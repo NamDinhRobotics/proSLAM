@@ -106,25 +106,12 @@ namespace gslam {
       keyframes_in_graph.push_back(keyframe);
     }
 
-    //ds closure checking
-    ClosureBuffer closure_buffer;
-    LoopClosureChecker closure_checker;
-    Count number_of_closures_checked = 0;
-    Count number_of_closures_added   = 0;
-
     //ds pose measurements: check for closures now as all id's are in the graph
     for (const KeyFrame* keyframe_query: context_->keyframes()) {
-
-      //ds candidates for the current pose
-      OptimizableGraph::EdgeSet closure_candidates;
 
       for (const KeyFrame::KeyFrameCorrespondence& keyframe_correspondence: keyframe_query->closures()) {
         const KeyFrame* keyframe_reference = keyframe_correspondence.keyframe;
         const TransformMatrix3D transform_query_to_reference = keyframe_correspondence.relation.transform;
-       closure_candidates.insert(Optimizer::getClosureEdge(_optimizer,
-                                                           keyframe_query->index(),
-                                                           keyframe_reference->index(),
-                                                           transform_query_to_reference));
 
         //ds compute required transform delta
         const TransformMatrix3D transform_query_to_reference_current = keyframe_reference->worldToRobot()*keyframe_query->robotToWorld();
@@ -132,7 +119,8 @@ namespace gslam {
 
         //ds check threshold
         if (4.0 < translation_delta.norm()) {
-          std::cerr << "Mapper::optimizePoses|WARNING: adding large impact closure: " << keyframe_query->index() << " > " << keyframe_reference->index() << " translation L1: " << translation_delta.norm() << std::endl;
+          std::cerr << "Mapper::optimizePoses|WARNING: adding large impact closure: " << keyframe_query->index() << " > " << keyframe_reference->index() 
+                    << " translation L1: " << translation_delta.norm() << std::endl;
         }
 
         //ds retrieve closure edge
@@ -141,46 +129,7 @@ namespace gslam {
                                                                keyframe_reference->index(),
                                                                transform_query_to_reference);
         _optimizer->addEdge(edge_closure);
-        ++number_of_closures_added;
-        ++number_of_closures_checked;
       }
-
-#ifdef ENABLE_CLOSURE_CHECKER
-      
-      //ds add closures for this pose
-      if (0 < closure_candidates.size()) {
-        closure_buffer.addEdgeSet(closure_candidates);
-        closure_buffer.addVertex(_optimizer->vertex(keyframe_query->index()));
-      }
-
-      //ds check buffer state
-      if (closure_buffer.checkList(_closure_checker_window)) {
-
-        //ds determine valid closures
-        closure_checker.init(closure_buffer.vertices(), closure_buffer.edgeSet(), static_cast<double>(_closure_checker_threshold));
-        closure_checker.check();
-
-        //ds there were closures with inliers
-        if (0 < closure_checker.inliers()) {
-
-          //ds add the inliers to the graph
-          for (LoopClosureChecker::EdgeDoubleMap::iterator edge_closure = closure_checker.closures( ).begin(); edge_closure != closure_checker.closures( ).end( ); ++edge_closure){
-            if (_closure_checker_threshold > edge_closure->second) {
-              _optimizer->addEdge(edge_closure->first);
-              ++number_of_closures_added;
-            }
-          }
-        }
-
-        //ds always clear buffer
-        closure_buffer.removeEdgeSet(closure_buffer.edgeSet());
-      }
-
-      //ds propagate buffer window
-      closure_buffer.updateList(_closure_checker_window);
-
-#endif //ENABLE_CLOSURE_CHECKER
-
     }
 
     //ds optimize poses

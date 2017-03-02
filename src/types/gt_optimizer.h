@@ -1,13 +1,15 @@
 #pragma once
 #include <dirent.h>
 #include "types/gt_defs.h"
+#include "g2o/core/optimizable_graph.h"
 #include "g2o/core/sparse_optimizer.h"
 #include "g2o/core/block_solver.h"
+#include "g2o/core/factory.h"
+#include "g2o/core/optimization_algorithm_factory.h"
+#include "g2o/core/optimization_algorithm_gauss_newton.h"
 #include "g2o/solvers/csparse/linear_solver_csparse.h"
 #include "g2o/solvers/cholmod/linear_solver_cholmod.h"
 #include "g2o/types/slam3d/types_slam3d.h"
-#include "gt_closure_buffer.h"
-#include "gt_closure_checker.h"
 
 namespace gslam {
   class Optimizer {

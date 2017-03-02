@@ -2,7 +2,7 @@
 #include <exception>
 
 #include "contexts/gt_keyframe.h"
-#include "utilities/gt_utility.h"
+#include "gt_utility.h"
 
 namespace gslam {
 

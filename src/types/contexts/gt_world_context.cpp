@@ -225,15 +225,6 @@ namespace gslam {
     return false;
   }
 
-  //ds save maps to file
-  void WorldContext::write() const {
-    std::cerr <<"WorldContext::WorldContext|saving map to file" << std::endl;
-    for (const TrackingContextPointerMapElement subcontext_element: _subcontexts) {
-      subcontext_element.second->write(_serializer);
-    }
-    std::cerr << "WorldContext::WorldContext|map successfully saved" << std::endl;
-  }
-
   //ds dump trajectory to file (in KITTI benchmark format only for now)
   void WorldContext::writeTrajectory(const std::string& filename_) const {
 
@@ -276,14 +267,6 @@ namespace gslam {
     } else {
       std::cerr << "WorldContext::WorldContext|unable to save trajectory, found non-merged contexts" << std::endl;
     }
-  }
-
-  //ds specify savefile path
-  void WorldContext::setMapSavefilepath(const std::string& map_savefile_path_) {
-    assert(_serializer != 0);
-    assert(map_savefile_path_.length() > 0);
-    _serializer->setFilePath(map_savefile_path_);
-    _serializer->setBinaryPath(map_savefile_path_ + ".d/<classname>.<nameAttribute>.<id>.<ext>");
   }
 
   const TransformMatrix3D WorldContext::getTransform(const TrackingContext* tracking_context_query_,

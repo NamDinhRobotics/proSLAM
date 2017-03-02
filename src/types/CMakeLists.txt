@@ -1,4 +1,4 @@
-add_library(srrg_gslam_types_library
+add_library(srrg_proslam_types_library
   gt_camera.cpp
   contexts/gt_frame.cpp
   items/gt_frame_point.cpp
@@ -16,7 +16,7 @@ add_library(srrg_gslam_types_library
   stereo_grid_detector.cpp
 )
 
-target_link_libraries(srrg_gslam_types_library
+target_link_libraries(srrg_proslam_types_library
   srrg_core_map_library
   ${OpenCV_LIBS}
 )

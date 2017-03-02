@@ -1,5 +1,5 @@
 #pragma once
-#include "core/gt_tracker.h"
+#include "types/contexts/gt_world_context.h"
 
 namespace gslam {
 

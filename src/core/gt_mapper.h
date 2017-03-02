@@ -1,8 +1,6 @@
 #pragma once
 #include "types/contexts/gt_tracking_context.h"
-#include "utilities/gt_optimizer.h"
-
-//#define ENABLE_CLOSURE_CHECKER
+#include "types/gt_optimizer.h"
 
 namespace gslam {
   class Mapper {
@@ -26,14 +24,6 @@ namespace gslam {
     g2o::SparseOptimizer* _optimizer = 0;
     Identifier _id_last_optimization = 0;
     const Identifier _id_interspace_poses   = 10000000; //ds limit: 2147483647
-
-#ifdef ENABLE_CLOSURE_CHECKER
-
-    //ds closure checking
-    const gt_real _closure_checker_threshold = 0.1;
-    const Count _closure_checker_window      = 2;
-
-#endif //ENABLE_CLOSURE_CHECKER
 
     CREATE_CHRONOMETER(overall)
 

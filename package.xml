@@ -1,19 +1,17 @@
 <?xml version="1.0"?>
 <package>
-  <name>srrg_gslam</name>
+  <name>srrg_proslam</name>
   <version>0.0.0</version>
-  <description>The gslam package</description>
-  <maintainer email="giorgio@todo.todo">giorgio</maintainer>
-  <license>TODO</license>
+  <description>The ProSLAM package</description>
+  <maintainer email="schdomin@gmail.com">schdomin</maintainer>
+  <license>TBD</license>
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>cv_bridge</build_depend>
-  <build_depend>thin_state_publisher</build_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>sensor_msgs</build_depend>
   <build_depend>geometry_msgs</build_depend>
   <build_depend>tf</build_depend>
   <run_depend>cv_bridge</run_depend>
-  <run_depend>thin_state_publisher</run_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>sensor_msgs</run_depend>
   <run_depend>geometry_msgs</run_depend>

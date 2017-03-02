@@ -1,10 +1,9 @@
 #include "gt_tracking_context.h"
 
-#include "utilities/gt_utility.h"
+#include "types/gt_utility.h"
 
 namespace gslam {
   using namespace srrg_core;
-  using namespace srrg_core_map;
 
   Identifier TrackingContext::_instances = 0;
 
@@ -18,8 +17,6 @@ namespace gslam {
 #else
   #error OpenCV version not supported
 #endif
-                                      _serializable_nodes(new MapNodeList()),
-                                      _serializable_node_relations(new BinaryNodeRelationSet()),
                                       _index(_instances) {
     clear();
     ++_instances;
@@ -36,8 +33,6 @@ namespace gslam {
 #else
   #error OpenCV version not supported
 #endif
-                                                               _serializable_nodes(new MapNodeList()),
-                                                               _serializable_node_relations(new BinaryNodeRelationSet()),
                                                                _index(_instances) {
     context_->setNext(this);
     clear();
@@ -68,8 +63,6 @@ namespace gslam {
     _frames.clear();
     _keyframes.clear();
     setRobotToWorldPrevious(TransformMatrix3D::Identity());
-    _serializable_nodes->clear();
-    _serializable_node_relations->clear();
   }
   
   Frame* TrackingContext::createNewFrame(const TransformMatrix3D& frame_to_world_guess_, const Identifier& sequence_number_raw_){
@@ -199,12 +192,6 @@ namespace gslam {
       if (!landmark_element.second->isOptimized()) {
         landmark_element.second->setIsContained(false);
       }
-    }
-  }
-
-  void TrackingContext::write(srrg_boss::Serializer* serializer_) const {
-    for (const KeyFrame* keyframe: _keyframes) {
-      keyframe->write(serializer_, _serializable_nodes, _serializable_node_relations);
     }
   }
 }

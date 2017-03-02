@@ -1,27 +1,20 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(srrg_gslam)
+project(srrg_proslam)
 
 SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 #set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_BUILD_TYPE Release)
 
-#ds DBoW2 configuration
-#set(DLIB_INCLUDE_DIR "$ENV{HOME}/source/libraries/DLib/include")
-#set(DLIB_LIBRARY "$ENV{HOME}/source/libraries/DLib/build/release/libDLib.so")
-#set(DBOW2_INCLUDE_DIR "$ENV{HOME}/source/libraries/DBoW2/include")
-#set(DBOW2_LIBRARY "$ENV{HOME}/source/libraries/DBoW2/build/release/libDBoW2.so")
-
 #ds OpenCV: we do not want to use the kinect opencv(3) package
 if("$ENV{ROS_DISTRO}" STREQUAL "kinetic")
 
-  #ds use our custom opencv
-  set(OpenCV_DIR "$ENV{HOME}/source/libraries/opencv/build/release")
+  #ds use our custom opencv: check environment variable OpenCV_DIR
   find_package(OpenCV REQUIRED)
   message("using custom OpenCV ${OpenCV_VERSION} (${OpenCV_DIR})")
 
 else()
 
-  #ds regular find (TODO enforce custom opencv installation?)
+  #ds regular find
   find_package(OpenCV REQUIRED)
   message("using system OpenCV ${OpenCV_VERSION} (${OpenCV_DIR})")
 
@@ -61,24 +54,16 @@ find_package(catkin REQUIRED COMPONENTS
   srrg_gl_helpers
   srrg_core_viewers
   srrg_hbst
-  srrg_core_map
   roscpp
   sensor_msgs
   tf
 )
 
-################################################
-## Declare ROS messages, services and actions ##
-################################################
-
-###########
-## Build ##
-###########
-
+#ds flags
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -Wall -O0 -g -fPIC -fstack-check")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -Wall -O3 -DNDEBUG -fPIC")
 
-## Specify additional locations of header files
+#ds specify additional locations of header files
 include_directories(
   ${EIGEN3_INCLUDE_DIR}
   ${G2O_INCLUDE_DIR}
@@ -86,8 +71,6 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
   ${QGLVIEWER_INCLUDE_DIR}
   ${CHOLMOD_INCLUDE_DIR}
-#  ${DLIB_INCLUDE_DIR}
-#  ${DBOW2_INCLUDE_DIR}
   ${catkin_INCLUDE_DIRS}
   src
 )
@@ -99,13 +82,13 @@ else()
   include_directories(${QT_INCLUDES})
 endif()
 
+#ds set catkin package
+catkin_package(
+  INCLUDE_DIRS src
+  LIBRARIES srrg_proslam_types_library srrg_proslam_ui_library srrg_proslam_core_library
+#  CATKIN_DEPENDS
+#  DEPENDS
+)
+
 #ds set sources
 add_subdirectory(src)
-
-#############
-## Install ##
-#############
-
-#############
-## Testing ##
-#############

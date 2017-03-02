@@ -12,9 +12,7 @@ namespace gslam {
     Camera(const Count& image_rows_,
            const Count& image_cols_,
            const CameraMatrix& camera_matrix_,
-           const TransformMatrix3D& offset_  = TransformMatrix3D::Identity(),
-           const bool& construct_projection_matrix_ = true,
-           const ProjectionMatrix& projection_matrix_ = ProjectionMatrix::Zero());
+           const TransformMatrix3D& offset_  = TransformMatrix3D::Identity());
 
   public:
 
@@ -26,11 +24,11 @@ namespace gslam {
     void setImageCols(const Count& image_cols_) {_image_cols = image_cols_;}
     inline const CameraMatrix& cameraMatrix() const {return _camera_matrix;}
     inline const CameraMatrix& inverseCameraMatrix() const {return _inverse_camera_matrix;}
-    void setCameraMatrix(const CameraMatrix& camera_matrix_, const bool& construct_projection_matrix_ = true);
+    void setCameraMatrix(const CameraMatrix& camera_matrix_);
     inline const ProjectionMatrix& projectionMatrix() const {return _projection_matrix;}
     inline const TransformMatrix3D& cameraToRobot() const {return _camera_to_robot;}
     inline const TransformMatrix3D& robotToCamera() const {return _robot_to_camera;}
-    void setOffset(const TransformMatrix3D& camera_to_robot_, const bool& construct_projection_matrix_ = true);
+    void setOffset(const TransformMatrix3D& camera_to_robot_);
     inline const gt_real depthConversionFactor() const {return _depth_conversion_factor;}
     void setDepthConversionFactor(const gt_real& depth_conversion_factor_) {_depth_conversion_factor = depth_conversion_factor_;}
 

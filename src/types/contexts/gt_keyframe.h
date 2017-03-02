@@ -1,7 +1,5 @@
 #pragma once
 #include "srrg_boss/serializer.h"
-#include "srrg_core_map/cloud.h"
-#include "srrg_core_map/local_map.h"
 #include "types/items/gt_landmark.h"
 #include "types/items/gt_landmark_item.h"
 
@@ -61,12 +59,6 @@ namespace gslam {
              const TransformMatrix3D transform_query_to_reference_,
              const Matrix6& information_ = Matrix6::Identity()) {_matches.push_back(KeyFrameCorrespondence(keyframe_reference_, TransformMatrix3DWithInformation(transform_query_to_reference_, information_)));}
     const KeyFrameCorrespondenceVector& closures() const {return _matches;}
-
-    //ds serialize local map to file (massive object generation, no frequent use intended!)
-    void write(srrg_boss::Serializer* serializer_, srrg_core_map::MapNodeList* nodes_, srrg_core_map::BinaryNodeRelationSet* node_relations_) const;
-
-    //ds computes cloud structure from all context elements - only minimal use intended
-    srrg_core_map::Cloud* generateCloud() const;
 
   protected:
 

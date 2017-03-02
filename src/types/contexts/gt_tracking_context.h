@@ -53,9 +53,6 @@ namespace gslam{
 
     void purifyLandmarks();
 
-    //ds writes full context map
-    void write(srrg_boss::Serializer* serializer_) const;
-
   protected:
 
     const TrackingContext* _previous = 0;
@@ -95,10 +92,6 @@ namespace gslam{
     //ds key frame holders
     KeyFrame* _current_keyframe  = 0;
     KeyFramePtrVector _keyframes;
-
-    //ds serializable map context
-    srrg_core_map::MapNodeList* _serializable_nodes                    = 0;
-    srrg_core_map::BinaryNodeRelationSet* _serializable_node_relations = 0;
 
     Identifier _index = 0;
   private:

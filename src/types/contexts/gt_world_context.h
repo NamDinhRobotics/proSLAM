@@ -29,14 +29,8 @@ namespace gslam {
     //ds checks status
     const bool isMergeable();
 
-    //ds save maps to file
-    void write() const;
-
     //ds dump trajectory to file (in KITTI benchmark format only for now)
     void writeTrajectory(const std::string& filename_ = "") const;
-
-    //ds specify savefile path
-    void setMapSavefilepath(const std::string& map_savefile_path_);
 
     //ds aligner configuration
     XYZAligner* aligner() {return _aligner;}

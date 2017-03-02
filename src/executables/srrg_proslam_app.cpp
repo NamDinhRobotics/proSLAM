@@ -15,13 +15,17 @@
 using namespace gslam;
 using namespace srrg_core;
 
-//ds help banner
 const char* banner[] = {
-  "srrg_gslam_sv_mapper_app: simple mapper application",
+  "srrg_gslam_mapper_app: simple mapper application",
   " it reads sequentially all elements in the file and tracks the camera",
   "",
-  "usage: srrg_gslam_mapper_app <dump_file>",
-  "options: TBD",
+  "usage: srrg_gslam_mapper_app  [options] [-stereo-camera-left-topic <string>] [-stereo-camera-right-topic <string>] <dump_file>",
+  "options:",
+  " -o <file>:  string, sensor message output file of the mapper",
+  " -map <file>:  string, serialized map output file of the mapper",
+  " -tracker-max-features:  int, max number of features in tracker",
+  " -tracker-min-age:  int, number of consecutive frames a feature should be detected before being promoted",
+  " -tracker-min-covered-region:  floar, region of the image that needs to be covered with redetected features before a redetection is thrown",
   0
 };
 
@@ -30,9 +34,7 @@ static SystemUsageCounter system_usage;
 MessageTimestampSynchronizer synchronizer;
 MessageWriter sensor_message_writer;
 bool running     = true;
-bool camera_only = true;
 bool use_gui     = false;
-TransformMatrix3D odometry_robot_to_world_previous_ground_truth = TransformMatrix3D::Identity();
 TransformMatrix3D world_previous_to_current = TransformMatrix3D::Identity();
 StringCameraMap cameras_by_topic;
 
@@ -71,22 +73,26 @@ int32_t main(int32_t argc, char ** argv) {
   Mapper* mapper           = new Mapper();
   Relocalizer* relocalizer = new Relocalizer();
   relocalizer->aligner()->setMaximumErrorKernel(0.5);
-  relocalizer->aligner()->setMinimumNumberOfInliers(50);
-  relocalizer->aligner()->setMinimumInlierRatio(0.5);
-  relocalizer->setMinimumAbsoluteNumberOfMatchesPointwise(50);
+  relocalizer->aligner()->setMinimumNumberOfInliers(10);
+  relocalizer->aligner()->setMinimumInlierRatio(0.4);
+  relocalizer->setMinimumAbsoluteNumberOfMatchesPointwise(25);
 
   //ds obtain configuration
   synchronizer.setTimeInterval(0.001);
-//  std::string topic_image_stereo_left      = "/camera_left/image_raw";
-//  std::string topic_image_stereo_right     = "/camera_right/image_raw";
-  std::string topic_image_stereo_left      = "/thin_visensor_node/camera_left/image_raw";
-  std::string topic_image_stereo_right     = "/thin_visensor_node/camera_right/image_raw";
+  std::string topic_image_stereo_left      = "/camera_left/image_raw";
+  std::string topic_image_stereo_right     = "/camera_right/image_raw";
   std::string filename_sensor_messages     = "";
   std::string filename_sensor_messages_out = "";
   std::string filename_save_map            = "";
   int count_added_arguments = 1;
   while(count_added_arguments < argc){
-    if (! strcmp(argv[count_added_arguments],"-h")) {
+    if (! strcmp(argv[count_added_arguments],"-stereo-camera-left-topic")){
+      count_added_arguments++;
+      topic_image_stereo_left=argv[count_added_arguments];
+    } else if (! strcmp(argv[count_added_arguments],"-stereo-camera-right-topic")){
+      count_added_arguments++;
+      topic_image_stereo_right=argv[count_added_arguments];
+    } else if (! strcmp(argv[count_added_arguments],"-h")) {
       printBanner(banner);
       return 0;
     } else if (! strcmp(argv[count_added_arguments],"-use-gui")) {
@@ -104,10 +110,9 @@ int32_t main(int32_t argc, char ** argv) {
   }
 
   //ds log configuration
-  std::cerr << "running with params: " << endl;
-  std::cerr << "-topic-name-camera-left (-cl)  " << topic_image_stereo_left << std::endl;
-  std::cerr << "-topic-name-camera-right (-cr) " << topic_image_stereo_right << std::endl;
-  std::cerr << "-camera-only                   " << camera_only << std::endl;
+  std::cerr << "running with params: " << std::endl;
+  std::cerr << "-stereo-camera-left-topic      " << topic_image_stereo_left << std::endl;
+  std::cerr << "-stereo-camera-right-topic     " << topic_image_stereo_right << std::endl;
   std::cerr << "-messages                      " << filename_sensor_messages << std::endl;
   if (filename_sensor_messages_out.length()) {
     std::cerr << "-o                             " << filename_sensor_messages_out << std::endl;
@@ -154,8 +159,7 @@ int32_t main(int32_t argc, char ** argv) {
       Camera* camera_left = new Camera(message_image_left->image().rows,
                                        message_image_left->image().cols,
                                        message_image_left->cameraMatrix().cast<gt_real>(),
-                                       message_image_left->offset().cast<gt_real>(),
-                                       false);
+                                       message_image_left->offset().cast<gt_real>());
       cameras_by_topic.insert(std::make_pair(message_image_left->topic(), camera_left));
     } else if (sensor_msg->topic() == topic_image_stereo_right) {
       PinholeImageMessage* message_image_right  = dynamic_cast<PinholeImageMessage*>(sensor_msg);
@@ -197,30 +201,26 @@ int32_t main(int32_t argc, char ** argv) {
 
   //ds allocate tracker with fixed cameras
   TrackerSVI* tracker = new TrackerSVI(world_context, cameras_by_topic.at(topic_image_stereo_left), cameras_by_topic.at(topic_image_stereo_right));
-  tracker->setMaximumPixelDistanceTrackingMinimum(25);
-  tracker->gridSensor()->setTargetNumberOfPoints(250);
-  tracker->gridSensor()->setDetectorThreshold(25);
-  tracker->gridSensor()->setDetectorThresholdMaximum(100);
-  tracker->gridSensor()->setMaximumMatchingDistanceTriangulation(100);
-  tracker->aligner()->setMaximumErrorKernel(9);
-  tracker->aligner()->setDamping(1);
+
+  //ds error measurements
+  std::vector<gt_real> errors_translation_relative(0);
+  std::vector<gt_real> squared_errors_translation_absolute(0);
+  std::vector<TransformMatrix3D> robot_to_world_ground_truth_poses(0);
 
   //ds frame counts
   Count number_of_processed_frames_total   = 0;
   Count number_of_processed_frames_current = 0;
 
   //ds store start time
-  double time_start_seconds             = getTime();
-  const double time_start_seconds_first = time_start_seconds;
+  double time_start_seconds       = getTime();
+  double time_start_seconds_first = getTime();
 
   //ds initialize gui
   if (use_gui) {
     ui_server      = new QApplication(argc, argv);
     tracker_viewer = new TrackerViewer(world_context);
-    context_viewer = new TrackingContextViewer(world_context, 0.1);
-//    aligner_viewer = new AlignerViewer();
+    context_viewer = new TrackingContextViewer(world_context);
     context_viewer->show();
-//    aligner_viewer->show();
   }
 
   //ds start playback
@@ -249,12 +249,17 @@ int32_t main(int32_t argc, char ** argv) {
       //ds buffer images and cameras
       cv::Mat intensity_image_left  = message_image_left->image();
       cv::Mat intensity_image_right = message_image_right->image();
+      //cv::equalizeHist(message_image_left->image(), intensity_image_left);
+      //cv::equalizeHist(message_image_right->image(), intensity_image_right);
       Camera* camera_left  = cameras_by_topic.at(message_image_left->topic());
       Camera* camera_right = cameras_by_topic.at(message_image_right->topic());
 
-      //ds if there's external odometry information available - otherwise constant velocity motion model is used
-      if (!camera_only && message_image_left->hasOdom()) {
-        world_previous_to_current = message_image_left->odometry().cast<gt_real>()*odometry_robot_to_world_previous_ground_truth.inverse();
+      //ds check if first frame and odometry is available
+      if (world_context->currentTrackingContext()->frames().size() == 0 && message_image_left->hasOdom()) {
+        world_context->currentTrackingContext()->setRobotToWorldPrevious(message_image_left->odometry().cast<gt_real>()*camera_left->robotToCamera());
+        if (use_gui) {
+          context_viewer->setViewpointOrigin((message_image_left->odometry().cast<gt_real>()*camera_left->robotToCamera()).inverse());
+        }
       }
 
       //ds trigger SLAM pipeline with all available input TODO purify this function
@@ -277,10 +282,9 @@ int32_t main(int32_t argc, char ** argv) {
       }
 
       if (message_image_left->hasOdom()) {
-        tracker->setOdometryRobotToWorld(message_image_left->odometry().cast<gt_real>());
-        odometry_robot_to_world_previous_ground_truth = message_image_left->odometry().cast<gt_real>();
-      } else {
-        odometry_robot_to_world_previous_ground_truth = tracker->robotToWorld();
+        const TransformMatrix3D robot_to_world_ground_truth = message_image_left->odometry().cast<gt_real>()*camera_left->robotToCamera();
+        robot_to_world_ground_truth_poses.push_back(robot_to_world_ground_truth);
+        tracker->setOdometryRobotToWorld(robot_to_world_ground_truth);
       }
 
       //ds info
@@ -293,17 +297,17 @@ int32_t main(int32_t argc, char ** argv) {
         const double total_duration_seconds_current = getTime()-time_start_seconds;
         const double total_duration_seconds_total   = getTime()-time_start_seconds_first;
 
-        //ds info
+        //ds runtime info
         std::cerr << "-------------------------------------------------------------------------" << std::endl;
         std::cerr << "fps: " << number_of_processed_frames_current/total_duration_seconds_current
-                                               << " (" << number_of_processed_frames_total << "/" << total_duration_seconds_total << ")" << std::endl;
+                             << " (" << number_of_processed_frames_total << "/" << total_duration_seconds_total << ")" << std::endl;
         std::cerr << "key frames: " << world_context->currentTrackingContext()->keyframes().size()
-                                                      << " (" << world_context->currentTrackingContext()->keyframes().size()/static_cast<gt_real>(number_of_processed_frames_total) << ")" << std::endl;
+                                    << " (" << world_context->currentTrackingContext()->keyframes().size()/static_cast<gt_real>(number_of_processed_frames_total) << ")" << std::endl;
         std::cerr << "memory usage (GB): " << static_cast<gt_real>(system_usage.totalMemory())/1e6 << std::endl;
         std::cerr << "runtime relocalizer (s): " << relocalizer->getTimeConsumptionSeconds_overall()
-                                                               << " (" << relocalizer->getTimeConsumptionSeconds_overall()/total_duration_seconds_total << ")" << std::endl;
+                                                 << " (" << relocalizer->getTimeConsumptionSeconds_overall()/total_duration_seconds_total << ")" << std::endl;
         std::cerr << "runtime      mapper (s): " << mapper->getTimeConsumptionSeconds_overall()
-                                                               << " (" << mapper->getTimeConsumptionSeconds_overall()/total_duration_seconds_total << ")" << std::endl;
+                                                 << " (" << mapper->getTimeConsumptionSeconds_overall()/total_duration_seconds_total << ")" << std::endl;
 
         //ds reset stats
         time_start_seconds = getTime();
@@ -322,6 +326,37 @@ int32_t main(int32_t argc, char ** argv) {
   }
   const double total_duration_seconds_total = getTime()-time_start_seconds_first;
 
+  //ds compute squared errors
+  TransformMatrix3D odometry_robot_to_world_previous_ground_truth = TransformMatrix3D::Identity();
+  Index index_frame     = 0;
+  Frame* previous_frame = 0;
+  for (FramePtrMapElement frame: world_context->currentTrackingContext()->frames()) {
+
+    //ds compute squared errors between frames
+    if (index_frame > 0) {
+      const TransformMatrix3D world_previous_to_current_ground_truth = robot_to_world_ground_truth_poses[index_frame]*odometry_robot_to_world_previous_ground_truth.inverse();
+      errors_translation_relative.push_back(((frame.second->robotToWorld()*previous_frame->robotToWorld().inverse()).translation()-world_previous_to_current_ground_truth.translation()).norm());
+    }
+    squared_errors_translation_absolute.push_back((frame.second->robotToWorld().translation()-robot_to_world_ground_truth_poses[index_frame].translation()).squaredNorm());
+    odometry_robot_to_world_previous_ground_truth = robot_to_world_ground_truth_poses[index_frame];
+    previous_frame = frame.second;
+    index_frame++;
+  }
+  robot_to_world_ground_truth_poses.clear();
+
+  //ds compute RMSEs
+  gt_real root_mean_squared_error_translation_absolute = 0;
+  for (const gt_real squared_error: squared_errors_translation_absolute) {
+    root_mean_squared_error_translation_absolute += squared_error;
+  }
+  root_mean_squared_error_translation_absolute /= squared_errors_translation_absolute.size();
+  root_mean_squared_error_translation_absolute = std::sqrt(root_mean_squared_error_translation_absolute);
+  gt_real mean_error_translation_relative = 0;
+  for (const gt_real error: errors_translation_relative) {
+    mean_error_translation_relative += error;
+  }
+  mean_error_translation_relative /= errors_translation_relative.size();
+
   //ds report
   std::cerr << "-------------------------------------------------------------------------" << std::endl;
   std::cerr << "dataset completed" << std::endl;
@@ -329,11 +364,15 @@ int32_t main(int32_t argc, char ** argv) {
   if (number_of_processed_frames_total == 0) {
     std::cerr << "no frames processed" << std::endl;
   } else {
+    std::cerr << "        absolute translation RMSE: " << root_mean_squared_error_translation_absolute << std::endl;
+    std::cerr << "        relative translation   ME: " << mean_error_translation_relative << std::endl;
     std::cerr << "        final translational error: " << (tracker->robotToWorld().translation()-odometry_robot_to_world_previous_ground_truth.translation()).norm() << std::endl;
     std::cerr << "              total stereo frames: " << number_of_processed_frames_total << std::endl;
     std::cerr << "               total duration (s): " << total_duration_seconds_total << std::endl;
     std::cerr << "                      average fps: " << number_of_processed_frames_total/total_duration_seconds_total << std::endl;
     std::cerr << "average processing time (s/frame): " << total_duration_seconds_total/number_of_processed_frames_total << std::endl;
+    std::cerr << "average landmarks close per frame: " << tracker->totalNumberOfLandmarksClose()/number_of_processed_frames_total << std::endl;
+    std::cerr << "  average landmarks far per frame: " << tracker->totalNumberOfLandmarksFar()/number_of_processed_frames_total << std::endl;
     std::cerr << "         average tracks per frame: " << tracker->totalNumberOfTrackedPoints()/number_of_processed_frames_total << std::endl;
     std::cerr << "        average tracks per second: " << tracker->totalNumberOfTrackedPoints()/total_duration_seconds_total << std::endl;
     std::cerr << "-------------------------------------------------------------------------" << std::endl;
@@ -371,12 +410,7 @@ int32_t main(int32_t argc, char ** argv) {
   sensor_message_reader.close();
 
   //ds save trajectory to disk
-  world_context->writeTrajectory();
-
-  //ds save accumulated maps to disk if desired
-  if (filename_save_map.length() > 0) {
-    world_context->write();
-  }
+  world_context->writeTrajectory("trajectory.txt");
 
   //ds controlled destruction: SLAM modules
   delete tracker;
@@ -494,4 +528,44 @@ void process(WorldContext* world_context_,
     tracker_viewer->initDrawing();
     tracker_viewer->drawFeatures();
   }
+}
+
+//ds loads kitti projection matrices
+void loadCalibrationKITTI(const std::string& filename_calibration_, ProjectionMatrix& projection_matrix_camera_left_, ProjectionMatrix& projection_matrix_camera_right_) {
+
+  //ds reset input
+  projection_matrix_camera_left_.setZero();
+  projection_matrix_camera_right_.setZero();
+
+  //ds attempt to open the file for reading
+  std::ifstream infile(filename_calibration_);
+
+  //ds two lines
+  std::string buffer_projection_matrix_camera_left("");
+  std::string buffer_projection_matrix_camera_right("");
+
+  //ds read both lines
+  std::getline(infile, buffer_projection_matrix_camera_left);
+  std::getline(infile, buffer_projection_matrix_camera_right);
+
+  //ds fill both matrices
+  std::istringstream istream_projection_matrix_camera_left(buffer_projection_matrix_camera_left);
+  std::string camera_name_left("");
+  istream_projection_matrix_camera_left >> camera_name_left;
+  for (Count u = 0; u < 3; ++u ) {
+    for (Count v = 0; v < 4; ++v ) {
+      istream_projection_matrix_camera_left >> projection_matrix_camera_left_(u,v);
+    }
+  }
+  std::istringstream istream_projection_matrix_camera_right(buffer_projection_matrix_camera_right);
+  std::string camera_name_right("");
+  istream_projection_matrix_camera_right >> camera_name_right;
+  for (Count u = 0; u < 3; ++u ) {
+    for (Count v = 0; v < 4; ++v ) {
+      istream_projection_matrix_camera_right >> projection_matrix_camera_right_(u,v);
+    }
+  }
+
+  //ds done
+  infile.close();
 }

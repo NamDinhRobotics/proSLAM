@@ -15,6 +15,10 @@ namespace gslam {
     setKeyDescription(Qt::Key_2, "Toggles trajectory display at maximum granularity");
     setKeyDescription(Qt::Key_3, "Switches view to robot ego perspective");
     setKeyDescription(Qt::Key_4, "Toggles robot ground truth trajectory (red)");
+    setKeyDescription(Qt::Key_5, "Decreases camera size by factor 2");
+    setKeyDescription(Qt::Key_6, "Increases camera size by factor 2");
+    setKeyDescription(Qt::Key_7, "Decreases point size by factor 2");
+    setKeyDescription(Qt::Key_8, "Increases point size by factor 2");
   }
 
   void TrackingContextViewer::drawFrame(const Frame* frame_, const Vector3& color_rgb_) {
@@ -153,6 +157,22 @@ namespace gslam {
       case Qt::Key_4: {
         if(_ground_truth_drawn) {_ground_truth_drawn = false;}
         else {_ground_truth_drawn = true;}
+        break;
+      }
+      case Qt::Key_5: {
+        _object_scale /= 2;
+        break;
+      }
+      case Qt::Key_6: {
+        _object_scale *= 2;
+        break;
+      }
+      case Qt::Key_7: {
+        _point_size /= 2;
+        break;
+      }
+      case Qt::Key_8: {
+        _point_size *= 2;
         break;
       }
       default: {

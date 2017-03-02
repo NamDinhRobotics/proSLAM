@@ -41,7 +41,7 @@ namespace gslam {
     bool _follow_robot       = true;
     bool _ground_truth_drawn = false;
     gt_real _object_scale    = 0.1;
-    gt_real _point_size      = 1;
+    gt_real _point_size      = 2;
     TransformMatrix3D _world_to_robot_origin = TransformMatrix3D::Identity();
   };
 
