@@ -1,0 +1,22 @@
+add_library(srrg_gslam_types_library
+  gt_camera.cpp
+  contexts/gt_frame.cpp
+  items/gt_frame_point.cpp
+  contexts/gt_keyframe.cpp
+  items/gt_landmark.cpp
+  contexts/gt_tracking_context.cpp
+  contexts/gt_world_context.cpp
+  contexts/correspondence_collection.cpp
+  aligners/aligner_factory.cpp
+  aligners/uvd_aligner.cpp
+  aligners/xyz_aligner.cpp
+  aligners/xuvd_aligner.cpp
+  aligners/pxyz_aligner.cpp
+  aligners/stereouv_aligner.cpp
+  stereo_grid_detector.cpp
+)
+
+target_link_libraries(srrg_gslam_types_library
+  srrg_core_map_library
+  ${OpenCV_LIBS}
+)

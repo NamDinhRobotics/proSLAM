@@ -1,0 +1,6 @@
+add_subdirectory(core)
+add_subdirectory(executables)
+add_subdirectory(types)
+add_subdirectory(ui)
+add_subdirectory(utilities)
+add_subdirectory(unittests)
