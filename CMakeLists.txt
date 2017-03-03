@@ -5,20 +5,9 @@ SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 #set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_BUILD_TYPE Release)
 
-#ds OpenCV: we do not want to use the kinect opencv(3) package
-if("$ENV{ROS_DISTRO}" STREQUAL "kinetic")
-
-  #ds use our custom opencv: check environment variable OpenCV_DIR
-  find_package(OpenCV REQUIRED)
-  message("using custom OpenCV ${OpenCV_VERSION} (${OpenCV_DIR})")
-
-else()
-
-  #ds regular find
-  find_package(OpenCV REQUIRED)
-  message("using system OpenCV ${OpenCV_VERSION} (${OpenCV_DIR})")
-
-endif()
+#ds OpenCV - OpenCV_DIR might be overwritten by user
+find_package(OpenCV REQUIRED)
+message("using OpenCV version ${OpenCV_VERSION} (${OpenCV_DIR})")
 
 find_package(Eigen3 REQUIRED)
 find_package(QGLViewer REQUIRED)
@@ -36,10 +25,10 @@ endif()
 
 #ds depending on found qt installation
 if(${SRRG_GSLAM_USE_QT_5})
-  message("using Qt 5")
+  message("using Qt version 5")
   find_package(Qt5 COMPONENTS Xml OpenGL Widgets REQUIRED)
 else()
-  message("using Qt 4")
+  message("using Qt version 4")
   find_package(Qt4 REQUIRED)
 endif()
 

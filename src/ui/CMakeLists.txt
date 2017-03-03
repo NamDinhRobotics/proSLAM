@@ -1,8 +1,6 @@
 add_library(srrg_proslam_ui_library
   gt_tracker_viewer.cpp
   gt_tracking_context_viewer.cpp
-  simple_point_viewer.cpp
-  aligner_viewer.cpp
 )
 
 target_link_libraries(srrg_proslam_ui_library

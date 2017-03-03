@@ -317,8 +317,7 @@ int32_t main(int32_t argc, char ** argv) {
       //ds update ui
       synchronizer.reset();
       if (use_gui) {
-        cv::imshow("TrackerDebug", tracker->imageDisplayDebug());
-        running = tracker_viewer->updateGUI();
+        running = context_viewer->isVisible() && tracker_viewer->updateGUI();
         context_viewer->updateGL();
         ui_server->processEvents();
       }
@@ -526,46 +525,7 @@ void process(WorldContext* world_context_,
 
   if (use_gui) {
     tracker_viewer->initDrawing();
+    tracker_viewer->drawFeatureTracking();
     tracker_viewer->drawFeatures();
   }
-}
-
-//ds loads kitti projection matrices
-void loadCalibrationKITTI(const std::string& filename_calibration_, ProjectionMatrix& projection_matrix_camera_left_, ProjectionMatrix& projection_matrix_camera_right_) {
-
-  //ds reset input
-  projection_matrix_camera_left_.setZero();
-  projection_matrix_camera_right_.setZero();
-
-  //ds attempt to open the file for reading
-  std::ifstream infile(filename_calibration_);
-
-  //ds two lines
-  std::string buffer_projection_matrix_camera_left("");
-  std::string buffer_projection_matrix_camera_right("");
-
-  //ds read both lines
-  std::getline(infile, buffer_projection_matrix_camera_left);
-  std::getline(infile, buffer_projection_matrix_camera_right);
-
-  //ds fill both matrices
-  std::istringstream istream_projection_matrix_camera_left(buffer_projection_matrix_camera_left);
-  std::string camera_name_left("");
-  istream_projection_matrix_camera_left >> camera_name_left;
-  for (Count u = 0; u < 3; ++u ) {
-    for (Count v = 0; v < 4; ++v ) {
-      istream_projection_matrix_camera_left >> projection_matrix_camera_left_(u,v);
-    }
-  }
-  std::istringstream istream_projection_matrix_camera_right(buffer_projection_matrix_camera_right);
-  std::string camera_name_right("");
-  istream_projection_matrix_camera_right >> camera_name_right;
-  for (Count u = 0; u < 3; ++u ) {
-    for (Count v = 0; v < 4; ++v ) {
-      istream_projection_matrix_camera_right >> projection_matrix_camera_right_(u,v);
-    }
-  }
-
-  //ds done
-  infile.close();
 }

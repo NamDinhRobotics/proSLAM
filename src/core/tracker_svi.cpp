@@ -125,10 +125,6 @@ namespace gslam {
 
         const cv::Point2f point_previous(previous_point->imageCoordinates().x(), previous_point->imageCoordinates().y());
         const cv::Point2f point_current(current_point->imageCoordinates().x(), current_point->imageCoordinates().y());
-        cv::line(_image_display_debug, point_previous, point_current, CV_COLOR_CODE_GREEN);
-        cv::circle(_image_display_debug, point_previous, 2, CV_COLOR_CODE_RED, -1);
-        cv::circle(_image_display_debug, point_current, 2, CV_COLOR_CODE_BLUE, -1);
-        cv::circle(_image_display_debug, projection_left, 4, CV_COLOR_CODE_BLUE, 1);
         ++_number_of_tracked_points;
 
         //ds disable further matching and reduce search time
@@ -194,10 +190,6 @@ namespace gslam {
 
         const cv::Point2f point_previous(previous_point->imageCoordinates().x(), previous_point->imageCoordinates().y());
         const cv::Point2f point_current(current_point->imageCoordinates().x(), current_point->imageCoordinates().y());
-        cv::line(_image_display_debug, point_previous, point_current, CV_COLOR_CODE_GREEN);
-        cv::circle(_image_display_debug, point_previous, 2, CV_COLOR_CODE_RED, -1);
-        cv::circle(_image_display_debug, point_current, 2, CV_COLOR_CODE_BLUE, -1);
-        cv::circle(_image_display_debug, projection_left, 4, CV_COLOR_CODE_BLUE, 1);
         ++_number_of_tracked_points;
 
         //ds disable further matching and reduce search time
@@ -243,7 +235,6 @@ namespace gslam {
                                                                      frame_->camera()->cameraToRobot()*_grid_sensor->triangulationMap()[row][col].camera_coordinates_left);
           ++index_point_new;
           _grid_sensor->triangulationMap()[row][col].is_available = false;
-          cv::circle(_image_display_debug, cv::Point2f(col, row), 2, CV_COLOR_CODE_GREEN, -1);
         }
       }
     }
@@ -397,7 +388,6 @@ namespace gslam {
     _number_of_tracked_points        = 0;
     _number_of_lost_points           = 0;
     _number_of_lost_points_recovered = 0;
-    cv::cvtColor(intensity_image_left_, _image_display_debug, CV_GRAY2RGB);
 
     //ds retrieve odometry prior - might be identity
     TransformMatrix3D robot_to_world_current = _context->currentTrackingContext()->robotToWorldPrevious();

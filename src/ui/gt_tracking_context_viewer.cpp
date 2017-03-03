@@ -9,6 +9,7 @@ namespace gslam {
 
   TrackingContextViewer::TrackingContextViewer(WorldContext* context_, const gt_real& object_scale_): _context(context_),
                                                                                                       _object_scale(object_scale_){
+    setWindowTitle("output");
 
     //ds set keyboard descriptors
     setKeyDescription(Qt::Key_1, "Toggles map points display");

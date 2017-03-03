@@ -74,9 +74,8 @@ namespace gslam {
       //ds if the point is representing a landmark view
       if (point->landmark()) {
 
-        //ds compute intensity -> old landmarks appear more bright
-        //const gt_real intensity = std::min(static_cast<gt_real>(1.0), point->age()/static_cast<gt_real>(50));
-        const gt_real intensity = std::min(static_cast<gt_real>(1.0), point->age()/static_cast<gt_real>(25)); //ds KITTI
+        //ds compute intensity -> old landmarks appear brighter
+        const gt_real intensity = std::min(static_cast<gt_real>(1.0), point->age()/static_cast<gt_real>(25));
 
         //ds check validity
         if (point->landmark()->isValidated()) {
@@ -111,78 +110,35 @@ namespace gslam {
 //            cv::circle(_current_image, cv::Point(point->imageCoordinatesExtra().x()+current_frame->camera()->imageCols(), point->imageCoordinatesExtra().y()), 4, CV_COLOR_CODE_RED);
 //          }
         }
-      } else {
-        switch(point->status()){
-          case FramePoint::Created:
-            continue; //color = CV_COLOR_CODE_GREEN; break;
-          case FramePoint::Confirmed:
-            continue; //color = CV_COLOR_CODE_ORANGE; break;
-          case FramePoint::Persistent:
-            continue; //color = CV_COLOR_CODE_RED; break;
-          default:
-            color = CV_COLOR_CODE_WHITE; break;
+
+        //ds draw the point
+        cv::circle(_current_image, cv::Point(point->imageCoordinates().x(), point->imageCoordinates().y()), 2, color, -1);
+        if (current_frame->hasIntensityExtra()) {
+          cv::circle(_current_image, cv::Point(point->imageCoordinatesExtra().x()+current_frame->camera()->imageCols(), point->imageCoordinatesExtra().y()), 2, color, -1);
         }
-      }
-
-      //ds draw the point
-      cv::circle(_current_image, cv::Point(point->imageCoordinates().x(), point->imageCoordinates().y()), 2, color, -1);
-
-      if (current_frame->hasIntensityExtra()) {
-        cv::circle(_current_image, cv::Point(point->imageCoordinatesExtra().x()+current_frame->camera()->imageCols(), point->imageCoordinatesExtra().y()), 2, color, -1);
-      }
-
-      //ds draw point index if desired
-      if (_display_point_index && point->status() == FramePoint::Confirmed) {
-
-        //ds buffer id and draw it on the image
-        char buffer[10];
-        std::snprintf(buffer, 10, "%lu", point->index());
-        cv::putText(_current_image, buffer, cv::Point2i(point->imageCoordinates().x()+5, point->imageCoordinates().y()+5), cv::FONT_HERSHEY_PLAIN, 0.5, CV_COLOR_CODE_RED);
       }
     }
   }
 
   void TrackerViewer::drawFeatureTracking(){
-    const Frame* current_frame=_world->currentTrackingContext()->currentFrame();
+    const Frame* current_frame = _world->currentTrackingContext()->currentFrame();
     if (! current_frame)
       return;
-    for(size_t i=0; i<current_frame->points().size(); i++){
-      const FramePoint* current_point=current_frame->points()[i];
-      const FramePoint* parent_point_ptr=current_point->previous();
-      if(! parent_point_ptr)
-	continue;
-      const FramePoint& parent_point=*parent_point_ptr;
-      cv::Point current_pt(current_point->imageCoordinates().x(),
-			   current_point->imageCoordinates().y());
-      cv::Point previous_pt(parent_point.imageCoordinates().x(),
-			    parent_point.imageCoordinates().y());
-      cv::line(_current_image, current_pt,previous_pt, CV_COLOR_CODE_GREEN);
+    for (const FramePoint* frame_point: current_frame->points()) {
+      if (frame_point->landmark()) {
+
+        //ds compute intensity -> old landmarks appear brighter
+        const gt_real intensity = std::min(static_cast<gt_real>(1.0), frame_point->age()/static_cast<gt_real>(25));
+        const cv::Point current_point(frame_point->imageCoordinates().x(), frame_point->imageCoordinates().y());
+        const cv::Point previous_point(frame_point->previous()->imageCoordinates().x(), frame_point->previous()->imageCoordinates().y());
+        cv::line(_current_image, current_point, previous_point, cv::Scalar(0, 100+intensity*155, 0));
+      }
     }
   }
 
-
-
-  // void LKTrackerViewer::drawSolverState(){
-  //   cv::Scalar color(0,0,255);
-  //   for(size_t i=0; i<_current_image_info.points.size(); i++){
-  //     const PointTrack& point=_current_image_info.points[i];
-  //     if (point.status&PointTrack::ConfirmedFromPosit) {
-  // 	if (point.reprojected_coordinates.z()<=0)
-  // 	  continue;
-  // 	cv::Point reprojected_pt(point.reprojected_coordinates.x(), 
-  // 				 point.reprojected_coordinates.y());
-  // 	cv::Point image_pt(point.image_coordinates.x(), 
-  // 			   point.image_coordinates.y());
-  // 	Eigen::Vector3f dp=point.reprojected_coordinates-point.image_coordinates;
-  // 	cv::circle(_current_image,reprojected_pt, 3, color);
-  // 	cv::line(_current_image, reprojected_pt, image_pt, color); 
-  //     }
-  //   }
-  // }
-
   const bool TrackerViewer::updateGUI(){
     if (!_current_image.empty()) {
-      cv::imshow("TrackerViewer", _current_image);
+      cv::imshow("input", _current_image);
 
       int last_key_stroke = cv::waitKey(_cv_wait_key_timeout_milliseconds);
       if(last_key_stroke != -1) {
@@ -192,7 +148,6 @@ namespace gslam {
             std::cerr << "termination requested" << std::endl;
             return false;
           }
-
           case KeyStroke::Backspace: {
             if(_cv_wait_key_timeout_milliseconds > 0) {
               _cv_wait_key_timeout_milliseconds = 0;
@@ -204,17 +159,10 @@ namespace gslam {
             }
             break;
           }
-
           case KeyStroke::Num1: {
             _display_depth_image = !_display_depth_image;
             break;
           }
-
-          case KeyStroke::Num2: {
-            _display_point_index = !_display_point_index;
-            break;
-          }
-
           default:{
             break;
           }

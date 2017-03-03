@@ -70,7 +70,6 @@ namespace gslam {
     BaseAligner6_4* aligner() {return _aligner;}
     std::shared_ptr<StereoGridDetector> gridSensor() {return _grid_sensor;}
     void setOdometryRobotToWorld(const TransformMatrix3D& robot_to_world_) {if (_context->currentTrackingContext()->currentFrame()) _context->currentTrackingContext()->currentFrame()->setRobotToWorldOdometry(robot_to_world_);}
-    const cv::Mat imageDisplayDebug() const {return _image_display_debug;}
     const Count totalNumberOfTrackedPoints() const {return _total_number_of_tracked_points;}
     const Count totalNumberOfLandmarksClose() const {return _total_number_of_landmarks_close;}
     const Count totalNumberOfLandmarksFar() const {return _total_number_of_landmarks_far;}
@@ -119,9 +118,6 @@ namespace gslam {
 
     //ds pose solving
     StereoUVAligner* _aligner = 0;
-
-    //ds debugging only - TODO PURGE
-    cv::Mat _image_display_debug;
 
     //ds wrapped access TODO macromize
     public: const double getTimeConsumptionSeconds_feature_detection() const {return _grid_sensor->getTimeConsumptionSeconds_feature_detection();}
