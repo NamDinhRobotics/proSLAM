@@ -1,6 +1,5 @@
 #include "gt_world_context.h"
 
-#include "ui/gt_viewer_icp.h"
 #include "srrg_types/types.hpp"
 
 namespace gslam {

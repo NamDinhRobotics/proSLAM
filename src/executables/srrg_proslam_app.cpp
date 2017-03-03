@@ -5,12 +5,11 @@
 #include "srrg_txt_io/message_timestamp_synchronizer.h"
 #include "srrg_txt_io/pinhole_image_message.h"
 
-#include "ui/gt_tracker_viewer.h"
-#include "ui/gt_tracking_context_viewer.h"
+#include "visualization/viewer_input_images.h"
+#include "visualization/viewer_output_map.h"
 #include "core/gt_mapper.h"
 #include "core/gt_relocalizer.h"
 #include "core/tracker_svi.h"
-#include "ui/gt_viewer_icp.h"
 
 using namespace gslam;
 using namespace srrg_core;
@@ -41,7 +40,8 @@ StringCameraMap cameras_by_topic;
 //ds ui
 QApplication* ui_server               = 0;
 TrackerViewer* tracker_viewer         = 0;
-TrackingContextViewer* context_viewer = 0;
+TrackingContextViewer* context_viewer_bird  = 0;
+TrackingContextViewer* context_viewer_top   = 0;
 
 //ds trigger SLAM pipeline
 void process(WorldContext* world_context_,
@@ -57,14 +57,11 @@ void process(WorldContext* world_context_,
 //ds don't allow any windoof compilation attempt!
 int32_t main(int32_t argc, char ** argv) {
 
-  //ds assertion activity validation
-  //assert(false);
-
-  //ds lock opencv to use only 1 thread
+  //ds lock opencv to really use only 1 thread
   cv::setNumThreads(1);
 
-  //ds enable maximally deterministic mode
-  cv::setUseOptimized(false);
+  //ds enable opencv2 optimization
+  cv::setUseOptimized(true);
 
   //ds all SLAM modules TODO proper generation
   WorldContext* world_context = new WorldContext();
@@ -219,8 +216,8 @@ int32_t main(int32_t argc, char ** argv) {
   if (use_gui) {
     ui_server      = new QApplication(argc, argv);
     tracker_viewer = new TrackerViewer(world_context);
-    context_viewer = new TrackingContextViewer(world_context);
-    context_viewer->show();
+    context_viewer_bird = new TrackingContextViewer(world_context);
+    context_viewer_bird->show();
   }
 
   //ds start playback
@@ -258,7 +255,7 @@ int32_t main(int32_t argc, char ** argv) {
       if (world_context->currentTrackingContext()->frames().size() == 0 && message_image_left->hasOdom()) {
         world_context->currentTrackingContext()->setRobotToWorldPrevious(message_image_left->odometry().cast<gt_real>()*camera_left->robotToCamera());
         if (use_gui) {
-          context_viewer->setViewpointOrigin((message_image_left->odometry().cast<gt_real>()*camera_left->robotToCamera()).inverse());
+          context_viewer_bird->setViewpointOrigin((message_image_left->odometry().cast<gt_real>()*camera_left->robotToCamera()).inverse());
         }
       }
 
@@ -317,8 +314,8 @@ int32_t main(int32_t argc, char ** argv) {
       //ds update ui
       synchronizer.reset();
       if (use_gui) {
-        running = context_viewer->isVisible() && tracker_viewer->updateGUI();
-        context_viewer->updateGL();
+        running = context_viewer_bird->isVisible() && tracker_viewer->updateGUI();
+        context_viewer_bird->updateGL();
         ui_server->processEvents();
       }
     }
@@ -429,7 +426,7 @@ int32_t main(int32_t argc, char ** argv) {
   if (running) {
 
     //ds exit in viewer if available
-    if (use_gui && context_viewer->isVisible()) {
+    if (use_gui && context_viewer_bird->isVisible()) {
       return ui_server->exec();
     } else {
       if (use_gui) {
@@ -443,7 +440,7 @@ int32_t main(int32_t argc, char ** argv) {
     //ds destroy world context
     delete world_context;
     if (use_gui) {
-      delete context_viewer;
+      delete context_viewer_bird;
       delete ui_server;
     }
     return 0;

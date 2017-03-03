@@ -5,7 +5,7 @@ add_library(srrg_proslam_core_library
 )
 
 target_link_libraries(srrg_proslam_core_library
-  srrg_proslam_ui_library
+  srrg_proslam_visualization_library
   ${G2O_OPENGL_HELPER_LIBRARY}
   ${G2O_SOLVER_CSPARSE_EXTENSION}
   ${G2O_TYPES_SLAM3D} 

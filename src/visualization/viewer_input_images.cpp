@@ -1,4 +1,4 @@
-#include "gt_tracker_viewer.h"
+#include "viewer_input_images.h"
 
 using namespace std;
 
@@ -19,43 +19,8 @@ namespace gslam {
     if(! current_frame) {
       return;
     }
-
-    //ds if at least one itensity image is available
     if (current_frame->hasIntensity()) {
-
-      //ds if depth display is desired and available
-      if (_display_depth_image && current_frame->hasDepth()) {
-
-        //ds display rgbd images in a stereo frmae
-        cv::Mat image_left;
-        cv::cvtColor(current_frame->intensityImage(), image_left, CV_GRAY2RGB);
-        cv::Mat image_right = current_frame->depthImage();
-
-        //ds obtain depth scaling and get it to rgb
-        double depth_minimum;
-        double depth_maximum;
-        cv::minMaxIdx(image_right, &depth_minimum, &depth_maximum);
-        cv::Mat _image_depth_scaled;
-        cv::convertScaleAbs(image_right, _image_depth_scaled, 255.0/depth_maximum);
-        cv::cvtColor(_image_depth_scaled, image_right, CV_GRAY2RGB);
-
-        //ds create stereo image
-        cv::hconcat(image_left, image_right, _current_image);
-      } else if (current_frame->hasIntensityExtra()) {
-
-        //ds get rgb copies of both images
-        cv::Mat image_left_rgb;
-        cv::Mat image_right_rgb;
-        cv::cvtColor(current_frame->intensityImage(), image_left_rgb, CV_GRAY2RGB);
-        cv::cvtColor(current_frame->intensityImageExtra(), image_right_rgb, CV_GRAY2RGB);
-
-        //ds create stereo image
-        cv::hconcat(image_left_rgb, image_right_rgb, _current_image);
-      } else {
-
-        //ds simple rgb display
-        cv::cvtColor(current_frame->intensityImage(), _current_image, CV_GRAY2RGB);
-      }
+      cv::cvtColor(current_frame->intensityImage(), _current_image, CV_GRAY2RGB);
     }
   }
 
@@ -69,10 +34,10 @@ namespace gslam {
 
     //ds for all points in the current frame
     for (const FramePoint* point: current_frame->points()) {
-      cv::Scalar color = CV_COLOR_CODE_WHITE;
 
       //ds if the point is representing a landmark view
       if (point->landmark()) {
+        cv::Scalar color = CV_COLOR_CODE_WHITE;
 
         //ds compute intensity -> old landmarks appear brighter
         const gt_real intensity = std::min(static_cast<gt_real>(1.0), point->age()/static_cast<gt_real>(25));
@@ -90,32 +55,26 @@ namespace gslam {
           color = CV_COLOR_CODE_RED;
         }
 
+        //ds check if the landmark is part of a loop closure
         if (point->landmark()->isInLoopClosureQuery() || point->landmark()->isInLoopClosureReference()) {
           color = CV_COLOR_CODE_DARKGREEN;
-        } else if (point->landmark()->isInMapMergeQuery() || point->landmark()->isInMapMergeReference()) {
-          color = CV_COLOR_CODE_BROWN;
         }
 
-        //ds draw reprojection - if set
+        //ds draw reprojection circle - if valid
         if (point->reprojectionCoordinates().x() > 0 || point->reprojectionCoordinates().y() > 0) {
           cv::circle(_current_image, cv::Point(point->reprojectionCoordinates().x(), point->reprojectionCoordinates().y()), 4, color);
-
           if (current_frame->hasIntensityExtra()) {
             cv::circle(_current_image, cv::Point(point->reprojectionCoordinatesExtra().x()+current_frame->camera()->imageCols(), point->reprojectionCoordinatesExtra().y()), 4, color);
           }
-        } else {
-//          cv::circle(_current_image, cv::Point(point->imageCoordinates().x(), point->imageCoordinates().y()), 4, CV_COLOR_CODE_RED);
-//
-//          if (current_frame->hasIntensityExtra()) {
-//            cv::circle(_current_image, cv::Point(point->imageCoordinatesExtra().x()+current_frame->camera()->imageCols(), point->imageCoordinatesExtra().y()), 4, CV_COLOR_CODE_RED);
-//          }
-        }
+        } /*else {
+          cv::circle(_current_image, cv::Point(point->imageCoordinates().x(), point->imageCoordinates().y()), 4, CV_COLOR_CODE_RED);
+          if (current_frame->hasIntensityExtra()) {
+            cv::circle(_current_image, cv::Point(point->imageCoordinatesExtra().x()+current_frame->camera()->imageCols(), point->imageCoordinatesExtra().y()), 4, CV_COLOR_CODE_RED);
+          }
+        }*/
 
         //ds draw the point
         cv::circle(_current_image, cv::Point(point->imageCoordinates().x(), point->imageCoordinates().y()), 2, color, -1);
-        if (current_frame->hasIntensityExtra()) {
-          cv::circle(_current_image, cv::Point(point->imageCoordinatesExtra().x()+current_frame->camera()->imageCols(), point->imageCoordinatesExtra().y()), 2, color, -1);
-        }
       }
     }
   }
@@ -138,7 +97,7 @@ namespace gslam {
 
   const bool TrackerViewer::updateGUI(){
     if (!_current_image.empty()) {
-      cv::imshow("input", _current_image);
+      cv::imshow(_window_name.c_str(), _current_image);
 
       int last_key_stroke = cv::waitKey(_cv_wait_key_timeout_milliseconds);
       if(last_key_stroke != -1) {

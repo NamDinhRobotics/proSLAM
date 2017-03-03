@@ -1,9 +1,9 @@
-add_library(srrg_proslam_ui_library
-  gt_tracker_viewer.cpp
-  gt_tracking_context_viewer.cpp
+add_library(srrg_proslam_visualization_library
+  viewer_input_images.cpp
+  viewer_output_map.cpp
 )
 
-target_link_libraries(srrg_proslam_ui_library
+target_link_libraries(srrg_proslam_visualization_library
   srrg_proslam_types_library
   ${OPENGL_gl_LIBRARY} 
   ${OPENGL_glu_LIBRARY}
@@ -15,11 +15,11 @@ target_link_libraries(srrg_proslam_ui_library
 
 #ds package specific linkage: qt
 if(${SRRG_proslam_USE_QT_5})
-  target_link_libraries(srrg_proslam_ui_library
+  target_link_libraries(srrg_proslam_visualization_library
     Qt5::Widgets
   )
 else()
-  target_link_libraries(srrg_proslam_ui_library
+  target_link_libraries(srrg_proslam_visualization_library
     ${QT_QTCORE_LIBRARY}
     ${QT_QTGUI_LIBRARY}
     ${QT_QTXML_LIBRARY}

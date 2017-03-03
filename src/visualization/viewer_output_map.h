@@ -43,6 +43,7 @@ namespace gslam {
     gt_real _object_scale    = 0.1;
     gt_real _point_size      = 2;
     TransformMatrix3D _world_to_robot_origin = TransformMatrix3D::Identity();
+    const std::string _window_name = "output: map";
   };
 
 }

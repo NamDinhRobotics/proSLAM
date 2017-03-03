@@ -46,6 +46,7 @@ namespace gslam {
     cv::Mat _current_image;
     Count _cv_wait_key_timeout_milliseconds = 0;
     bool _display_depth_image               = true;
+    const std::string _window_name          = "input: images";
   };
 
 }

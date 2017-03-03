@@ -1,4 +1,5 @@
-#include "gt_tracking_context_viewer.h"
+#include "viewer_output_map.h"
+
 #include "srrg_gl_helpers/opengl_primitives.h"
 #include <QKeyEvent>
 
@@ -9,7 +10,8 @@ namespace gslam {
 
   TrackingContextViewer::TrackingContextViewer(WorldContext* context_, const gt_real& object_scale_): _context(context_),
                                                                                                       _object_scale(object_scale_){
-    setWindowTitle("output");
+    setWindowTitle(_window_name.c_str());
+    //setFPSIsDisplayed(true);
 
     //ds set keyboard descriptors
     setKeyDescription(Qt::Key_1, "Toggles map points display");
@@ -126,9 +128,9 @@ namespace gslam {
 
       //ds check if we have a keyframe and drawing is enabled
       if (it->second->isKeyFrame() && _key_frames_drawn) {
-        drawFrame(it->second, Vector3(0.5, 0.5, 0.8));
+        drawFrame(it->second, Vector3(0.5, 0.5, 1));
       } else if (_frames_drawn) {
-        drawFrame(it->second, Vector3(0.75, 0.75, 0.9));
+        drawFrame(it->second, Vector3(0.75, 0.75, 1));
       }
     }
 
