@@ -2,7 +2,6 @@
 <center>Authors: Dominik Schlegel, Mirco Colosi, Giorgio Grisetti</center><br/>
 <br/>
 
----
 ### Supported environments ###
  - Ubuntu 14.04 LTS + ROS Indigo /(OpenCV2 + Qt4)
  - Ubuntu 16.04 LTS + ROS Kinetic/(OpenCV3 + Qt5)
@@ -14,7 +13,7 @@
 
     sudo apt-get install build-essential libeigen3-dev libsuitesparse-dev freeglut3-dev libqglviewer-dev
 
-<br/>
+---
 2) download and install
  - ROS: http://wiki.ros.org/ROS/Installation
 
