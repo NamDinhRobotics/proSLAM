@@ -1,4 +1,5 @@
 # <center>ProSLAM</center> #
+---
 <center>Authors: Dominik Schlegel, Mirco Colosi, Giorgio Grisetti</center><br/>
 <br/>
 
