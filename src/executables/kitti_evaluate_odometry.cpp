@@ -1,6 +1,9 @@
-#include "types/gt_defs.h"
+//ds THIS CODE WAS CREATED BASED ON: http://kitti.is.tue.mpg.de/kitti/devkit_odometry.zip
+
 #include <limits>
 #include <fstream>
+
+#include "../types/definitions.h"
 
 using namespace std;
 using namespace gslam;

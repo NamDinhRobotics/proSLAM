@@ -1,5 +1,5 @@
 #pragma once
-#include "types/gt_defs.h"
+#include "types/definitions.h"
 
 namespace gslam {
 
@@ -91,18 +91,6 @@ namespace gslam {
       appearances.resize(number_of_added_appearances);
       return appearances;
     }
-
-//    //ds TODO remove
-//    static const std::vector<DBoW2::FBrief::TDescriptor> getDescriptorsBoW(const AppearancePtrVector& appearances_) {
-//      assert(appearances_.size() > 0);
-//      std::vector<DBoW2::FBrief::TDescriptor> descriptors_BoW(appearances_.size());
-//
-//      //ds copy raw data
-//      for (Index index_appearance = 0; index_appearance < appearances_.size(); ++index_appearance) {
-//        descriptors_BoW[index_appearance] = appearances_[index_appearance]->descriptor_bow;
-//      }
-//      return descriptors_BoW;
-//    }
 
   }; //class Utility
 } //namespace gtracker

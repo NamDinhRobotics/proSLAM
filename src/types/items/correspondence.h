@@ -1,5 +1,5 @@
 #pragma once
-#include "gt_landmark_item.h"
+#include "landmark_item.h"
 
 namespace gslam {
 

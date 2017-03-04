@@ -1,6 +1,6 @@
 #pragma once
-#include "types/gt_camera.h"
-#include "types/items/gt_frame_point.h"
+#include "../camera.h"
+#include "../items/frame_point.h"
 
 namespace gslam {
   

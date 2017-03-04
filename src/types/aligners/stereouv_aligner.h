@@ -1,5 +1,5 @@
 #pragma once
-#include "../contexts/gt_frame.h"
+#include "../contexts/frame.h"
 #include "base_aligner.h"
 
 namespace gslam {

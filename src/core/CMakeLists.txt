@@ -1,7 +1,7 @@
 add_library(srrg_proslam_core_library
-  gt_mapper.cpp
-  gt_relocalizer.cpp
-  tracker_svi.cpp
+  mapper.cpp
+  relocalizer.cpp
+  tracker.cpp
 )
 
 target_link_libraries(srrg_proslam_core_library

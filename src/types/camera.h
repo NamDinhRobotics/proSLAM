@@ -1,5 +1,5 @@
 #pragma once
-#include "gt_defs.h"
+#include "definitions.h"
 
 namespace gslam {
 

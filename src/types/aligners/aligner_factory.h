@@ -1,9 +1,6 @@
 #pragma once
 #include "stereouv_aligner.h"
-#include "uvd_aligner.h"
-#include "xuvd_aligner.h"
 #include "xyz_aligner.h"
-#include "pxyz_aligner.h"
 
 namespace gslam {
 
@@ -25,20 +22,6 @@ class AlignerFactory {
         //ds switch through available products
         switch(aligner_type_) {
 
-          //ds projection aligner
-          case AlignerType6_3::uvd: {
-
-            //ds allocate a new aligner
-            BaseAligner6_3* aligner = new UVDAligner();
-
-            //ds bookkeep construction for proper memory handling
-            _aligners6_3.push_back(aligner);
-
-            //ds return to user
-            std::cerr << "AlignerFactory::create|deploying aligner of type: UVD (convergence delta: " << aligner->errorDeltaForConvergence() << " kernel cutoff error: " << aligner->maximumErrorKernel() << ")" << std::endl;
-            return aligner;
-          }
-
           //ds classical 3d icp
           case AlignerType6_3::xyz: {
 
@@ -50,34 +33,6 @@ class AlignerFactory {
 
             //ds return to user
             std::cerr << "AlignerFactory::create|deploying aligner of type: XYZ (convergence delta: " << aligner->errorDeltaForConvergence() << " kernel cutoff error: " << aligner->maximumErrorKernel() << ")" << std::endl;
-            return aligner;
-          }
-
-          //ds mocked uvd aligner running on odometry
-          case AlignerType6_3::xuvd: {
-
-            //ds allocate a new aligner
-            BaseAligner6_3* aligner = new XUVDAligner();
-
-            //ds bookkeep construction for proper memory handling
-            _aligners6_3.push_back(aligner);
-
-            //ds return to user
-            std::cerr << "AlignerFactory::create|deploying aligner of type: Mocked UVD (convergence delta: " << aligner->errorDeltaForConvergence() << " kernel cutoff error: " << aligner->maximumErrorKernel() << ")" << std::endl;
-            return aligner;
-          }
-
-          //ds far 3d icp
-          case AlignerType6_3::pxyz: {
-
-            //ds allocate a new aligner
-            BaseAligner6_3* aligner = new PXYZAligner();
-
-            //ds bookkeep construction for proper memory handling
-            _aligners6_3.push_back(aligner);
-
-            //ds return to user
-            std::cerr << "AlignerFactory::create|deploying aligner of type: PXYZ (convergence delta: " << aligner->errorDeltaForConvergence() << " kernel cutoff error: " << aligner->maximumErrorKernel() << ")" << std::endl;
             return aligner;
           }
 

@@ -1,7 +1,6 @@
 #pragma once
-#include "srrg_boss/serializer.h"
-#include "types/items/gt_landmark.h"
-#include "types/items/gt_landmark_item.h"
+#include "../items/landmark.h"
+#include "../items/landmark_item.h"
 
 namespace gslam {
 

@@ -1,7 +1,6 @@
-#include "gt_frame.h"
-
-#include "gt_keyframe.h"
-#include "gt_keyframe.h"
+#include "frame.h"
+#include "local_map.h"
+#include "local_map.h"
 #include "types/stereo_grid_detector.h"
 
 namespace gslam {

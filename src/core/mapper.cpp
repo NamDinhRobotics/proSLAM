@@ -1,14 +1,14 @@
-#include "gt_mapper.h"
+#include "mapper.h"
 
 namespace gslam {
 
   Mapper::Mapper(): _optimizer(Optimizer::getOptimizer()) {
-    LOG_INFO("Mapper::Mapper", "constructed");
+    std::cerr << "Mapper::Mapper|constructed" << std::endl;
   }
 
   Mapper::~Mapper(){
-    LOG_INFO("Mapper::Mapper", "destroying");
-    LOG_INFO("Mapper::Mapper", "destroyed");
+    std::cerr << "Mapper::Mapper|destroying" << std::endl;
+    std::cerr << "Mapper::Mapper|destroyed" << std::endl;
   }
 
   void Mapper::optimize(TrackingContext* context_) {

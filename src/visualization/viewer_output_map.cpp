@@ -8,7 +8,7 @@ namespace gslam {
   using namespace srrg_gl_helpers;
   using namespace srrg_core_viewers;
 
-  TrackingContextViewer::TrackingContextViewer(WorldContext* context_, const gt_real& object_scale_): _context(context_),
+  TrackingContextViewer::TrackingContextViewer(TrackingContext* context_, const gt_real& object_scale_): _context(context_),
                                                                                                       _object_scale(object_scale_){
     setWindowTitle(_window_name.c_str());
     //setFPSIsDisplayed(true);
@@ -56,7 +56,7 @@ namespace gslam {
   void TrackingContextViewer::drawLandmarks() {
     glPointSize(_point_size);
     glBegin(GL_POINTS);
-    for (LandmarkPtrMap::iterator it=_context->currentTrackingContext()->landmarks().begin(); it!=_context->currentTrackingContext()->landmarks().end(); it++) {
+    for (LandmarkPtrMap::iterator it=_context->landmarks().begin(); it!=_context->landmarks().end(); it++) {
 
       //ds buffer landmark
       const Landmark* landmark = it->second;
@@ -98,10 +98,7 @@ namespace gslam {
     if (!_context) {
       return;
     }
-    if (!_context->currentTrackingContext()) {
-      return;
-    }
-    const Frame* current_frame = _context->currentTrackingContext()->currentFrame();
+    const Frame* current_frame = _context->currentFrame();
     if(! current_frame) {
       return;
     }
@@ -119,12 +116,12 @@ namespace gslam {
     glLineWidth(0.1);
 
     //ds always draw the keyframe generating head
-    for (const Frame* frame_for_keyframe: _context->currentTrackingContext()->frameQueueForKeyframe()) {
+    for (const Frame* frame_for_keyframe: _context->frameQueueForKeyframe()) {
       drawFrame(frame_for_keyframe, Vector3(0.0, 0.0, 1.0));
     }
 
     //ds for all frames in the map
-    for (FramePtrMap::const_iterator it=_context->currentTrackingContext()->frames().begin(); it!=_context->currentTrackingContext()->frames().end(); it++){
+    for (FramePtrMap::const_iterator it=_context->frames().begin(); it!=_context->frames().end(); it++){
 
       //ds check if we have a keyframe and drawing is enabled
       if (it->second->isKeyFrame() && _key_frames_drawn) {

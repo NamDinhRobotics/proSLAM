@@ -1,8 +1,8 @@
 #pragma once
 #include <exception>
 
-#include "contexts/gt_keyframe.h"
-#include "gt_utility.h"
+#include "contexts/local_map.h"
+#include "utility.h"
 
 namespace gslam {
 

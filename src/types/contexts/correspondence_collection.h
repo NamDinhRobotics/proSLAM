@@ -1,6 +1,6 @@
 #pragma once
+#include "../relocalizer_types.h"
 #include "types/items/correspondence.h"
-#include "types/gt_relocalizer_types.h"
 
 namespace gslam {
 
@@ -66,14 +66,4 @@ namespace gslam {
   typedef std::map<const Identifier, CorrespondenceCollection*> CorrespondenceMap;
   typedef std::pair<const Identifier, CorrespondenceCollection*> CorrespondenceMapElement;
 
-  //ds architecture CorrespondenceMultiMap: once a query-reference pair is merged, the query is removed from the map
-  //map-> query1-> reference2 + correspondences1-2
-  // |       |---> reference5 + correspondences1-5
-  // |
-  // ---> query2-> reference5 + correspondences2-5
-  //         |---> reference3 + correspondences2-3
-  //         |---> reference4 + correspondences2-4
-  //...
-  typedef std::map<const Identifier, std::map<const Identifier, CorrespondenceCollection*>> CorrespondenceMultiMap;
-  typedef std::pair<const Identifier, std::map<const Identifier, CorrespondenceCollection*>> CorrespondenceMultiMapElement;
 } //namespace gslam

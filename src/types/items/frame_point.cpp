@@ -1,4 +1,4 @@
-#include "gt_frame_point.h"
+#include "frame_point.h"
 
 namespace gslam {
   using namespace std;

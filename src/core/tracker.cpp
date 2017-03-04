@@ -1,16 +1,15 @@
-#include "tracker_svi.h"
+#include "tracker.h"
 
 namespace gslam {
   using namespace srrg_core;
 
-  TrackerSVI::TrackerSVI(WorldContext* context_,
+  TrackerSVI::TrackerSVI(TrackingContext* context_,
                          const Camera* camera_left_,
                          const Camera* camera_right_): _context(context_),
                                                        _grid_sensor(std::make_shared<StereoGridDetector>(camera_left_, camera_right_)),
                                                        _aligner(static_cast<StereoUVAligner*>(AlignerFactory::create(AlignerType6_4::stereouv))) {
 
     //ds request initial tracking context for the tracker
-    _context->createNewTrackingContext();
     _lost_points.clear();
 
     //ds allocate stereouv aligner for odometry computation
@@ -26,7 +25,7 @@ namespace gslam {
 
   void TrackerSVI::trackFeatures(Frame* previous_frame_) {
     assert(previous_frame_ != 0);
-    Frame* current_frame = _context->currentTrackingContext()->currentFrame();
+    Frame* current_frame = _context->currentFrame();
     assert(current_frame != 0);
 
     //ds control variables
@@ -337,7 +336,7 @@ namespace gslam {
 
         //ds if no landmark yet - but point with depth information, create a new landmark using the given depth
         if (!landmark) {
-          landmark = _context->currentTrackingContext()->createNewLandmark(frame_->robotToWorld()*point->robotCoordinates());
+          landmark = _context->createNewLandmark(frame_->robotToWorld()*point->robotCoordinates());
           point->setLandmark(landmark);
         }
 
@@ -354,7 +353,7 @@ namespace gslam {
 
         //ds create a new landmark using the vision depth
         if (!landmark) {
-          landmark = _context->currentTrackingContext()->createNewLandmark(frame_->robotToWorld()*point->robotCoordinates());
+          landmark = _context->createNewLandmark(frame_->robotToWorld()*point->robotCoordinates());
           point->setLandmark(landmark);
         }
 
@@ -390,14 +389,14 @@ namespace gslam {
     _number_of_lost_points_recovered = 0;
 
     //ds retrieve odometry prior - might be identity
-    TransformMatrix3D robot_to_world_current = _context->currentTrackingContext()->robotToWorldPrevious();
-    if (_context->currentTrackingContext()->currentFrame()) {
+    TransformMatrix3D robot_to_world_current = _context->robotToWorldPrevious();
+    if (_context->currentFrame()) {
       robot_to_world_current = initial_guess_world_previous_to_current_*robot_to_world_current;
     }
-    _context->currentTrackingContext()->setRobotToWorldPrevious(robot_to_world_current);
+    _context->setRobotToWorldPrevious(robot_to_world_current);
 
     //ds create new frame (memory lock expected)
-    Frame* current_frame = _context->currentTrackingContext()->createNewFrame(robot_to_world_current, sequence_number_raw_);
+    Frame* current_frame = _context->createNewFrame(robot_to_world_current, sequence_number_raw_);
     current_frame->setCamera(camera_left_);
     current_frame->setIntensityImage(intensity_image_left_);
     current_frame->setCameraExtra(camera_right_);
@@ -428,7 +427,7 @@ namespace gslam {
 
           //ds solve pose on frame points only
           CHRONOMETER_START(pose_optimization)
-          _context->currentTrackingContext()->landmarks().clearActive();
+          _context->landmarks().clearActive();
           _aligner->init(current_frame, current_frame->robotToWorld());
           _aligner->setWeightFramepoint(1);
           _aligner->converge();
@@ -457,7 +456,7 @@ namespace gslam {
             }
 
             //ds update previous
-            _context->currentTrackingContext()->setRobotToWorldPrevious(current_frame->robotToWorld());
+            _context->setRobotToWorldPrevious(current_frame->robotToWorld());
           }
         }
 
@@ -480,19 +479,15 @@ namespace gslam {
 
           //ds reset
           std::cerr << "LOST TRACK due to insufficient good points" << std::endl;
-          getchar();
           _status_previous = Frame::Localizing;
           _status          = Frame::Localizing;
           current_frame->setStatus(_status);
           current_frame->points().clear();
-//          _context->createNewTrackingContext();
-//          CHRONOMETER_STOP
-//          return world_previous_to_current;
 
           //ds keep previous solution
           current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
           world_previous_to_current = TransformMatrix3D::Identity();
-          _context->currentTrackingContext()->setRobotToWorldPrevious(current_frame->robotToWorld());
+          _context->setRobotToWorldPrevious(current_frame->robotToWorld());
           return world_previous_to_current;
         }
 
@@ -503,7 +498,7 @@ namespace gslam {
 
         //ds call pose solver
         CHRONOMETER_START(pose_optimization)
-        _context->currentTrackingContext()->landmarks().clearActive();
+        _context->landmarks().clearActive();
         _aligner->init(current_frame, current_frame->robotToWorld());
         _aligner->setWeightFramepoint(std::max(weight_framepoint, static_cast<gt_real>(0.1)));
         _aligner->converge();
@@ -536,11 +531,15 @@ namespace gslam {
 
           //ds reset state
           std::cerr << "LOST TRACK due to invalid position optimization" << std::endl;
-          getchar();
           _status_previous = Frame::Localizing;
           _status          = Frame::Localizing;
           current_frame->setStatus(_status);
-          _context->createNewTrackingContext();
+          current_frame->points().clear();
+
+          //ds keep previous solution
+          current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
+          world_previous_to_current = TransformMatrix3D::Identity();
+          _context->setRobotToWorldPrevious(current_frame->robotToWorld());
           return world_previous_to_current;
         }
 
@@ -574,7 +573,7 @@ namespace gslam {
         CHRONOMETER_STOP(point_recovery)
 
         //ds update tracks
-        _context->currentTrackingContext()->setRobotToWorldPrevious(current_frame->robotToWorld());
+        _context->setRobotToWorldPrevious(current_frame->robotToWorld());
         CHRONOMETER_START(landmark_optimization)
         updateLandmarks(current_frame);
         CHRONOMETER_STOP(landmark_optimization)
@@ -596,8 +595,8 @@ namespace gslam {
     current_frame->setStatus(_status);
 
     //ds keyframe generation - regardless of tracker state (TODO change?)
-    if (_context->currentTrackingContext()->previousFrame()) {
-      _context->currentTrackingContext()->createNewKeyframe();
+    if (_context->previousFrame()) {
+      _context->createNewKeyframe();
     }
 
     //ds done
@@ -682,7 +681,7 @@ namespace gslam {
       keypoint_buffer_left[0] = point_previous->keypoint();
       keypoint_buffer_left[0].pt = offset_keypoint_half;
       cv::Mat descriptor_left;
-      _context->currentTrackingContext()->descriptorExtractor()->compute(frame_->intensityImage()(region_of_interest_left), keypoint_buffer_left, descriptor_left);
+      _context->descriptorExtractor()->compute(frame_->intensityImage()(region_of_interest_left), keypoint_buffer_left, descriptor_left);
       if (descriptor_left.rows == 0) {
         continue;
       }
@@ -692,7 +691,7 @@ namespace gslam {
       keypoint_buffer_right[0] = point_previous->keypointExtra();
       keypoint_buffer_right[0].pt = offset_keypoint_half;
       cv::Mat descriptor_right;
-      _context->currentTrackingContext()->descriptorExtractor()->compute(frame_->intensityImageExtra()(region_of_interest_right), keypoint_buffer_right, descriptor_right);
+      _context->descriptorExtractor()->compute(frame_->intensityImageExtra()(region_of_interest_right), keypoint_buffer_right, descriptor_right);
       if (descriptor_right.rows == 0) {
         continue;
       }

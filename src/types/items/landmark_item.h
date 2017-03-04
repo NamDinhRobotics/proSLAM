@@ -1,6 +1,6 @@
 #pragma once
-#include "gt_appearance.h"
-#include "gt_landmark.h"
+#include "appearance.h"
+#include "landmark.h"
 
 namespace gslam {
 

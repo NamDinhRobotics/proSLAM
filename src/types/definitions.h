@@ -23,7 +23,6 @@
 #endif
 #include <iostream>
 #include <stdint.h>
-//#include "DBoW2/DBoW2.h"
 #include "srrg_system_utils/system_utils.h"
 #include "srrg_hbst_types_core/BinaryTree.hpp"
 #include "contexts/base_context.h"
@@ -42,12 +41,6 @@ namespace gslam{
 
   //ds adjust for floating point precision
   typedef double gt_real;
-
-  //ds set desired log level
-  //#define LOG_LEVEL_DEBUG
-  #define LOG_LEVEL_INFO
-  //#define LOG_LEVEL_WARNING
-  //#define LOG_LEVEL_ERROR
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% CONFIGURATION// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -121,31 +114,4 @@ namespace gslam{
     if (!CONDITION) { \
       throw std::runtime_error("flying polar buffalo error"); \
     }
-
-    //ds automatic log function dispatch: TODO implement variadic logging
-  #if defined LOG_LEVEL_DEBUG
-
-  #define LOG_DEBUG(STRING) std::cerr << STRING << std::endl;
-  #define LOG_DEBUG_VALUE(NAME, VALUE) cerr << NAME << VALUE << std::endl;
-  #define LOG_INFO(CONTEXT, MESSAGE) std::cerr << CONTEXT << "|" << MESSAGE << std::endl;
-  #define LOG_INFO_VALUE(CONTEXT, NAME, VALUE) std::cerr << CONTEXT << "|" << NAME << ": " << VALUE << std::endl;
-  #define LOG_ERROR(CONTEXT, MESSAGE) std::cerr << CONTEXT << "|" << MESSAGE << std::endl;
-
-  #elif defined LOG_LEVEL_INFO
-
-  #define LOG_DEBUG(STRING) //ds empty
-  #define LOG_DEBUG_VALUE(NAME, VALUE) //ds empty
-  #define LOG_INFO(CONTEXT, MESSAGE) std::cerr << CONTEXT << "|" << MESSAGE << std::endl;
-  #define LOG_INFO_VALUE(CONTEXT, NAME, VALUE) std::cerr << CONTEXT << "|" << NAME << ": " << VALUE << std::endl;
-  #define LOG_ERROR(CONTEXT, MESSAGE) std::cerr << CONTEXT << "|" << MESSAGE << std::endl;
-
-  #else
-
-  #define LOG_DEBUG(STRING) //ds empty
-  #define LOG_DEBUG_VALUE(NAME, VALUE) //ds empty
-  #define LOG_INFO(STRING) //ds empty
-  #define LOG_INFO_VALUE(NAME, VALUE) //ds empty
-
-  #endif
-
 };

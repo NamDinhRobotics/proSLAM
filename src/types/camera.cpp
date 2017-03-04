@@ -1,4 +1,4 @@
-#include "gt_camera.h"
+#include "camera.h"
 
 namespace gslam {
 

@@ -1,6 +1,6 @@
-#include "gt_landmark.h"
+#include "landmark.h"
 
-#include "gt_landmark_item.h"
+#include "landmark_item.h"
 #include "types/stereo_grid_detector.h"
 
 namespace gslam {

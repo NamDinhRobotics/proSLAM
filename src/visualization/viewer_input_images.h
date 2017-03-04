@@ -1,5 +1,5 @@
 #pragma once
-#include "types/contexts/gt_world_context.h"
+#include "types/contexts/world_map.h"
 
 namespace gslam {
 
@@ -33,7 +33,7 @@ namespace gslam {
     } KeyStroke;
 
   public:
-    TrackerViewer(WorldContext* world_);
+    TrackerViewer(TrackingContext* world_);
     void initDrawing();
     void drawFeatures();
     void drawFeatureTracking();
@@ -42,7 +42,7 @@ namespace gslam {
     void switchToStepwiseMode();
 
   protected:
-    WorldContext* _world;
+    TrackingContext* _world;
     cv::Mat _current_image;
     Count _cv_wait_key_timeout_milliseconds = 0;
     bool _display_depth_image               = true;

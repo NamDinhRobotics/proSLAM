@@ -1,5 +1,5 @@
-#include "contexts/gt_frame.h"
-#include "types/gt_camera.h"
+#include "contexts/frame.h"
+#include "types/camera.h"
 
 namespace gslam {
 

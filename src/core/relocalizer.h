@@ -1,7 +1,8 @@
 #pragma once
 #include <queue>
+
+#include "../types/relocalizer_types.h"
 #include "types/aligners/aligner_factory.h"
-#include "types/gt_relocalizer_types.h"
 
 namespace gslam {
   class Relocalizer {

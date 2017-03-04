@@ -1,12 +1,11 @@
 #pragma once
-#include "types/gt_relocalizer_types.h"
+#include "../relocalizer_types.h"
 
 namespace gslam{
   class TrackingContext{
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     TrackingContext();
-    TrackingContext(TrackingContext* context_);
     ~TrackingContext();
 
     const TrackingContext* previous() const {return _previous;}
@@ -47,11 +46,12 @@ namespace gslam{
 
     void resetWindow();
 
-    const Identifier index() const {return _index;}
-
     void absorb(TrackingContext* context_query_, const TransformMatrix3D& transform_query_world_to_reference_world_);
 
     void purifyLandmarks();
+
+    //ds dump trajectory to file (in KITTI benchmark format only for now)
+    void writeTrajectory(const std::string& filename_ = "") const;
 
   protected:
 
@@ -92,10 +92,6 @@ namespace gslam{
     //ds key frame holders
     KeyFrame* _current_keyframe  = 0;
     KeyFramePtrVector _keyframes;
-
-    Identifier _index = 0;
-  private:
-    static Identifier _instances;
   };
 
   typedef std::vector<TrackingContext*> TrackingContextPointerVector;

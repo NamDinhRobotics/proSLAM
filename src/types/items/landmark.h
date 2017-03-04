@@ -1,6 +1,7 @@
 #pragma once
 #include <Eigen/Eigenvalues>
-#include "gt_appearance.h"
+
+#include "appearance.h"
 
 namespace gslam {
 

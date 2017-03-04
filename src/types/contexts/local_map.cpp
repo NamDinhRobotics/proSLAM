@@ -1,4 +1,4 @@
-#include "gt_keyframe.h"
+#include "local_map.h"
 
 namespace gslam {
   using namespace srrg_core;

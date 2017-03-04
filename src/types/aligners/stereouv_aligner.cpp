@@ -1,7 +1,8 @@
 #include "stereouv_aligner.h"
 
 #include "srrg_types/types.hpp"
-#include "types/items/gt_landmark.h"
+
+#include "../items/landmark.h"
 #include "types/stereo_grid_detector.h"
 
 namespace gslam {

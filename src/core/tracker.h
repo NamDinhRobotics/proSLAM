@@ -1,5 +1,6 @@
 #pragma once
-#include "types/contexts/gt_world_context.h"
+#include "types/contexts/world_map.h"
+#include "types/aligners/aligner_factory.h"
 #include "types/stereo_grid_detector.h"
 
 namespace gslam {
@@ -50,7 +51,7 @@ namespace gslam {
   public:
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    TrackerSVI(WorldContext* context_,
+    TrackerSVI(TrackingContext* context_,
                const Camera* camera_left_,
                const Camera* camera_right_);
     ~TrackerSVI();
@@ -65,11 +66,11 @@ namespace gslam {
                                      const TransformMatrix3D& initial_guess_transform_previous_to_current_ = TransformMatrix3D::Identity(),
                                      const Identifier& sequence_number_raw_ = 0);
     
-    const TrackingContext* trackingContext() const {return _context->currentTrackingContext();}
-    const TransformMatrix3D robotToWorld() const {return _context->currentTrackingContext()->robotToWorldPrevious();}
+    const TrackingContext* trackingContext() const {return _context;}
+    const TransformMatrix3D robotToWorld() const {return _context->robotToWorldPrevious();}
     BaseAligner6_4* aligner() {return _aligner;}
     std::shared_ptr<StereoGridDetector> gridSensor() {return _grid_sensor;}
-    void setOdometryRobotToWorld(const TransformMatrix3D& robot_to_world_) {if (_context->currentTrackingContext()->currentFrame()) _context->currentTrackingContext()->currentFrame()->setRobotToWorldOdometry(robot_to_world_);}
+    void setOdometryRobotToWorld(const TransformMatrix3D& robot_to_world_) {if (_context->currentFrame()) _context->currentFrame()->setRobotToWorldOdometry(robot_to_world_);}
     const Count totalNumberOfTrackedPoints() const {return _total_number_of_tracked_points;}
     const Count totalNumberOfLandmarksClose() const {return _total_number_of_landmarks_close;}
     const Count totalNumberOfLandmarksFar() const {return _total_number_of_landmarks_far;}
@@ -91,7 +92,7 @@ namespace gslam {
   protected:
 
     //ds control
-    WorldContext* _context = 0;
+    TrackingContext* _context = 0;
     Frame::Status _status          = Frame::Localizing;
     Frame::Status _status_previous = Frame::Localizing;
 

@@ -1,6 +1,6 @@
 #pragma once
-#include "types/contexts/gt_tracking_context.h"
-#include "types/gt_optimizer.h"
+#include "../types/optimizer.h"
+#include "types/contexts/world_map.h"
 
 namespace gslam {
   class Mapper {

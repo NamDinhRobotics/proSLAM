@@ -4,7 +4,7 @@ using namespace std;
 
 namespace gslam {
 
-  TrackerViewer::TrackerViewer(WorldContext* world_): _world(world_), _cv_wait_key_timeout_milliseconds(0) {
+  TrackerViewer::TrackerViewer(TrackingContext* world_): _world(world_), _cv_wait_key_timeout_milliseconds(0) {
     std::cerr << "switched to stepwise mode (press backspace for switch, press space for stepping)" << std::endl;
   }
   
@@ -12,10 +12,7 @@ namespace gslam {
     if (!_world) {
       return;
     }
-    if (!_world->currentTrackingContext()) {
-      return;
-    }
-    const Frame* current_frame = _world->currentTrackingContext()->currentFrame();
+    const Frame* current_frame = _world->currentFrame();
     if(! current_frame) {
       return;
     }
@@ -27,7 +24,7 @@ namespace gslam {
   void TrackerViewer::drawFeatures(){
 
     //ds check if we have an active frame
-    const Frame* current_frame = _world->currentTrackingContext()->currentFrame();
+    const Frame* current_frame = _world->currentFrame();
     if (! current_frame) {
       return;
     }
@@ -80,7 +77,7 @@ namespace gslam {
   }
 
   void TrackerViewer::drawFeatureTracking(){
-    const Frame* current_frame = _world->currentTrackingContext()->currentFrame();
+    const Frame* current_frame = _world->currentFrame();
     if (! current_frame)
       return;
     for (const FramePoint* frame_point: current_frame->points()) {

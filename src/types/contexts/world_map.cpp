@@ -1,56 +1,34 @@
-#include "gt_tracking_context.h"
+#include "world_map.h"
 
-#include "types/gt_utility.h"
+#include <fstream>
+#include "types/utility.h"
 
 namespace gslam {
   using namespace srrg_core;
 
-  Identifier TrackingContext::_instances = 0;
-
   TrackingContext::TrackingContext(): _previous(0),
                                       _current_to_previous_initial(TransformMatrix3D::Identity()),
-                                      _previous_to_current_initial(_current_to_previous_initial.inverse()),
+                                      _previous_to_current_initial(_current_to_previous_initial.inverse())
 #if CV_MAJOR_VERSION == 2
-                                      _descriptor_extractor(new cv::BriefDescriptorExtractor(DESCRIPTOR_SIZE_BYTES)),
+                                      ,_descriptor_extractor(new cv::BriefDescriptorExtractor(DESCRIPTOR_SIZE_BYTES)) {
 #elif CV_MAJOR_VERSION == 3
-                                      _descriptor_extractor(cv::xfeatures2d::BriefDescriptorExtractor::create(DESCRIPTOR_SIZE_BYTES)),
+                                      ,_descriptor_extractor(cv::xfeatures2d::BriefDescriptorExtractor::create(DESCRIPTOR_SIZE_BYTES)) {
 #else
   #error OpenCV version not supported
 #endif
-                                      _index(_instances) {
     clear();
-    ++_instances;
-    LOG_INFO("TrackingContext::TrackingContext", "constructed with index: " + std::to_string(_index));
-  };
-
-  TrackingContext::TrackingContext(TrackingContext* context_): _previous(context_),
-                                                               _current_to_previous_initial(context_->robotToWorldPrevious()),
-                                                               _previous_to_current_initial(_current_to_previous_initial.inverse()),
-#if CV_MAJOR_VERSION == 2
-                                                               _descriptor_extractor(new cv::BriefDescriptorExtractor(DESCRIPTOR_SIZE_BYTES)),
-#elif CV_MAJOR_VERSION == 3
-                                                               _descriptor_extractor(cv::xfeatures2d::BriefDescriptorExtractor::create(DESCRIPTOR_SIZE_BYTES)),
-#else
-  #error OpenCV version not supported
-#endif
-                                                               _index(_instances) {
-    context_->setNext(this);
-    clear();
-    ++_instances;
-    LOG_INFO("TrackingContext::TrackingContext", "constructed (copy) with index: " + std::to_string(_index));
+    std::cerr << "TrackingContext::TrackingContext|constructed" << std::endl;
   };
 
   TrackingContext::~TrackingContext() {
 
-    LOG_INFO("TrackingContext::TrackingContext", "destroying with index: " + std::to_string(_index));
-
+    std::cerr << "TrackingContext::TrackingContext|destroying" << std::endl;
     for(LandmarkPtrMap::iterator it=_landmarks.begin(); it!=_landmarks.end(); it++)
       delete it->second;
 
     for(FramePtrMap::iterator it=_frames.begin(); it!=_frames.end(); it++)
       delete it->second;
-
-    LOG_INFO("TrackingContext::TrackingContext", "destroyed with index: " + std::to_string(_index));
+    std::cerr << "TrackingContext::TrackingContext|destroyed" << std::endl;
   }
 
   void TrackingContext::clear() {
@@ -193,6 +171,41 @@ namespace gslam {
         landmark_element.second->setIsContained(false);
       }
     }
+  }
+
+  //ds dump trajectory to file (in KITTI benchmark format only for now)
+  void TrackingContext::writeTrajectory(const std::string& filename_) const {
+
+    //ds construct filename
+    std::string filename(filename_);
+
+    //ds if not set
+    if (filename_ == "") {
+
+      //ds generate generic filename with timestamp
+      filename = "trajectory-"+std::to_string(static_cast<uint64_t>(std::round(srrg_core::getTime())))+".txt";
+    }
+
+    //ds open file stream (overwriting)
+    std::ofstream outfile_trajectory(filename, std::ifstream::out);
+    assert(outfile_trajectory.good());
+
+    //ds for each frame (assuming continuous, sequential indexing)
+    for (Index index_frame = 0; index_frame < _frames.size(); ++index_frame) {
+
+      //ds buffer transform
+      const TransformMatrix3D& robot_to_world = _frames.at(index_frame)->robotToWorld();
+
+      //ds dump transform according to KITTI format
+      for (uint8_t u = 0; u < 3; ++u) {
+        for (uint8_t v = 0; v < 4; ++v) {
+          outfile_trajectory << robot_to_world(u,v) << " ";
+        }
+      }
+      outfile_trajectory << "\n";
+    }
+    outfile_trajectory.close();
+    std::cerr << "WorldContext::WorldContext|saved trajectory to: " << filename << std::endl;
   }
 }
 

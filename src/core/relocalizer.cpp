@@ -1,9 +1,6 @@
-#include "gt_relocalizer.h"
+#include "relocalizer.h"
 
 #include "srrg_types/types.hpp"
-//#include "DUtils/DUtils.h"
-//#include "DUtilsCV/DUtilsCV.h"
-//#include "DVision/DVision.h"
 
 namespace gslam {
   using namespace srrg_core;
@@ -22,12 +19,12 @@ namespace gslam {
     assert(_query_history_queue.empty());
     _aligner = static_cast<XYZAligner*>(AlignerFactory::create(AlignerType6_3::xyz));
     assert(_aligner != 0);
-    LOG_INFO("Relocalizer::Relocalizer", "constructed");
+    std::cerr << "Relocalizer::Relocalizer|constructed" << std::endl;
   }
 
   Relocalizer::~Relocalizer() {
 
-    LOG_INFO("Relocalizer::Relocalizer", "destroying");
+    std::cerr << "Relocalizer::Relocalizer|destroying" << std::endl;
 
     //ds free closure buffer
     clear();
@@ -56,7 +53,7 @@ namespace gslam {
       delete _query;
     }
 
-    LOG_INFO("Relocalizer::Relocalizer", "destroyed");
+    std::cerr << "Relocalizer::Relocalizer|destroyed" << std::endl;
   }
 
 //  //ds load bow vocabulary
@@ -119,23 +116,6 @@ namespace gslam {
 
     //ds clear output buffers
     clear();
-
-    //ds compute upper closure search id limit
-    //const DBoW2::EntryId index_limit = std::max(0, static_cast<int>(_bow_database->size()-_preliminary_minimum_interspace_queries));
-    //assert(index_limit >= 0);
-
-    //ds get the query results
-    //DBoW2::QueryResults matching_queries;
-    //CHRONOMETER_START
-    //_bow_database->query(_query->descriptors_bow, matching_queries, _preliminary_maximum_number_of_closures_per_query, index_limit);
-    //CHRONOMETER_STOP
-
-    //gg: TO TRY 2
-    //and what about "preloading" the tracker with some of the landmarks? Any idea on how to do that?
-    
-    //ds evaluate queries
-    //for (const DBoW2::Result& matching_query: matching_queries ) {
-    //  if (matching_query.Score > _preliminary_minimum_score_bow) {
 
     //ds evaluate all past queries
     for (const Query* reference: _query_history) {

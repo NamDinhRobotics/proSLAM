@@ -1,13 +1,14 @@
 #pragma once
-#include "core/gt_relocalizer.h"
 #include "srrg_core_viewers/simple_viewer.h"
-#include "types/contexts/gt_world_context.h"
+
+#include "../core/relocalizer.h"
+#include "types/contexts/world_map.h"
 
 namespace gslam {
 
   class TrackingContextViewer: public srrg_core_viewers::SimpleViewer{
   public:
-    TrackingContextViewer(WorldContext* context_ = 0, const gt_real& object_scale_ = 0.1);
+    TrackingContextViewer(TrackingContext* context_ = 0, const gt_real& object_scale_ = 0.1);
 
     inline bool landmarksDrawn() const {return _landmarks_drawn;}
     inline void setLandmarksDrawn(bool landmarks_drawn_) {_landmarks_drawn=landmarks_drawn_;}
@@ -34,8 +35,8 @@ namespace gslam {
 
   protected:
 
-    WorldContext* _context   = 0;
-    bool _frames_drawn       = false;
+    TrackingContext* _context   = 0;
+    bool _frames_drawn       = true;
     bool _key_frames_drawn   = true;
     bool _landmarks_drawn    = true;
     bool _follow_robot       = true;

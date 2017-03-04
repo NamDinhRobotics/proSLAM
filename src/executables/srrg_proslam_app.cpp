@@ -5,11 +5,11 @@
 #include "srrg_txt_io/message_timestamp_synchronizer.h"
 #include "srrg_txt_io/pinhole_image_message.h"
 
+#include "../core/mapper.h"
+#include "../core/relocalizer.h"
+#include "../core/tracker.h"
 #include "visualization/viewer_input_images.h"
 #include "visualization/viewer_output_map.h"
-#include "core/gt_mapper.h"
-#include "core/gt_relocalizer.h"
-#include "core/tracker_svi.h"
 
 using namespace gslam;
 using namespace srrg_core;
@@ -44,7 +44,7 @@ TrackingContextViewer* context_viewer_bird  = 0;
 TrackingContextViewer* context_viewer_top   = 0;
 
 //ds trigger SLAM pipeline
-void process(WorldContext* world_context_,
+void process(TrackingContext* world_context_,
              TrackerSVI* tracker_,
              Mapper* mapper_,
              Relocalizer* relocalizer_,
@@ -58,17 +58,15 @@ void process(WorldContext* world_context_,
 int32_t main(int32_t argc, char ** argv) {
 
   //ds lock opencv to really use only 1 thread
-  cv::setNumThreads(1);
+  cv::setNumThreads(0);
 
   //ds enable opencv2 optimization
   cv::setUseOptimized(true);
 
   //ds all SLAM modules TODO proper generation
-  WorldContext* world_context = new WorldContext();
-  world_context->aligner()->setMaximumErrorKernel(0.5);
-  world_context->aligner()->setMinimumInlierRatio(0.5);
-  Mapper* mapper           = new Mapper();
-  Relocalizer* relocalizer = new Relocalizer();
+  TrackingContext* world_map = new TrackingContext();
+  Mapper* mapper             = new Mapper();
+  Relocalizer* relocalizer   = new Relocalizer();
   relocalizer->aligner()->setMaximumErrorKernel(0.5);
   relocalizer->aligner()->setMinimumNumberOfInliers(10);
   relocalizer->aligner()->setMinimumInlierRatio(0.4);
@@ -107,10 +105,10 @@ int32_t main(int32_t argc, char ** argv) {
   }
 
   //ds log configuration
-  std::cerr << "running with params: " << std::endl;
-  std::cerr << "-stereo-camera-left-topic      " << topic_image_stereo_left << std::endl;
-  std::cerr << "-stereo-camera-right-topic     " << topic_image_stereo_right << std::endl;
-  std::cerr << "-messages                      " << filename_sensor_messages << std::endl;
+  std::cerr << "main|running with params: " << std::endl;
+  std::cerr << "main| -stereo-camera-left-topic      " << topic_image_stereo_left << std::endl;
+  std::cerr << "main| -stereo-camera-right-topic     " << topic_image_stereo_right << std::endl;
+  std::cerr << "main| -messages                      " << filename_sensor_messages << std::endl;
   if (filename_sensor_messages_out.length()) {
     std::cerr << "-o                             " << filename_sensor_messages_out << std::endl;
   }
@@ -186,10 +184,10 @@ int32_t main(int32_t argc, char ** argv) {
   sensor_message_reader.close();
   sensor_message_reader.open(filename_sensor_messages);
 
-  std::cerr << "loaded cameras: " << cameras_by_topic.size() << std::endl;
+  std::cerr << "main|loaded cameras: " << cameras_by_topic.size() << std::endl;
   for (StringCameraMapElement camera: cameras_by_topic) {
-    std::cerr << camera.first << " - resolution: " << camera.second->imageCols() << " x " << camera.second->imageRows()
-                              << " aspect ratio: " << static_cast<gt_real>(camera.second->imageCols())/camera.second->imageRows() << std::endl;
+    std::cerr << "main|" << camera.first << " - resolution: " << camera.second->imageCols() << " x " << camera.second->imageRows()
+                                         << " aspect ratio: " << static_cast<gt_real>(camera.second->imageCols())/camera.second->imageRows() << std::endl;
   }
 
 
@@ -197,7 +195,7 @@ int32_t main(int32_t argc, char ** argv) {
 
 
   //ds allocate tracker with fixed cameras
-  TrackerSVI* tracker = new TrackerSVI(world_context, cameras_by_topic.at(topic_image_stereo_left), cameras_by_topic.at(topic_image_stereo_right));
+  TrackerSVI* tracker = new TrackerSVI(world_map, cameras_by_topic.at(topic_image_stereo_left), cameras_by_topic.at(topic_image_stereo_right));
 
   //ds error measurements
   std::vector<gt_real> errors_translation_relative(0);
@@ -215,9 +213,11 @@ int32_t main(int32_t argc, char ** argv) {
   //ds initialize gui
   if (use_gui) {
     ui_server      = new QApplication(argc, argv);
-    tracker_viewer = new TrackerViewer(world_context);
-    context_viewer_bird = new TrackingContextViewer(world_context);
+    tracker_viewer = new TrackerViewer(world_map);
+    context_viewer_bird = new TrackingContextViewer(world_map);
     context_viewer_bird->show();
+    context_viewer_top = new TrackingContextViewer(world_map);
+    context_viewer_top->show();
   }
 
   //ds start playback
@@ -246,21 +246,19 @@ int32_t main(int32_t argc, char ** argv) {
       //ds buffer images and cameras
       cv::Mat intensity_image_left  = message_image_left->image();
       cv::Mat intensity_image_right = message_image_right->image();
-      //cv::equalizeHist(message_image_left->image(), intensity_image_left);
-      //cv::equalizeHist(message_image_right->image(), intensity_image_right);
       Camera* camera_left  = cameras_by_topic.at(message_image_left->topic());
       Camera* camera_right = cameras_by_topic.at(message_image_right->topic());
 
       //ds check if first frame and odometry is available
-      if (world_context->currentTrackingContext()->frames().size() == 0 && message_image_left->hasOdom()) {
-        world_context->currentTrackingContext()->setRobotToWorldPrevious(message_image_left->odometry().cast<gt_real>()*camera_left->robotToCamera());
+      if (world_map->frames().size() == 0 && message_image_left->hasOdom()) {
+        world_map->setRobotToWorldPrevious(message_image_left->odometry().cast<gt_real>()*camera_left->robotToCamera());
         if (use_gui) {
           context_viewer_bird->setViewpointOrigin((message_image_left->odometry().cast<gt_real>()*camera_left->robotToCamera()).inverse());
         }
       }
 
       //ds trigger SLAM pipeline with all available input TODO purify this function
-      process(world_context,
+      process(world_map,
               tracker,
               mapper,
               relocalizer,
@@ -292,19 +290,13 @@ int32_t main(int32_t argc, char ** argv) {
 
         //ds compute durations
         const double total_duration_seconds_current = getTime()-time_start_seconds;
-        const double total_duration_seconds_total   = getTime()-time_start_seconds_first;
 
         //ds runtime info
-        std::cerr << "-------------------------------------------------------------------------" << std::endl;
-        std::cerr << "fps: " << number_of_processed_frames_current/total_duration_seconds_current
-                             << " (" << number_of_processed_frames_total << "/" << total_duration_seconds_total << ")" << std::endl;
-        std::cerr << "key frames: " << world_context->currentTrackingContext()->keyframes().size()
-                                    << " (" << world_context->currentTrackingContext()->keyframes().size()/static_cast<gt_real>(number_of_processed_frames_total) << ")" << std::endl;
-        std::cerr << "memory usage (GB): " << static_cast<gt_real>(system_usage.totalMemory())/1e6 << std::endl;
-        std::cerr << "runtime relocalizer (s): " << relocalizer->getTimeConsumptionSeconds_overall()
-                                                 << " (" << relocalizer->getTimeConsumptionSeconds_overall()/total_duration_seconds_total << ")" << std::endl;
-        std::cerr << "runtime      mapper (s): " << mapper->getTimeConsumptionSeconds_overall()
-                                                 << " (" << mapper->getTimeConsumptionSeconds_overall()/total_duration_seconds_total << ")" << std::endl;
+        std::cerr << "main|processed frames: " << number_of_processed_frames_total;
+        std::cerr << " |current fps: " << number_of_processed_frames_current/total_duration_seconds_current
+                              << " (" << number_of_processed_frames_current << "/" << total_duration_seconds_current << "s)";
+        std::cerr << " |local maps: " << world_map->keyframes().size()
+                                     << " (" << world_map->keyframes().size()/static_cast<gt_real>(number_of_processed_frames_total) << ")" << std::endl;
 
         //ds reset stats
         time_start_seconds = getTime();
@@ -316,6 +308,7 @@ int32_t main(int32_t argc, char ** argv) {
       if (use_gui) {
         running = context_viewer_bird->isVisible() && tracker_viewer->updateGUI();
         context_viewer_bird->updateGL();
+        context_viewer_top->updateGL();
         ui_server->processEvents();
       }
     }
@@ -326,7 +319,7 @@ int32_t main(int32_t argc, char ** argv) {
   TransformMatrix3D odometry_robot_to_world_previous_ground_truth = TransformMatrix3D::Identity();
   Index index_frame     = 0;
   Frame* previous_frame = 0;
-  for (FramePtrMapElement frame: world_context->currentTrackingContext()->frames()) {
+  for (FramePtrMapElement frame: world_map->frames()) {
 
     //ds compute squared errors between frames
     if (index_frame > 0) {
@@ -354,15 +347,15 @@ int32_t main(int32_t argc, char ** argv) {
   mean_error_translation_relative /= errors_translation_relative.size();
 
   //ds report
-  std::cerr << "-------------------------------------------------------------------------" << std::endl;
-  std::cerr << "dataset completed" << std::endl;
-  std::cerr << "-------------------------------------------------------------------------" << std::endl;
+  std::cerr << "main|-------------------------------------------------------------------------" << std::endl;
+  std::cerr << "main|dataset completed" << std::endl;
+  std::cerr << "main|-------------------------------------------------------------------------" << std::endl;
   if (number_of_processed_frames_total == 0) {
     std::cerr << "no frames processed" << std::endl;
   } else {
-    std::cerr << "        absolute translation RMSE: " << root_mean_squared_error_translation_absolute << std::endl;
-    std::cerr << "        relative translation   ME: " << mean_error_translation_relative << std::endl;
-    std::cerr << "        final translational error: " << (tracker->robotToWorld().translation()-odometry_robot_to_world_previous_ground_truth.translation()).norm() << std::endl;
+    std::cerr << "    absolute translation RMSE (m): " << root_mean_squared_error_translation_absolute << std::endl;
+    std::cerr << "    relative translation   ME (m): " << mean_error_translation_relative << std::endl;
+    std::cerr << "    final translational error (m): " << (tracker->robotToWorld().translation()-odometry_robot_to_world_previous_ground_truth.translation()).norm() << std::endl;
     std::cerr << "              total stereo frames: " << number_of_processed_frames_total << std::endl;
     std::cerr << "               total duration (s): " << total_duration_seconds_total << std::endl;
     std::cerr << "                      average fps: " << number_of_processed_frames_total/total_duration_seconds_total << std::endl;
@@ -372,31 +365,27 @@ int32_t main(int32_t argc, char ** argv) {
     std::cerr << "         average tracks per frame: " << tracker->totalNumberOfTrackedPoints()/number_of_processed_frames_total << std::endl;
     std::cerr << "        average tracks per second: " << tracker->totalNumberOfTrackedPoints()/total_duration_seconds_total << std::endl;
     std::cerr << "-------------------------------------------------------------------------" << std::endl;
-    std::cerr << "run times" << std::endl;
+    std::cerr << "runtime" << std::endl;
     std::cerr << "-------------------------------------------------------------------------" << std::endl;
-    std::cerr << "tracker      feature detection: " << tracker->getTimeConsumptionSeconds_feature_detection()/total_duration_seconds_total
-                                                            << " (" << tracker->getTimeConsumptionSeconds_feature_detection() << "s)" << std::endl;
-    std::cerr << "              keypoint pruning: " << tracker->getTimeConsumptionSeconds_keypoint_pruning()/total_duration_seconds_total
-                                                          << " (" << tracker->getTimeConsumptionSeconds_keypoint_pruning() << "s)" << std::endl;
-    std::cerr << "         descriptor extraction: " << tracker->getTimeConsumptionSeconds_descriptor_extraction()/total_duration_seconds_total
-                                                          << " (" << tracker->getTimeConsumptionSeconds_descriptor_extraction() << "s)" << std::endl;
-    std::cerr << "           point triangulation: " << tracker->getTimeConsumptionSeconds_point_triangulation()/total_duration_seconds_total
-                                                          << " (" << tracker->getTimeConsumptionSeconds_point_triangulation() << "s)" << std::endl;
-    std::cerr << "                      tracking: " << tracker->getTimeConsumptionSeconds_tracking()/total_duration_seconds_total
-                                                          << " (" << tracker->getTimeConsumptionSeconds_tracking() << "s)" << std::endl;
-    std::cerr << "                track creation: " << tracker->getTimeConsumptionSeconds_track_creation()/total_duration_seconds_total
-                                                          << " (" << tracker->getTimeConsumptionSeconds_track_creation() << "s)" << std::endl;
-    std::cerr << "             pose optimization: " << tracker->getTimeConsumptionSeconds_pose_optimization()/total_duration_seconds_total
-                                                          << " (" << tracker->getTimeConsumptionSeconds_pose_optimization() << "s)" << std::endl;
-    std::cerr << "         landmark optimization: " << tracker->getTimeConsumptionSeconds_landmark_optimization()/total_duration_seconds_total
-                                                          << " (" << tracker->getTimeConsumptionSeconds_landmark_optimization() << "s)" << std::endl;
-    std::cerr << "                point recovery: " << tracker->getTimeConsumptionSeconds_point_recovery()/total_duration_seconds_total
-                                                          << " (" << tracker->getTimeConsumptionSeconds_point_recovery() << "s)" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "relocalizer: " << relocalizer->getTimeConsumptionSeconds_overall()/total_duration_seconds_total
-                                               << " (" << relocalizer->getTimeConsumptionSeconds_overall() << "s)" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "     mapper: " << mapper->getTimeConsumptionSeconds_overall()/total_duration_seconds_total
+    std::cerr << "       feature detection: " << tracker->getTimeConsumptionSeconds_feature_detection()/total_duration_seconds_total
+                                             << " (" << tracker->getTimeConsumptionSeconds_feature_detection() << "s)" << std::endl;
+    std::cerr << " keypoint regularization: " << tracker->getTimeConsumptionSeconds_keypoint_pruning()/total_duration_seconds_total
+                                              << " (" << tracker->getTimeConsumptionSeconds_keypoint_pruning() << "s)" << std::endl;
+    std::cerr << "   descriptor extraction: " << tracker->getTimeConsumptionSeconds_descriptor_extraction()/total_duration_seconds_total
+                                             << " (" << tracker->getTimeConsumptionSeconds_descriptor_extraction() << "s)" << std::endl;
+    std::cerr << "  stereo keypoint search: " << tracker->getTimeConsumptionSeconds_point_triangulation()/total_duration_seconds_total
+                                             << " (" << tracker->getTimeConsumptionSeconds_point_triangulation() << "s)" << std::endl;
+    std::cerr << "                tracking: " << tracker->getTimeConsumptionSeconds_tracking()/total_duration_seconds_total
+                                             << " (" << tracker->getTimeConsumptionSeconds_tracking() << "s)" << std::endl;
+    std::cerr << "       pose optimization: " << tracker->getTimeConsumptionSeconds_pose_optimization()/total_duration_seconds_total
+                                             << " (" << tracker->getTimeConsumptionSeconds_pose_optimization() << "s)" << std::endl;
+    std::cerr << "   landmark optimization: " << tracker->getTimeConsumptionSeconds_landmark_optimization()/total_duration_seconds_total
+                                             << " (" << tracker->getTimeConsumptionSeconds_landmark_optimization() << "s)" << std::endl;
+    std::cerr << " correspondence recovery: " << tracker->getTimeConsumptionSeconds_point_recovery()/total_duration_seconds_total
+                                             << " (" << tracker->getTimeConsumptionSeconds_point_recovery() << "s)" << std::endl;
+    std::cerr << "similarity search (HBST): " << relocalizer->getTimeConsumptionSeconds_overall()/total_duration_seconds_total
+                                             << " (" << relocalizer->getTimeConsumptionSeconds_overall() << "s)" << std::endl;
+    std::cerr << "              map update: " << mapper->getTimeConsumptionSeconds_overall()/total_duration_seconds_total
                                              << " (" << mapper->getTimeConsumptionSeconds_overall() << "s)" << std::endl;
   }
   std::cerr << "-------------------------------------------------------------------------" << std::endl;
@@ -406,7 +395,7 @@ int32_t main(int32_t argc, char ** argv) {
   sensor_message_reader.close();
 
   //ds save trajectory to disk
-  world_context->writeTrajectory("trajectory.txt");
+  world_map->writeTrajectory("trajectory.txt");
 
   //ds controlled destruction: SLAM modules
   delete tracker;
@@ -426,28 +415,29 @@ int32_t main(int32_t argc, char ** argv) {
   if (running) {
 
     //ds exit in viewer if available
-    if (use_gui && context_viewer_bird->isVisible()) {
+    if (use_gui && context_viewer_bird->isVisible() && context_viewer_top->isVisible()) {
       return ui_server->exec();
     } else {
       if (use_gui) {
         delete ui_server;
       }
-      delete world_context;
+      delete world_map;
       return 0;
     }
   } else {
 
     //ds destroy world context
-    delete world_context;
+    delete world_map;
     if (use_gui) {
       delete context_viewer_bird;
+      delete context_viewer_top;
       delete ui_server;
     }
     return 0;
   }
 }
 
-void process(WorldContext* world_context_,
+void process(TrackingContext* world_map_,
              TrackerSVI* tracker_,
              Mapper* mapper_,
              Relocalizer* relocalizer_,
@@ -465,39 +455,34 @@ void process(WorldContext* world_context_,
                                                  world_previous_to_current_estimate_);
 
   //ds if we have a valid frame (not the case after the track is lost)
-  if (world_context_->currentTrackingContext()->currentFrame() != 0) {
+  if (world_map_->currentFrame() != 0) {
 
     //ds if a key frame was generated
-    if (world_context_->currentTrackingContext()->generatedKeyframe()) {
+    if (world_map_->generatedKeyframe()) {
 
       //ds if we have a fresh track (start or lost)
-      if (world_context_->currentTrackingContext()->keyframes().size() == 1) {
+      if (world_map_->keyframes().size() == 1) {
         relocalizer_->flush();
       }
 
       //ds trigger relocalization
-      relocalizer_->init(world_context_->currentTrackingContext()->currentKeyframe());
+      relocalizer_->init(world_map_->currentKeyframe());
       relocalizer_->detect();
       relocalizer_->compute();
 
       //ds check the closures
       for(CorrespondenceCollection* closure: relocalizer_->closures()) {
         if (closure->is_valid) {
-          assert(world_context_->currentTrackingContext()->currentKeyframe() == closure->keyframe_query);
+          assert(world_map_->currentKeyframe() == closure->keyframe_query);
 
-          //ds check if were matching onto another context
-          if (world_context_->currentTrackingContext() != closure->keyframe_reference->trackingContext()) {
-            world_context_->add(closure);
-          } else {
-            world_context_->currentTrackingContext()->closeKeyframes(world_context_->currentTrackingContext()->currentKeyframe(),
-                                                                   closure->keyframe_reference,
-                                                                   closure->transform_frame_query_to_frame_reference);
-
-            if (use_gui) {
-              for (const Correspondence* match: closure->correspondences) {
-                world_context_->currentTrackingContext()->landmarks().get(match->item_query->landmark()->index())->setIsInLoopClosureQuery(true);
-                world_context_->currentTrackingContext()->landmarks().get(match->item_reference->landmark()->index())->setIsInLoopClosureReference(true);
-              }
+          //ds add loop closure constraint
+          world_map_->closeKeyframes(world_map_->currentKeyframe(),
+                                                                 closure->keyframe_reference,
+                                                                 closure->transform_frame_query_to_frame_reference);
+          if (use_gui) {
+            for (const Correspondence* match: closure->correspondences) {
+              world_map_->landmarks().get(match->item_query->landmark()->index())->setIsInLoopClosureQuery(true);
+              world_map_->landmarks().get(match->item_reference->landmark()->index())->setIsInLoopClosureReference(true);
             }
           }
         }
@@ -505,21 +490,14 @@ void process(WorldContext* world_context_,
       relocalizer_->train();
     }
 
-    //ds if there were merge requests caused by added closures
-    if (world_context_->isMergeable()) {
-      //tracker_viewer.switchToStepwiseMode();
-      world_context_->merge(use_gui);
-    }
-
-    //ds trigger regular tracking context optimization
-    if (world_context_->currentTrackingContext()->closedKeyframe()) {
-      mapper_->optimize(world_context_->currentTrackingContext());
+    //ds check if we closed a local map
+    if (world_map_->closedKeyframe()) {
+      mapper_->optimize(world_map_);
 
       //ds wipe non-optimized landmarks
-      world_context_->currentTrackingContext()->purifyLandmarks();
+      world_map_->purifyLandmarks();
     }
   }
-
   if (use_gui) {
     tracker_viewer->initDrawing();
     tracker_viewer->drawFeatureTracking();
