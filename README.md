@@ -15,10 +15,7 @@
     sudo apt-get install build-essential libeigen3-dev libsuitesparse-dev freeglut3-dev libqglviewer-dev
 
 <br/>
-2) download and install g2o: https://github.com/RainerKuemmerle/g2o
-
----
-3) download and install
+2) download and install
  - ROS: http://wiki.ros.org/ROS/Installation
 
 or (OpenCV + Qt)
@@ -26,7 +23,10 @@ or (OpenCV + Qt)
  - Qt5: https://wiki.qt.io/Install_Qt_5_on_Ubuntu (Version 5.7.0)
 
 ---
-4) download and install ROS catkin: http://wiki.ros.org/catkin
+3) download and install ROS catkin: http://wiki.ros.org/catkin
+
+---
+4) download and install g2o for catkin: https://github.com/yorsh87/g2o_catkin
 
 ---
 5) download and build (using catkin_make) this repository:
