@@ -2,19 +2,11 @@
 
 #include "srrg_types/types.hpp"
 
-namespace gslam {
+namespace proslam {
   using namespace srrg_core;
 
-  Relocalizer::Relocalizer(): _query(0)/*,
-                              _bow_database(0)*/ {
+  Relocalizer::Relocalizer(): _query(0) {
     clear();
-
-    //ds initialize jit head
-    _query_history_JIT = new QueryFrame*[_number_of_queries_JIT];
-    for (Count u = 0; u < 10; ++u) {
-      _query_history_JIT[u] = 0;
-    }
-
     _query_history.clear();
     assert(_query_history_queue.empty());
     _aligner = static_cast<XYZAligner*>(AlignerFactory::create(AlignerType6_3::xyz));
@@ -56,17 +48,6 @@ namespace gslam {
     std::cerr << "Relocalizer::Relocalizer|destroyed" << std::endl;
   }
 
-//  //ds load bow vocabulary
-//  void Relocalizer::loadVocabulary(const std::string& path_to_dbow2_vocabulary_) {
-//    LOG_INFO_VALUE("Relocalizer::loadVocabulary", "loading vocabulary", path_to_dbow2_vocabulary_);
-//    try {
-//      _bow_database = new BriefDatabase(BriefVocabulary(path_to_dbow2_vocabulary_), false);
-//    } catch(const std::string& exception_text) {
-//      LOG_ERROR("Relocalizer::loadVocabulary", exception_text);
-//      throw std::runtime_error(exception_text);
-//    }
-//  }
-
   void Relocalizer::init(const KeyFrame* keyframe) {
     CHRONOMETER_START(overall)
     _query = new Query(keyframe);
@@ -86,8 +67,6 @@ namespace gslam {
       //ds check if we can pop the first element of the buffer into our history
       if (_query_history_queue.size() > _preliminary_minimum_interspace_queries) {
         _query_history.push_back(_query_history_queue.front());
-//        std::cerr << "added to history: " << _query_history_queue.front()->keyframe->index() << std::endl;
-        //_query_history.insert(std::make_pair(_bow_database->add(_query_history_queue.front()->descriptors_bow), _query_history_queue.front()));
         _query_history_queue.pop();
       }
     }
@@ -121,13 +100,10 @@ namespace gslam {
     for (const Query* reference: _query_history) {
 
       //ds get match count
-      const gt_real matching_ratio = reference->hbst_tree->getMatchingRatioFlat(_query->matchables);
+      const real matching_ratio = reference->hbst_tree->getMatchingRatioFlat(_query->matchables);
 
       //ds if acceptable
       if (matching_ratio > _preliminary_minimum_matching_ratio || force_matching_) {
-
-        //ds buffer reference
-        //const Query* reference = _query_history.at(matching_query.Id);
         assert(reference != 0);
 
         //ds matches within the current reference
@@ -165,7 +141,7 @@ namespace gslam {
         assert(0 < absolute_number_of_descriptor_matches);
         assert(0 < _query->appearances.size());
         assert(0 < descriptor_matches_pointwise.size());
-        const gt_real relative_number_of_descriptor_matches_query     = static_cast<gt_real>(absolute_number_of_descriptor_matches)/_query->appearances.size();
+        const real relative_number_of_descriptor_matches_query     = static_cast<real>(absolute_number_of_descriptor_matches)/_query->appearances.size();
         //const gt_real relative_number_of_descriptor_matches_reference = static_cast<gt_real>(absolute_number_of_descriptor_matches)/reference->appearances.size();
         //const gt_real relative_delta = std::fabs(relative_number_of_descriptor_matches_query-relative_number_of_descriptor_matches_reference)/relative_number_of_descriptor_matches_reference;
 
@@ -244,7 +220,7 @@ namespace gslam {
       //ds return the found correspondence
       return new Correspondence(match_best->item_query,
                                 match_best->item_reference,
-                                count_best, static_cast<gt_real>(count_best)/matches_.size());
+                                count_best, static_cast<real>(count_best)/matches_.size());
     }
 
     return 0;
@@ -256,89 +232,6 @@ namespace gslam {
     }
     _closures.clear();
     _mask_id_references_for_correspondences.clear();
-  }
-
-  //ds JIT: retrieve loop closure candidates from chain
-  void Relocalizer::train(const Frame* frame_) {
-
-    //ds free last query if set
-    if (_query_history_JIT[0] != 0) {
-      delete _query_history_JIT[0];
-    }
-
-    //ds update chain
-    for (Count u = 0; u < 9; ++u) {
-      _query_history_JIT[u] = _query_history_JIT[u+1];
-    }
-
-    //ds get a new query and set it to the holder
-    _query_history_JIT[9] = new QueryFrame(frame_);
-  }
-
-  //ds JIT: retrieve loop closure candidates from chain
-  void Relocalizer::detect(const Frame* frame_) {
-
-    //ds buffer query
-    const QueryFrame* query = _query_history_JIT[9];
-
-    //ds directly look for candidates in the chain (NO PRELIMINARY PHASE)
-    for (Count u = 0; u < 9; ++u) {
-
-      //ds start from most recent JIT frame
-      const QueryFrame* reference = _query_history_JIT[8-u];
-
-      //ds if available and filled and cross tracking context
-      if (reference != 0                                                        &&
-          reference->appearances.size() > 0                                     &&
-          reference->frame->trackingContext() != query->frame->trackingContext()) {
-
-        //ds matches within the current reference
-        HBSTTree::MatchVector matches_unfiltered;
-        MatchMap descriptor_matches_pointwise;
-
-        //ds get matches
-        assert(0 < query->matchables.size());
-        assert(0 < reference->matchables.size());
-        reference->hbst_tree->match(query->matchables, matches_unfiltered);
-        assert(0 < matches_unfiltered.size());
-        //const Count absolute_number_of_descriptor_matches = matches_unfiltered.size();
-
-        //ds loop over all matches
-        for (const HBSTTree::Match match: matches_unfiltered) {
-
-          const Appearance* appearance_query     = query->appearances[match.identifier_query];
-          const Appearance* appearance_reference = reference->appearances[match.identifier_reference];
-          const Identifier& query_index          = appearance_query->item->landmark()->index();
-
-          try{
-
-            //ds add a new match to the given query point
-            descriptor_matches_pointwise.at(query_index).push_back(new Match(appearance_query->item,
-                                                                   appearance_reference->item,
-                                                                   match.distance));
-          } catch(const std::out_of_range& /*exception*/) {
-
-            //ds initialize the first match for the given query point
-            descriptor_matches_pointwise.insert(std::make_pair(query_index, MatchPtrVector(1, new Match(appearance_query->item,
-                                                                                              appearance_reference->item,
-                                                                                              match.distance))));
-          }
-        }
-        //assert(0 < absolute_number_of_descriptor_matches);
-        assert(0 < query->appearances.size());
-        assert(0 < descriptor_matches_pointwise.size());
-        //const gt_real relative_number_of_descriptor_matches_query     = static_cast<gt_real>(absolute_number_of_descriptor_matches)/_query->appearances.size();
-        //const gt_real relative_number_of_descriptor_matches_reference = static_cast<gt_real>(absolute_number_of_descriptor_matches)/reference->appearances.size();
-        //const gt_real relative_delta = std::fabs(relative_number_of_descriptor_matches_query-relative_number_of_descriptor_matches_reference)/relative_number_of_descriptor_matches_reference;
-
-        std::cerr << descriptor_matches_pointwise.size() << std::endl;
-
-        //ds if the result quality is sufficient
-        if (descriptor_matches_pointwise.size() > _minimum_absolute_number_of_matches_pointwise) {
-
-        }
-      }
-    }
   }
 
 } //namespace gtracker

@@ -3,7 +3,7 @@
 #include "local_map.h"
 #include "types/stereo_grid_detector.h"
 
-namespace gslam {
+namespace proslam {
   using namespace std;
 
   Identifier Frame::_instances = 0;
@@ -14,7 +14,7 @@ namespace gslam {
                const TransformMatrix3D& robot_to_world_,
                const Identifier& sequence_number_raw_): _index(_instances),
                                                         _sequence_number_raw(sequence_number_raw_),
-                                                        _keyframe(0), _tracking_context(context_){
+                                                        _keyframe(0) {
     ++_instances;
     setPrevious(previous_);
     setNext(next_);
@@ -26,8 +26,7 @@ namespace gslam {
   //ds "deep" copy ctor used in keyframe generation - unfortunately error prone as shit currently
   Frame::Frame(Frame* frame_): _index(frame_->index()),
                                _sequence_number_raw(frame_->sequenceNumberRaw()),
-                               _keyframe(frame_->keyframe()),
-                               _tracking_context(frame_->trackingContext()){
+                               _keyframe(frame_->keyframe()) {
     setCamera(frame_->camera());
     setPrevious(frame_->previous());
     setNext(frame_->next());
@@ -52,7 +51,6 @@ namespace gslam {
     _has_intensity         = frame_->hasIntensity();
     _intensity_image_extra = frame_->intensityImageExtra();
     _has_intensity_extra   = frame_->hasIntensityExtra();
-    _depth_image           = frame_->depthImage();
     _has_depth             = frame_->hasDepth();
   }
 
@@ -111,51 +109,10 @@ namespace gslam {
   }
 
   FramePoint* Frame::createNewPoint(const cv::KeyPoint& keypoint_left_,
-                                    const cv::Mat& descriptor_left_) {
-
-    //ds allocate a new point connected to the previous one
-    FramePoint* frame_point = new FramePoint(keypoint_left_,
-                                             descriptor_left_,
-                                             this);
-
-    //ds this point has no predecessor
-    frame_point->setRoot(frame_point);
-
-    //ds update point status
-    if (frame_point->age() > minimum_image_age) {
-      frame_point->setStatus(FramePoint::Confirmed);
-    }
-    if (frame_point->age() > minimum_landmark_age) {
-      frame_point->setStatus(FramePoint::Persistent);
-    }
-    return frame_point;
-  }
-
-  FramePoint* Frame::createNewPoint(const cv::KeyPoint& keypoint_left_,
-                                    const cv::Mat& descriptor_left_,
-                                    FramePoint* previous_point_) {
-
-    //ds allocate a new point connected to the previous one
-    FramePoint* frame_point = new FramePoint(keypoint_left_,
-                                             descriptor_left_,
-                                             this,
-                                             previous_point_);
-
-    //ds update point status
-    if (frame_point->age() > minimum_image_age) {
-      frame_point->setStatus(FramePoint::Confirmed);
-    }
-    if (frame_point->age() > minimum_landmark_age) {
-      frame_point->setStatus(FramePoint::Persistent);
-    }
-    return frame_point;
-  }
-
-  FramePoint* Frame::createNewPoint(const cv::KeyPoint& keypoint_left_,
                                     const cv::Mat& descriptor_left_,
                                     const cv::KeyPoint& keypoint_right_,
                                     const cv::Mat& descriptor_right_,
-                                    const gt_real& depth_meters_,
+                                    const real& depth_meters_,
                                     const PointCoordinates& coordinates_in_robot_) {
 
     //ds allocate a new point connected to the previous one
@@ -192,7 +149,7 @@ namespace gslam {
                                     const cv::Mat& descriptor_left_,
                                     const cv::KeyPoint& keypoint_right_,
                                     const cv::Mat& descriptor_right_,
-                                    const gt_real& depth_meters_,
+                                    const real& depth_meters_,
                                     const PointCoordinates& coordinates_in_robot_,
                                     FramePoint* previous_point_) {
 
@@ -224,33 +181,6 @@ namespace gslam {
     return frame_point;
   }
 
-  void Frame::toCvPoints(std::vector<cv::Point2f>& cv_points) const {
-    cv_points.resize(_points.size());
-    for (size_t i=0; i<cv_points.size(); i++){
-      const PointCoordinates& frame_point=_points[i]->imageCoordinates();
-      cv::Point2f& cv_point=cv_points[i];
-      cv_point.x=frame_point.x();
-      cv_point.y=frame_point.y();
-    }
-  }
-
-  void Frame::toCvPointsExtra(std::vector<cv::Point2f>& cv_points) const {
-    cv_points.resize(_points.size());
-    for (size_t i=0; i<cv_points.size(); i++){
-      const PointCoordinates& frame_point=_points[i]->imageCoordinatesExtra();
-      cv::Point2f& cv_point=cv_points[i];
-      cv_point.x=frame_point.x();
-      cv_point.y=frame_point.y();
-    }
-  }
-
-  void Frame::toCvKeyPoints(std::vector<cv::KeyPoint>& cv_keypoints) const {
-    cv_keypoints.resize(_points.size());
-    for(Index i=0; i<cv_keypoints.size(); ++i){
-      cv_keypoints[i]=_points[i]->keypoint();
-    }
-  }
-
   Frame* FramePtrMap::get(int index) {
     FramePtrMap::iterator it=find(index);
     if (it==end())
@@ -259,7 +189,6 @@ namespace gslam {
   }
 
   void Frame::releaseImages() {
-    _depth_image.release();
     _intensity_image.release();
     _intensity_image_extra.release();
   }

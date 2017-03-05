@@ -1,15 +1,37 @@
 #include "contexts/frame.h"
 #include "types/camera.h"
 
-namespace gslam {
+namespace proslam {
+
+  class ExceptionTriangulation: public std::exception {
+  public:
+
+    ExceptionTriangulation(const std::string& what_): _what(what_){}
+    ~ExceptionTriangulation(){}
+
+  public:
+
+    virtual const char* what() const throw() {return _what.c_str();}
+
+  private:
+
+    const std::string _what;
+  };
 
   class StereoGridDetector {
-    public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds exported datatypes
     public:
 
+      struct KeypointWithDescriptor {
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+        cv::KeyPoint keypoint;
+        cv::Mat descriptor;
+      };
+
       struct TriangulatedPoint {
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
         bool is_set       = false;
         bool is_available = false;
         cv::KeyPoint keypoint_left;
@@ -36,7 +58,7 @@ namespace gslam {
 
       int32_t** keypointIndexMapLeft() {return _keypoint_index_map_left;}
       int32_t** keypointIndexMapRight() {return _keypoint_index_map_right;}
-      TriangulatedPoint** triangulationMap() {return _triangulation_map;}
+      TriangulatedPoint** framepointMap() {return _triangulation_map;}
       const Count numberOfRowsImage() const {return _number_of_rows_image;}
       const Count numberOfColsImage() const {return _number_of_cols_image;}
       const int32_t maximumTrackingMatchingDistance() const {return _maximum_tracking_matching_distance;}
@@ -44,13 +66,13 @@ namespace gslam {
       void setDetectorThreshold(const int32_t& detector_threshold_) {_detector_threshold = detector_threshold_;}
       void setDetectorThresholdMaximum(const int32_t& detector_threshold_maximum_) {_detector_threshold_maximum = detector_threshold_maximum_;}
       void setDetectorThresholdMinimum(const int32_t& detector_threshold_minimum_) {_detector_threshold_minimum = detector_threshold_minimum_;}
-      void setMaximumMatchingDistanceTriangulation(const gt_real& maximum_matching_distance_triangulation_) {_maximum_matching_distance_triangulation = maximum_matching_distance_triangulation_;}
+      void setMaximumMatchingDistanceTriangulation(const real& maximum_matching_distance_triangulation_) {_maximum_matching_distance_triangulation = maximum_matching_distance_triangulation_;}
 
     //ds public settings UGLY UGLY
     public:
 
-      static gt_real maximum_depth_close;
-      static gt_real maximum_depth_far;
+      static real maximum_depth_close;
+      static real maximum_depth_far;
 
     //ds settings
     protected:
@@ -74,16 +96,16 @@ namespace gslam {
 //      cv::KeyPoint** _bin_map_right;
 
       //ds triangulation
-      gt_real _maximum_matching_distance_triangulation = 50;
-      const gt_real _triangulation_F           = 0;
-      const gt_real _triangulation_Finverse    = 0;
-      const gt_real _triangulation_Pu          = 0;
-      const gt_real _triangulation_Pv          = 0;
-      const gt_real _triangulation_DuR         = 0;
-      const gt_real _triangulation_DuR_flipped = 0;
-      const gt_real _baseline_meters           = 0;
-      const gt_real _baseline_factor           = 50;
-      const gt_real _minimum_disparity         = 1;
+      real _maximum_matching_distance_triangulation = 50;
+      const real _triangulation_F           = 0;
+      const real _triangulation_Finverse    = 0;
+      const real _triangulation_Pu          = 0;
+      const real _triangulation_Pv          = 0;
+      const real _triangulation_DuR         = 0;
+      const real _triangulation_DuR_flipped = 0;
+      const real _baseline_meters           = 0;
+      const real _baseline_factor           = 50;
+      const real _minimum_disparity         = 1;
       int32_t** _keypoint_index_map_left;
       int32_t** _keypoint_index_map_right;
       TriangulatedPoint** _triangulation_map;
@@ -105,6 +127,12 @@ namespace gslam {
 #else
       #error OpenCV version not supported
 #endif
+
+      //ds buffers
+      std::vector<cv::KeyPoint> _keypoints_left;
+      std::vector<cv::KeyPoint> _keypoints_right;
+      cv::Mat _descriptors_left;
+      cv::Mat _descriptors_right;
 
     //ds helpers
     protected:

@@ -1,7 +1,7 @@
 #pragma once
 #include "../definitions.h"
 
-namespace gslam {
+namespace proslam {
   
   class Landmark;
   class Frame;
@@ -58,11 +58,11 @@ namespace gslam {
     inline const Landmark* landmark() const {return _landmark;}
     inline void setLandmark(Landmark* landmark_) {_landmark = landmark_;}
 
-    void setDepth(const gt_real& depth_meters_);
+    void setDepth(const real& depth_meters_);
     inline bool hasDepth() const {return _has_depth;}
 
     inline const bool hasDepthByVision() const {return _has_depth_by_vision;}
-    void setDepthByVision(const gt_real& depth_meters_);
+    void setDepthByVision(const real& depth_meters_);
 
     inline const Count age() const {return _age;}
     inline void setAge(const Count& age_) {_age = age_;}
@@ -87,8 +87,8 @@ namespace gslam {
     inline const cv::KeyPoint& keypointExtra() const {return _keypoint_extra;}
     inline const cv::Mat& descriptor() const {return _descriptor;}
     inline const cv::Mat& descriptorExtra() const {return _descriptor_extra;}
-    inline const gt_real disparity() const {return _disparity;}
-    inline const gt_real depth() const {return _depth;}
+    inline const real disparity() const {return _disparity;}
+    inline const real depth() const {return _depth;}
 
   protected:
 
@@ -103,7 +103,7 @@ namespace gslam {
     const cv::KeyPoint _keypoint_extra;
     const cv::Mat _descriptor;    //ds descriptor of feature extraction
     const cv::Mat _descriptor_extra;
-    const gt_real _disparity = -1;
+    const real _disparity = -1;
 
     //ds spatial properties
     PointCoordinates _image_coordinates        = PointCoordinates::Zero(); //ds detection image coordinates x/y/1
@@ -111,7 +111,7 @@ namespace gslam {
     PointCoordinates _robot_coordinates        = PointCoordinates::Zero(); //ds 3D point in robot pose frame
     PointCoordinates _reprojection_coordinates = PointCoordinates::Zero(); //ds if a point is a landmark, these are its reprojected coordinates x/y/1
     PointCoordinates _reprojection_coordinates_extra = PointCoordinates::Zero(); //ds reprojected coordinates for additional camera (e.g. stereo)
-    gt_real _depth = -1; //ds depth value in meters in camera coordinate frame
+    real _depth = -1; //ds depth value in meters in camera coordinate frame
 
     //ds control
     Landmark* _landmark  = 0; //< landmark, if any

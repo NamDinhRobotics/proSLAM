@@ -2,7 +2,7 @@
 #include "../types/optimizer.h"
 #include "types/contexts/world_map.h"
 
-namespace gslam {
+namespace proslam {
   class Mapper {
 
   public:

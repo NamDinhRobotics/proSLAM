@@ -2,9 +2,10 @@
 #include "stereouv_aligner.h"
 #include "xyz_aligner.h"
 
-namespace gslam {
+namespace proslam {
 
 class AlignerFactory {
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds object handling
     public:

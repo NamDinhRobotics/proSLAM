@@ -4,7 +4,7 @@
 #include "contexts/local_map.h"
 #include "utility.h"
 
-namespace gslam {
+namespace proslam {
 
   struct Match {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -31,16 +31,12 @@ namespace gslam {
     Query(const KeyFrame* keyframe_): keyframe(keyframe_),
                                       appearances(keyframe_->appearances()),
                                       matchables(Utility::getMatchables(appearances)),
-                                      //descriptors_bow(Utility::getDescriptorsBoW(appearances)),
                                       hbst_tree(new HBSTTree(keyframe_->index(), matchables)) {}
     const KeyFrame* keyframe = 0;
     const AppearancePtrVector appearances;
     const HBSTNode::BinaryMatchableVector matchables;
-    //const std::vector<DBoW2::FBrief::TDescriptor> descriptors_bow;
     const HBSTTree* hbst_tree = 0;
   };
-  //typedef std::map<const DBoW2::EntryId, const Query*> QueryMap;
-  //typedef std::pair<const DBoW2::EntryId, const Query*> QueryMapElement;
 
   struct QueryFrame {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -70,20 +66,4 @@ namespace gslam {
     const HBSTNode::BinaryMatchableVector matchables;
     const HBSTTree* hbst_tree = 0;
   };
-
-  //ds sorry boss :>
-  class ExceptionNoTransformFound: public std::exception {
-  public:
-
-    ExceptionNoTransformFound(const std::string& what_): _what(what_){}
-    ~ExceptionNoTransformFound(){}
-
-  public:
-
-    virtual const char* what() const throw() {return _what.c_str();}
-
-  private:
-
-    const std::string _what;
-  };
-} //namespace gtracker
+}

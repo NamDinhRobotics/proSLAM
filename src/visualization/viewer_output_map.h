@@ -4,11 +4,11 @@
 #include "../core/relocalizer.h"
 #include "types/contexts/world_map.h"
 
-namespace gslam {
+namespace proslam {
 
   class TrackingContextViewer: public srrg_core_viewers::SimpleViewer{
   public:
-    TrackingContextViewer(TrackingContext* context_ = 0, const gt_real& object_scale_ = 0.1);
+    TrackingContextViewer(TrackingContext* context_ = 0, const real& object_scale_ = 0.1);
 
     inline bool landmarksDrawn() const {return _landmarks_drawn;}
     inline void setLandmarksDrawn(bool landmarks_drawn_) {_landmarks_drawn=landmarks_drawn_;}
@@ -41,8 +41,8 @@ namespace gslam {
     bool _landmarks_drawn    = true;
     bool _follow_robot       = true;
     bool _ground_truth_drawn = false;
-    gt_real _object_scale    = 0.1;
-    gt_real _point_size      = 2;
+    real _object_scale    = 0.1;
+    real _point_size      = 2;
     TransformMatrix3D _world_to_robot_origin = TransformMatrix3D::Identity();
     const std::string _window_name = "output: map";
   };

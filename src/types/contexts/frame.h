@@ -1,8 +1,9 @@
 #pragma once
-#include "../camera.h"
-#include "../items/frame_point.h"
+#include "base_context.h"
+#include "types/camera.h"
+#include "types/items/frame_point.h"
 
-namespace gslam {
+namespace proslam {
   
   class KeyFrame;
   class TrackingContext;
@@ -54,21 +55,12 @@ namespace gslam {
     inline const FramePointPtrVector& points() const {return _points;}
     inline FramePointPtrVector& points() {return _points;}
 
-    //ds mono point factory method 1
-    FramePoint* createNewPoint(const cv::KeyPoint& keypoint_left_,
-                               const cv::Mat& descriptor_left_);
-
-    //ds mono factory method 2
-    FramePoint* createNewPoint(const cv::KeyPoint& keypoint_left_,
-                               const cv::Mat& descriptor_left_,
-                               FramePoint* previous_point_);
-
     //ds stereo point factory method 1
     FramePoint* createNewPoint(const cv::KeyPoint& keypoint_left_,
                                const cv::Mat& descriptor_left_,
                                const cv::KeyPoint& keypoint_right_,
                                const cv::Mat& descriptor_right_,
-                               const gt_real& depth_meters_,
+                               const real& depth_meters_,
                                const PointCoordinates& coordinates_in_robot_);
 
     //ds stereo factory method 2
@@ -76,7 +68,7 @@ namespace gslam {
                                const cv::Mat& descriptor_left_,
                                const cv::KeyPoint& keypoint_right_,
                                const cv::Mat& descriptor_right_,
-                               const gt_real& depth_meters_,
+                               const real& depth_meters_,
                                const PointCoordinates& coordinates_in_robot_,
                                FramePoint* previous_point_);
 
@@ -88,8 +80,6 @@ namespace gslam {
     inline void  setIntensityImageExtra(const IntensityImage& intensity_image_extra_)  {_intensity_image_extra = intensity_image_extra_.clone(); _has_intensity_extra = true;}
     inline const bool hasIntensityExtra() const {return _has_intensity_extra;}
 
-    inline const DepthImage& depthImage() const {return _depth_image;}
-    inline void  setDepthImage(const DepthImage& depth_image) {_depth_image = depth_image.clone(); _has_depth = true;}
     inline const bool hasDepth() const {return _has_depth;}
 
     inline Status status() const {return _status;}
@@ -98,14 +88,6 @@ namespace gslam {
     void setKeyframe(const KeyFrame* keyframe);
     const KeyFrame* keyframe() const {return _keyframe;}
     bool isKeyFrame() const;
-
-    void setTrackingContext(const TrackingContext* tracking_context_) {_tracking_context = tracking_context_; }
-    const TrackingContext* trackingContext() const {return _tracking_context;}
-
-    void toCvPoints(std::vector<cv::Point2f>& cv_points) const;
-    void toCvPointsExtra(std::vector<cv::Point2f>& cv_points) const;
-
-    void toCvKeyPoints(std::vector<cv::KeyPoint>& cv_keypoints) const;
 
     size_t countPoints(const Count min_age_,
 		       const ThreeValued has_landmark = Unknown,
@@ -149,11 +131,9 @@ namespace gslam {
     bool _has_intensity                      = false;
     IntensityImage _intensity_image_extra;
     bool _has_intensity_extra                = false;
-    DepthImage _depth_image;
     bool _has_depth                          = false;
 
     const KeyFrame* _keyframe                = 0;
-    const TrackingContext* _tracking_context = 0;
     static Identifier _instances;
 
   friend class Tracker;

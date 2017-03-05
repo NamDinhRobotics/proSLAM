@@ -3,7 +3,7 @@
 #include "landmark_item.h"
 #include "types/stereo_grid_detector.h"
 
-namespace gslam {
+namespace proslam {
 
   Identifier Landmark::_instances = 0;
 
@@ -11,12 +11,10 @@ namespace gslam {
                                                                   _coordinates(point_coordinates_) {
     ++_instances;
     _is_validated      = false;
-    _information_vector.setZero();
-    _information_matrix.setZero();
     _is_by_vision      = false;
     _is_active         = false;
     _first_observation = 0;
-    _measurements.clear();
+    _measurements_test.clear();
   }
 
   Landmark::~Landmark() {
@@ -26,143 +24,52 @@ namespace gslam {
       delete appearance;
     }
     _descriptor_track.clear();
-
-    //ds clear measurements
-    if (_measurements.size() > 0) {
-      for (const PointCoordinatesMeasurement* measurement: _measurements) {
-        delete measurement;
-      }
-      _measurements.clear();
-    }
-
-    //ds TODO o mei
+    _measurements_test.clear();
   }
 
   void Landmark::update(const PointCoordinates& coordinates_in_world_,
-                        const Matrix3& information_,
-                        const cv::Mat& descriptor_) {
+                        const real& depth_meters_) {
     assert(_current_item != 0);
 
-    //ds update position
-    updateCoordinates(coordinates_in_world_, information_);
+    //ds if we got at least 2 previous measurements
+    if (_measurements_test.size() > 1) {
 
-    //ds always update item TODO check performance if only updated for valid update
-    _current_item->addSpatials(_coordinates);
-    _current_item->addAppearance(descriptor_);
-    ++_number_of_updates;
-  }
+      //ds compute average delta
+      const real relative_delta = (_coordinates_average_previous-coordinates_in_world_).norm()/depth_meters_;
 
-  void Landmark::update(const PointCoordinates& coordinates_in_world_,
-                        const PointCoordinates& coordinates_in_robot_,
-                        const TransformMatrix3D& world_to_camera_left_,
-                        const cv::Mat& descriptor_left_,
-                        const cv::Mat& descriptor_right_,
-                        const gt_real& depth_meters_,
-                        const FramePoint* frame_point_) {
-    assert(_current_item != 0);
+      //ds if inlier measurement
+      if (relative_delta < 0.5) {
 
-    //ds add measurement
-    _measurements.push_back(new PointCoordinatesMeasurement(coordinates_in_world_, coordinates_in_robot_, world_to_camera_left_, depth_meters_));
-    assert(_current_item != 0);
-    assert(!std::isnan(coordinates_in_world_.x()));
-    assert(!std::isnan(coordinates_in_world_.y()));
-    assert(!std::isnan(coordinates_in_world_.z()));
+        //ds update average for next measurement addition
+        _coordinates_average_previous = (_measurements_test.size()*_coordinates_average_previous+coordinates_in_world_)/(_measurements_test.size()+1);
 
-    //ds initial values
-    Matrix3 H(Matrix3::Zero());
-    Vector3 b(Vector3::Zero());
-    Matrix3 omega(Matrix3::Identity());
-    gt_real total_error_previous = 0;
-    const gt_real maximum_error_kernel = 0.1;
-    _is_validated = false;
-
-    //ds 3d point to optimize - brute average prior
-    PointCoordinates coordinates_in_world_sampled(PointCoordinates::Zero());
-    for (const PointCoordinatesMeasurement* measurement: _measurements) {
-      coordinates_in_world_sampled += measurement->coordinates_in_world;
-    }
-    coordinates_in_world_sampled /= _measurements.size();
-
-    //ds if we have enough measurements to start an optimization - at least 3
-    if (_measurements.size() > 2) {
-
-      //ds iterations (break-out if convergence reached early)
-      for (uint32_t iteration = 0; iteration < 100; ++iteration) {
-
-        //ds counts
-        gt_real total_error_current = 0;
-        Count number_of_inliers     = 0;
-
-        //ds initialize setup
-        H.setZero();
-        b.setZero();
-
-        //ds do calibration over all recorded values
-        for (const PointCoordinatesMeasurement* measurement: _measurements) {
-          omega.setIdentity();
-
-          //ds get error
-          const Vector3 error(coordinates_in_world_sampled-measurement->coordinates_in_world);
-          const gt_real depth_meters((measurement->world_to_camera_left*coordinates_in_world_sampled).z());
-          if (depth_meters <= 0 || depth_meters > StereoGridDetector::maximum_depth_far) {
-            continue;
-          }
-
-          //ds current error
-          const gt_real error_squared = error.transpose()*error;
-
-          //ds check if outlier
-          const gt_real maximum_error_kernel_relative = depth_meters*maximum_error_kernel;
-          if (error_squared > maximum_error_kernel_relative) {
-            omega *= maximum_error_kernel_relative/error_squared;
-          } else {
-            ++number_of_inliers;
-          }
-          total_error_current += error_squared;
-
-          //ds aggressive information value
-          omega *= 1/depth_meters;
-
-          //ds accumulate (special case as jacobian is the identity)
-          H += omega;
-          b += omega*error;
+        //ds update coordinates
+        _measurements_test.push_back(std::make_pair(1/depth_meters_, coordinates_in_world_));
+        PointCoordinates coordinates_final(PointCoordinates::Zero());
+        real total_weight = 0;
+        for (const std::pair<real, PointCoordinates> measurement: _measurements_test) {
+          total_weight      += measurement.first;
+          coordinates_final += measurement.first*measurement.second;
         }
+        _coordinates = coordinates_final/total_weight;
+        _is_validated = true;
+      } else {
 
-        //ds update x solution
-        coordinates_in_world_sampled += H.ldlt().solve(-b);
-
-        //ds check if we have converged
-        if (std::fabs(total_error_previous-total_error_current) < 1e-5) {
-
-          //ds compute inliers ratio
-          _inlier_ratio = static_cast<gt_real>(number_of_inliers)/_measurements.size();
-
-          //ds if by vision - less restrictive optimization requirements
-          if (isByVision()) {
-//            if (_inlier_ratio > 0) {
-              _coordinates = coordinates_in_world_sampled;
-              _is_validated = true;
-//            } else {
-//              ++_number_of_failed_updates;
-//            }
-          } else {
-            if (_inlier_ratio > 0.3) {
-              _coordinates = coordinates_in_world_sampled;
-              _is_validated = true;
-            } else {
-              ++_number_of_failed_updates;
-            }
-          }
-          break;
-        } else {
-
-          //ds update error
-          total_error_previous = total_error_current;
-        }
+        //ds discard measurement completely TODO add kernel?
+        _is_validated = false;
+        ++_number_of_failed_updates;
       }
     } else {
-      _coordinates  = coordinates_in_world_sampled;
-      _is_validated = true;
+
+      //ds update coordinates based on average
+      _measurements_test.push_back(std::make_pair(1/depth_meters_, coordinates_in_world_));
+      PointCoordinates coordinates_average(PointCoordinates::Zero());
+      for (const std::pair<real, PointCoordinates> measurement: _measurements_test) {
+        coordinates_average += measurement.second;
+      }
+      _coordinates                  = coordinates_average/_measurements_test.size();
+      _coordinates_average_previous = _coordinates;
+      _is_validated                 = true;
     }
     assert(!std::isnan(_coordinates.x()));
     assert(!std::isnan(_coordinates.y()));
@@ -170,42 +77,32 @@ namespace gslam {
 
     //ds always update item TODO check performance if only updated for valid update
     _current_item->addSpatials(_coordinates);
-    _current_item->addAppearance(descriptor_left_);
-    _current_item->addAppearance(descriptor_right_);
     ++_number_of_updates;
   }
 
-  void Landmark::updateCoordinates(const PointCoordinates& coordinates_in_world_,
-                                   const Matrix3& information_) {
+  void Landmark::update(const PointCoordinates& coordinates_in_world_,
+                        const cv::Mat& descriptor_left_,
+                        const cv::Mat& descriptor_right_,
+                        const real& depth_meters_) {
+    assert(_current_item != 0);
 
-    //ds update position optimization
-    _information_matrix += information_;
-    _information_vector += information_*coordinates_in_world_;
-    _eigensolver.compute(_information_matrix);
-    assert(!std::isnan(_eigensolver.eigenvalues()(0)));
-    assert(!std::isnan(_eigensolver.eigenvalues()(2)));
+    //ds always update descriptors
+    _current_item->addAppearance(descriptor_left_);
+    _current_item->addAppearance(descriptor_right_);
 
-    //ds check result quality
-    if (_eigensolver.eigenvalues()(0)/_eigensolver.eigenvalues()(2) > _min_eigenratio) {
-      _coordinates  = _information_matrix.inverse()*_information_vector;
-      _is_validated = true;
-    } else {
-      _is_validated = false;
-    }
+    //ds update position
+    update(coordinates_in_world_, depth_meters_);
   }
 
-  void Landmark::resetCoordinates() {
-    _information_vector.setZero();
-    _information_matrix.setZero();
-    _number_of_updates = 0;
+  void Landmark::resetCoordinates(const PointCoordinates& coordinates_) {
 
-    //ds clear measurements
-    if (_measurements.size() > 0) {
-      for (const PointCoordinatesMeasurement* measurement: _measurements) {
-        delete measurement;
-      }
-      _measurements.clear();
-    }
+    //ds clear past measurements
+    _measurements_test.clear();
+    _number_of_failed_updates = 0;
+    _number_of_updates        = 0;
+
+    //ds add fresh measurement
+    update(coordinates_);
   }
 
   void Landmark::createNewItem(const PointCoordinates& spatials_in_world_) {

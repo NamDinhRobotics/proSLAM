@@ -2,10 +2,10 @@
 
 #include "srrg_types/types.hpp"
 
-#include "../items/landmark.h"
+#include "types/items/landmark.h"
 #include "types/stereo_grid_detector.h"
 
-namespace gslam {
+namespace proslam {
 
   using namespace srrg_core;
 
@@ -60,7 +60,7 @@ namespace gslam {
         sampled_point_in_camera_left = _world_to_camera_left*(_robot_to_world_previous*frame_point->previous()->robotCoordinates());
         _omega *= _weight_framepoint;
       }
-      const gt_real& depth_meters = sampled_point_in_camera_left.z();
+      const real& depth_meters = sampled_point_in_camera_left.z();
       if (depth_meters <= 0 || depth_meters > StereoGridDetector::maximum_depth_far) {
         continue;
       }
@@ -69,8 +69,8 @@ namespace gslam {
       const Vector4 sampled_point_in_camera_left_homogeneous(sampled_point_in_camera_left.x(), sampled_point_in_camera_left.y(), sampled_point_in_camera_left.z(), 1);
       const PointCoordinates sampled_abc_in_camera_left  = _projection_matrix_left*sampled_point_in_camera_left_homogeneous;
       const PointCoordinates sampled_abc_in_camera_right = _projection_matrix_right*sampled_point_in_camera_left_homogeneous;
-      const gt_real& sampled_c_left  = sampled_abc_in_camera_left.z();
-      const gt_real& sampled_c_right = sampled_abc_in_camera_right.z();
+      const real& sampled_c_left  = sampled_abc_in_camera_left.z();
+      const real& sampled_c_right = sampled_abc_in_camera_right.z();
 
       //ds compute the image coordinates
       const PointCoordinates sampled_point_in_image_left  = sampled_abc_in_camera_left/sampled_c_left;
@@ -89,10 +89,10 @@ namespace gslam {
       assert(_context->cameraExtra()->isInFieldOfView(sampled_point_in_image_right));
 
       //ds precompute
-      const gt_real inverse_sampled_c_left  = 1/sampled_c_left;
-      const gt_real inverse_sampled_c_right = 1/sampled_c_right;
-      const gt_real inverse_sampled_c_squared_left  = inverse_sampled_c_left*inverse_sampled_c_left;
-      const gt_real inverse_sampled_c_squared_right = inverse_sampled_c_right*inverse_sampled_c_right;
+      const real inverse_sampled_c_left  = 1/sampled_c_left;
+      const real inverse_sampled_c_right = 1/sampled_c_right;
+      const real inverse_sampled_c_squared_left  = inverse_sampled_c_left*inverse_sampled_c_left;
+      const real inverse_sampled_c_squared_right = inverse_sampled_c_right*inverse_sampled_c_right;
       frame_point->setReprojectionCoordinates(sampled_point_in_image_left);
       frame_point->setReprojectionCoordinatesExtra(sampled_point_in_image_right);
 
@@ -104,7 +104,7 @@ namespace gslam {
       assert(error(1) == error(3));
 
       //ds compute squared error
-      const gt_real chi = error.transpose()*error;
+      const real chi = error.transpose()*error;
 
       //ds update error stats
       _errors[index_point] = chi;
@@ -179,11 +179,11 @@ namespace gslam {
     const Vector6 dx = _H.ldlt().solve(-_b);
     _world_to_camera_left = v2t(dx)*_world_to_camera_left;
 
-    //ds enforce rotation matrix
-    const Matrix3 R = _world_to_camera_left.linear();
-    Matrix3 E       = R.transpose() * R;
-    E.diagonal().array()     -= 1;
-    _world_to_camera_left.linear() -= 0.5 * R * E;
+    //ds enforce proper rotation matrix
+    const Matrix3 rotation = _world_to_camera_left.linear();
+    Matrix3 rotation_squared             = rotation.transpose() * rotation;
+    rotation_squared.diagonal().array() -= 1;
+    _world_to_camera_left.linear()      -= 0.5*rotation*rotation_squared;
     _camera_left_to_world = _world_to_camera_left.inverse();
 
     //ds update wrapped structures
@@ -195,7 +195,7 @@ namespace gslam {
   void StereoUVAligner::converge() {
 
     //ds previous error to check for convergence
-    gt_real total_error_previous = 0.0;
+    real total_error_previous = 0.0;
 
     //ds start LS
     for (Count iteration = 0; iteration < _maximum_number_of_iterations; ++iteration) {

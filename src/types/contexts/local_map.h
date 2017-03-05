@@ -2,7 +2,7 @@
 #include "../items/landmark.h"
 #include "../items/landmark_item.h"
 
-namespace gslam {
+namespace proslam {
 
   class KeyFrame;
   typedef std::vector<KeyFrame*> KeyFramePtrVector;

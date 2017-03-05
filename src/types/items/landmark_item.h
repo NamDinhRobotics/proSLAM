@@ -2,7 +2,7 @@
 #include "appearance.h"
 #include "landmark.h"
 
-namespace gslam {
+namespace proslam {
 
   class LandmarkItem {
 

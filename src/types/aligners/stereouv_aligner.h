@@ -1,17 +1,17 @@
 #pragma once
-#include "../contexts/frame.h"
+#include "types/contexts/frame.h"
 #include "base_aligner.h"
 
-namespace gslam {
+namespace proslam {
 
   class StereoUVAligner: public BaseAligner6_4 {
-    public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds object handling
     protected:
 
       //ds instantiation controlled by aligner factory
-      StereoUVAligner(): BaseAligner6_4(1e-3, 9, 1) {}
+      StereoUVAligner(): BaseAligner6_4(1e-3, 9, 1, 1e3) {}
       ~StereoUVAligner() {}
 
     //ds required interface
@@ -35,7 +35,7 @@ namespace gslam {
       //ds getters/setters
       const TransformMatrix3D robotToWorld() const {return _robot_to_world;}
       const TransformMatrix3D worldToRobot() const {return _world_to_robot;}
-      void setWeightFramepoint(const gt_real& weight_framepoint_) {_weight_framepoint = weight_framepoint_;}
+      void setWeightFramepoint(const real& weight_framepoint_) {_weight_framepoint = weight_framepoint_;}
 
     //ds aligner specific
     protected:
@@ -57,7 +57,7 @@ namespace gslam {
 
       //ds others
       TransformMatrix3D _robot_to_world_previous = TransformMatrix3D::Identity();
-      gt_real _weight_framepoint                 = 1;
+      real _weight_framepoint                 = 1;
 
     //ds grant access to factory: ctor/dtor
     friend AlignerFactory;

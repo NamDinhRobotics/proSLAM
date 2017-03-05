@@ -1,6 +1,6 @@
 #include "local_map.h"
 
-namespace gslam {
+namespace proslam {
   using namespace srrg_core;
 
   KeyFrame::KeyFrame(Frame* frame_for_context_, 

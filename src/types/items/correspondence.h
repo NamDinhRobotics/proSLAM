@@ -1,7 +1,7 @@
 #pragma once
 #include "landmark_item.h"
 
-namespace gslam {
+namespace proslam {
 
   class Correspondence {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -13,7 +13,7 @@ namespace gslam {
     Correspondence(const LandmarkItem* item_query_,
                    const LandmarkItem* item_reference_,
                    const Count& matching_count_,
-                   const gt_real& matching_ratio_): item_query(item_query_),
+                   const real& matching_ratio_): item_query(item_query_),
                                                     item_reference(item_reference_),
                                                     matching_count(matching_count_),
                                                     matching_ratio(matching_ratio_) {}
@@ -30,7 +30,7 @@ namespace gslam {
     const LandmarkItem* item_query     = 0;
     const LandmarkItem* item_reference = 0;
     const Count matching_count         = 0;
-    const gt_real matching_ratio       = 0.0;
+    const real matching_ratio       = 0.0;
   };
 
   typedef std::vector<const Correspondence*> CorrespondencePointerVector;

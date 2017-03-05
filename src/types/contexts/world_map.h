@@ -1,16 +1,12 @@
 #pragma once
 #include "../relocalizer_types.h"
 
-namespace gslam{
+namespace proslam{
   class TrackingContext{
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     TrackingContext();
     ~TrackingContext();
-
-    const TrackingContext* previous() const {return _previous;}
-    const TrackingContext* next() const {return _next;}
-    void setNext(const TrackingContext* context_) {_next = context_;}
 
     const TransformMatrix3D& currentToPreviousContext() const {return _current_to_previous_initial;}
     const TransformMatrix3D& previousToCurrentContext() const {return _previous_to_current_initial;}
@@ -21,7 +17,7 @@ namespace gslam{
     KeyFramePtrVector& keyframes() {return _keyframes;}
     const KeyFramePtrVector& keyframes() const {return _keyframes;}
     Frame* createNewFrame(const TransformMatrix3D& robot_pose, const Identifier& sequence_number_raw_ = 0);
-    void createNewKeyframe();
+    const bool createLocalMap();
     const FramePtrVector& frameQueueForKeyframe() const {return _frame_queue_for_keyframe;}
 
     LandmarkPtrMap& landmarks() {return _landmarks;}
@@ -41,12 +37,9 @@ namespace gslam{
     void setRobotToWorldPrevious(const TransformMatrix3D& robot_pose_) {_last_good_robot_pose = robot_pose_;}
     const TransformMatrix3D robotToWorldPrevious() const {return _last_good_robot_pose;}
 
-    const bool generatedKeyframe() const {return _generated_keyframe;}
     const bool closedKeyframe() const {return _closed_keyframe;}
 
     void resetWindow();
-
-    void absorb(TrackingContext* context_query_, const TransformMatrix3D& transform_query_world_to_reference_world_);
 
     void purifyLandmarks();
 
@@ -54,9 +47,6 @@ namespace gslam{
     void writeTrajectory(const std::string& filename_ = "") const;
 
   protected:
-
-    const TrackingContext* _previous = 0;
-    const TrackingContext* _next     = 0;
 
     const TransformMatrix3D _current_to_previous_initial;
     const TransformMatrix3D _previous_to_current_initial;
@@ -75,16 +65,15 @@ namespace gslam{
 #endif
 
     TransformMatrix3D _last_good_robot_pose  = TransformMatrix3D::Identity();
-    bool _generated_keyframe = false;
     bool _closed_keyframe    = false;
 
     //ds current frame window buffer for key frame generation
-    gt_real _distance_traveled_window = 0.0;
-    gt_real _degrees_rotated_window   = 0.0;
+    real _distance_traveled_window = 0.0;
+    real _degrees_rotated_window   = 0.0;
 
     //ds key frame generation properties
-    gt_real _minimum_distance_traveled_for_keyframe = 0.5; //ds keyframe generation based on translational movement
-    gt_real _minimum_degrees_rotated_for_keyframe   = 0.5; //ds keyframe generation based on rotational movement
+    real _minimum_distance_traveled_for_keyframe = 0.5; //ds keyframe generation based on translational movement
+    real _minimum_degrees_rotated_for_keyframe   = 0.5; //ds keyframe generation based on rotational movement
     Count _minimum_number_of_frames_for_keyframe    = 4;   //ds in case translational keyframe generation is triggered, this value enforces a reasonable trajectory granularity
     
     FramePtrVector _frame_queue_for_keyframe;

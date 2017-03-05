@@ -6,7 +6,6 @@
 #include "../types/definitions.h"
 
 using namespace std;
-using namespace gslam;
 
 // static parameter
 // float lengths[] = {5,10,50,100,150,200,250,300,350,400};
@@ -23,8 +22,8 @@ struct errors {
     first_frame(first_frame),r_err(r_err),t_err(t_err),len(len),speed(speed) {}
 };
 
-vector<Matrix4> loadPoses(string file_name) {
-  vector<Matrix4> poses;
+vector<proslam::Matrix4> loadPoses(string file_name) {
+  vector<proslam::Matrix4> poses;
 
   //ds going modern
   std::ifstream pose_file(file_name, std::ifstream::in);
@@ -37,7 +36,7 @@ vector<Matrix4> loadPoses(string file_name) {
     std::istringstream buffer_stream(buffer_line);
 
     //ds information fields (KITTI format)
-    Matrix4 pose(Matrix4::Identity());
+    proslam::Matrix4 pose(proslam::Matrix4::Identity());
     for (uint8_t u = 0; u < 3; ++u) {
       for (uint8_t v = 0; v < 4; ++v) {
         buffer_stream >> pose(u,v);
@@ -50,12 +49,12 @@ vector<Matrix4> loadPoses(string file_name) {
   return poses;
 }
 
-vector<float> trajectoryDistances (vector<Matrix4> &poses) {
+vector<float> trajectoryDistances (vector<proslam::Matrix4> &poses) {
   vector<float> dist;
   dist.push_back(0);
   for (int32_t i=1; i<poses.size(); i++) {
-    Matrix4 P1 = poses[i-1];
-    Matrix4 P2 = poses[i];
+    proslam::Matrix4 P1 = poses[i-1];
+    proslam::Matrix4 P2 = poses[i];
     float dx = P1(0,3)-P2(0,3);
     float dy = P1(1,3)-P2(1,3);
     float dz = P1(2,3)-P2(2,3);
@@ -71,7 +70,7 @@ int32_t lastFrameFromSegmentLength(vector<float> &dist,int32_t first_frame,float
   return -1;
 }
 
-inline float rotationError(Matrix4 &pose_error) {
+inline float rotationError(proslam::Matrix4 &pose_error) {
   float a = pose_error(0,0);
   float b = pose_error(1,1);
   float c = pose_error(2,2);
@@ -79,14 +78,14 @@ inline float rotationError(Matrix4 &pose_error) {
   return acos(max(min(d,1.0f),-1.0f));
 }
 
-inline float translationError(Matrix4 &pose_error) {
+inline float translationError(proslam::Matrix4 &pose_error) {
   float dx = pose_error(0,3);
   float dy = pose_error(1,3);
   float dz = pose_error(2,3);
   return sqrt(dx*dx+dy*dy+dz*dz);
 }
 
-vector<errors> calcSequenceErrors (vector<Matrix4> &poses_gt,vector<Matrix4> &poses_result) {
+vector<errors> calcSequenceErrors (vector<proslam::Matrix4> &poses_gt,vector<proslam::Matrix4> &poses_result) {
 
   // error vector
   vector<errors> err;
@@ -114,9 +113,9 @@ vector<errors> calcSequenceErrors (vector<Matrix4> &poses_gt,vector<Matrix4> &po
         continue;
 
       // compute rotational and translational errors
-      Matrix4 pose_delta_gt     = poses_gt[first_frame].inverse()*poses_gt[last_frame];
-      Matrix4 pose_delta_result = poses_result[first_frame].inverse()*poses_result[last_frame];
-      Matrix4 pose_error        = pose_delta_result.inverse()*pose_delta_gt;
+      proslam::Matrix4 pose_delta_gt     = poses_gt[first_frame].inverse()*poses_gt[last_frame];
+      proslam::Matrix4 pose_delta_result = poses_result[first_frame].inverse()*poses_result[last_frame];
+      proslam::Matrix4 pose_error        = pose_delta_result.inverse()*pose_delta_gt;
       float r_err = rotationError(pose_error);
       float t_err = translationError(pose_error);
 
@@ -147,7 +146,7 @@ void saveSequenceErrors (vector<errors> &err,string file_name) {
   fclose(fp);
 }
 
-void savePathPlot (vector<Matrix4> &poses_gt,vector<Matrix4> &poses_result,string file_name) {
+void savePathPlot (vector<proslam::Matrix4> &poses_gt,vector<proslam::Matrix4> &poses_result,string file_name) {
 
   // parameters
   int32_t step_size = 3;
@@ -164,21 +163,21 @@ void savePathPlot (vector<Matrix4> &poses_gt,vector<Matrix4> &poses_result,strin
   fclose(fp);
 }
 
-vector<int32_t> computeRoi (vector<Matrix4> &poses_gt,vector<Matrix4> &poses_result) {
+vector<int32_t> computeRoi (vector<proslam::Matrix4> &poses_gt,vector<proslam::Matrix4> &poses_result) {
 
   float x_min = numeric_limits<int32_t>::max();
   float x_max = numeric_limits<int32_t>::min();
   float z_min = numeric_limits<int32_t>::max();
   float z_max = numeric_limits<int32_t>::min();
 
-  for (vector<Matrix4>::iterator it=poses_gt.begin(); it!=poses_gt.end(); it++) {
+  for (vector<proslam::Matrix4>::iterator it=poses_gt.begin(); it!=poses_gt.end(); it++) {
     float x = (*it)(0,3);
     float z = (*it)(2,3);
     if (x<x_min) x_min = x; if (x>x_max) x_max = x;
     if (z<z_min) z_min = z; if (z>z_max) z_max = z;
   }
 
-  for (vector<Matrix4>::iterator it=poses_result.begin(); it!=poses_result.end(); it++) {
+  for (vector<proslam::Matrix4>::iterator it=poses_result.begin(); it!=poses_result.end(); it++) {
     float x = (*it)(0,3);
     float z = (*it)(2,3);
     if (x<x_min) x_min = x; if (x>x_max) x_max = x;
@@ -264,9 +263,9 @@ void saveErrorPlots(vector<errors> &seq_err,string plot_error_dir,const char* pr
 
   // for each segment length do
   std::cerr << "---------------------------- ERROR STATISTICS ----------------------------" << std::endl;
-  gt_real total_error_rotation    = 0;
-  gt_real total_error_translation = 0;
-  Count number_of_lengths = 0;
+  proslam::real total_error_rotation    = 0;
+  proslam::real total_error_translation = 0;
+  proslam::Count number_of_lengths = 0;
   for (int32_t i=0; i<num_lengths; i++) {
 
     float t_err = 0;
@@ -441,8 +440,8 @@ bool eval (const std::string& file_trajectory_test_, const std::string& file_tra
   system(("mkdir " + plot_error_dir).c_str());
 
   // read ground truth and result poses
-  vector<Matrix4> poses_gt     = loadPoses(file_trajectory_ground_truth_);
-  vector<Matrix4> poses_result = loadPoses(file_trajectory_test_);
+  vector<proslam::Matrix4> poses_gt     = loadPoses(file_trajectory_ground_truth_);
+  vector<proslam::Matrix4> poses_result = loadPoses(file_trajectory_test_);
 
   //ds parse sequence number
   const uint32_t sequence_number = std::stoi(file_sequence_.substr(0, 2));

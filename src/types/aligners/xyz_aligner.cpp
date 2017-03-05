@@ -2,7 +2,7 @@
 
 #include "srrg_types/types.hpp"
 
-namespace gslam {
+namespace proslam {
 
   //ds initialize aligner with minimal entity TODO purify this
   void XYZAligner::init(BaseContext* context_, const TransformMatrix3D& current_to_reference_) {
@@ -66,10 +66,10 @@ namespace gslam {
       }
 
       //ds update chi
-      const gt_real error_squared = error.transpose()*error;
+      const real error_squared = error.transpose()*error;
 
       //ds check if outlier
-      gt_real weight = 1.0;
+      real weight = 1.0;
       if (error_squared > _maximum_error_kernel) {
         ++_number_of_outliers;
         if (ignore_outliers_) {
@@ -114,7 +114,7 @@ namespace gslam {
   void XYZAligner::converge() {
 
     //ds previous error to check for convergence
-    gt_real total_error_previous = 0.0;
+    real total_error_previous = 0.0;
 
     //ds start LS
     for (Count iteration = 0; iteration < _maximum_number_of_iterations; ++iteration) {
@@ -132,7 +132,7 @@ namespace gslam {
         _has_system_converged = true;
 
         //ds compute inliers ratio
-        const gt_real inlier_ratio = static_cast<gt_real>(_number_of_inliers)/_context->correspondences.size();
+        const real inlier_ratio = static_cast<real>(_number_of_inliers)/_context->correspondences.size();
 
         //ds set out values
         _context->transform_frame_query_to_frame_reference = _current_to_reference;
@@ -142,12 +142,12 @@ namespace gslam {
 
         //ds if the solution is acceptable
         if (_number_of_inliers > _minimum_number_of_inliers && inlier_ratio > _minimum_inlier_ratio) {
-          std::printf( "XYZAligner::converge|found closure: [%06lu] > [%06lu] (correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu, kernel: %5.3f)\n",
+          std::printf( "XYZAligner::converge|found closure: [%06lu] > [%06lu] (correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu, kernel size: %5.3f)\n",
           _context->id_query, _context->id_reference, _context->correspondences.size( ), iteration, inlier_ratio, _number_of_inliers, _maximum_error_kernel );
           _context->is_valid = true;
           break;
         } else {
-          std::printf( "XYZAligner::converge|dropped closure: [%06lu] > [%06lu] (correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu, kernel: %5.3f)\n",
+          std::printf( "XYZAligner::converge|dropped closure: [%06lu] > [%06lu] (correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu, kernel size: %5.3f)\n",
           _context->id_query, _context->id_reference, _context->correspondences.size( ), iteration, inlier_ratio, _number_of_inliers, _maximum_error_kernel );
           _context->is_valid = false;
           break;
@@ -159,7 +159,7 @@ namespace gslam {
       //ds check last iteration
       if(iteration == _maximum_number_of_iterations-1) {
         _has_system_converged = false;
-        std::cerr << "XYZAligner::converge|WARNING: system did not converge - inlier ratio: " << static_cast<gt_real>(_number_of_inliers)/_context->correspondences.size() << std::endl;
+        std::cerr << "XYZAligner::converge|WARNING: system did not converge - inlier ratio: " << static_cast<real>(_number_of_inliers)/_context->correspondences.size() << std::endl;
       }
     }
   }

@@ -1,11 +1,11 @@
 #include "correspondence_collection.h"
 
-namespace gslam {
+namespace proslam {
 
   CorrespondenceCollection::CorrespondenceCollection(const KeyFrame* keyframe_query_,
                                                      const KeyFrame* keyframe_reference_,
                                                      const Count& absolute_number_of_matches_,
-                                                     const gt_real& relative_number_of_matches_,
+                                                     const real& relative_number_of_matches_,
                                                      const MatchMap& matches_,
                                                      const CorrespondencePointerVector& correspondences_): keyframe_query(keyframe_query_),
                                                                                                            keyframe_reference(keyframe_reference_),

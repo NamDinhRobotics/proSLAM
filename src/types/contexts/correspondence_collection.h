@@ -2,7 +2,7 @@
 #include "../relocalizer_types.h"
 #include "types/items/correspondence.h"
 
-namespace gslam {
+namespace proslam {
 
   class CorrespondenceCollection: public BaseContext {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -14,7 +14,7 @@ namespace gslam {
     CorrespondenceCollection(const KeyFrame* keyframe_query_,
                              const KeyFrame* keyframe_reference_,
                              const Count& absolute_number_of_matches_,
-                             const gt_real& relative_number_of_matches_,
+                             const real& relative_number_of_matches_,
                              const MatchMap& matches_,
                              const CorrespondencePointerVector& correspondences_);
 
@@ -52,11 +52,11 @@ namespace gslam {
     const Identifier id_query          = 0;
     const Identifier id_reference      = 0;
     const Count absolute_number_of_matches   = 0;
-    const gt_real relative_number_of_matches = 0.0;
+    const real relative_number_of_matches = 0.0;
     const MatchMap matches_per_point;
     CorrespondencePointerVector correspondences;
     TransformMatrix3D transform_frame_query_to_frame_reference = TransformMatrix3D::Identity();
-    gt_real icp_inlier_ratio       = 0.0;
+    real icp_inlier_ratio       = 0.0;
     Count icp_number_of_iterations = 0;
     Count icp_number_of_inliers    = 0;
     bool is_valid              = false;

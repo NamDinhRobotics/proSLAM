@@ -1,6 +1,6 @@
 #include "frame_point.h"
 
-namespace gslam {
+namespace proslam {
   using namespace std;
 
   Identifier FramePoint::_instances = 0;
@@ -76,13 +76,13 @@ namespace gslam {
     setReprojectionCoordinates(PointCoordinates::Zero());
   }
 
-  void FramePoint::setDepth(const gt_real& depth_meters_) {
+  void FramePoint::setDepth(const real& depth_meters_) {
     assert(depth_meters_ > 0.0);
     _depth = depth_meters_;
     _has_depth = true;
   }
 
-  void FramePoint::setDepthByVision(const gt_real& depth_meters_) {
+  void FramePoint::setDepthByVision(const real& depth_meters_) {
     assert(depth_meters_ > 0.0);
     assert(!_has_depth);
     _depth = depth_meters_;

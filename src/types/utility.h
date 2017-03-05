@@ -1,14 +1,14 @@
 #pragma once
 #include "types/definitions.h"
 
-namespace gslam {
+namespace proslam {
 
   //ds TODO this class MUST be purged
   class Utility {
 
   public:
 
-    static const Eigen::Matrix< gt_real, 3, 1 > toOrientationRodrigues( const Eigen::Matrix< gt_real, 3, 3 >& p_matRotation )
+    static const Eigen::Matrix< real, 3, 1 > toOrientationRodrigues( const Eigen::Matrix< real, 3, 3 >& p_matRotation )
     {
         //ds orientation
         cv::Mat vecOrientation;
@@ -17,20 +17,20 @@ namespace gslam {
         cv::Rodrigues( toCVMatrix( p_matRotation ), vecOrientation );
 
         //ds return in Eigen format
-        return fromCVVector< gt_real, 3 >( vecOrientation );
+        return fromCVVector< real, 3 >( vecOrientation );
     }
 
-    static const cv::Mat_< gt_real > toCVMatrix( const Eigen::Matrix< gt_real, 3, 3 >& p_matEigen )
+    static const cv::Mat_< real > toCVMatrix( const Eigen::Matrix< real, 3, 3 >& p_matEigen )
     {
         //ds allocate cv vector
-        cv::Mat_< gt_real > matCV( 3, 3 );
+        cv::Mat_< real > matCV( 3, 3 );
 
         //ds fill the vector (column major)
         for( uint32_t u = 0; u < 3; ++u )
         {
             for( uint32_t v = 0; v < 3; ++v )
             {
-                matCV.at< gt_real >( u, v ) = p_matEigen( u, v );
+                matCV.at< real >( u, v ) = p_matEigen( u, v );
             }
         }
 
@@ -49,16 +49,6 @@ namespace gslam {
         }
 
         return vecEigen;
-    }
-
-    //ds TODO remove
-    static const cv::Mat getCvMat(const AppearancePtrVector& descriptors) {
-      assert(0 < descriptors.size());
-      cv::Mat descriptors_cv;
-      for(const Appearance* descriptor_query: descriptors) {
-        descriptors_cv.push_back(descriptor_query->descriptor);
-      }
-      return descriptors_cv;
     }
 
     //ds TODO remove

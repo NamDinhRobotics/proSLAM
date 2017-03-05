@@ -3,16 +3,14 @@
 #include <fstream>
 #include "types/utility.h"
 
-namespace gslam {
+namespace proslam {
   using namespace srrg_core;
 
-  TrackingContext::TrackingContext(): _previous(0),
-                                      _current_to_previous_initial(TransformMatrix3D::Identity()),
-                                      _previous_to_current_initial(_current_to_previous_initial.inverse())
+  TrackingContext::TrackingContext():
 #if CV_MAJOR_VERSION == 2
-                                      ,_descriptor_extractor(new cv::BriefDescriptorExtractor(DESCRIPTOR_SIZE_BYTES)) {
+                                      _descriptor_extractor(new cv::BriefDescriptorExtractor(DESCRIPTOR_SIZE_BYTES)) {
 #elif CV_MAJOR_VERSION == 3
-                                      ,_descriptor_extractor(cv::xfeatures2d::BriefDescriptorExtractor::create(DESCRIPTOR_SIZE_BYTES)) {
+                                      _descriptor_extractor(cv::xfeatures2d::BriefDescriptorExtractor::create(DESCRIPTOR_SIZE_BYTES)) {
 #else
   #error OpenCV version not supported
 #endif
@@ -63,9 +61,13 @@ namespace gslam {
     return _current_frame;
   }
 
-  void TrackingContext::createNewKeyframe() {
-    _generated_keyframe = false;
-    _closed_keyframe    = false;
+  const bool TrackingContext::createLocalMap() {
+    if (_previous_frame == 0) {
+      return false;
+    }
+
+    //ds reset closure status
+    _closed_keyframe = false;
 
     //ds update distance traveled and last pose
     const TransformMatrix3D robot_pose_last_to_current = _previous_frame->worldToRobot()*_current_frame->robotToWorld();
@@ -80,7 +82,6 @@ namespace gslam {
       //ds create the new keyframe and add it to the keyframe database
       _current_keyframe = new KeyFrame(_current_frame, _frame_queue_for_keyframe);
       _keyframes.push_back(_current_keyframe);
-      _generated_keyframe = true;
 
       //ds reset generation properties
       resetWindow();
@@ -89,7 +90,12 @@ namespace gslam {
       _current_frame = _current_keyframe;
       _frames.replace(_current_frame);
 
-//      std::cerr << "TrackingContext::createNewKeyframe|created keyframe: " << _current_frame->index() << " in context: " << index() << std::endl;
+      //ds local map generated
+      return true;
+    } else {
+
+      //ds no local map generated
+      return false;
     }
   }
   
@@ -110,57 +116,6 @@ namespace gslam {
   void TrackingContext::resetWindow() {
     _distance_traveled_window = 0.0;
     _degrees_rotated_window   = 0.0;
-  }
-
-  void TrackingContext::absorb(TrackingContext* context_query_, const TransformMatrix3D& transform_query_world_to_reference_world_) {
-
-    //ds iterate over all landmarks (order does not matter)
-    for(LandmarkPtrMapElement landmark_with_index: context_query_->landmarks()) {
-
-      //ds merge landmark properties
-      Landmark* landmark = landmark_with_index.second;
-      const PointCoordinates& coordinates_in_reference = transform_query_world_to_reference_world_*landmark->coordinates();
-      landmark->setCoordinates(coordinates_in_reference);
-      landmark->resetCoordinates();
-
-      //ds add to control structure
-      _landmarks.put(landmark);
-    }
-
-    //ds iterate over all frames (order does matter)
-    Frame* frame = context_query_->rootFrame();
-    while (frame) {
-
-      //ds merge frame properties
-      frame->setTrackingContext(this);
-      const TransformMatrix3D& frame_to_world_in_reference = transform_query_world_to_reference_world_*frame->robotToWorld();
-      frame->setRobotToWorld(frame_to_world_in_reference);
-
-      //ds add to control structure
-      _previous_frame = _current_frame;
-      _current_frame  = frame;
-      _current_frame->setPrevious(_previous_frame);
-      _previous_frame->setNext(_current_frame);
-      _frames.put(_current_frame);
-
-      //ds check if the frame is a keyframe
-      if (_current_frame->isKeyFrame()) {
-        KeyFrame* keyframe_in_reference = static_cast<KeyFrame*>(_current_frame);
-        keyframe_in_reference->updateSubContext();
-        _current_keyframe = keyframe_in_reference;
-        _keyframes.push_back(keyframe_in_reference);
-      }
-
-      //ds move on
-      frame = _current_frame->next();
-    }
-
-    //ds update last position
-    setRobotToWorldPrevious(_current_frame->robotToWorld());
-
-    //ds purge ties to all objects in the absorbed context
-    context_query_->clear();
-    delete context_query_;
   }
 
   void TrackingContext::purifyLandmarks() {

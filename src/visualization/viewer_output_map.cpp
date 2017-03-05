@@ -3,12 +3,12 @@
 #include "srrg_gl_helpers/opengl_primitives.h"
 #include <QKeyEvent>
 
-namespace gslam {
+namespace proslam {
 
   using namespace srrg_gl_helpers;
   using namespace srrg_core_viewers;
 
-  TrackingContextViewer::TrackingContextViewer(TrackingContext* context_, const gt_real& object_scale_): _context(context_),
+  TrackingContextViewer::TrackingContextViewer(TrackingContext* context_, const real& object_scale_): _context(context_),
                                                                                                       _object_scale(object_scale_){
     setWindowTitle(_window_name.c_str());
     //setFPSIsDisplayed(true);

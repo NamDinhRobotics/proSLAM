@@ -1,6 +1,6 @@
 #include "mapper.h"
 
-namespace gslam {
+namespace proslam {
 
   Mapper::Mapper(): _optimizer(Optimizer::getOptimizer()) {
     std::cerr << "Mapper::Mapper|constructed" << std::endl;
@@ -18,15 +18,8 @@ namespace gslam {
     CHRONOMETER_STOP(overall)
   }
 
-  // optimizes all landmarks by computing rudely the average. no g2o
+  //ds optimizes all landmarks by computing rudely the average without using g2o
   void Mapper::optimizeLandmarks(TrackingContext* context_){
-
-    //ds reset all active landmark positions (redundant calls)
-    for (const KeyFrame* keyframe: context_->keyframes()) {
-      for (LandmarkItem* item: keyframe->items()) {
-        item->landmark()->resetCoordinates();
-      }
-    }
 
     //ds update all active landmark positions
     for (const KeyFrame* keyframe: context_->keyframes()) {
@@ -36,10 +29,8 @@ namespace gslam {
         Landmark* landmark = item->landmark();
         assert(landmark);
 
-        //ds compute new coordinates according to keyframe position
-        const PointCoordinates& coordinates_in_world = keyframe->robotToWorld()*item->spatials();
-        const Matrix3& information(Matrix3::Identity());
-        landmark->updateCoordinates(coordinates_in_world, information);
+        //ds update landmark position
+        landmark->resetCoordinates(keyframe->robotToWorld()*item->spatials());
         landmark->setIsOptimized(true);
         landmark->setIsClosed(true);
       }
@@ -47,15 +38,6 @@ namespace gslam {
   }
 
   void Mapper::optimizePoses(TrackingContext* context_) {
-
-    //ds compute string for file naming
-    //const std::string identifier                = std::to_string(_id_last_optimization)+ "-" +std::to_string(context_->keyframes().back()->index());
-    //const std::string file_pose_raw             = "g2o/graph_"+ identifier +"_pose_raw.g2o";
-    //const std::string file_pose_optimized       = "g2o/graph_"+ identifier +"_pose_optimized.g2o";
-    //const std::string file_full_raw             = "g2o/graph_"+ identifier +"_full_raw.g2o";
-    //const std::string file_full_ptimized        = "g2o/graph_"+ identifier +"_full_optimized.g2o";
-    //const std::string file_full_optimized_clean = "g2o/graph_"+ identifier +"_full_optimized_clean.g2o";
-    _id_last_optimization = context_->keyframes().back()->index();
     _optimizer->clear();
     _optimizer->clearParameters();
 
@@ -133,20 +115,16 @@ namespace gslam {
     }
 
     //ds optimize poses
-    //_optimizer->save(file_pose_raw.c_str());
     _optimizer->initializeOptimization();
     _optimizer->setVerbose(false);
     _optimizer->optimize(10);
-    //_optimizer->save(file_pose_optimized.c_str());
 
     //ds backpropagate solution to tracking context: keyframes
     for (KeyFrame* keyframe: keyframes_in_graph) {
       g2o::VertexSE3* vertex_keyframe = dynamic_cast<g2o::VertexSE3*>(_optimizer->vertex(keyframe->index()));
       assert(0 != vertex_keyframe);
-      keyframe->setRobotToWorld(vertex_keyframe->estimate().cast<gt_real>());
+      keyframe->setRobotToWorld(vertex_keyframe->estimate().cast<real>());
     }
     context_->setRobotToWorldPrevious(context_->currentKeyframe()->robotToWorld());
-
-    //std::cerr << "optimized poses: " << keyframes_in_graph.size() << " with closures: " << number_of_closures_added << "/" << number_of_closures_checked << std::endl;
   }
-} //namespace gtracker
+}

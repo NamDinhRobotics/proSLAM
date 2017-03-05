@@ -25,11 +25,10 @@
 #include <stdint.h>
 #include "srrg_system_utils/system_utils.h"
 #include "srrg_hbst_types_core/BinaryTree.hpp"
-#include "contexts/base_context.h"
 
 
 
-namespace gslam{
+namespace proslam{
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% //CONFIGURATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -39,18 +38,19 @@ namespace gslam{
   #define DESCRIPTOR_MAXIMUM_HAMMING_DISTANCE 25
   #define DESCRIPTOR_NORM cv::NORM_HAMMING
 
-  //ds adjust for floating point precision
-  typedef double gt_real;
+  //ds adjust floating point precision
+  typedef double real;
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% CONFIGURATION// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   //ds existential types
-  typedef Eigen::Matrix<gt_real, 3, 1> PointCoordinates;
-  typedef Eigen::Matrix<gt_real, 3, 1> PointColorRGB;
-  typedef Eigen::Matrix<gt_real, 3, 3> CameraMatrix;
-  typedef Eigen::Matrix<gt_real, 3, 4> ProjectionMatrix;
-  typedef Eigen::Transform<gt_real, 3, Eigen::Isometry> TransformMatrix3D;
-  typedef Eigen::Matrix<gt_real, 6, 1> TransformVector3D;
+  typedef Eigen::Matrix<real, 3, 1> PointCoordinates;
+  typedef Eigen::Matrix<real, 3, 1> ImageCoordinates;
+  typedef Eigen::Matrix<real, 3, 1> PointColorRGB;
+  typedef Eigen::Matrix<real, 3, 3> CameraMatrix;
+  typedef Eigen::Matrix<real, 3, 4> ProjectionMatrix;
+  typedef Eigen::Transform<real, 3, Eigen::Isometry> TransformMatrix3D;
+  typedef Eigen::Matrix<real, 6, 1> TransformVector3D;
   typedef uint64_t Identifier;
   typedef uint64_t Index;
   typedef uint64_t Count;
@@ -61,25 +61,25 @@ namespace gslam{
   typedef std::pair<PointCoordinates, PointColorRGB> PointDrawable;
 
   //ds generic types
-  typedef Eigen::Matrix<gt_real, 2, 1> Vector2;  
-  typedef Eigen::Matrix<gt_real, 2, 3> Matrix2;
-  typedef Eigen::Matrix<gt_real, 3, 1> Vector3;  
-  typedef Eigen::Matrix<gt_real, 4, 1> Vector4;
-  typedef Eigen::Matrix<gt_real, 3, 3> Matrix3;
-  typedef Eigen::Matrix<gt_real, 4, 4> Matrix4;
-  typedef Eigen::Matrix<gt_real, 6, 6> Matrix6;
-  typedef Eigen::Matrix<gt_real, 6, 1> Vector6;  
-  typedef Eigen::Matrix<gt_real, 1, 6> Matrix1_6;  
-  typedef Eigen::Matrix<gt_real, 3, 6> Matrix3_6;
-  typedef Eigen::Matrix<gt_real, 4, 6> Matrix4_6;
-  typedef Eigen::Matrix<gt_real, 2, 6> Matrix2_6;
-  typedef Eigen::Matrix<gt_real, 2, 3> Matrix2_3;
-  typedef Eigen::Matrix<gt_real, 6, 3> Matrix6_3;
-  typedef Eigen::Matrix<gt_real, 6, 4> Matrix6_4;
+  typedef Eigen::Matrix<real, 2, 1> Vector2;  
+  typedef Eigen::Matrix<real, 2, 3> Matrix2;
+  typedef Eigen::Matrix<real, 3, 1> Vector3;  
+  typedef Eigen::Matrix<real, 4, 1> Vector4;
+  typedef Eigen::Matrix<real, 3, 3> Matrix3;
+  typedef Eigen::Matrix<real, 4, 4> Matrix4;
+  typedef Eigen::Matrix<real, 6, 6> Matrix6;
+  typedef Eigen::Matrix<real, 6, 1> Vector6;  
+  typedef Eigen::Matrix<real, 1, 6> Matrix1_6;  
+  typedef Eigen::Matrix<real, 3, 6> Matrix3_6;
+  typedef Eigen::Matrix<real, 4, 6> Matrix4_6;
+  typedef Eigen::Matrix<real, 2, 6> Matrix2_6;
+  typedef Eigen::Matrix<real, 2, 3> Matrix2_3;
+  typedef Eigen::Matrix<real, 6, 3> Matrix6_3;
+  typedef Eigen::Matrix<real, 6, 4> Matrix6_4;
 
   //ds HBST
   typedef srrg_hbst::BinaryMatchable<DESCRIPTOR_SIZE_BITS> HBSTMatchable;
-  typedef srrg_hbst::BinaryNode<HBSTMatchable, 50, gt_real> HBSTNode;
+  typedef srrg_hbst::BinaryNode<HBSTMatchable, 50, real> HBSTNode;
   typedef srrg_hbst::BinaryTree<HBSTNode, DESCRIPTOR_MAXIMUM_HAMMING_DISTANCE> HBSTTree;
 
   //ds cv colors

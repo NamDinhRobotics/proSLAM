@@ -12,5 +12,4 @@ target_link_libraries(srrg_proslam_core_library
   ${G2O_CORE_LIBRARY} 
   ${G2O_STUFF_LIBRARY} 
   ${CSPARSE_LIBRARY}
-  ${CHOLMOD_LIBRARY}
 )

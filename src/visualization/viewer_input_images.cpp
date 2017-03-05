@@ -2,7 +2,7 @@
 
 using namespace std;
 
-namespace gslam {
+namespace proslam {
 
   TrackerViewer::TrackerViewer(TrackingContext* world_): _world(world_), _cv_wait_key_timeout_milliseconds(0) {
     std::cerr << "switched to stepwise mode (press backspace for switch, press space for stepping)" << std::endl;
@@ -37,7 +37,7 @@ namespace gslam {
         cv::Scalar color = CV_COLOR_CODE_WHITE;
 
         //ds compute intensity -> old landmarks appear brighter
-        const gt_real intensity = std::min(static_cast<gt_real>(1.0), point->age()/static_cast<gt_real>(25));
+        const real intensity = std::min(static_cast<real>(1.0), point->age()/static_cast<real>(25));
 
         //ds check validity
         if (point->landmark()->isValidated()) {
@@ -84,7 +84,7 @@ namespace gslam {
       if (frame_point->landmark()) {
 
         //ds compute intensity -> old landmarks appear brighter
-        const gt_real intensity = std::min(static_cast<gt_real>(1.0), frame_point->age()/static_cast<gt_real>(25));
+        const real intensity = std::min(static_cast<real>(1.0), frame_point->age()/static_cast<real>(25));
         const cv::Point current_point(frame_point->imageCoordinates().x(), frame_point->imageCoordinates().y());
         const cv::Point previous_point(frame_point->previous()->imageCoordinates().x(), frame_point->previous()->imageCoordinates().y());
         cv::line(_current_image, current_point, previous_point, cv::Scalar(0, 100+intensity*155, 0));

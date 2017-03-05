@@ -1,7 +1,7 @@
 #pragma once
 #include "../contexts/frame.h"
 
-namespace gslam {
+namespace proslam {
 
   class LandmarkItem;
   class Appearance {

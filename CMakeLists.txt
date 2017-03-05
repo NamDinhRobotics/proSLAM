@@ -34,11 +34,9 @@ endif()
 
 find_package(G2O REQUIRED)
 find_package(SuiteSparse REQUIRED)
-find_package(Cholmod REQUIRED)
 
 #ds find catkin macros and libraries
 find_package(catkin REQUIRED COMPONENTS
-  cv_bridge
   srrg_core
   srrg_gl_helpers
   srrg_core_viewers
@@ -59,7 +57,6 @@ include_directories(
   ${CSPARSE_INCLUDE_DIR}
   ${OpenCV_INCLUDE_DIRS}
   ${QGLVIEWER_INCLUDE_DIR}
-  ${CHOLMOD_INCLUDE_DIR}
   ${catkin_INCLUDE_DIRS}
   src
 )

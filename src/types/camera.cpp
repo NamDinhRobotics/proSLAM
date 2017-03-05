@@ -1,6 +1,6 @@
 #include "camera.h"
 
-namespace gslam {
+namespace proslam {
 
   Identifier Camera::_instances = 0;
 

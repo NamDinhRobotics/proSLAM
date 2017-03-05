@@ -1,15 +1,15 @@
 #include "stereo_grid_detector.h"
 
-namespace gslam {
+namespace proslam {
 
-  gt_real StereoGridDetector::maximum_depth_close   = 0;
-  gt_real StereoGridDetector::maximum_depth_far     = 0;
+  real StereoGridDetector::maximum_depth_close   = 0;
+  real StereoGridDetector::maximum_depth_far     = 0;
 
   StereoGridDetector::StereoGridDetector(const Camera* camera_left_,
                                          const Camera* camera_right_): _number_of_rows_image(camera_left_->imageRows()),
                                                                        _number_of_cols_image(camera_left_->imageCols()),
-                                                                       _number_of_bins_u(std::floor(static_cast<gt_real>(_number_of_cols_image)/_bin_size)),
-                                                                       _number_of_bins_v(std::floor(static_cast<gt_real>(_number_of_rows_image)/_bin_size)),
+                                                                       _number_of_bins_u(std::floor(static_cast<real>(_number_of_cols_image)/_bin_size)),
+                                                                       _number_of_bins_v(std::floor(static_cast<real>(_number_of_rows_image)/_bin_size)),
                                                                        _bin_map_left(0),
 //                                                                       _bin_map_right(0),
                                                                        _triangulation_F(camera_left_->projectionMatrix()(0,0)),
@@ -63,6 +63,9 @@ namespace gslam {
       }
     }
 
+    _keypoints_left.clear();
+    _keypoints_right.clear();
+
     std::cerr << "StereoGridDetector::StereoGridDetector|baseline (m): " << _baseline_meters << std::endl;
     std::cerr << "StereoGridDetector::StereoGridDetector|maximum depth tracking close (m): " << maximum_depth_close << std::endl;
     std::cerr << "StereoGridDetector::StereoGridDetector|maximum depth tracking far (m): " << maximum_depth_far << std::endl;
@@ -95,32 +98,26 @@ namespace gslam {
 
   const Count StereoGridDetector::triangulate(const Frame* frame_) {
 
-    //ds buffer locally (avoid memory bugs)
-    cv::Mat descriptors_left_current;
-    cv::Mat descriptors_right_current;
-
     //ds buffer images
     const cv::Mat& intensity_image_left  = frame_->intensityImage();
     const cv::Mat& intensity_image_right = frame_->intensityImageExtra();
 
     //ds detect new features
     CHRONOMETER_START(feature_detection)
-    std::vector<cv::KeyPoint> keypoints_left;
-    _feature_detector->detect(intensity_image_left, keypoints_left);
-    std::vector<cv::KeyPoint> keypoints_right;
-    _feature_detector->detect(intensity_image_right, keypoints_right);
+    _feature_detector->detect(intensity_image_left, _keypoints_left);
+    _feature_detector->detect(intensity_image_right, _keypoints_right);
     CHRONOMETER_STOP(feature_detection)
 
     //ds keypoint pruning - prune only left and keep all potential epipolar matches on right
     CHRONOMETER_START(keypoint_pruning)
-    _binKeypoints(keypoints_left, _bin_map_left);
+    _binKeypoints(_keypoints_left, _bin_map_left);
 //    _binKeypoints(keypoints_right, _bin_map_right);
     CHRONOMETER_STOP(keypoint_pruning)
 
     //ds extract descriptors for detected features
     CHRONOMETER_START(descriptor_extraction)
-    _descriptor_extractor->compute(intensity_image_left, keypoints_left, descriptors_left_current);
-    _descriptor_extractor->compute(intensity_image_right, keypoints_right, descriptors_right_current);
+    _descriptor_extractor->compute(intensity_image_left, _keypoints_left, _descriptors_left);
+    _descriptor_extractor->compute(intensity_image_right, _keypoints_right, _descriptors_right);
     CHRONOMETER_STOP(descriptor_extraction)
 
     //ds detector-driven TRIANGULATION: reset maps
@@ -135,14 +132,14 @@ namespace gslam {
     }
 
     //ds set keypoint maps
-    for (int32_t index_keypoint = 0; index_keypoint < static_cast<int32_t>(keypoints_left.size()); ++index_keypoint) {
-      const cv::KeyPoint& keypoint_left = keypoints_left[index_keypoint];
+    for (int32_t index_keypoint = 0; index_keypoint < static_cast<int32_t>(_keypoints_left.size()); ++index_keypoint) {
+      const cv::KeyPoint& keypoint_left = _keypoints_left[index_keypoint];
       const uint32_t row = static_cast<uint32_t>(keypoint_left.pt.y);
       const uint32_t col = static_cast<uint32_t>(keypoint_left.pt.x);
       _keypoint_index_map_left[row][col] = index_keypoint;
     }
-    for (int32_t index_keypoint = 0; index_keypoint < static_cast<int32_t>(keypoints_right.size()); ++index_keypoint) {
-      const cv::KeyPoint& keypoint_right = keypoints_right[index_keypoint];
+    for (int32_t index_keypoint = 0; index_keypoint < static_cast<int32_t>(_keypoints_right.size()); ++index_keypoint) {
+      const cv::KeyPoint& keypoint_right = _keypoints_right[index_keypoint];
       const uint32_t row = static_cast<uint32_t>(keypoint_right.pt.y);
       const uint32_t col = static_cast<uint32_t>(keypoint_right.pt.x);
       _keypoint_index_map_right[row][col] = index_keypoint;
@@ -162,7 +159,7 @@ namespace gslam {
         if (_keypoint_index_map_left[row][col_left] != -1) {
 
           //ds exhaustive search
-          gt_real matching_distance_best = _maximum_matching_distance_triangulation;
+          real matching_distance_best = _maximum_matching_distance_triangulation;
           int32_t col_right_best         = -1;
 
           //ds check the all potentially matching stereo keypoints in range
@@ -172,9 +169,9 @@ namespace gslam {
             if (_keypoint_index_map_right[row][col_right] != -1) {
 
               //ds compute the distance
-              const gt_real matching_distance = cv::norm(descriptors_left_current.row(_keypoint_index_map_left[row][col_left]),
-                                                         descriptors_right_current.row(_keypoint_index_map_right[row][col_right]),
-                                                         DESCRIPTOR_NORM);
+              const real matching_distance = cv::norm(_descriptors_left.row(_keypoint_index_map_left[row][col_left]),
+                                                      _descriptors_right.row(_keypoint_index_map_right[row][col_right]),
+                                                      DESCRIPTOR_NORM);
 
               if (matching_distance < matching_distance_best) {
                 matching_distance_best = matching_distance;
@@ -189,22 +186,22 @@ namespace gslam {
             try {
 
               //ds directly attempt the triangulation - might throw
-              const PointCoordinates camera_coordinates(getCoordinatesInCamera(keypoints_left[_keypoint_index_map_left[row][col_left]].pt,
-                                                                               keypoints_right[_keypoint_index_map_right[row][col_right_best]].pt));
+              const PointCoordinates camera_coordinates(getCoordinatesInCamera(_keypoints_left[_keypoint_index_map_left[row][col_left]].pt,
+                                                                               _keypoints_right[_keypoint_index_map_right[row][col_right_best]].pt));
 
               //ds set descriptor map
               _triangulation_map[row][col_left].camera_coordinates_left = camera_coordinates;
-              _triangulation_map[row][col_left].keypoint_left    = keypoints_left[_keypoint_index_map_left[row][col_left]];
-              _triangulation_map[row][col_left].keypoint_right   = keypoints_right[_keypoint_index_map_right[row][col_right_best]];
-              _triangulation_map[row][col_left].descriptor_left  = descriptors_left_current.row(_keypoint_index_map_left[row][col_left]);
-              _triangulation_map[row][col_left].descriptor_right = descriptors_right_current.row(_keypoint_index_map_right[row][col_right_best]);
+              _triangulation_map[row][col_left].keypoint_left    = _keypoints_left[_keypoint_index_map_left[row][col_left]];
+              _triangulation_map[row][col_left].keypoint_right   = _keypoints_right[_keypoint_index_map_right[row][col_right_best]];
+              _triangulation_map[row][col_left].descriptor_left  = _descriptors_left.row(_keypoint_index_map_left[row][col_left]);
+              _triangulation_map[row][col_left].descriptor_right = _descriptors_right.row(_keypoint_index_map_right[row][col_right_best]);
               _triangulation_map[row][col_left].is_set           = true;
               _triangulation_map[row][col_left].is_available     = true;
               ++number_of_potential_points;
 
               //ds disable further matching and reduce search time
               col_right_last = col_right_best;
-            } catch (const std::runtime_error& exception) {}
+            } catch (const ExceptionTriangulation& exception) {}
           }
         }
       }
@@ -261,7 +258,7 @@ namespace gslam {
 
     //ds check for minimal disparity
     if (image_coordinates_left_.x-image_coordinates_right_.x < _minimum_disparity) {
-      throw std::runtime_error("disparity value to low");
+      throw ExceptionTriangulation("disparity value to low");
     }
 
     //ds input validation
@@ -269,7 +266,7 @@ namespace gslam {
     assert(image_coordinates_right_.y == image_coordinates_left_.y);
 
     //ds first compute depth (z in camera)
-    const gt_real depth_meters = _triangulation_DuR_flipped/(image_coordinates_left_.x-image_coordinates_right_.x);
+    const real depth_meters = _triangulation_DuR_flipped/(image_coordinates_left_.x-image_coordinates_right_.x);
     assert(depth_meters >= 0);
 
     //ds set 3d point
@@ -289,8 +286,8 @@ namespace gslam {
     //ds check all keypoints for this grid
     Count u_current = 0;
     for (const cv::KeyPoint& keypoint: keypoints_) {
-      const gt_real& keypoint_u = keypoint.pt.x;
-      const gt_real& keypoint_v = keypoint.pt.y;
+      const real& keypoint_u = keypoint.pt.x;
+      const real& keypoint_v = keypoint.pt.y;
 
       //ds if the keypoint still enters the current bin
       if (keypoint_u < u_current*_bin_size) {

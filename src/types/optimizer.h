@@ -12,7 +12,7 @@
 
 #include "definitions.h"
 
-namespace gslam {
+namespace proslam {
   class Optimizer {
 
   //ds exported data types
@@ -71,36 +71,6 @@ namespace gslam {
       g2o::SparseOptimizer * optimizer = new g2o::SparseOptimizer();
       optimizer->setAlgorithm(solverGauss);
       return optimizer;
-    }
-
-    static void clearFilesUNIX() {
-
-      //ds directory handle
-      DIR *pDirectory = opendir("g2o");
-
-      //ds try to open the directory
-      if (0 != pDirectory) {
-
-        //ds file handle
-        struct dirent *pFile;
-
-        //ds delete all files
-        while ((pFile = readdir(pDirectory)) != NULL) {
-
-          //ds validate filename
-          if ('.' != pFile->d_name[0]) {
-
-              //ds construct full filename and delete
-              std::string strFile("g2o/");
-              strFile += pFile->d_name;
-              //std::printf( "<Cg2oOptimizer>(clearFiles) removing file: %s\n", strFile.c_str( ) );
-              std::remove(strFile.c_str());
-          }
-        }
-
-        //ds close directory
-        closedir(pDirectory);
-      }
     }
   }; //class Mapper
 } //namespace gtracker
