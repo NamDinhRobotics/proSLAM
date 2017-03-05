@@ -1,5 +1,6 @@
 # <center>ProSLAM</center> #
-<center>Authors: Dominik Schlegel, Mirco Colosi, Giorgio Grisetti</center><br/>
+<center>Authors: Dominik Schlegel, Mirco Colosi, Giorgio Grisetti</center>
+<br/>
 <br/>
 
 ### Supported environments ###
@@ -7,7 +8,7 @@
  - Ubuntu 16.04 LTS + ROS Kinetic/(OpenCV3 + Qt5)
 <br/>
 
----
+<br/>
 ### How do I get set up? ###
 1) install the Ubuntu packages
 
@@ -43,7 +44,7 @@ CMake variables that must be set when building without ROS or specific libraries
 
     OpenCV_DIR=/your/path/to/the/opencv/build/folder
 
----
+<br/>
 ### How do I check if it works? ###
 
 1) download the KITTI sequence 00 into a folder on your computer: https://drive.google.com/open?id=0ByaBRAPfmgEqdXhJRmktQ2lsMEE (2.8GB)
