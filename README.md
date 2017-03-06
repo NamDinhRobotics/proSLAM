@@ -4,8 +4,10 @@
 <br/>
 
 <figure class="video_container">
-  <iframe src="https://www.youtube.com/embed/n_UmEpIwb9Y?ecver=1" frameborder="0" allowfullscreen="true">[ProSLAM: Full run KITTI Sequence 00 (real-time, 1 thread@2.40GHz/i7-4700MQ)][https://www.youtube.com/watch?v=n_UmEpIwb9Y]</iframe>
+  <iframe src="https://www.youtube.com/embed/n_UmEpIwb9Y?ecver=1" frameborder="0" allowfullscreen="true"></iframe>
 </figure>
+
+[ProSLAM: Full run KITTI Sequence 00 (real-time, 1 thread@2.40GHz/i7-4700MQ)][https://www.youtube.com/watch?v=n_UmEpIwb9Y]
 
 ### Supported environments ###
  - Ubuntu 14.04 LTS + ROS Indigo /(OpenCV2 + Qt4)
