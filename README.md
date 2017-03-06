@@ -9,6 +9,12 @@
 </figure>
 <!-- blank line -->
 
+<figure class="video_container">
+  <video controls="true" allowfullscreen="true" poster="path/to/poster_image.png">
+    <source src="path/to/video.mp4" type="video/mp4">
+  </video>
+</figure>
+
 ### Supported environments ###
  - Ubuntu 14.04 LTS + ROS Indigo /(OpenCV2 + Qt4)
  - Ubuntu 16.04 LTS + ROS Kinetic/(OpenCV3 + Qt5)
