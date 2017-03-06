@@ -9,12 +9,6 @@
 </figure>
 <!-- blank line -->
 
-<!-- blank line -->
-<figure class="video_container">
-  <iframe src="https://www.youtube.com/embed/enMumwvLAug" frameborder="0" allowfullscreen="true"> </iframe>
-</figure>
-<!-- blank line -->
-
 ### Supported environments ###
  - Ubuntu 14.04 LTS + ROS Indigo /(OpenCV2 + Qt4)
  - Ubuntu 16.04 LTS + ROS Kinetic/(OpenCV3 + Qt5)
@@ -44,6 +38,12 @@ or (OpenCV + Qt)
 5) download and build (using catkin_make) this repository:
 
     git clone https://gitlab.com/srrg-software/srrg_proslam.git
+    
+<!-- blank line -->
+<figure class="video_container">
+  <iframe src="https://www.youtube.com/embed/enMumwvLAug" frameborder="0" allowfullscreen="true"> </iframe>
+</figure>
+<!-- blank line -->
 
 The catkin build will automatically fetch the SRRG libraries (if not existing):
  - srrg_boss: https://gitlab.com/srrg-software/srrg_boss (required by srrg_core)
