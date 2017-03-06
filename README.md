@@ -4,7 +4,7 @@
 <br/>
 <!-- blank line -->
 <figure class="video_container">
-  <iframe src="https://www.youtube.com/embed/n_UmEpIwb9Y?ecver=1" frameborder="0" allowfullscreen="true"> </iframe>
+  <iframe src="https://www.youtube.com/embed/n_UmEpIwb9Y" frameborder="0" allowfullscreen="true"> </iframe>
 </figure>
 <!-- blank line -->
 ### Supported environments ###
