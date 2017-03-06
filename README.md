@@ -3,16 +3,8 @@
 <br/>
 <br/>
 
-<!-- blank line -->
 <figure class="video_container">
   <iframe src="https://www.youtube.com/embed/n_UmEpIwb9Y?ecver=1" frameborder="0" allowfullscreen="true">https://www.youtube.com/watch?v=n_UmEpIwb9Y</iframe>
-</figure>
-<!-- blank line -->
-
-<figure class="video_container">
-  <video controls="true" allowfullscreen="true" poster="">
-    <source src="https://www.youtube.com/watch?v=n_UmEpIwb9Y" type="video/mp4">
-  </video>
 </figure>
 
 ### Supported environments ###
