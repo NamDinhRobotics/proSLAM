@@ -2,11 +2,11 @@
 <center>Authors: Dominik Schlegel, Mirco Colosi, Giorgio Grisetti</center>
 <br/>
 <br/>
-
+<!-- blank line -->
 <figure class="video_container">
   <iframe src="https://www.youtube.com/embed/n_UmEpIwb9Y?ecver=1" frameborder="0" allowfullscreen="true"> </iframe>
 </figure>
-
+<!-- blank line -->
 ### Supported environments ###
  - Ubuntu 14.04 LTS + ROS Indigo /(OpenCV2 + Qt4)
  - Ubuntu 16.04 LTS + ROS Kinetic/(OpenCV3 + Qt5)
