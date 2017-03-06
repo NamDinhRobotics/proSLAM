@@ -71,3 +71,7 @@ Two windows will pop up (Input and Output)
 ---
 4) press [Backspace] on the Input window to toggle between automatic processing and stepwise (press [Space] for stepping) mode
 
+<br/>
+### It doesn't work? ###
+
+Feel free to contact the author: schdomin@gmail.com
