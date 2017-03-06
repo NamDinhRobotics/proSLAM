@@ -4,14 +4,13 @@
 <br/>
 
 <figure class="video_container">
-  <iframe src="https://www.youtube.com/embed/n_UmEpIwb9Y?ecver=1" frameborder="0" allowfullscreen="true"></iframe>
+  <iframe src="https://www.youtube.com/embed/n_UmEpIwb9Y?ecver=1" frameborder="0" allowfullscreen="true">https://www.youtube.com/watch?v=n_UmEpIwb9Y</iframe>
 </figure>
 
 
 ### Supported environments ###
  - Ubuntu 14.04 LTS + ROS Indigo /(OpenCV2 + Qt4)
  - Ubuntu 16.04 LTS + ROS Kinetic/(OpenCV3 + Qt5)
- - [arbitrary case-insensitive reference text]: https://www.mozilla.org
 <br/>
 
 <br/>
