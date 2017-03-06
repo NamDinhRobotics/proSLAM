@@ -5,7 +5,7 @@
 
 <!-- blank line -->
 <figure class="video_container">
-  <iframe src="https://www.youtube.com/embed/n_UmEpIwb9Y?ecver=1" frameborder="0" allowfullscreen="true">_</iframe>
+  <iframe src="https://www.youtube.com/embed/n_UmEpIwb9Y?ecver=1" frameborder="0" allowfullscreen="true">https://www.youtube.com/watch?v=n_UmEpIwb9Y</iframe>
 </figure>
 <!-- blank line -->
 
