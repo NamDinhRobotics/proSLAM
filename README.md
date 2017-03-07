@@ -7,7 +7,7 @@
 
 ### Supported environments ###
  - Ubuntu 14.04 LTS + ROS Indigo /(OpenCV2 + Qt4)
- - Ubuntu 16.04 LTS + ROS Kinetic/(OpenCV3 + Qt5)
+ - Ubuntu 16.04 LTS + ROS Kinetic/(OpenCV3 + Qt5)<br/>
 The complete system runs on a single thread (including visualization components)
 <br/>
 
