@@ -9,7 +9,7 @@
 
 ![Sample Video](https://www.youtube.com/embed/n_UmEpIwb9Y?ecver=1)
 
-![link text itself]: https://www.reddit.com
+![link text itself](https://www.reddit.com)
 
 
 ### Supported environments ###
