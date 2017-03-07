@@ -5,10 +5,6 @@
 
 ![ProSLAM: Full run KITTI Sequence 00 (real-time, 1 thread@2.40GHz/i7-4700MQ)](https://www.youtube.com/watch?v=n_UmEpIwb9Y)
 
-[![ProSLAM demo](https://img.youtube.com/vi/n_UmEpIwb9Y/0.jpg "ProSLAM demo")*ProSLAM: Full run KITTI Sequence 00 (real-time, 1 thread@2.40GHz/i7-4700MQ)*][https://www.youtube.com/watch?v=n_UmEpIwb9Y]
-
-[![An awesome example image](https://img.youtube.com/vi/n_UmEpIwb9Y/0.jpg "Hello World")*My caption*][about.gitlab.com]
-
 ### Supported environments ###
  - Ubuntu 14.04 LTS + ROS Indigo /(OpenCV2 + Qt4)
  - Ubuntu 16.04 LTS + ROS Kinetic/(OpenCV3 + Qt5)<br/>
