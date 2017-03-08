@@ -18,7 +18,7 @@ The complete system **runs on a single thread** (including visualization compone
 ### How do I get set up? ###
 1) install the Ubuntu packages
 
-    sudo apt-get install build-essential libeigen3-dev libsuitesparse-dev freeglut3-dev libqglviewer-dev
+    sudo apt-get install build-essential libeigen3-dev libsuitesparse-dev freeglut3-dev libqglviewer-dev ninja-build
 
 ---
 2) download and install
