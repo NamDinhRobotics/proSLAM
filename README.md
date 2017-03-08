@@ -30,7 +30,12 @@ or (OpenCV + Qt)
 3) download and install ROS catkin: http://wiki.ros.org/catkin
 
 ---
-4) download and install g2o for catkin: https://github.com/yorsh87/g2o_catkin
+4) download and install
+- g2o for catkin: https://github.com/yorsh87/g2o_catkin
+
+or
+- the native g2o library: https://github.com/RainerKuemmerle/g2o (G2O_ROOT environment variable must be set)
+
 
 ---
 5) download and build (using catkin_make) this repository:
