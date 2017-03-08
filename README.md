@@ -3,9 +3,13 @@
 <br/>
 <br/>
 
+![ProSLAM: Full run KITTI Sequence 00 (real-time, 1 thread@2.40GHz/i7-4700MQ)](https://www.youtube.com/watch?v=n_UmEpIwb9Y)
+
 ### Supported environments ###
  - Ubuntu 14.04 LTS + ROS Indigo /(OpenCV2 + Qt4)
- - Ubuntu 16.04 LTS + ROS Kinetic/(OpenCV3 + Qt5)
+ - Ubuntu 16.04 LTS + ROS Kinetic/(OpenCV3 + Qt5)<br/>
+
+The complete system **runs on a single thread** (including visualization components)
 <br/>
 
 <br/>
@@ -66,3 +70,7 @@ Two windows will pop up (Input and Output)
 ---
 4) press [Backspace] on the Input window to toggle between automatic processing and stepwise (press [Space] for stepping) mode
 
+<br/>
+### It doesn't work? ###
+
+Feel free to contact the author: schdomin@gmail.com
