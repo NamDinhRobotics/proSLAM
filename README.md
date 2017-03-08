@@ -5,6 +5,10 @@
 
 ![ProSLAM: Full run KITTI Sequence 00 (real-time, 1 thread@2.40GHz/i7-4700MQ)](https://www.youtube.com/watch?v=n_UmEpIwb9Y)
 
+| Centered |
+| :------: |
+| Cell 2   |
+
 ### Supported environments ###
 Currently Linux only:
  - Ubuntu 14.04 LTS + ROS Indigo /(OpenCV2 + Qt4)
@@ -50,7 +54,7 @@ The catkin build will automatically fetch the SRRG libraries (if not existing):
  - srrg_core_viewers: https://gitlab.com/srrg-software/srrg_core_viewers
  - srrg_hbst: https://gitlab.com/srrg-software/srrg_hbst
 
-CMake variables that must be set when building without ROS or specific libraries:
+CMake variables that must be set when building without ROS or to select specific libraries:
 
     OpenCV_DIR=/your/path/to/the/opencv/build/folder
 
