@@ -29,10 +29,10 @@ or (OpenCV + Qt)
  - Qt5: https://wiki.qt.io/Install_Qt_5_on_Ubuntu (Version 5.7.0)
 
 ---
-3) download and install the Catkin Command Line Tools: https://catkin-tools.readthedocs.io/en/latest/installing.html (currently fixed)
+3) download and install the Catkin Command Line Tools: https://catkin-tools.readthedocs.io/en/latest/installing.html (currently required)
 
 ---
-4) download and install g2o for catkin: https://github.com/yorsh87/g2o_catkin (currently fixed)
+4) download and install g2o for catkin: https://github.com/yorsh87/g2o_catkin (currently required)
 
 ---
 5) download this repository to your catkin workspace:
@@ -71,10 +71,13 @@ The folder should now contain 4 files (.txt) and 1 folder (.txt.d) plus the tarb
 
     rosrun srrg_proslam srrg_proslam_app 00.txt -use-gui
 
-Two windows will pop up (Input and Output)
+Three windows will pop up - "input: images", "output: map (bird view)" and "output: map (top view)"
 
 ---
-4) press [Backspace] on the Input window to toggle between automatic processing and stepwise (press [Space] for stepping) mode
+4) press [Backspace] on the input window to toggle between automatic processing and stepwise (press [Space] for stepping) mode
+
+---
+5) press [H] to view the available commands for the output windows
 
 ---
 ### It doesn't work? ###
