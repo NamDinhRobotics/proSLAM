@@ -3,7 +3,8 @@
 | Authors: Dominik Schlegel, Mirco Colosi, Giorgio Grisetti |
 
 ### Demo videos ###
-![ProSLAM: Full run KITTI Sequence 00 (real-time, 1 thread@2.40GHz/i7-4700MQ)](https://www.youtube.com/watch?v=n_UmEpIwb9Y) (YouTube link, direct video embedding seems broken for some browsers)
+![ProSLAM: Full run KITTI Sequence 00 (real-time, 1 thread@2.40GHz/i7-4700MQ)](https://www.youtube.com/watch?v=n_UmEpIwb9Y)
+(All of the above are YouTube links, direct video embedding on GitLab seems broken for some browsers)
 
 ---
 ### Supported environments ###
