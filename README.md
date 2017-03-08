@@ -2,7 +2,6 @@
 | :------: |
 | Authors: Dominik Schlegel, Mirco Colosi, Giorgio Grisetti |
 
----
 ### Demo videos ###
 ![ProSLAM: Full run KITTI Sequence 00 (real-time, 1 thread@2.40GHz/i7-4700MQ)](https://www.youtube.com/watch?v=n_UmEpIwb9Y)
 
@@ -55,6 +54,7 @@ CMake variables that must be set when building without ROS or to select specific
 
     OpenCV_DIR=/your/path/to/the/opencv/build/folder
 
+---
 ### How do I check if it works? ###
 
 1) download the KITTI sequence 00 into a folder on your computer: https://drive.google.com/open?id=0ByaBRAPfmgEqdXhJRmktQ2lsMEE (2.8GB)
@@ -76,6 +76,7 @@ Two windows will pop up (Input and Output)
 ---
 4) press [Backspace] on the Input window to toggle between automatic processing and stepwise (press [Space] for stepping) mode
 
+---
 ### It doesn't work? ###
 
 Feel free to contact the author: schdomin@gmail.com
