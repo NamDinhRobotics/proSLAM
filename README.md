@@ -44,7 +44,7 @@ or
 
     git clone https://gitlab.com/srrg-software/srrg_proslam.git
     
-build the project using:
+and build the project using:
     
     catkin build srrg_proslam
 
