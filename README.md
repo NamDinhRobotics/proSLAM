@@ -5,9 +5,9 @@
 
 ![ProSLAM: Full run KITTI Sequence 00 (real-time, 1 thread@2.40GHz/i7-4700MQ)](https://www.youtube.com/watch?v=n_UmEpIwb9Y)
 
-| Centered |
+| # ProSLAM # |
 | :------: |
-| Cell 2   |
+| Authors: Dominik Schlegel, Mirco Colosi, Giorgio Grisetti |
 
 ### Supported environments ###
 Currently Linux only:
