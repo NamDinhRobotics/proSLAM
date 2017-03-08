@@ -40,9 +40,13 @@ or
 
 
 ---
-5) download and build (using catkin_make) this repository:
+5) download this repository to your catkin workspace:
 
     git clone https://gitlab.com/srrg-software/srrg_proslam.git
+    
+build the project using:
+    
+    catkin build srrg_proslam
 
 The catkin build will automatically fetch the SRRG libraries (if not existing):
  - srrg_boss: https://gitlab.com/srrg-software/srrg_boss (required by srrg_core)
