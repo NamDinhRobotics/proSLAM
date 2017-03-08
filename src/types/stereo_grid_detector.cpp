@@ -128,25 +128,25 @@ namespace proslam {
     CHRONOMETER_START(point_triangulation)
     for (uint32_t row = 0; row < _number_of_rows_image; ++row) {
       for (uint32_t col = 0; col < _number_of_cols_image; ++col) {
-        _keypoint_index_map_left[row][col]  = -1;
-        _keypoint_index_map_right[row][col] = -1;
+//        _keypoint_index_map_left[row][col]  = -1;
+//        _keypoint_index_map_right[row][col] = -1;
         _triangulation_map[row][col].is_available = false;
       }
     }
 
-    //ds set keypoint maps
-    for (int32_t index_keypoint = 0; index_keypoint < static_cast<int32_t>(_keypoints_left.size()); ++index_keypoint) {
-      const cv::KeyPoint& keypoint_left = _keypoints_left[index_keypoint];
-      const uint32_t row = static_cast<uint32_t>(keypoint_left.pt.y);
-      const uint32_t col = static_cast<uint32_t>(keypoint_left.pt.x);
-      _keypoint_index_map_left[row][col] = index_keypoint;
-    }
-    for (int32_t index_keypoint = 0; index_keypoint < static_cast<int32_t>(_keypoints_right.size()); ++index_keypoint) {
-      const cv::KeyPoint& keypoint_right = _keypoints_right[index_keypoint];
-      const uint32_t row = static_cast<uint32_t>(keypoint_right.pt.y);
-      const uint32_t col = static_cast<uint32_t>(keypoint_right.pt.x);
-      _keypoint_index_map_right[row][col] = index_keypoint;
-    }
+//    //ds set keypoint maps
+//    for (int32_t index_keypoint = 0; index_keypoint < static_cast<int32_t>(_keypoints_left.size()); ++index_keypoint) {
+//      const cv::KeyPoint& keypoint_left = _keypoints_left[index_keypoint];
+//      const uint32_t row = static_cast<uint32_t>(keypoint_left.pt.y);
+//      const uint32_t col = static_cast<uint32_t>(keypoint_left.pt.x);
+//      _keypoint_index_map_left[row][col] = index_keypoint;
+//    }
+//    for (int32_t index_keypoint = 0; index_keypoint < static_cast<int32_t>(_keypoints_right.size()); ++index_keypoint) {
+//      const cv::KeyPoint& keypoint_right = _keypoints_right[index_keypoint];
+//      const uint32_t row = static_cast<uint32_t>(keypoint_right.pt.y);
+//      const uint32_t col = static_cast<uint32_t>(keypoint_right.pt.x);
+//      _keypoint_index_map_right[row][col] = index_keypoint;
+//    }
 
     //ds fuse keypoints buffers
     _keypoints_with_descriptor_left.resize(_keypoints_left.size());
