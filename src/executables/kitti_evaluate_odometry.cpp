@@ -3,7 +3,7 @@
 #include <limits>
 #include <fstream>
 
-#include "../types/definitions.h"
+#include "types/definitions.h"
 
 using namespace std;
 

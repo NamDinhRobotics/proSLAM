@@ -41,9 +41,6 @@ find_package(catkin REQUIRED COMPONENTS
   srrg_gl_helpers
   srrg_core_viewers
   srrg_hbst
-  roscpp
-  sensor_msgs
-  tf
 )
 
 #ds flags

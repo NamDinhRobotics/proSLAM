@@ -5,11 +5,10 @@ add_library(srrg_proslam_visualization_library
 
 target_link_libraries(srrg_proslam_visualization_library
   srrg_proslam_types_library
-  ${OPENGL_gl_LIBRARY} 
+  ${OPENGL_gl_LIBRARY}
   ${OPENGL_glu_LIBRARY}
-  ${QGLVIEWER_LIBRARY} 
-  srrg_gl_helpers_library
-  srrg_core_viewers_library
+  ${QGLVIEWER_LIBRARY}
+  ${catkin_LIBRARIES}
   GL GLU
 )
 
