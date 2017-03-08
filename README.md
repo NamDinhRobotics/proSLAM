@@ -1,6 +1,6 @@
 | **ProSLAM** |
 | :------: |
-| Authors: Dominik Schlegel, Mirco Colosi, Giorgio Grisetti |
+| Dominik Schlegel, Mirco Colosi, Giorgio Grisetti |
 
 ### Demo videos ###
 ![ProSLAM: Full run KITTI Sequence 00 (real-time, 1 thread@2.40GHz/i7-4700MQ)](https://www.youtube.com/watch?v=n_UmEpIwb9Y)
@@ -29,15 +29,10 @@ or (OpenCV + Qt)
  - Qt5: https://wiki.qt.io/Install_Qt_5_on_Ubuntu (Version 5.7.0)
 
 ---
-3) download and install the Catkin Command Line Tools: https://catkin-tools.readthedocs.io/en/latest/installing.html
+3) download and install the Catkin Command Line Tools: https://catkin-tools.readthedocs.io/en/latest/installing.html (currently fixed)
 
 ---
-4) download and install
-- g2o for catkin: https://github.com/yorsh87/g2o_catkin
-
-or
-- the native g2o library: https://github.com/RainerKuemmerle/g2o (G2O_ROOT environment variable must be set)
-
+4) download and install g2o for catkin: https://github.com/yorsh87/g2o_catkin (currently fixed)
 
 ---
 5) download this repository to your catkin workspace:
