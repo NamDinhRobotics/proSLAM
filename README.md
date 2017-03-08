@@ -57,7 +57,7 @@ The catkin build will automatically fetch the SRRG libraries (if not existing):
 
 CMake variables that must be set when building without ROS or to select specific libraries:
 
-    OpenCV_DIR=/your/path/to/the/opencv/build/folder
+    -D OpenCV_DIR=/your/path/to/the/opencv/build/folder
 
 ---
 ### How do I check if it works? ###
