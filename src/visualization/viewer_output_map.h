@@ -8,7 +8,7 @@ namespace proslam {
 
   class TrackingContextViewer: public srrg_core_viewers::SimpleViewer{
   public:
-    TrackingContextViewer(TrackingContext* context_ = 0, const real& object_scale_ = 0.1);
+    TrackingContextViewer(TrackingContext* context_ = 0, const real& object_scale_ = 0.1, const std::string& window_name_ = "output: map");
 
     inline bool landmarksDrawn() const {return _landmarks_drawn;}
     inline void setLandmarksDrawn(bool landmarks_drawn_) {_landmarks_drawn=landmarks_drawn_;}
@@ -44,7 +44,7 @@ namespace proslam {
     real _object_scale    = 0.1;
     real _point_size      = 2;
     TransformMatrix3D _world_to_robot_origin = TransformMatrix3D::Identity();
-    const std::string _window_name = "output: map";
+    const std::string _window_name;
   };
 
 }

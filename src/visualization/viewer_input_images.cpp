@@ -4,7 +4,9 @@ using namespace std;
 
 namespace proslam {
 
-  TrackerViewer::TrackerViewer(TrackingContext* world_): _world(world_), _cv_wait_key_timeout_milliseconds(0) {
+  TrackerViewer::TrackerViewer(TrackingContext* world_, const std::string& window_name_): _world(world_),
+                                                                                          _cv_wait_key_timeout_milliseconds(0),
+                                                                                          _window_name(window_name_) {
     std::cerr << "switched to stepwise mode (press backspace for switch, press space for stepping)" << std::endl;
   }
   

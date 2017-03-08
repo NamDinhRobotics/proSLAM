@@ -44,9 +44,7 @@ void process(TrackingContext* world_context_,
              TrackerSVI* tracker_,
              Mapper* mapper_,
              Relocalizer* relocalizer_,
-             const Camera* camera_left_,
              const cv::Mat& intensity_image_left_,
-             const Camera* camera_right_,
              const cv::Mat& intensity_image_right_,
              const TransformMatrix3D& world_previous_to_current_estimate_ = TransformMatrix3D::Identity());
 
@@ -188,10 +186,17 @@ int32_t main(int32_t argc, char ** argv) {
   if (use_gui) {
     ui_server      = new QApplication(argc, argv);
     tracker_viewer = new TrackerViewer(world_map);
-    context_viewer_bird = new TrackingContextViewer(world_map);
+    context_viewer_bird = new TrackingContextViewer(world_map, 1, "output: map (bird view)");
     context_viewer_bird->show();
-    context_viewer_top = new TrackingContextViewer(world_map);
+    context_viewer_top = new TrackingContextViewer(world_map, 1, "output: map (top view)");
     context_viewer_top->show();
+    TransformMatrix3D center_for_kitti_sequence_00;
+    center_for_kitti_sequence_00.matrix() << 1, 0, 0, 0,
+                                             0, 0, -1, 200,
+                                             0, 1, 0, 800,
+                                             0, 0, 0, 1;
+    context_viewer_top->setViewpointOrigin(center_for_kitti_sequence_00);
+    context_viewer_top->setFollowRobot(false);
   }
 
   //ds start playback
@@ -221,7 +226,6 @@ int32_t main(int32_t argc, char ** argv) {
       cv::Mat intensity_image_left  = message_image_left->image();
       cv::Mat intensity_image_right = message_image_right->image();
       Camera* camera_left  = cameras_by_topic.at(message_image_left->topic());
-      Camera* camera_right = cameras_by_topic.at(message_image_right->topic());
 
       //ds check if first frame and odometry is available
       if (world_map->frames().size() == 0 && message_image_left->hasOdom()) {
@@ -236,9 +240,7 @@ int32_t main(int32_t argc, char ** argv) {
               tracker,
               mapper,
               relocalizer,
-              camera_left,
               intensity_image_left,
-              camera_right,
               intensity_image_right,
               world_previous_to_current);
 
@@ -272,6 +274,9 @@ int32_t main(int32_t argc, char ** argv) {
       //ds update ui
       synchronizer.reset();
       if (use_gui) {
+        tracker_viewer->initDrawing();
+        tracker_viewer->drawFeatureTracking();
+        tracker_viewer->drawFeatures();
         running = context_viewer_bird->isVisible() && tracker_viewer->updateGUI();
         context_viewer_bird->updateGL();
         context_viewer_top->updateGL();
@@ -407,9 +412,7 @@ void process(TrackingContext* world_map_,
              TrackerSVI* tracker_,
              Mapper* mapper_,
              Relocalizer* relocalizer_,
-             const Camera* camera_left_,
              const cv::Mat& intensity_image_left_,
-             const Camera* camera_right_,
              const cv::Mat& intensity_image_right_,
              const TransformMatrix3D& world_previous_to_current_estimate_) {
 
@@ -464,10 +467,5 @@ void process(TrackingContext* world_map_,
       //ds wipe non-optimized landmarks
       world_map_->purifyLandmarks();
     }
-  }
-  if (use_gui) {
-    tracker_viewer->initDrawing();
-    tracker_viewer->drawFeatureTracking();
-    tracker_viewer->drawFeatures();
   }
 }

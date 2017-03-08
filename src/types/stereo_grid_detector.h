@@ -28,11 +28,12 @@ namespace proslam {
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
         cv::KeyPoint keypoint;
         cv::Mat descriptor;
+        int32_t r;
+        int32_t c;
       };
 
       struct TriangulatedPoint {
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-        bool is_set       = false;
         bool is_available = false;
         cv::KeyPoint keypoint_left;
         cv::KeyPoint keypoint_right;
@@ -56,8 +57,8 @@ namespace proslam {
 
       const PointCoordinates getCoordinatesInCamera(const cv::Point2f& image_coordinates_left_, const cv::Point2f& image_coordinates_right_);
 
-      int32_t** keypointIndexMapLeft() {return _keypoint_index_map_left;}
-      int32_t** keypointIndexMapRight() {return _keypoint_index_map_right;}
+//      int32_t** keypointIndexMapLeft() {return _keypoint_index_map_left;}
+//      int32_t** keypointIndexMapRight() {return _keypoint_index_map_right;}
       TriangulatedPoint** framepointMap() {return _triangulation_map;}
       const Count numberOfRowsImage() const {return _number_of_rows_image;}
       const Count numberOfColsImage() const {return _number_of_cols_image;}
@@ -133,6 +134,9 @@ namespace proslam {
       std::vector<cv::KeyPoint> _keypoints_right;
       cv::Mat _descriptors_left;
       cv::Mat _descriptors_right;
+      std::vector<KeypointWithDescriptor> _keypoints_with_descriptor_left;
+      std::vector<KeypointWithDescriptor> _keypoints_with_descriptor_right;
+      std::vector<std::pair<KeypointWithDescriptor, KeypointWithDescriptor>> _stereo_keypoints;
 
     //ds helpers
     protected:

@@ -170,12 +170,12 @@ namespace proslam {
 
         //ds allocate a new point connected to the previous one
         FramePoint* current_point = current_frame_->createNewPoint(_preprocessor->framepointMap()[row_best][col_best].keypoint_left,
-                                                                  _preprocessor->framepointMap()[row_best][col_best].descriptor_left,
-                                                                  _preprocessor->framepointMap()[row_best][col_best].keypoint_right,
-                                                                  _preprocessor->framepointMap()[row_best][col_best].descriptor_right,
-                                                                  _preprocessor->framepointMap()[row_best][col_best].camera_coordinates_left.z(),
-                                                                  current_frame_->camera()->cameraToRobot()*_preprocessor->framepointMap()[row_best][col_best].camera_coordinates_left,
-                                                                  previous_point);
+                                                                   _preprocessor->framepointMap()[row_best][col_best].descriptor_left,
+                                                                   _preprocessor->framepointMap()[row_best][col_best].keypoint_right,
+                                                                   _preprocessor->framepointMap()[row_best][col_best].descriptor_right,
+                                                                   _preprocessor->framepointMap()[row_best][col_best].camera_coordinates_left.z(),
+                                                                   current_frame_->camera()->cameraToRobot()*_preprocessor->framepointMap()[row_best][col_best].camera_coordinates_left,
+                                                                   previous_point);
         //ds set the point to the control structure
         current_frame_->points()[_number_of_tracked_points] = current_point;
         if (current_point->landmark()) {
@@ -480,7 +480,6 @@ namespace proslam {
         //ds compute far to close landmark ratio TODO simplify or get better logic: currently the idea is to give more weight to framepoints in case we have almost only far landmarks
         const real weight_framepoint = 1-(_number_of_tracked_landmarks_far+10*_number_of_tracked_landmarks_close)/static_cast<real>(_number_of_tracked_points);
         assert(weight_framepoint <= 1);
-        assert(weight_framepoint >= 0);
 
         //ds call pose solver
         CHRONOMETER_START(pose_optimization)

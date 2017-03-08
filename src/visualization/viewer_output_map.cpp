@@ -8,8 +8,9 @@ namespace proslam {
   using namespace srrg_gl_helpers;
   using namespace srrg_core_viewers;
 
-  TrackingContextViewer::TrackingContextViewer(TrackingContext* context_, const real& object_scale_): _context(context_),
-                                                                                                      _object_scale(object_scale_){
+  TrackingContextViewer::TrackingContextViewer(TrackingContext* context_, const real& object_scale_, const std::string& window_name_): _context(context_),
+                                                                                                                                       _object_scale(object_scale_),
+                                                                                                                                       _window_name(window_name_){
     setWindowTitle(_window_name.c_str());
     //setFPSIsDisplayed(true);
 

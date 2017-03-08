@@ -13,18 +13,18 @@ find_package(Eigen3 REQUIRED)
 find_package(QGLViewer REQUIRED)
 
 #ds check if qt5 is available - lock variable to false if qt4 should be used
-set(SRRG_GSLAM_USE_QT_5 false)
+set(SRRG_PROSLAM_USE_QT_5 false)
 find_package(Qt5Widgets)
 if(${Qt5Widgets_FOUND})
 
   #ds only enable qt5 if ros kinetic is present
   if("$ENV{ROS_DISTRO}" STREQUAL "kinetic")
-    set(SRRG_GSLAM_USE_QT_5 true)
+    set(SRRG_PROSLAM_USE_QT_5 true)
   endif()
 endif()
 
 #ds depending on found qt installation
-if(${SRRG_GSLAM_USE_QT_5})
+if(${SRRG_PROSLAM_USE_QT_5})
   message("using Qt version 5")
   find_package(Qt5 COMPONENTS Xml OpenGL Widgets REQUIRED)
 else()
@@ -62,7 +62,7 @@ include_directories(
 )
 
 #ds specific includes: qt
-if(${SRRG_GSLAM_USE_QT_5})
+if(${SRRG_PROSLAM_USE_QT_5})
   include_directories(${Qt5Xml_INCLUDE_DIRS} ${Qt5OpenGL_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS})
 else()
   include_directories(${QT_INCLUDES})

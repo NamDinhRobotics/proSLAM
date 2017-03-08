@@ -1,5 +1,7 @@
 #include "stereo_grid_detector.h"
 
+#include <fstream>
+
 namespace proslam {
 
   real StereoGridDetector::maximum_depth_close   = 0;
@@ -58,13 +60,15 @@ namespace proslam {
       for (Count col = 0; col < _number_of_cols_image; ++col) {
         _keypoint_index_map_left[row][col]  = -1;
         _keypoint_index_map_right[row][col] = -1;
-        _triangulation_map[row][col].is_set       = false;
         _triangulation_map[row][col].is_available = false;
       }
     }
 
     _keypoints_left.clear();
     _keypoints_right.clear();
+    _keypoints_with_descriptor_left.clear();
+    _keypoints_with_descriptor_right.clear();
+    _stereo_keypoints.clear();
 
     std::cerr << "StereoGridDetector::StereoGridDetector|baseline (m): " << _baseline_meters << std::endl;
     std::cerr << "StereoGridDetector::StereoGridDetector|maximum depth tracking close (m): " << maximum_depth_close << std::endl;
@@ -126,7 +130,6 @@ namespace proslam {
       for (uint32_t col = 0; col < _number_of_cols_image; ++col) {
         _keypoint_index_map_left[row][col]  = -1;
         _keypoint_index_map_right[row][col] = -1;
-        _triangulation_map[row][col].is_set       = false;
         _triangulation_map[row][col].is_available = false;
       }
     }
@@ -144,6 +147,123 @@ namespace proslam {
       const uint32_t col = static_cast<uint32_t>(keypoint_right.pt.x);
       _keypoint_index_map_right[row][col] = index_keypoint;
     }
+
+//    //ds fuse keypoints buffers
+//    _keypoints_with_descriptor_left.resize(_keypoints_left.size());
+//    _keypoints_with_descriptor_right.resize(_keypoints_right.size());
+//    if (_keypoints_left.size() <= _keypoints_right.size()) {
+//      for (Index u = 0; u < _keypoints_left.size(); ++u) {
+//        _keypoints_with_descriptor_left[u].keypoint    = _keypoints_left[u];
+//        _keypoints_with_descriptor_left[u].descriptor  = _descriptors_left.row(u);
+//        _keypoints_with_descriptor_left[u].r           = _keypoints_left[u].pt.y;
+//        _keypoints_with_descriptor_left[u].c           = _keypoints_left[u].pt.x;
+//        _keypoints_with_descriptor_right[u].keypoint   = _keypoints_right[u];
+//        _keypoints_with_descriptor_right[u].descriptor = _descriptors_right.row(u);
+//        _keypoints_with_descriptor_right[u].r          = _keypoints_right[u].pt.y;
+//        _keypoints_with_descriptor_right[u].c          = _keypoints_right[u].pt.x;
+//      }
+//      for (Index u = _keypoints_left.size(); u < _keypoints_right.size(); ++u) {
+//        _keypoints_with_descriptor_right[u].keypoint   = _keypoints_right[u];
+//        _keypoints_with_descriptor_right[u].descriptor = _descriptors_right.row(u);
+//        _keypoints_with_descriptor_right[u].r          = _keypoints_right[u].pt.y;
+//        _keypoints_with_descriptor_right[u].c          = _keypoints_right[u].pt.x;
+//      }
+//      _stereo_keypoints.resize(_keypoints_left.size());
+//    } else {
+//      for (Index u = 0; u < _keypoints_right.size(); ++u) {
+//        _keypoints_with_descriptor_left[u].keypoint    = _keypoints_left[u];
+//        _keypoints_with_descriptor_left[u].descriptor  = _descriptors_left.row(u);
+//        _keypoints_with_descriptor_left[u].r           = _keypoints_left[u].pt.y;
+//        _keypoints_with_descriptor_left[u].c           = _keypoints_left[u].pt.x;
+//        _keypoints_with_descriptor_right[u].keypoint   = _keypoints_right[u];
+//        _keypoints_with_descriptor_right[u].descriptor = _descriptors_left.row(u);
+//      }
+//      for (Index u = _keypoints_right.size(); u < _keypoints_left.size(); ++u) {
+//        _keypoints_with_descriptor_left[u].keypoint   = _keypoints_left[u];
+//        _keypoints_with_descriptor_left[u].descriptor = _descriptors_left.row(u);
+//        _keypoints_with_descriptor_left[u].r          = _keypoints_left[u].pt.y;
+//        _keypoints_with_descriptor_left[u].c          = _keypoints_left[u].pt.x;
+//      }
+//      _stereo_keypoints.resize(_keypoints_right.size());
+//    }
+//
+////    std::ofstream out("new.txt", std::ofstream::app);
+//
+//    //ds perform stereo keypoint search algorithm
+//    //ds sort all input vectors in the order of the expression
+//    std::sort(_keypoints_with_descriptor_left.begin(), _keypoints_with_descriptor_left.end(), [](const KeypointWithDescriptor& a_, const KeypointWithDescriptor& b_){return ((a_.r < b_.r) || (a_.r == b_.r && a_.c < b_.c));});
+//    std::sort(_keypoints_with_descriptor_right.begin(), _keypoints_with_descriptor_right.end(), [](const KeypointWithDescriptor& a_, const KeypointWithDescriptor& b_){return ((a_.r < b_.r) || (a_.r == b_.r && a_.c < b_.c));});
+//
+//    //ds running variable
+//    Index idx_R = 0;
+//
+//    //ds loop over all left keypoints
+//    Count number_of_potential_points = 0;
+//    for (Index idx_L = 0; idx_L < _keypoints_with_descriptor_left.size(); idx_L++) {
+//      //stop condition
+//      if (idx_R == _keypoints_with_descriptor_right.size()) {break;}
+//      //the right keypoints are on an lower row - skip left
+//      while (_keypoints_with_descriptor_left[idx_L].r < _keypoints_with_descriptor_right[idx_R].r) {
+//        idx_L++; if (idx_L == _keypoints_with_descriptor_left.size()) {break;}
+//      }
+//      if (idx_L == _keypoints_with_descriptor_left.size()) {break;}
+//      //the right keypoints are on an upper row - skip right
+//      while (_keypoints_with_descriptor_left[idx_L].r > _keypoints_with_descriptor_right[idx_R].r) {
+//        idx_R++; if (idx_R == _keypoints_with_descriptor_right.size()) {break;}
+//      }
+//      if (idx_R == _keypoints_with_descriptor_right.size()) {break;}
+//      //search bookkeeping
+//      Index idx_RS = idx_R;
+//      real dist_best = _maximum_matching_distance_triangulation;
+//      Index idx_best_R = 0;
+//      //scan epipolar line for current keypoint at idx_L
+//      while (_keypoints_with_descriptor_left[idx_L].r == _keypoints_with_descriptor_right[idx_RS].r) {
+//        //zero disparity stop condition
+//        if (_keypoints_with_descriptor_right[idx_RS].c >= _keypoints_with_descriptor_left[idx_L].c) {break;}
+//        //compute descriptor distance
+//        const real dist = cv::norm(_keypoints_with_descriptor_left[idx_L].descriptor, _keypoints_with_descriptor_right[idx_RS].descriptor, DESCRIPTOR_NORM);
+//        if(dist < dist_best) {
+//          dist_best = dist;
+//          idx_best_R = idx_RS;
+//        }
+//        idx_RS++; if (idx_RS == _keypoints_with_descriptor_right.size()) {break;}
+//      }
+//      //check if something was found
+//      if (dist_best < _maximum_matching_distance_triangulation) {
+//
+//        //ds add triangulation map entry
+//        try {
+//
+//          const Index& row       = _keypoints_with_descriptor_left[idx_L].r;
+//          const Index& col_left  = _keypoints_with_descriptor_left[idx_L].c;
+//          assert(!_triangulation_map[row][col_left].is_available);
+//
+//          //ds directly attempt the triangulation - might throw
+//          const PointCoordinates camera_coordinates(getCoordinatesInCamera(_keypoints_with_descriptor_left[idx_L].keypoint.pt,
+//                                                                           _keypoints_with_descriptor_right[idx_best_R].keypoint.pt));
+//
+////          out << "[" << number_of_potential_points << "]"
+////              << _keypoints_with_descriptor_left[idx_L].keypoint.pt << "|"
+////              << _keypoints_with_descriptor_right[idx_best_R].keypoint.pt
+////              << ">" << camera_coordinates.transpose() << std::endl;
+//
+//          //ds set descriptor map
+//          _triangulation_map[row][col_left].camera_coordinates_left = camera_coordinates;
+//          _triangulation_map[row][col_left].keypoint_left    = _keypoints_with_descriptor_left[idx_L].keypoint;
+//          _triangulation_map[row][col_left].keypoint_right   = _keypoints_with_descriptor_right[idx_best_R].keypoint;
+//          _triangulation_map[row][col_left].descriptor_left  = _keypoints_with_descriptor_left[idx_L].descriptor;
+//          _triangulation_map[row][col_left].descriptor_right = _keypoints_with_descriptor_right[idx_best_R].descriptor;
+//          _triangulation_map[row][col_left].is_available     = true;
+//          ++number_of_potential_points;
+//
+//          //ds reduce search space
+//          idx_R = idx_best_R+1;
+//        } catch (const ExceptionTriangulation& exception) {}
+//      }
+//    }
+//    std::cerr << number_of_potential_points << "/" << _keypoints_with_descriptor_left.size() << std::endl;
+
+
 
     //ds look for triangulation pairs - row wise block optimization
     Count number_of_potential_points = 0;
@@ -189,13 +309,17 @@ namespace proslam {
               const PointCoordinates camera_coordinates(getCoordinatesInCamera(_keypoints_left[_keypoint_index_map_left[row][col_left]].pt,
                                                                                _keypoints_right[_keypoint_index_map_right[row][col_right_best]].pt));
 
+//              out << "[" << number_of_potential_points << "]"
+//                  << _keypoints_left[_keypoint_index_map_left[row][col_left]].pt << "|"
+//                  << _keypoints_right[_keypoint_index_map_right[row][col_right_best]].pt
+//                  << ">" << camera_coordinates.transpose() << std::endl;
+
               //ds set descriptor map
               _triangulation_map[row][col_left].camera_coordinates_left = camera_coordinates;
               _triangulation_map[row][col_left].keypoint_left    = _keypoints_left[_keypoint_index_map_left[row][col_left]];
               _triangulation_map[row][col_left].keypoint_right   = _keypoints_right[_keypoint_index_map_right[row][col_right_best]];
               _triangulation_map[row][col_left].descriptor_left  = _descriptors_left.row(_keypoint_index_map_left[row][col_left]);
               _triangulation_map[row][col_left].descriptor_right = _descriptors_right.row(_keypoint_index_map_right[row][col_right_best]);
-              _triangulation_map[row][col_left].is_set           = true;
               _triangulation_map[row][col_left].is_available     = true;
               ++number_of_potential_points;
 
@@ -206,7 +330,12 @@ namespace proslam {
         }
       }
     }
+//    std::cerr << number_of_potential_points << "/" << _keypoints_left.size() << std::endl;
     CHRONOMETER_STOP(point_triangulation)
+
+//    out << "-----------------------------------------------------" << std::endl;
+//    out.close();
+//    getchar();
 
     //ds check if there's a significant loss in target points
     if (number_of_potential_points < _target_number_of_points) {

@@ -14,7 +14,7 @@ target_link_libraries(srrg_proslam_visualization_library
 )
 
 #ds package specific linkage: qt
-if(${SRRG_proslam_USE_QT_5})
+if(${SRRG_PROSLAM_USE_QT_5})
   target_link_libraries(srrg_proslam_visualization_library
     Qt5::Widgets
   )
