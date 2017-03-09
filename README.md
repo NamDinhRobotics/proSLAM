@@ -29,7 +29,9 @@ or (OpenCV + Qt)
  - Qt5: https://wiki.qt.io/Install_Qt_5_on_Ubuntu (Version 5.7.0)
 
 ---
-3) download and install the Catkin Command Line Tools: https://catkin-tools.readthedocs.io/en/latest/installing.html (currently required)
+3) download and install the Catkin Command Line Tools: https://catkin-tools.readthedocs.io/en/latest/installing.html (currently required) if ROS is installed simply enter:
+
+    sudo apt-get install python-catkin-tools
 
 ---
 4) clone g2o for catkin (currently required) to your catkin workspace:
