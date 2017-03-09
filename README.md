@@ -80,6 +80,9 @@ Three windows will pop up - "input: images", "output: map (bird view)" and "outp
 5) press [H] to view the available commands for the output windows
 
 ---
+6) press [Esc] to terminate the system prematurely
+
+---
 ### It doesn't work? ###
 
 Feel free to contact the author: schdomin@gmail.com
