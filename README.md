@@ -32,7 +32,7 @@ or (OpenCV + Qt)
 3) download and install the Catkin Command Line Tools: https://catkin-tools.readthedocs.io/en/latest/installing.html (currently required)
 
 ---
-4) download and install g2o for catkin: https://github.com/yorsh87/g2o_catkin (currently required)
+4) download g2o for catkin: https://github.com/yorsh87/g2o_catkin (currently required) and build it using catkin:
 
     catkin build g2o_catkin
 
@@ -41,7 +41,7 @@ or (OpenCV + Qt)
 
     git clone https://gitlab.com/srrg-software/srrg_proslam.git
     
-enter the project directory in your catkin workspacce (e.g. in ../src/srrg_proslam) and fetch the SRRG libraries:
+enter the project directory in your catkin workspacce (e.g. in ../src/srrg_proslam) and fetch the SRRG libraries by executing the script:
 
     ./pull_srrg_packages.bash
     
