@@ -25,8 +25,8 @@ The complete system **runs on a single thread** (including visualization compone
  - ROS: http://wiki.ros.org/ROS/Installation
 
 or (OpenCV + Qt)
- - OpenCV3: https://github.com/opencv/opencv/archive/3.2.0.zip (Version 3.2.0)
- - Qt5: https://wiki.qt.io/Install_Qt_5_on_Ubuntu (Version 5.7.0)
+ - OpenCV3: https://github.com/opencv/opencv/archive/3.2.0.zip (Version 3.2.0) - used for FAST detection, BRIEF extraction, visualization
+ - Qt5: https://wiki.qt.io/Install_Qt_5_on_Ubuntu (Version 5.7.0)              - used for visualization
 
 ---
 3) download and install the Colorful Catkin Command Line Tools: https://catkin-tools.readthedocs.io/en/latest/installing.html (currently required) if ROS is installed simply enter:
