@@ -5,6 +5,16 @@ SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 #set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_BUILD_TYPE Release)
 
+#ds fetch srrg packages - retrieve catkin workspace source folder - brutal, disabled for now
+#string(REPLACE "srrg_proslam" "" CATKIN_SOURCE_DIR ${PROJECT_SOURCE_DIR})
+
+#ds start fetching all packages - this will fail automatically if the given package already exists - brutal, disabled for now
+#execute_process(COMMAND bash "-c" "git clone https://gitlab.com/srrg-software/srrg_boss ${CATKIN_SOURCE_DIR}srrg_boss")
+#execute_process(COMMAND bash "-c" "git clone https://gitlab.com/srrg-software/srrg_core ${CATKIN_SOURCE_DIR}srrg_core")
+#execute_process(COMMAND bash "-c" "git clone https://gitlab.com/srrg-software/srrg_gl_helpers ${CATKIN_SOURCE_DIR}srrg_gl_helpers")
+#execute_process(COMMAND bash "-c" "git clone https://gitlab.com/srrg-software/srrg_core_viewers ${CATKIN_SOURCE_DIR}srrg_core_viewers")
+#execute_process(COMMAND bash "-c" "git clone https://gitlab.com/srrg-software/srrg_hbst ${CATKIN_SOURCE_DIR}srrg_hbst")
+
 #ds OpenCV - OpenCV_DIR might be overwritten by user
 find_package(OpenCV REQUIRED)
 message("using OpenCV version ${OpenCV_VERSION} (${OpenCV_DIR})")
@@ -17,7 +27,7 @@ set(SRRG_PROSLAM_USE_QT_5 false)
 find_package(Qt5Widgets)
 if(${Qt5Widgets_FOUND})
 
-  #ds only enable qt5 if ros kinetic is present
+  #ds only enable qt5 if ros kinetic is present for now
   if("$ENV{ROS_DISTRO}" STREQUAL "kinetic")
     set(SRRG_PROSLAM_USE_QT_5 true)
   endif()
@@ -32,7 +42,6 @@ else()
   find_package(Qt4 REQUIRED)
 endif()
 
-find_package(G2O REQUIRED)
 find_package(SuiteSparse REQUIRED)
 
 #ds find catkin macros and libraries
@@ -41,6 +50,7 @@ find_package(catkin REQUIRED COMPONENTS
   srrg_gl_helpers
   srrg_core_viewers
   srrg_hbst
+  g2o_catkin
 )
 
 #ds flags
@@ -50,7 +60,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -Wall -O3 -DNDEBUG -fPIC")
 #ds specify additional locations of header files
 include_directories(
   ${EIGEN3_INCLUDE_DIR}
-  ${G2O_INCLUDE_DIR}
+  ${g2o_catkin_INCLUDE_DIRS}
   ${CSPARSE_INCLUDE_DIR}
   ${OpenCV_INCLUDE_DIRS}
   ${QGLVIEWER_INCLUDE_DIR}
@@ -69,8 +79,6 @@ endif()
 catkin_package(
   INCLUDE_DIRS src
   LIBRARIES srrg_proslam_types_library srrg_proslam_ui_library srrg_proslam_core_library
-#  CATKIN_DEPENDS
-#  DEPENDS
 )
 
 #ds set sources
