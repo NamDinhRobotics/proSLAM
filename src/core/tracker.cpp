@@ -490,39 +490,59 @@ namespace proslam {
         CHRONOMETER_STOP(pose_optimization)
 
         //ds solver deltas
-        Count number_of_inliers       = _aligner->numberOfInliers();
-        world_previous_to_current     = _aligner->robotToWorld()*current_frame->previous()->robotToWorld().inverse();
+        Count number_of_inliers    = _aligner->numberOfInliers();
+        world_previous_to_current  = _aligner->robotToWorld()*current_frame->previous()->robotToWorld().inverse();
         real delta_angular         = Utility::toOrientationRodrigues(world_previous_to_current.linear()).norm();
         real delta_translational   = world_previous_to_current.translation().norm();
 
-        //ds if the system converged and we got enough inliers
-        if (number_of_inliers > _minimum_number_of_landmarks_to_track) {
+        //ds if we don't have enough inliers - trigger fallback posit
+        if (number_of_inliers < _minimum_number_of_landmarks_to_track) {
 
-          //ds if the posit result is significant enough
-          if (delta_angular > 0.001 || delta_translational > 0.01) {
+          //ds trigger identity movement posit
+          CHRONOMETER_START(pose_optimization)
+          context_->landmarks().clearActive();
+          _aligner->init(current_frame, current_frame->previous()->robotToWorld());
+          _aligner->setWeightFramepoint(std::max(weight_framepoint, static_cast<real>(0.1)));
+          _aligner->converge();
+          CHRONOMETER_STOP(pose_optimization)
 
-            //ds update robot pose with previous posit result
-            current_frame->setRobotToWorld(_aligner->robotToWorld());
-          } else {
+          //ds update stats
+          number_of_inliers         = _aligner->numberOfInliers();
+          world_previous_to_current = _aligner->robotToWorld()*current_frame->previous()->robotToWorld().inverse();
+          delta_angular             = Utility::toOrientationRodrigues(world_previous_to_current.linear()).norm();
+          delta_translational       = world_previous_to_current.translation().norm();
+
+          //ds check if still insufficient
+          if (number_of_inliers < _minimum_number_of_landmarks_to_track) {
+
+            //ds reset state
+            std::cerr << "LOST TRACK due to invalid position optimization" << std::endl;
+            _status_previous = Frame::Localizing;
+            _status          = Frame::Localizing;
+            current_frame->setStatus(_status);
+            current_frame->points().clear();
 
             //ds keep previous solution
             current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
             world_previous_to_current = TransformMatrix3D::Identity();
+            context_->setRobotToWorldPrevious(current_frame->robotToWorld());
+            return world_previous_to_current;
           }
-        } else {
 
-          //ds reset state
-          std::cerr << "LOST TRACK due to invalid position optimization" << std::endl;
-          _status_previous = Frame::Localizing;
-          _status          = Frame::Localizing;
-          current_frame->setStatus(_status);
-          current_frame->points().clear();
+          std::cerr << "TrackerSVI::addImage|WARNING: using posit on identiy motion model (experimental) inliers: " << _aligner->numberOfInliers()
+                    << " outliers: " << _aligner->numberOfOutliers() << " average error: " << _aligner->totalError()/_aligner->numberOfInliers() <<  std::endl;
+        }
+
+        //ds if the posit result is significant enough
+        if (delta_angular > 0.001 || delta_translational > 0.01) {
+
+          //ds update robot pose with posit result
+          current_frame->setRobotToWorld(_aligner->robotToWorld());
+        } else {
 
           //ds keep previous solution
           current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
           world_previous_to_current = TransformMatrix3D::Identity();
-          context_->setRobotToWorldPrevious(current_frame->robotToWorld());
-          return world_previous_to_current;
         }
 
         //ds update current frame points

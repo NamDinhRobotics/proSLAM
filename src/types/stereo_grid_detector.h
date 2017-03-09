@@ -57,8 +57,6 @@ namespace proslam {
 
       const PointCoordinates getCoordinatesInCamera(const cv::Point2f& image_coordinates_left_, const cv::Point2f& image_coordinates_right_);
 
-//      int32_t** keypointIndexMapLeft() {return _keypoint_index_map_left;}
-//      int32_t** keypointIndexMapRight() {return _keypoint_index_map_right;}
       TriangulatedPoint** framepointMap() {return _triangulation_map;}
       const Count numberOfRowsImage() const {return _number_of_rows_image;}
       const Count numberOfColsImage() const {return _number_of_cols_image;}
@@ -107,8 +105,6 @@ namespace proslam {
       const real _baseline_meters           = 0;
       const real _baseline_factor           = 50;
       const real _minimum_disparity         = 1;
-      int32_t** _keypoint_index_map_left;
-      int32_t** _keypoint_index_map_right;
       TriangulatedPoint** _triangulation_map;
 
       //ds feature detection

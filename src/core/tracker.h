@@ -67,8 +67,8 @@ namespace proslam {
 
     //ds feature tracking criteria
     int32_t _pixel_distance_tracking         = 0;
-    int32_t _pixel_distance_tracking_maximum = 50;
-    int32_t _pixel_distance_tracking_minimum = 25;
+    int32_t _pixel_distance_tracking_maximum = 49; //7x7 pixels
+    int32_t _pixel_distance_tracking_minimum = 16; //4x4 pixels
     const int32_t _range_point_tracking      = 2;
 
     //ds pose solving
