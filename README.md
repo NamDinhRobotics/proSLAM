@@ -34,21 +34,20 @@ or (OpenCV + Qt)
 ---
 4) download and install g2o for catkin: https://github.com/yorsh87/g2o_catkin (currently required)
 
+    catkin build g2o_catkin
+
 ---
 5) download this repository to your catkin workspace:
 
     git clone https://gitlab.com/srrg-software/srrg_proslam.git
     
-and build the project using:
+enter the project directory in your catkin workspacce (e.g. in ../src/srrg_proslam) and fetch the SRRG libraries:
+
+    ./pull_srrg_packages.bash
+    
+then build the project using:
     
     catkin build srrg_proslam
-
-The catkin build will automatically fetch the SRRG libraries (if not existing):
- - srrg_boss: https://gitlab.com/srrg-software/srrg_boss (required by srrg_core)
- - srrg_core: https://gitlab.com/srrg-software/srrg_core
- - srrg_gl_helpers: https://gitlab.com/srrg-software/srrg_gl_helpers (required by srrg_core_viewers)
- - srrg_core_viewers: https://gitlab.com/srrg-software/srrg_core_viewers
- - srrg_hbst: https://gitlab.com/srrg-software/srrg_hbst
 
 CMake variables that must be set when building without ROS or to select specific libraries:
 
