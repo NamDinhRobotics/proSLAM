@@ -28,9 +28,9 @@ namespace proslam{
     const Frame* previousFrame() const {return _previous_frame;}
     Frame* currentFrame() {return _current_frame;}
     Frame* previousFrame() {return _previous_frame;}
-    KeyFrame* currentKeyframe() {return _current_keyframe;}
-    KeyFrame* previousKeyframe() {assert(1 < _keyframes.size()); return *(_keyframes.end()-2);} //ds NASTY, price for readability
-    void closeKeyframes(KeyFrame* query_, const KeyFrame* reference_, const TransformMatrix3D& transform_query_to_reference_);
+    LocalMap* currentKeyframe() {return _current_keyframe;}
+    LocalMap* previousKeyframe() {assert(1 < _keyframes.size()); return *(_keyframes.end()-2);} //ds NASTY, price for readability
+    void closeKeyframes(LocalMap* query_, const LocalMap* reference_, const TransformMatrix3D& transform_query_to_reference_);
 
     cv::DescriptorExtractor* descriptorExtractor() {return _descriptor_extractor;}
 
@@ -79,7 +79,7 @@ namespace proslam{
     FramePtrVector _frame_queue_for_keyframe;
 
     //ds key frame holders
-    KeyFrame* _current_keyframe  = 0;
+    LocalMap* _current_keyframe  = 0;
     KeyFramePtrVector _keyframes;
   };
 

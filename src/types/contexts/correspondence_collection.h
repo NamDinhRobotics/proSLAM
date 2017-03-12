@@ -11,8 +11,8 @@ namespace proslam {
   public:
 
     //ds ctor
-    CorrespondenceCollection(const KeyFrame* keyframe_query_,
-                             const KeyFrame* keyframe_reference_,
+    CorrespondenceCollection(const LocalMap* keyframe_query_,
+                             const LocalMap* keyframe_reference_,
                              const Count& absolute_number_of_matches_,
                              const real& relative_number_of_matches_,
                              const MatchMap& matches_,
@@ -47,8 +47,8 @@ namespace proslam {
       return correspondences_copy;
     }
 
-    const KeyFrame* keyframe_query     = 0;
-    const KeyFrame* keyframe_reference = 0;
+    const LocalMap* keyframe_query     = 0;
+    const LocalMap* keyframe_reference = 0;
     const Identifier id_query          = 0;
     const Identifier id_reference      = 0;
     const Count absolute_number_of_matches   = 0;

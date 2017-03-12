@@ -15,7 +15,7 @@ namespace proslam {
   public:
 
     //ds initialize closer module for a new keyframe
-    void init(const KeyFrame* keyframe);
+    void init(const LocalMap* keyframe);
 
     //ds integrate frame into loop closing pool
     void train();

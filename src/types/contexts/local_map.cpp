@@ -3,7 +3,7 @@
 namespace proslam {
   using namespace srrg_core;
 
-  KeyFrame::KeyFrame(Frame* frame_for_context_, 
+  LocalMap::LocalMap(Frame* frame_for_context_, 
 		                 FramePtrVector& frames_): Frame(frame_for_context_) {
     _keyframe = this;
     _items.clear();
@@ -47,7 +47,7 @@ namespace proslam {
 
     //ds check for low item counts
     if (_minimum_number_of_items > landmarks_added_to_context.size()) {
-      std::cerr << "KeyFrame::KeyFrame|WARNING: low item number: " << landmarks_added_to_context.size() << std::endl;
+      std::cerr << "LocalMap::LocalMap|WARNING: low item number: " << landmarks_added_to_context.size() << std::endl;
     }
 
     //ds propagate keyframe transform to contained frames
@@ -62,7 +62,7 @@ namespace proslam {
     frames_.clear();
   }
 
-  KeyFrame::~KeyFrame() {
+  LocalMap::~LocalMap() {
 
     //ds free all items and their sub elements (e.g. appearances)
     for (const LandmarkItem* item: _items) {
@@ -73,7 +73,7 @@ namespace proslam {
     _matches.clear();
   }
 
-  void KeyFrame::updateSubContext() {
+  void LocalMap::updateSubContext() {
 
     //ds update robot poses for all contained frames
     for (Frame* frame: _subcontext) {

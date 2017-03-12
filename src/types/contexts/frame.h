@@ -5,7 +5,7 @@
 
 namespace proslam {
   
-  class KeyFrame;
+  class LocalMap;
   class TrackingContext;
   class Frame: public BaseContext {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -85,8 +85,8 @@ namespace proslam {
     inline Status status() const {return _status;}
     inline void setStatus(Status status_) {_status=status_;}
 
-    void setKeyframe(const KeyFrame* keyframe);
-    const KeyFrame* keyframe() const {return _keyframe;}
+    void setKeyframe(const LocalMap* keyframe);
+    const LocalMap* keyframe() const {return _keyframe;}
     bool isKeyFrame() const;
 
     size_t countPoints(const Count min_age_,
@@ -133,7 +133,7 @@ namespace proslam {
     bool _has_intensity_extra                = false;
     bool _has_depth                          = false;
 
-    const KeyFrame* _keyframe                = 0;
+    const LocalMap* _keyframe                = 0;
     static Identifier _instances;
 
   friend class Tracker;

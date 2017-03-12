@@ -61,7 +61,7 @@ namespace proslam {
     _points.clear();
   }
 
-  void Frame::setKeyframe(const KeyFrame* keyframe_) {
+  void Frame::setKeyframe(const LocalMap* keyframe_) {
     _keyframe          = keyframe_;
     _frame_to_keyframe = keyframe_->worldToRobot()*this->robotToWorld();
     _keyframe_to_frame = _frame_to_keyframe.inverse();

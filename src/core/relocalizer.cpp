@@ -48,7 +48,7 @@ namespace proslam {
     std::cerr << "Relocalizer::Relocalizer|destroyed" << std::endl;
   }
 
-  void Relocalizer::init(const KeyFrame* keyframe) {
+  void Relocalizer::init(const LocalMap* keyframe) {
     CHRONOMETER_START(overall)
     _query = new Query(keyframe);
     CHRONOMETER_STOP(overall)

@@ -34,7 +34,7 @@ namespace proslam {
     glMultMatrixf(camera_to_world_pose.cast<float>().data());
 
     //ds check if the frame is a closed keyframe and highlight it accordingly
-    if (frame_->isKeyFrame() && (static_cast<const KeyFrame*>(frame_))->closures().size() > 0) {
+    if (frame_->isKeyFrame() && (static_cast<const LocalMap*>(frame_))->closures().size() > 0) {
       glColor3f(0.0, 1.0, 0.0);
     } else {
       glColor3f(color_rgb_.x(), color_rgb_.y(), color_rgb_.z());

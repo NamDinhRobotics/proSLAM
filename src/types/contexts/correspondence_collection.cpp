@@ -2,8 +2,8 @@
 
 namespace proslam {
 
-  CorrespondenceCollection::CorrespondenceCollection(const KeyFrame* keyframe_query_,
-                                                     const KeyFrame* keyframe_reference_,
+  CorrespondenceCollection::CorrespondenceCollection(const LocalMap* keyframe_query_,
+                                                     const LocalMap* keyframe_reference_,
                                                      const Count& absolute_number_of_matches_,
                                                      const real& relative_number_of_matches_,
                                                      const MatchMap& matches_,

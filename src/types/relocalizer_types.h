@@ -28,11 +28,11 @@ namespace proslam {
 
   struct Query {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-    Query(const KeyFrame* keyframe_): keyframe(keyframe_),
+    Query(const LocalMap* keyframe_): keyframe(keyframe_),
                                       appearances(keyframe_->appearances()),
                                       matchables(Utility::getMatchables(appearances)),
                                       hbst_tree(new HBSTTree(keyframe_->index(), matchables)) {}
-    const KeyFrame* keyframe = 0;
+    const LocalMap* keyframe = 0;
     const AppearancePtrVector appearances;
     const HBSTNode::BinaryMatchableVector matchables;
     const HBSTTree* hbst_tree = 0;
@@ -45,7 +45,7 @@ namespace proslam {
                                      matchables(Utility::getMatchables(appearances)),
                                      hbst_tree(new HBSTTree(frame_->index(), matchables)) {}
 
-    QueryFrame(const KeyFrame* keyframe_): frame(keyframe_),
+    QueryFrame(const LocalMap* keyframe_): frame(keyframe_),
                                            appearances(keyframe_->appearances()),
                                            matchables(Utility::getMatchables(appearances)),
                                            hbst_tree(new HBSTTree(keyframe_->index(), matchables)) {}

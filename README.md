@@ -90,4 +90,4 @@ Three windows will pop up - "input: images", "output: map (bird view)" and "outp
 ---
 ### It doesn't work? ###
 
-Feel free to contact the author: schdomin@gmail.com
+Feel free to contact the maintainer at any time (see package.xml)

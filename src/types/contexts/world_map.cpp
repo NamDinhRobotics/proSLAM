@@ -80,7 +80,7 @@ namespace proslam {
         (_frame_queue_for_keyframe.size() > _minimum_number_of_frames_for_keyframe && _keyframes.size() < 5)                                              ) {
 
       //ds create the new keyframe and add it to the keyframe database
-      _current_keyframe = new KeyFrame(_current_frame, _frame_queue_for_keyframe);
+      _current_keyframe = new LocalMap(_current_frame, _frame_queue_for_keyframe);
       _keyframes.push_back(_current_keyframe);
 
       //ds reset generation properties
@@ -106,8 +106,8 @@ namespace proslam {
     return landmark;
   }
 
-  void TrackingContext::closeKeyframes(KeyFrame* query_,
-                                       const KeyFrame* reference_,
+  void TrackingContext::closeKeyframes(LocalMap* query_,
+                                       const LocalMap* reference_,
                                        const TransformMatrix3D& transform_query_to_reference_) {
     query_->add(reference_, transform_query_to_reference_);
     _closed_keyframe = true;

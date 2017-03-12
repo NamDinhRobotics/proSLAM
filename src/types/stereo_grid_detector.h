@@ -81,7 +81,7 @@ namespace proslam {
       const Count _number_of_cols_image = 0;
       Count _target_number_of_points    = 750;
       int32_t _detector_threshold = 10;
-      int32_t _detector_threshold_minimum = 10;
+      int32_t _detector_threshold_minimum = 5;
       int32_t _detector_threshold_maximum = 50;
       int32_t _maximum_tracking_matching_distance = 50;
       const int32_t _tracking_matching_distance_threshold_maximum = 50;

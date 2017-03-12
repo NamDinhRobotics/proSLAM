@@ -1,13 +1,13 @@
 #pragma once
-#include "../items/landmark.h"
-#include "../items/landmark_item.h"
+#include "types/items/landmark.h"
+#include "types/items/landmark_item.h"
 
 namespace proslam {
 
-  class KeyFrame;
-  typedef std::vector<KeyFrame*> KeyFramePtrVector;
+  class LocalMap;
+  typedef std::vector<LocalMap*> KeyFramePtrVector;
 
-  class KeyFrame: public Frame {
+  class LocalMap: public Frame {
 
   //ds exported objects
   public:
@@ -25,11 +25,11 @@ namespace proslam {
       struct KeyFrameCorrespondence {
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
-        KeyFrameCorrespondence(const KeyFrame* keyframe_,
+        KeyFrameCorrespondence(const LocalMap* keyframe_,
                                const TransformMatrix3DWithInformation& relation_): keyframe(keyframe_),
                                                                                    relation(relation_) {}
 
-        const KeyFrame* keyframe = 0;
+        const LocalMap* keyframe = 0;
         const TransformMatrix3DWithInformation relation;
       };
       typedef std::vector<KeyFrameCorrespondence> KeyFrameCorrespondenceVector;
@@ -38,9 +38,9 @@ namespace proslam {
   public:
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-    KeyFrame(Frame* frame_for_context_, FramePtrVector& frames_);
-    virtual ~KeyFrame();
-    KeyFrame() = delete;
+    LocalMap(Frame* frame_for_context_, FramePtrVector& frames_);
+    virtual ~LocalMap();
+    LocalMap() = delete;
 
   public:
 
@@ -54,7 +54,7 @@ namespace proslam {
     const AppearancePtrVector& appearances() const {return _appearances;}
     const LandmarkItemPointerVector& items() const {return _items;}
 
-    void add(const KeyFrame* keyframe_reference_,
+    void add(const LocalMap* keyframe_reference_,
              const TransformMatrix3D transform_query_to_reference_,
              const Matrix6& information_ = Matrix6::Identity()) {_matches.push_back(KeyFrameCorrespondence(keyframe_reference_, TransformMatrix3DWithInformation(transform_query_to_reference_, information_)));}
     const KeyFrameCorrespondenceVector& closures() const {return _matches;}

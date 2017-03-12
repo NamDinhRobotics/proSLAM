@@ -22,7 +22,7 @@ namespace proslam {
   void Mapper::optimizeLandmarks(TrackingContext* context_){
 
     //ds update all active landmark positions
-    for (const KeyFrame* keyframe: context_->keyframes()) {
+    for (const LocalMap* keyframe: context_->keyframes()) {
       for (LandmarkItem* item: keyframe->items()) {
 
         //ds buffer current landmark
@@ -64,7 +64,7 @@ namespace proslam {
     KeyFramePtrVector keyframes_in_graph(0);
     
     //ds pose measurements
-    for (KeyFrame* keyframe: context_->keyframes()) {
+    for (LocalMap* keyframe: context_->keyframes()) {
 
       //ds add the pose to g2o
       g2o::VertexSE3* vertex_keyframe = new g2o::VertexSE3;
@@ -89,10 +89,10 @@ namespace proslam {
     }
 
     //ds pose measurements: check for closures now as all id's are in the graph
-    for (const KeyFrame* keyframe_query: context_->keyframes()) {
+    for (const LocalMap* keyframe_query: context_->keyframes()) {
 
-      for (const KeyFrame::KeyFrameCorrespondence& keyframe_correspondence: keyframe_query->closures()) {
-        const KeyFrame* keyframe_reference = keyframe_correspondence.keyframe;
+      for (const LocalMap::KeyFrameCorrespondence& keyframe_correspondence: keyframe_query->closures()) {
+        const LocalMap* keyframe_reference = keyframe_correspondence.keyframe;
         const TransformMatrix3D transform_query_to_reference = keyframe_correspondence.relation.transform;
 
         //ds compute required transform delta
@@ -120,7 +120,7 @@ namespace proslam {
     _optimizer->optimize(10);
 
     //ds backpropagate solution to tracking context: keyframes
-    for (KeyFrame* keyframe: keyframes_in_graph) {
+    for (LocalMap* keyframe: keyframes_in_graph) {
       g2o::VertexSE3* vertex_keyframe = dynamic_cast<g2o::VertexSE3*>(_optimizer->vertex(keyframe->index()));
       assert(0 != vertex_keyframe);
       keyframe->setRobotToWorld(vertex_keyframe->estimate().cast<real>());

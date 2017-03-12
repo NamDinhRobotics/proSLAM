@@ -21,15 +21,17 @@ const char* banner[] = {
   "options:",
   "-camera-left-topic <string>",
   "-camera-right-topic <string>",
-  " -use-gui:  display gui",
+  "-use-gui:  displays GUI elements",
+  "-open: disables relocalization",
   0
 };
 
 //ds playback modules
 static SystemUsageCounter system_usage;
 MessageTimestampSynchronizer synchronizer;
-bool running     = true;
-bool use_gui     = false;
+bool running            = true;
+bool use_gui            = false;
+bool use_relocalization = true;
 TransformMatrix3D world_previous_to_current = TransformMatrix3D::Identity();
 StringCameraMap cameras_by_topic;
 
@@ -62,7 +64,7 @@ int32_t main(int32_t argc, char ** argv) {
   Mapper* mapper             = new Mapper();
   Relocalizer* relocalizer   = new Relocalizer();
   relocalizer->aligner()->setMaximumErrorKernel(0.5);
-  relocalizer->aligner()->setMinimumNumberOfInliers(10);
+  relocalizer->aligner()->setMinimumNumberOfInliers(25);
   relocalizer->aligner()->setMinimumInlierRatio(0.4);
   relocalizer->setMinimumAbsoluteNumberOfMatchesPointwise(25);
 
@@ -73,17 +75,19 @@ int32_t main(int32_t argc, char ** argv) {
   std::string filename_sensor_messages     = "";
   int count_added_arguments = 1;
   while(count_added_arguments < argc){
-    if (! strcmp(argv[count_added_arguments],"-stereo-camera-left-topic")){
+    if (! strcmp(argv[count_added_arguments], "-camera-left-topic")){
       count_added_arguments++;
-      topic_image_stereo_left=argv[count_added_arguments];
-    } else if (! strcmp(argv[count_added_arguments],"-stereo-camera-right-topic")){
+      topic_image_stereo_left = argv[count_added_arguments];
+    } else if (! strcmp(argv[count_added_arguments], "-camera-right-topic")){
       count_added_arguments++;
-      topic_image_stereo_right=argv[count_added_arguments];
-    } else if (! strcmp(argv[count_added_arguments],"-h")) {
+      topic_image_stereo_right = argv[count_added_arguments];
+    } else if (! strcmp(argv[count_added_arguments], "-h")) {
       printBanner(banner);
       return 0;
-    } else if (! strcmp(argv[count_added_arguments],"-use-gui")) {
+    } else if (! strcmp(argv[count_added_arguments], "-use-gui")) {
       use_gui = true;
+    } else if (! strcmp(argv[count_added_arguments], "-open")) {
+      use_relocalization = false;
     } else {
       filename_sensor_messages=argv[count_added_arguments];
     }
@@ -92,9 +96,11 @@ int32_t main(int32_t argc, char ** argv) {
 
   //ds log configuration
   std::cerr << "main|running with params: " << std::endl;
-  std::cerr << "main| -camera-left-topic  " << topic_image_stereo_left << std::endl;
-  std::cerr << "main| -camera-right-topic " << topic_image_stereo_right << std::endl;
-  std::cerr << "main| -messages           " << filename_sensor_messages << std::endl;
+  std::cerr << "main|-camera-left-topic  " << topic_image_stereo_left << std::endl;
+  std::cerr << "main|-camera-right-topic " << topic_image_stereo_right << std::endl;
+  std::cerr << "main|-use-gui            " << use_gui << std::endl;
+  std::cerr << "main|-open               " << !use_relocalization << std::endl;
+  std::cerr << "main|-messages           " << filename_sensor_messages << std::endl;
 
   //ds configure sensor message source
   if (filename_sensor_messages.length() == 0) {
@@ -422,50 +428,54 @@ void process(TrackingContext* world_map_,
                                                  intensity_image_right_,
                                                  world_previous_to_current_estimate_);
 
-  //ds if we have a valid frame (not the case after the track is lost)
-  if (world_map_->currentFrame() != 0) {
+  //ds check if relocalization is desired
+  if (use_relocalization) {
 
-    //ds local map generation - regardless of tracker state
-    if (world_map_->createLocalMap()) {
+    //ds if we have a valid frame (not the case after the track is lost)
+    if (world_map_->currentFrame() != 0) {
 
-      //ds if we have a fresh track (start or lost)
-      if (world_map_->keyframes().size() == 1) {
-        relocalizer_->flush();
-      }
+      //ds local map generation - regardless of tracker state
+      if (world_map_->createLocalMap()) {
 
-      //ds trigger relocalization
-      relocalizer_->init(world_map_->currentKeyframe());
-      relocalizer_->detect();
-      relocalizer_->compute();
+        //ds if we have a fresh track (start or lost)
+        if (world_map_->keyframes().size() == 1) {
+          relocalizer_->flush();
+        }
 
-      //ds check the closures
-      for(CorrespondenceCollection* closure: relocalizer_->closures()) {
-        if (closure->is_valid) {
-          assert(world_map_->currentKeyframe() == closure->keyframe_query);
+        //ds trigger relocalization
+        relocalizer_->init(world_map_->currentKeyframe());
+        relocalizer_->detect();
+        relocalizer_->compute();
 
-          //ds add loop closure constraint
-          world_map_->closeKeyframes(world_map_->currentKeyframe(),
-                                                                 closure->keyframe_reference,
-                                                                 closure->transform_frame_query_to_frame_reference);
-          if (use_gui) {
-            for (const Correspondence* match: closure->correspondences) {
-              world_map_->landmarks().get(match->item_query->landmark()->index())->setIsInLoopClosureQuery(true);
-              world_map_->landmarks().get(match->item_reference->landmark()->index())->setIsInLoopClosureReference(true);
+        //ds check the closures
+        for(CorrespondenceCollection* closure: relocalizer_->closures()) {
+          if (closure->is_valid) {
+            assert(world_map_->currentKeyframe() == closure->keyframe_query);
+
+            //ds add loop closure constraint
+            world_map_->closeKeyframes(world_map_->currentKeyframe(),
+                                                                   closure->keyframe_reference,
+                                                                   closure->transform_frame_query_to_frame_reference);
+            if (use_gui) {
+              for (const Correspondence* match: closure->correspondences) {
+                world_map_->landmarks().get(match->item_query->landmark()->index())->setIsInLoopClosureQuery(true);
+                world_map_->landmarks().get(match->item_reference->landmark()->index())->setIsInLoopClosureReference(true);
+              }
             }
           }
         }
+        relocalizer_->train();
       }
-      relocalizer_->train();
-    }
 
-    //ds check if we closed a local map
-    if (world_map_->closedKeyframe()) {
+      //ds check if we closed a local map
+      if (world_map_->closedKeyframe()) {
 
-      //ds optimize graph
-      mapper_->optimize(world_map_);
+        //ds optimize graph
+        mapper_->optimize(world_map_);
 
-      //ds wipe non-optimized landmarks
-      world_map_->purifyLandmarks();
+        //ds wipe non-optimized landmarks
+        world_map_->purifyLandmarks();
+      }
     }
   }
 }
