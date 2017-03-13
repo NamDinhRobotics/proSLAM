@@ -1,14 +1,15 @@
 #include "frame.h"
+
+#include "../stereo_triangulator.h"
 #include "local_map.h"
 #include "local_map.h"
-#include "types/stereo_grid_detector.h"
 
 namespace proslam {
   using namespace std;
 
   Identifier Frame::_instances = 0;
 
-  Frame::Frame(const TrackingContext* context_,
+  Frame::Frame(const WorldMap* context_,
                Frame* previous_,
                Frame* next_,
                const TransformMatrix3D& robot_to_world_,
@@ -129,7 +130,7 @@ namespace proslam {
     frame_point->setRobotCoordinates(coordinates_in_robot_);
 
     //ds update depth based on quality
-    if (depth_meters_ < StereoGridDetector::maximum_depth_close) {
+    if (depth_meters_ < StereoTriangulator::maximum_depth_close) {
       frame_point->setDepth(depth_meters_);
     } else {
       frame_point->setDepthByVision(depth_meters_);
@@ -165,7 +166,7 @@ namespace proslam {
     frame_point->setRobotCoordinates(coordinates_in_robot_);
 
     //ds update depth based on quality
-    if (depth_meters_ < StereoGridDetector::maximum_depth_close) {
+    if (depth_meters_ < StereoTriangulator::maximum_depth_close) {
       frame_point->setDepth(depth_meters_);
     } else {
       frame_point->setDepthByVision(depth_meters_);

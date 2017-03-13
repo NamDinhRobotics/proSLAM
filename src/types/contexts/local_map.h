@@ -5,15 +5,16 @@
 namespace proslam {
 
   class LocalMap;
-  typedef std::vector<LocalMap*> KeyFramePtrVector;
+  typedef std::vector<LocalMap*> LocalMapPointerVector;
 
   class LocalMap: public Frame {
+    public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  //ds exported objects
+  //ds exported types
   public:
 
       struct TransformMatrix3DWithInformation {
-        EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
         TransformMatrix3DWithInformation(const TransformMatrix3D& transform_,
                                          const Matrix6& information_): transform(transform_),
@@ -22,22 +23,22 @@ namespace proslam {
         const TransformMatrix3D transform;
         const Matrix6 information;
       };
-      struct KeyFrameCorrespondence {
-        EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+      struct LocalMapCorrespondence {
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-        KeyFrameCorrespondence(const LocalMap* keyframe_,
+        LocalMapCorrespondence(const LocalMap* keyframe_,
                                const TransformMatrix3DWithInformation& relation_): keyframe(keyframe_),
                                                                                    relation(relation_) {}
 
         const LocalMap* keyframe = 0;
         const TransformMatrix3DWithInformation relation;
       };
-      typedef std::vector<KeyFrameCorrespondence> KeyFrameCorrespondenceVector;
+      typedef std::vector<LocalMapCorrespondence> KeyFrameCorrespondenceVector;
 
   //ds object handling
-  public:
+  protected:
 
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    //ds owned by world map
     LocalMap(Frame* frame_for_context_, FramePtrVector& frames_);
     virtual ~LocalMap();
     LocalMap() = delete;
@@ -56,7 +57,7 @@ namespace proslam {
 
     void add(const LocalMap* keyframe_reference_,
              const TransformMatrix3D transform_query_to_reference_,
-             const Matrix6& information_ = Matrix6::Identity()) {_matches.push_back(KeyFrameCorrespondence(keyframe_reference_, TransformMatrix3DWithInformation(transform_query_to_reference_, information_)));}
+             const Matrix6& information_ = Matrix6::Identity()) {_matches.push_back(LocalMapCorrespondence(keyframe_reference_, TransformMatrix3DWithInformation(transform_query_to_reference_, information_)));}
     const KeyFrameCorrespondenceVector& closures() const {return _matches;}
 
   protected:
@@ -65,7 +66,10 @@ namespace proslam {
     KeyFrameCorrespondenceVector _matches;
     LandmarkItemPointerVector _items;
     FramePtrVector _subcontext;
-    const Count _minimum_number_of_items = 100;
+    static constexpr Count _minimum_number_of_items = 100;
+
+  //ds grant access to local map producer
+  friend WorldMap;
 
   };
 }

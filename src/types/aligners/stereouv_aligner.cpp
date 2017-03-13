@@ -2,8 +2,8 @@
 
 #include "srrg_types/types.hpp"
 
+#include "../stereo_triangulator.h"
 #include "types/items/landmark.h"
-#include "types/stereo_grid_detector.h"
 
 namespace proslam {
 
@@ -61,7 +61,7 @@ namespace proslam {
         _omega *= _weight_framepoint;
       }
       const real& depth_meters = sampled_point_in_camera_left.z();
-      if (depth_meters <= 0 || depth_meters > StereoGridDetector::maximum_depth_far) {
+      if (depth_meters <= 0 || depth_meters > StereoTriangulator::maximum_depth_far) {
         continue;
       }
 
@@ -131,7 +131,7 @@ namespace proslam {
       jacobian_transform.setZero();
 
       //ds if the point is near enough - we consider translation
-      if (depth_meters < StereoGridDetector::maximum_depth_close) {
+      if (depth_meters < StereoTriangulator::maximum_depth_close) {
         jacobian_transform.block<3,3>(0,0).setIdentity();
       }
 
@@ -154,10 +154,10 @@ namespace proslam {
       //ds precompute transposed
       const Matrix6_4 jacobian_transposed(_jacobian.transpose());
 
-      if (depth_meters < StereoGridDetector::maximum_depth_close) {
-        _omega *= (StereoGridDetector::maximum_depth_close-depth_meters)/StereoGridDetector::maximum_depth_close;
+      if (depth_meters < StereoTriangulator::maximum_depth_close) {
+        _omega *= (StereoTriangulator::maximum_depth_close-depth_meters)/StereoTriangulator::maximum_depth_close;
       } else {
-        _omega *= (StereoGridDetector::maximum_depth_far-depth_meters)/StereoGridDetector::maximum_depth_far;
+        _omega *= (StereoTriangulator::maximum_depth_far-depth_meters)/StereoTriangulator::maximum_depth_far;
       }
 
       //ds update H and b

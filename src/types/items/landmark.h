@@ -6,12 +6,12 @@ namespace proslam {
   class LandmarkItem;
   class PoseItemCollection;
   class Landmark {
-    public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds object handling
     protected:
 
-      //ds owned by tracking context
+      //ds owned by world map
       Landmark(const PointCoordinates& point_coordinates_);
       ~Landmark();
       Landmark() = delete;
@@ -37,10 +37,6 @@ namespace proslam {
       inline const bool isInLoopClosureReference() const {return _is_in_loop_closure_reference;}
       inline void setIsInLoopClosureQuery(const bool& is_in_loop_closure_query_) {_is_in_loop_closure_query = is_in_loop_closure_query_;}
       inline void setIsInLoopClosureReference(const bool& is_in_loop_closure_reference_) {_is_in_loop_closure_reference = is_in_loop_closure_reference_;}
-      inline const bool isInMapMergeQuery() const {return _is_in_map_merge_query;}
-      inline const bool isInMapMergeReference() const {return _is_in_map_merge_reference;}
-      inline void setIsInMapMergeQuery(const bool& is_in_map_merge_query_) {_is_in_map_merge_query = is_in_map_merge_query_;}
-      inline void setIsInMapMergeReference(const bool& is_in_map_merge_reference_) {_is_in_map_merge_reference = is_in_map_merge_reference_;}
       inline void setIsClosed(const bool& is_closed_) {_is_closed = is_closed_;}
       inline const bool isClosed() const {return _is_closed;}
 
@@ -88,13 +84,11 @@ namespace proslam {
       //ds visualization
       bool _is_in_loop_closure_query     = false;
       bool _is_in_loop_closure_reference = false;
-      bool _is_in_map_merge_query        = false;
-      bool _is_in_map_merge_reference    = false;
 
       LandmarkItem* _current_item = 0;
 
     //ds grant access to landmark producer
-    friend TrackingContext;
+    friend WorldMap;
 
     private:
       static Identifier _instances;

@@ -1,14 +1,14 @@
 #include "viewer_output_map.h"
 
-#include "srrg_gl_helpers/opengl_primitives.h"
 #include <QKeyEvent>
+#include "srrg_gl_helpers/opengl_primitives.h"
 
 namespace proslam {
 
   using namespace srrg_gl_helpers;
   using namespace srrg_core_viewers;
 
-  TrackingContextViewer::TrackingContextViewer(TrackingContext* context_, const real& object_scale_, const std::string& window_name_): _context(context_),
+  ViewerOutputMap::ViewerOutputMap(WorldMap* context_, const real& object_scale_, const std::string& window_name_): _context(context_),
                                                                                                                                        _object_scale(object_scale_),
                                                                                                                                        _window_name(window_name_){
     setWindowTitle(_window_name.c_str());
@@ -25,7 +25,7 @@ namespace proslam {
     setKeyDescription(Qt::Key_8, "Increases point size by factor 2");
   }
 
-  void TrackingContextViewer::drawFrame(const Frame* frame_, const Vector3& color_rgb_) {
+  void ViewerOutputMap::drawFrame(const Frame* frame_, const Vector3& color_rgb_) {
     assert(frame_ != 0);
     assert(frame_->camera() != 0);
     const Camera* camera = frame_->camera();
@@ -54,7 +54,7 @@ namespace proslam {
     }
   }
 
-  void TrackingContextViewer::drawLandmarks() {
+  void ViewerOutputMap::drawLandmarks() {
     glPointSize(_point_size);
     glBegin(GL_POINTS);
     for (LandmarkPtrMap::iterator it=_context->landmarks().begin(); it!=_context->landmarks().end(); it++) {
@@ -77,10 +77,6 @@ namespace proslam {
           color = Vector3(0.0, 1.0, 0.0);
         } else if (landmark->isInLoopClosureReference()) {
           color = Vector3(0.0, 0.5, 0.0);
-        } else if (landmark->isInMapMergeQuery()) {
-          color = Vector3(1.0, 0.5, 0.0);
-        } else if (landmark->isInMapMergeReference()) {
-          color = Vector3(0.7, 0.3, 0.0);
         } else {
 //          if (landmark->isByVision()) {
 //            color = Vector3(0.5, 0.0, 0.5);
@@ -95,7 +91,7 @@ namespace proslam {
     glEnd();
   }
 
-  void TrackingContextViewer::draw(){
+  void ViewerOutputMap::draw(){
     if (!_context) {
       return;
     }
@@ -106,7 +102,7 @@ namespace proslam {
     
     TransformMatrix3D world_to_robot(_world_to_robot_origin);
     if(_follow_robot) {
-      world_to_robot=current_frame->worldToRobot();
+      world_to_robot = _rotation_robot_view*current_frame->worldToRobot();
     }
 
     glPushMatrix();
@@ -117,15 +113,15 @@ namespace proslam {
     glLineWidth(0.1);
 
     //ds always draw the keyframe generating head
-    for (const Frame* frame_for_keyframe: _context->frameQueueForKeyframe()) {
+    for (const Frame* frame_for_keyframe: _context->frameQueueForLocalMap()) {
       drawFrame(frame_for_keyframe, Vector3(0.0, 0.0, 1.0));
     }
 
     //ds for all frames in the map
-    for (FramePtrMap::const_iterator it=_context->frames().begin(); it!=_context->frames().end(); it++){
+    for (FramePtrMap::const_iterator it = _context->frames().begin(); it != _context->frames().end(); it++){
 
       //ds check if we have a keyframe and drawing is enabled
-      if (it->second->isKeyFrame() && _key_frames_drawn) {
+      if (it->second->isKeyFrame() && _local_maps_drawn) {
         drawFrame(it->second, Vector3(0.5, 0.5, 1));
       } else if (_frames_drawn) {
         drawFrame(it->second, Vector3(0.75, 0.75, 1));
@@ -138,7 +134,7 @@ namespace proslam {
     glPopMatrix();
   }
 
-  void TrackingContextViewer::keyPressEvent(QKeyEvent* event_){
+  void ViewerOutputMap::keyPressEvent(QKeyEvent* event_){
     switch( event_->key( ) ) {
       case Qt::Key_1: {
         if(_landmarks_drawn) {_landmarks_drawn = false;}
@@ -187,7 +183,7 @@ namespace proslam {
     updateGL();
   }
 
-  QString TrackingContextViewer::helpString( ) const {
+  QString ViewerOutputMap::helpString( ) const {
       return "See keyboard tab for controls";
   }
 }

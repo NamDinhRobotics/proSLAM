@@ -14,9 +14,9 @@ namespace proslam {
   public:
 
     void closeKeyFrames(const Identifier& id_query_, const Identifier& id_reference_, const TransformMatrix3D& transform_query_to_reference_);
-    void optimize(TrackingContext* context_);
-    void optimizeLandmarks(TrackingContext* context_);
-    void optimizePoses(TrackingContext* context_);
+    void optimize(WorldMap* context_);
+    void optimizeLandmarks(WorldMap* context_);
+    void optimizePoses(WorldMap* context_);
 
   protected:
 

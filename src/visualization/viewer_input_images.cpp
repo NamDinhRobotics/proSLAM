@@ -4,13 +4,13 @@ using namespace std;
 
 namespace proslam {
 
-  TrackerViewer::TrackerViewer(TrackingContext* world_, const std::string& window_name_): _world(world_),
-                                                                                          _cv_wait_key_timeout_milliseconds(0),
-                                                                                          _window_name(window_name_) {
+  ViewerInputImages::ViewerInputImages(WorldMap* world_, const std::string& window_name_): _world(world_),
+                                                                                           _cv_wait_key_timeout_milliseconds(0),
+                                                                                           _window_name(window_name_) {
     std::cerr << "switched to stepwise mode (press backspace for switch, press space for stepping)" << std::endl;
   }
   
-  void TrackerViewer::initDrawing(){
+  void ViewerInputImages::initDrawing(){
     if (!_world) {
       return;
     }
@@ -23,7 +23,7 @@ namespace proslam {
     }
   }
 
-  void TrackerViewer::drawFeatures(){
+  void ViewerInputImages::drawFeatures(){
 
     //ds check if we have an active frame
     const Frame* current_frame = _world->currentFrame();
@@ -78,7 +78,7 @@ namespace proslam {
     }
   }
 
-  void TrackerViewer::drawFeatureTracking(){
+  void ViewerInputImages::drawFeatureTracking(){
     const Frame* current_frame = _world->currentFrame();
     if (! current_frame)
       return;
@@ -94,7 +94,7 @@ namespace proslam {
     }
   }
 
-  const bool TrackerViewer::updateGUI(){
+  const bool ViewerInputImages::updateGUI(){
     if (!_current_image.empty()) {
       cv::imshow(_window_name.c_str(), _current_image);
 
@@ -131,7 +131,7 @@ namespace proslam {
     return true;
   }
 
-  void TrackerViewer::switchToStepwiseMode() {
+  void ViewerInputImages::switchToStepwiseMode() {
     _cv_wait_key_timeout_milliseconds = 0;
     std::cerr << "switched to stepwise mode (press backspace for switch, press space for stepping)" << std::endl;
   }

@@ -1,7 +1,7 @@
 #include "landmark.h"
 
+#include "../stereo_triangulator.h"
 #include "landmark_item.h"
-#include "types/stereo_grid_detector.h"
 
 namespace proslam {
 

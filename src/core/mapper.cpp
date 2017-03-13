@@ -11,7 +11,7 @@ namespace proslam {
     std::cerr << "Mapper::Mapper|destroyed" << std::endl;
   }
 
-  void Mapper::optimize(TrackingContext* context_) {
+  void Mapper::optimize(WorldMap* context_) {
     CHRONOMETER_START(overall)
     optimizePoses(context_);
     optimizeLandmarks(context_);
@@ -19,10 +19,10 @@ namespace proslam {
   }
 
   //ds optimizes all landmarks by computing rudely the average without using g2o
-  void Mapper::optimizeLandmarks(TrackingContext* context_){
+  void Mapper::optimizeLandmarks(WorldMap* context_){
 
     //ds update all active landmark positions
-    for (const LocalMap* keyframe: context_->keyframes()) {
+    for (const LocalMap* keyframe: context_->localMaps()) {
       for (LandmarkItem* item: keyframe->items()) {
 
         //ds buffer current landmark
@@ -37,18 +37,18 @@ namespace proslam {
     }
   }
 
-  void Mapper::optimizePoses(TrackingContext* context_) {
+  void Mapper::optimizePoses(WorldMap* context_) {
     _optimizer->clear();
     _optimizer->clearParameters();
 
     //ds add the camera as parameter
     g2o::ParameterCamera* parameter_camera = new g2o::ParameterCamera();
     parameter_camera->setId(0);
-    parameter_camera->setOffset(context_->currentKeyframe()->camera()->cameraToRobot().cast<double>());
-    parameter_camera->setKcam(static_cast<double>(context_->currentKeyframe()->camera()->cameraMatrix()(0,0)),
-                              static_cast<double>(context_->currentKeyframe()->camera()->cameraMatrix()(1,1)),
-                              static_cast<double>(context_->currentKeyframe()->camera()->cameraMatrix()(0,2)),
-                              static_cast<double>(context_->currentKeyframe()->camera()->cameraMatrix()(1,2)));
+    parameter_camera->setOffset(context_->currentLocalMap()->camera()->cameraToRobot().cast<double>());
+    parameter_camera->setKcam(static_cast<double>(context_->currentLocalMap()->camera()->cameraMatrix()(0,0)),
+                              static_cast<double>(context_->currentLocalMap()->camera()->cameraMatrix()(1,1)),
+                              static_cast<double>(context_->currentLocalMap()->camera()->cameraMatrix()(0,2)),
+                              static_cast<double>(context_->currentLocalMap()->camera()->cameraMatrix()(1,2)));
     _optimizer->addParameter(parameter_camera);
 
     g2o::ParameterSE3Offset* camera_offset = new g2o::ParameterSE3Offset();
@@ -61,10 +61,10 @@ namespace proslam {
     TransformMatrix3D world_to_frame_previous(TransformMatrix3D::Identity());
 
     //ds added measurements
-    KeyFramePtrVector keyframes_in_graph(0);
+    LocalMapPointerVector keyframes_in_graph(0);
     
     //ds pose measurements
-    for (LocalMap* keyframe: context_->keyframes()) {
+    for (LocalMap* keyframe: context_->localMaps()) {
 
       //ds add the pose to g2o
       g2o::VertexSE3* vertex_keyframe = new g2o::VertexSE3;
@@ -89,9 +89,9 @@ namespace proslam {
     }
 
     //ds pose measurements: check for closures now as all id's are in the graph
-    for (const LocalMap* keyframe_query: context_->keyframes()) {
+    for (const LocalMap* keyframe_query: context_->localMaps()) {
 
-      for (const LocalMap::KeyFrameCorrespondence& keyframe_correspondence: keyframe_query->closures()) {
+      for (const LocalMap::LocalMapCorrespondence& keyframe_correspondence: keyframe_query->closures()) {
         const LocalMap* keyframe_reference = keyframe_correspondence.keyframe;
         const TransformMatrix3D transform_query_to_reference = keyframe_correspondence.relation.transform;
 
@@ -125,6 +125,6 @@ namespace proslam {
       assert(0 != vertex_keyframe);
       keyframe->setRobotToWorld(vertex_keyframe->estimate().cast<real>());
     }
-    context_->setRobotToWorldPrevious(context_->currentKeyframe()->robotToWorld());
+    context_->setRobotToWorldPrevious(context_->currentLocalMap()->robotToWorld());
   }
 }

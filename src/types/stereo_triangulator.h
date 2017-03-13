@@ -18,7 +18,7 @@ namespace proslam {
     const std::string _what;
   };
 
-  class StereoGridDetector {
+  class StereoTriangulator {
     public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds exported datatypes
@@ -45,10 +45,10 @@ namespace proslam {
     //ds object handling
     public:
 
-      StereoGridDetector(const Camera* camera_left_,
+      StereoTriangulator(const Camera* camera_left_,
                          const Camera* camera_right_);
-      ~StereoGridDetector();
-      StereoGridDetector() = delete;
+      ~StereoTriangulator();
+      StereoTriangulator() = delete;
 
     //ds access
     public:
@@ -57,6 +57,7 @@ namespace proslam {
 
       const PointCoordinates getCoordinatesInCamera(const cv::Point2f& image_coordinates_left_, const cv::Point2f& image_coordinates_right_);
 
+      const cv::DescriptorExtractor* descriptorExtractor() const {return _descriptor_extractor;}
       TriangulatedPoint** framepointMap() {return _triangulation_map;}
       const Count numberOfRowsImage() const {return _number_of_rows_image;}
       const Count numberOfColsImage() const {return _number_of_cols_image;}
@@ -109,7 +110,7 @@ namespace proslam {
 
       //ds feature detection
 #if CV_MAJOR_VERSION == 2
-      std::shared_ptr<cv::FeatureDetector> _feature_detector = 0;
+      cv::FeatureDetector* _feature_detector = 0;
 #elif CV_MAJOR_VERSION == 3
       cv::Ptr<cv::Feature2D> _feature_detector;
 #else
@@ -118,9 +119,9 @@ namespace proslam {
 
       //ds descriptor extraction
 #if CV_MAJOR_VERSION == 2
-      std::shared_ptr<cv::DescriptorExtractor> _descriptor_extractor = 0;
+      const cv::DescriptorExtractor* _descriptor_extractor = 0;
 #elif CV_MAJOR_VERSION == 3
-      const cv::Ptr<cv::Feature2D> _descriptor_extractor;
+      const cv::DescriptorExtractor* _descriptor_extractor;
 #else
       #error OpenCV version not supported
 #endif

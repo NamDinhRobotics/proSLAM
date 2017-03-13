@@ -6,9 +6,11 @@ namespace proslam {
   class Landmark;
   class Frame;
   class FramePoint {
+    public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+  //ds public object handling
   public:
 
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     enum Status {Created, Confirmed, Persistent};
 
     //ds prohibit default construction

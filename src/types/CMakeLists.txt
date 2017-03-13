@@ -9,7 +9,7 @@ add_library(srrg_proslam_types_library
   items/frame_point.cpp
   items/landmark.cpp
   camera.cpp
-  stereo_grid_detector.cpp
+  stereo_triangulator.cpp
 )
 
 target_link_libraries(srrg_proslam_types_library

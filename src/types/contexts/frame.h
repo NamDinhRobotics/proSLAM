@@ -6,14 +6,14 @@
 namespace proslam {
   
   class LocalMap;
-  class TrackingContext;
+  class WorldMap;
   class Frame: public BaseContext {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
   public:
 
     enum Status {Localizing, Tracking}; //< defines one of the two tracker states
-    Frame(const TrackingContext* context_,
+    Frame(const WorldMap* context_,
         Frame* previous_,
         Frame* next_,
         const TransformMatrix3D& robot_to_world_,

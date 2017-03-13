@@ -3,13 +3,14 @@
 namespace proslam {
   using namespace srrg_core;
 
-  TrackerSVI::TrackerSVI(const Camera* camera_left_,
+  Tracker::Tracker(const Camera* camera_left_,
                          const Camera* camera_right_): _camera_left(camera_left_),
                                                        _camera_right(camera_right_),
                                                        _camera_rows(camera_left_->imageRows()),
                                                        _camera_cols(camera_left_->imageCols()),
-                                                       _preprocessor(new StereoGridDetector(_camera_left, _camera_right)),
+                                                       _preprocessor(new StereoTriangulator(_camera_left, _camera_right)),
                                                        _aligner(static_cast<StereoUVAligner*>(AlignerFactory::create(AlignerType6_4::stereouv))) {
+    std::cerr << "Tracker::Tracker|constructing" << std::endl;
 
     //ds request initial tracking context for the tracker
     _lost_points.clear();
@@ -19,17 +20,17 @@ namespace proslam {
 
     //ds clear buffers
     _projected_image_coordinates_left.clear();
-    std::cerr << "TrackerSVI::TrackerSVI|constructed" << std::endl;
+    std::cerr << "Tracker::Tracker|constructed" << std::endl;
   }
 
-  TrackerSVI::~TrackerSVI() {
-    std::cerr << "TrackerSVI::TrackerSVI|destroying" << std::endl;
+  Tracker::~Tracker() {
+    std::cerr << "Tracker::Tracker|destroying" << std::endl;
     //ds TODO clear tracker owned scopes
     delete _preprocessor;
-    std::cerr << "TrackerSVI::TrackerSVI|destroyed" << std::endl;
+    std::cerr << "Tracker::Tracker|destroyed" << std::endl;
   }
 
-  void TrackerSVI::trackFeatures(Frame* previous_frame_, Frame* current_frame_) {
+  void Tracker::trackFeatures(Frame* previous_frame_, Frame* current_frame_) {
     assert(previous_frame_ != 0);
     assert(current_frame_ != 0);
 
@@ -205,7 +206,7 @@ namespace proslam {
     _lost_points.resize(_number_of_lost_points);
 
 //    //ds info
-//    std::cerr << "TrackerSVI::trackFeatures|tracks: " << _number_of_tracked_points << "/" << previous_frame_->points().size()
+//    std::cerr << "Tracker::trackFeatures|tracks: " << _number_of_tracked_points << "/" << previous_frame_->points().size()
 //              << " landmarks close: " << _number_of_tracked_landmarks_close
 //              << " landmarks far: " << _number_of_tracked_landmarks_far
 //              << std::endl;
@@ -213,7 +214,7 @@ namespace proslam {
     _total_number_of_landmarks_far   += _number_of_tracked_landmarks_far;
   }
 
-  void TrackerSVI::extractFeatures(Frame* frame_) {
+  void Tracker::extractFeatures(Frame* frame_) {
 
     //ds make space for all remaining points
     frame_->points().resize(_number_of_potential_points+_number_of_lost_points_recovered);
@@ -237,10 +238,10 @@ namespace proslam {
       }
     }
     frame_->points().resize(index_point_new);
-//    std::cerr << "TrackerSVI::extractFeatures|new points: " << index_point_new-_number_of_tracked_points << std::endl;
+//    std::cerr << "Tracker::extractFeatures|new points: " << index_point_new-_number_of_tracked_points << std::endl;
   }
 
-  void TrackerSVI::getImageCoordinates(std::vector<ImageCoordinates>& projected_image_coordinates_left_,
+  void Tracker::getImageCoordinates(std::vector<ImageCoordinates>& projected_image_coordinates_left_,
                                        Frame* previous_frame_,
                                        const Frame* current_frame_) const {
     assert(previous_frame_ != 0);
@@ -297,7 +298,7 @@ namespace proslam {
     projected_image_coordinates_left_.resize(number_of_visible_points);
   }
 
-  void TrackerSVI::updateLandmarks(TrackingContext* context_) {
+  void Tracker::updateLandmarks(WorldMap* context_) {
     Frame* current_frame = context_->currentFrame();
 
 //    //ds precomputations
@@ -325,17 +326,17 @@ namespace proslam {
 
         //ds if no landmark yet - but point with depth information, create a new landmark using the given depth
         if (!landmark) {
-          landmark = context_->createNewLandmark(current_frame->robotToWorld()*point->robotCoordinates());
+          landmark = context_->createLandmark(current_frame->robotToWorld()*point->robotCoordinates());
           point->setLandmark(landmark);
         }
 
         //ds depth must be within limits here
         assert(depth_meters > 0);
-        assert(depth_meters < StereoGridDetector::maximum_depth_far);
+        assert(depth_meters < StereoTriangulator::maximum_depth_far);
 
         //ds adjust omega to include full depth information
         landmark->setIsByVision(false);
-        omega *= (StereoGridDetector::maximum_depth_far-depth_meters)/StereoGridDetector::maximum_depth_far;
+        omega *= (StereoTriangulator::maximum_depth_far-depth_meters)/StereoTriangulator::maximum_depth_far;
       }
 
       //ds depth obtained by vision
@@ -343,13 +344,13 @@ namespace proslam {
 
         //ds create a new landmark using the vision depth
         if (!landmark) {
-          landmark = context_->createNewLandmark(current_frame->robotToWorld()*point->robotCoordinates());
+          landmark = context_->createLandmark(current_frame->robotToWorld()*point->robotCoordinates());
           point->setLandmark(landmark);
         }
 
         //ds adjust omega to include full depth information
         landmark->setIsByVision(true);
-        omega *= (StereoGridDetector::maximum_depth_close-depth_meters)/StereoGridDetector::maximum_depth_close;
+        omega *= (StereoTriangulator::maximum_depth_close-depth_meters)/StereoTriangulator::maximum_depth_close;
       }
 
       assert(depth_meters > 0);
@@ -363,7 +364,7 @@ namespace proslam {
     }
   }
 
-  const TransformMatrix3D TrackerSVI::addImage(TrackingContext* context_,
+  const TransformMatrix3D Tracker::addImage(WorldMap* context_,
                                                const cv::Mat& intensity_image_left_,
                                                const cv::Mat& intensity_image_right_,
                                                const TransformMatrix3D& initial_guess_world_previous_to_current_) {
@@ -382,7 +383,7 @@ namespace proslam {
     context_->setRobotToWorldPrevious(robot_to_world_current);
 
     //ds create new frame (memory lock expected)
-    Frame* current_frame = context_->createNewFrame(robot_to_world_current);
+    Frame* current_frame = context_->createFrame(robot_to_world_current);
     current_frame->setCamera(_camera_left);
     current_frame->setIntensityImage(intensity_image_left_);
     current_frame->setCameraExtra(_camera_right);
@@ -406,7 +407,7 @@ namespace proslam {
 
       //ds track lost - localizing
       case Frame::Localizing: {
-        std::cerr << "TrackerSVI::addImage|STATE: LOCALIZING" << std::endl;
+        std::cerr << "Tracker::addImage|STATE: LOCALIZING" << std::endl;
 
         //ds if we have a previous frame
         if (current_frame->previous()) {
@@ -432,7 +433,7 @@ namespace proslam {
 
               //ds update tracker
               current_frame->setRobotToWorld(_aligner->robotToWorld());
-              std::cerr << "TrackerSVI::addImage|WARNING: using posit on frame points (experimental) inliers: " << _aligner->numberOfInliers()
+              std::cerr << "Tracker::addImage|WARNING: using posit on frame points (experimental) inliers: " << _aligner->numberOfInliers()
                         << " outliers: " << _aligner->numberOfOutliers() << " average error: " << _aligner->totalError()/_aligner->numberOfInliers() <<  std::endl;
             } else {
 
@@ -529,7 +530,7 @@ namespace proslam {
             return world_previous_to_current;
           }
 
-          std::cerr << "TrackerSVI::addImage|WARNING: using posit on identiy motion model (experimental) inliers: " << _aligner->numberOfInliers()
+          std::cerr << "Tracker::addImage|WARNING: using posit on identiy motion model (experimental) inliers: " << _aligner->numberOfInliers()
                     << " outliers: " << _aligner->numberOfOutliers() << " average error: " << _aligner->totalError()/_aligner->numberOfInliers() <<  std::endl;
         }
 
@@ -601,7 +602,7 @@ namespace proslam {
     return world_previous_to_current;
   }
 
-  void TrackerSVI::recoverPoints(TrackingContext* context_) {
+  void Tracker::recoverPoints(WorldMap* context_) {
     Frame* current_frame = context_->currentFrame();
 
     //ds precompute transforms
@@ -679,7 +680,7 @@ namespace proslam {
       keypoint_buffer_left[0] = point_previous->keypoint();
       keypoint_buffer_left[0].pt = offset_keypoint_half;
       cv::Mat descriptor_left;
-      context_->descriptorExtractor()->compute(current_frame->intensityImage()(region_of_interest_left), keypoint_buffer_left, descriptor_left);
+      _preprocessor->descriptorExtractor()->compute(current_frame->intensityImage()(region_of_interest_left), keypoint_buffer_left, descriptor_left);
       if (descriptor_left.rows == 0) {
         continue;
       }
@@ -689,7 +690,7 @@ namespace proslam {
       keypoint_buffer_right[0] = point_previous->keypointExtra();
       keypoint_buffer_right[0].pt = offset_keypoint_half;
       cv::Mat descriptor_right;
-      context_->descriptorExtractor()->compute(current_frame->intensityImageExtra()(region_of_interest_right), keypoint_buffer_right, descriptor_right);
+      _preprocessor->descriptorExtractor()->compute(current_frame->intensityImageExtra()(region_of_interest_right), keypoint_buffer_right, descriptor_right);
       if (descriptor_right.rows == 0) {
         continue;
       }
@@ -719,6 +720,6 @@ namespace proslam {
     _number_of_lost_points_recovered = index_lost_point_recovered-_number_of_tracked_points;
     _number_of_tracked_points = index_lost_point_recovered;
     current_frame->points().resize(_number_of_tracked_points);
-//    std::cerr << "TrackerSVI::recoverPoints|recovered points: " << _number_of_lost_points_recovered << "/" << _number_of_lost_points << std::endl;
+//    std::cerr << "Tracker::recoverPoints|recovered points: " << _number_of_lost_points_recovered << "/" << _number_of_lost_points << std::endl;
   }
 }

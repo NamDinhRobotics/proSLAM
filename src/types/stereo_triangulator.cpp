@@ -1,13 +1,11 @@
-#include "stereo_grid_detector.h"
-
-#include <fstream>
+#include "stereo_triangulator.h"
 
 namespace proslam {
 
-  real StereoGridDetector::maximum_depth_close   = 0;
-  real StereoGridDetector::maximum_depth_far     = 0;
+  real StereoTriangulator::maximum_depth_close   = 0;
+  real StereoTriangulator::maximum_depth_far     = 0;
 
-  StereoGridDetector::StereoGridDetector(const Camera* camera_left_,
+  StereoTriangulator::StereoTriangulator(const Camera* camera_left_,
                                          const Camera* camera_right_): _number_of_rows_image(camera_left_->imageRows()),
                                                                        _number_of_cols_image(camera_left_->imageCols()),
                                                                        _number_of_bins_u(std::floor(static_cast<real>(_number_of_cols_image)/_bin_size)),
@@ -22,15 +20,15 @@ namespace proslam {
                                                                        _triangulation_DuR_flipped(-_triangulation_DuR),
                                                                        _baseline_meters(_triangulation_DuR_flipped/_triangulation_F),
 #if CV_MAJOR_VERSION == 2
-                                                                       _feature_detector(std::make_shared<cv::FastFeatureDetector>(_detector_threshold)),
-                                                                       _descriptor_extractor(std::make_shared<cv::BriefDescriptorExtractor>(DESCRIPTOR_SIZE_BYTES)) {
+                                                                       _feature_detector(new cv::FastFeatureDetector(_detector_threshold)),
+                                                                       _descriptor_extractor(new cv::BriefDescriptorExtractor(DESCRIPTOR_SIZE_BYTES)) {
 #elif CV_MAJOR_VERSION == 3
                                                                        _feature_detector(cv::FastFeatureDetector::create(_detector_threshold)),
                                                                        _descriptor_extractor(cv::xfeatures2d::BriefDescriptorExtractor::create(DESCRIPTOR_SIZE_BYTES)) {
 #else
   #error OpenCV version not supported
 #endif
-    std::cerr << "StereoGridDetector::StereoGridDetector|constructing" << std::endl;
+    std::cerr << "StereoTriangulator::StereoTriangulator|constructing" << std::endl;
     assert(camera_left_->imageCols() == camera_right_->imageCols());
     assert(camera_left_->imageRows() == camera_right_->imageRows());
     maximum_depth_close = _baseline_factor*_baseline_meters;
@@ -64,18 +62,18 @@ namespace proslam {
     _keypoints_with_descriptor_right.clear();
     _stereo_keypoints.clear();
 
-    std::cerr << "StereoGridDetector::StereoGridDetector|baseline (m): " << _baseline_meters << std::endl;
-    std::cerr << "StereoGridDetector::StereoGridDetector|maximum depth tracking close (m): " << maximum_depth_close << std::endl;
-    std::cerr << "StereoGridDetector::StereoGridDetector|maximum depth tracking far (m): " << maximum_depth_far << std::endl;
-    std::cerr << "StereoGridDetector::StereoGridDetector|bin size (pixel): " << _bin_size << std::endl;
-    std::cerr << "StereoGridDetector::StereoGridDetector|number of bins u: " << _number_of_bins_u << std::endl;
-    std::cerr << "StereoGridDetector::StereoGridDetector|number of bins v: " << _number_of_bins_v << std::endl;
-    std::cerr << "StereoGridDetector::StereoGridDetector|total number of bins: " << _number_of_bins_u*_number_of_bins_v << std::endl;
-    std::cerr << "StereoGridDetector::StereoGridDetector|constructed" << std::endl;
+    std::cerr << "StereoTriangulator::StereoTriangulator|baseline (m): " << _baseline_meters << std::endl;
+    std::cerr << "StereoTriangulator::StereoTriangulator|maximum depth tracking close (m): " << maximum_depth_close << std::endl;
+    std::cerr << "StereoTriangulator::StereoTriangulator|maximum depth tracking far (m): " << maximum_depth_far << std::endl;
+    std::cerr << "StereoTriangulator::StereoTriangulator|bin size (pixel): " << _bin_size << std::endl;
+    std::cerr << "StereoTriangulator::StereoTriangulator|number of bins u: " << _number_of_bins_u << std::endl;
+    std::cerr << "StereoTriangulator::StereoTriangulator|number of bins v: " << _number_of_bins_v << std::endl;
+    std::cerr << "StereoTriangulator::StereoTriangulator|total number of bins: " << _number_of_bins_u*_number_of_bins_v << std::endl;
+    std::cerr << "StereoTriangulator::StereoTriangulator|constructed" << std::endl;
   }
 
-  StereoGridDetector::~StereoGridDetector() {
-    std::cerr << "StereoGridDetector::StereoGridDetector|destroying" << std::endl;
+  StereoTriangulator::~StereoTriangulator() {
+    std::cerr << "StereoTriangulator::StereoTriangulator|destroying" << std::endl;
 
     //ds deallocate dynamic datastructures
     for (Index row = 0; row < _number_of_rows_image; ++row) {
@@ -87,10 +85,15 @@ namespace proslam {
     }
     delete[] _bin_map_left;
 
-    std::cerr << "StereoGridDetector::StereoGridDetector|destroyed" << std::endl;
+#if CV_MAJOR_VERSION == 2
+    delete _feature_detector;
+    delete _descriptor_extractor;
+#endif
+
+    std::cerr << "StereoTriangulator::StereoTriangulator|destroyed" << std::endl;
   }
 
-  const Count StereoGridDetector::triangulate(const Frame* frame_) {
+  const Count StereoTriangulator::triangulate(const Frame* frame_) {
 
     //ds buffer images
     const cv::Mat& intensity_image_left  = frame_->intensityImage();
@@ -240,7 +243,7 @@ namespace proslam {
         _detector_threshold -= 5;
 
 #if CV_MAJOR_VERSION == 2
-        _feature_detector = std::make_shared<cv::FastFeatureDetector>(_detector_threshold);
+        _feature_detector->setInt("threshold", _detector_threshold);
 #elif CV_MAJOR_VERSION == 3
         _feature_detector = cv::FastFeatureDetector::create(_detector_threshold);
 #else
@@ -261,7 +264,7 @@ namespace proslam {
       if (_detector_threshold < _detector_threshold_maximum) {
         _detector_threshold += 5;
 #if CV_MAJOR_VERSION == 2
-        _feature_detector = std::make_shared<cv::FastFeatureDetector>(_detector_threshold);
+        _feature_detector->setInt("threshold", _detector_threshold);
 #elif CV_MAJOR_VERSION == 3
         _feature_detector = cv::FastFeatureDetector::create(_detector_threshold);
 #else
@@ -278,7 +281,7 @@ namespace proslam {
     return number_of_potential_points;
   }
 
-  const PointCoordinates StereoGridDetector::getCoordinatesInCamera(const cv::Point2f& image_coordinates_left_, const cv::Point2f& image_coordinates_right_) {
+  const PointCoordinates StereoTriangulator::getCoordinatesInCamera(const cv::Point2f& image_coordinates_left_, const cv::Point2f& image_coordinates_right_) {
 
     //ds check for minimal disparity
     if (image_coordinates_left_.x-image_coordinates_right_.x < _minimum_disparity) {
@@ -302,7 +305,7 @@ namespace proslam {
     return coordinates_in_camera;
   }
 
-  void StereoGridDetector::_binKeypoints(std::vector<cv::KeyPoint>& keypoints_, cv::KeyPoint** bin_map_) {
+  void StereoTriangulator::_binKeypoints(std::vector<cv::KeyPoint>& keypoints_, cv::KeyPoint** bin_map_) {
 
     //ds sort by position in u
     std::sort(keypoints_.begin(), keypoints_.end(), [](const cv::KeyPoint& a_, const cv::KeyPoint& b_) {return a_.pt.x < b_.pt.x;});

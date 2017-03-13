@@ -1,29 +1,29 @@
 #pragma once
+#include "../types/stereo_triangulator.h"
 #include "types/contexts/world_map.h"
 #include "types/aligners/aligner_factory.h"
-#include "types/stereo_grid_detector.h"
 
 namespace proslam {
 
-  class TrackerSVI {
+  class Tracker {
     public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds object handling
   public:
 
-    TrackerSVI(const Camera* camera_left_, const Camera* camera_right_);
-    ~TrackerSVI();
+    Tracker(const Camera* camera_left_, const Camera* camera_right_);
+    ~Tracker();
 
   //ds access
   public:
 
-    const TransformMatrix3D addImage(TrackingContext* context_,
+    const TransformMatrix3D addImage(WorldMap* context_,
                                      const cv::Mat& intensity_image_left_,
                                      const cv::Mat& intensity_image_right_,
                                      const TransformMatrix3D& initial_guess_transform_previous_to_current_ = TransformMatrix3D::Identity());
     
     BaseAligner6_4* aligner() {return _aligner;}
-    StereoGridDetector* gridSensor() {return _preprocessor;}
+    StereoTriangulator* preprocessor() {return _preprocessor;}
     const Count totalNumberOfTrackedPoints() const {return _total_number_of_tracked_points;}
     const Count totalNumberOfLandmarksClose() const {return _total_number_of_landmarks_close;}
     const Count totalNumberOfLandmarksFar() const {return _total_number_of_landmarks_far;}
@@ -37,8 +37,8 @@ namespace proslam {
     void getImageCoordinates(std::vector<ImageCoordinates>& predictions_left,
                              Frame* previous_frame_,
                              const Frame* current_frame_) const;
-    void updateLandmarks(TrackingContext* context_);
-    void recoverPoints(TrackingContext* context_);
+    void updateLandmarks(WorldMap* context_);
+    void recoverPoints(WorldMap* context_);
 
   protected:
 
@@ -58,7 +58,7 @@ namespace proslam {
     const int32_t _camera_cols  = 0;
 
     //ds 3d point retrieval
-    StereoGridDetector* _preprocessor;
+    StereoTriangulator* _preprocessor;
 
     //ds track recovery
     Count _number_of_lost_points           = 0;
