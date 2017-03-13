@@ -57,7 +57,14 @@ namespace proslam {
 
       const PointCoordinates getCoordinatesInCamera(const cv::Point2f& image_coordinates_left_, const cv::Point2f& image_coordinates_right_);
 
+#if CV_MAJOR_VERSION == 2
       const cv::DescriptorExtractor* descriptorExtractor() const {return _descriptor_extractor;}
+#elif CV_MAJOR_VERSION == 3
+      cv::Ptr<cv::DescriptorExtractor> descriptorExtractor() const {return _descriptor_extractor;}
+#else
+      #error OpenCV version not supported
+#endif
+
       TriangulatedPoint** framepointMap() {return _triangulation_map;}
       const Count numberOfRowsImage() const {return _number_of_rows_image;}
       const Count numberOfColsImage() const {return _number_of_cols_image;}
@@ -112,7 +119,7 @@ namespace proslam {
 #if CV_MAJOR_VERSION == 2
       cv::FeatureDetector* _feature_detector = 0;
 #elif CV_MAJOR_VERSION == 3
-      cv::Ptr<cv::Feature2D> _feature_detector;
+      cv::Ptr<cv::FastFeatureDetector> _feature_detector;
 #else
       #error OpenCV version not supported
 #endif
@@ -121,7 +128,7 @@ namespace proslam {
 #if CV_MAJOR_VERSION == 2
       const cv::DescriptorExtractor* _descriptor_extractor = 0;
 #elif CV_MAJOR_VERSION == 3
-      const cv::DescriptorExtractor* _descriptor_extractor;
+      cv::Ptr<cv::DescriptorExtractor> _descriptor_extractor;
 #else
       #error OpenCV version not supported
 #endif

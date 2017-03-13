@@ -35,17 +35,17 @@ namespace proslam {
     maximum_depth_far   = _triangulation_DuR_flipped/_minimum_disparity;
 
     //ds allocate dynamic datastructures: simple maps
-    _triangulation_map        = new TriangulatedPoint*[_number_of_rows_image];
+    _triangulation_map = new TriangulatedPoint*[_number_of_rows_image];
     for (Index row = 0; row < _number_of_rows_image; ++row) {
-      _triangulation_map[row]        = new TriangulatedPoint[_number_of_cols_image];
+      _triangulation_map[row] = new TriangulatedPoint[_number_of_cols_image];
     }
 
     //ds allocate dynamic datastructures: bin grid
-    _bin_map_left  = new cv::KeyPoint*[_number_of_bins_v];
+    _bin_map_left = new cv::KeyPoint*[_number_of_bins_v];
     for (Count v = 0; v < _number_of_bins_v; ++v) {
-      _bin_map_left[v]  = new cv::KeyPoint[_number_of_bins_u];
+      _bin_map_left[v] = new cv::KeyPoint[_number_of_bins_u];
       for (Count u = 0; u < _number_of_bins_u; ++u) {
-        _bin_map_left[v][u].response  = 0;
+        _bin_map_left[v][u].response = 0;
       }
     }
 
@@ -245,7 +245,7 @@ namespace proslam {
 #if CV_MAJOR_VERSION == 2
         _feature_detector->setInt("threshold", _detector_threshold);
 #elif CV_MAJOR_VERSION == 3
-        _feature_detector = cv::FastFeatureDetector::create(_detector_threshold);
+        _feature_detector->setThreshold(_detector_threshold);
 #else
   #error OpenCV version not supported
 #endif
@@ -266,7 +266,7 @@ namespace proslam {
 #if CV_MAJOR_VERSION == 2
         _feature_detector->setInt("threshold", _detector_threshold);
 #elif CV_MAJOR_VERSION == 3
-        _feature_detector = cv::FastFeatureDetector::create(_detector_threshold);
+        _feature_detector->setThreshold(_detector_threshold);
 #else
   #error OpenCV version not supported
 #endif
