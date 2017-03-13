@@ -3,7 +3,7 @@
 | Dominik Schlegel, Mirco Colosi, Giorgio Grisetti |
 
 ### Demo videos ###
-![ProSLAM: Full run KITTI Sequence 00 (real-time, 1 thread@2.40GHz/i7-4700MQ)][identifier]
+[ProSLAM: Full run KITTI Sequence 00 (real-time, 1 thread@2.40GHz/i7-4700MQ)][identifier]
 ![ProSLAM: Full run KITTI Sequence 06 (real-time, 1 thread@3.50GHz/i7-4770K)](https://www.youtube.com/watch?v=Bmig0ASFOY4)
 ![ProSLAM: Full run EuRoC MH_01_easy (real-time, 1 thread@3.50GHz/i7-4770K)](https://www.youtube.com/watch?v=TctS1b1zCbY)
 (All of the above are clickable YouTube links)
