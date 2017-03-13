@@ -82,7 +82,7 @@ Three windows will pop up - "input: images", "output: map (bird view)" and "outp
 4) press [Backspace] on the input window to toggle between automatic processing and stepwise (press [Space] for stepping) mode
 
 ---
-5) press [H] to view the available commands for the output windows
+5) press [H] to view the available commands for the output windows (Number keys 1-8)
 
 ---
 6) press [Esc] to terminate the system prematurely
