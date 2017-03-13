@@ -92,7 +92,7 @@ Three windows will pop up - "input: images", "output: map (bird view)" and "outp
 
 EuRoC MH_01_easy: https://drive.google.com/open?id=0ByaBRAPfmgEqbUctejZwb0xRaFk (1.9GB)
 
-Run procedure remains identical to the one above (with dataset_name.txt set accordingly)
+Run procedure remains identical to the one above (only the dataset name has to be adjusted, e.g. 00.txt -> MH_01_easy.txt)
 
 ---
 ### It doesn't work? ###
