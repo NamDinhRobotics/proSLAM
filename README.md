@@ -90,7 +90,8 @@ Three windows will pop up - "input: images", "output: map (bird view)" and "outp
 ---
 ### Additional pre-formatted datasets ###
 
-EuRoC MAV dataset: https://drive.google.com/open?id=0ByaBRAPfmgEqbUctejZwb0xRaFk (1.9GB)
+EuRoC MH_01_easy: https://drive.google.com/open?id=0ByaBRAPfmgEqbUctejZwb0xRaFk (1.9GB)
+
 Run procedure remains identical to the one above (with dataset_name.txt set accordingly)
 
 ---
