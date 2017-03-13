@@ -3,7 +3,7 @@
   <name>srrg_proslam</name>
   <version>0.0.0</version>
   <description>The ProSLAM package</description>
-  <maintainer email="schdomin@gmail.com">schdomin</maintainer>
+  <maintainer email="schdomin@gmail.com">Dominik Schlegel</maintainer>
   <license>TBD</license>
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>srrg_core</build_depend>
