@@ -88,6 +88,11 @@ Three windows will pop up - "input: images", "output: map (bird view)" and "outp
 6) press [Esc] to terminate the system prematurely
 
 ---
+### Additional pre-formatted datasets ###
+
+EuRoC MAV dataset: https://drive.google.com/open?id=0ByaBRAPfmgEqbUctejZwb0xRaFk (1.9GB)
+
+---
 ### It doesn't work? ###
 
 Feel free to contact the maintainer at any time (see package.xml)
