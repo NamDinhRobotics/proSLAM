@@ -343,7 +343,7 @@ int32_t main(int32_t argc, char ** argv) {
   if (running) {
 
     //ds exit in viewer if available
-    if (use_gui && context_viewer_bird->isVisible() && context_viewer_top->isVisible()) {
+    if (use_gui && context_viewer_bird->isVisible()) {
       return ui_server->exec();
     } else {
       if (use_gui) {
