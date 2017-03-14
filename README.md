@@ -7,12 +7,15 @@
 
 [ProSLAM: Full run KITTI Sequence 06 (real-time, 1 thread@3.50GHz/i7-4770K)][kitti_06]
 
+[ProSLAM: Full run KITTI Sequence 10 (real-time, 1 thread@2.40GHz/i7-4700MQ)][kitti_10]
+
 [ProSLAM: Full run EuRoC MH_01_easy (real-time, 1 thread@3.50GHz/i7-4770K)][euroc_01]
 
 (All of the above are clickable YouTube links)
 
 [kitti_00]: https://www.youtube.com/watch?v=n_UmEpIwb9Y
 [kitti_06]: https://www.youtube.com/watch?v=Bmig0ASFOY4
+[kitti_10]: https://www.youtube.com/watch?v=ZW8OQ2b0tjk
 [euroc_01]: https://www.youtube.com/watch?v=TctS1b1zCbY
 
 ---
