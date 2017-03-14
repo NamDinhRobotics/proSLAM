@@ -107,7 +107,7 @@ EuRoC MH_01_easy: https://drive.google.com/open?id=0ByaBRAPfmgEqbUctejZwb0xRaFk 
 Run procedure remains identical to the one above (only the dataset name has to be adjusted, e.g. 00.txt -> MH_01_easy.txt)
 
 ---
-### Custom input ###
+### Custom stereo camera sensor input ###
 
 On-the-fly raw stereo image processing with custom stereo camera parameters will be supported shortly.
 
