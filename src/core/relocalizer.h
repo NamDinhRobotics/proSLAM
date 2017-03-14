@@ -1,17 +1,65 @@
 #pragma once
 #include <queue>
 
-#include "types/relocalizer_types.h"
+#include "types/utility.h"
 #include "types/aligners/aligner_factory.h"
+#include "types/contexts/local_map.h"
 
 namespace proslam {
   class Relocalizer {
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
+  //ds exported types
   public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+    struct Query {
+      EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+      Query(const LocalMap* keyframe_): keyframe(keyframe_),
+                                        appearances(keyframe_->appearances()),
+                                        matchables(Utility::getMatchables(appearances)),
+                                        hbst_tree(new HBSTTree(keyframe_->index(), matchables)) {}
+      const LocalMap* keyframe = 0;
+      const AppearancePtrVector appearances;
+      const HBSTNode::BinaryMatchableVector matchables;
+      const HBSTTree* hbst_tree = 0;
+    };
+
+    struct QueryFrame {
+      EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+      QueryFrame(const Frame* frame_): frame(frame_),
+                                       appearances(Utility::getAppearances(frame_->points())),
+                                       matchables(Utility::getMatchables(appearances)),
+                                       hbst_tree(new HBSTTree(frame_->index(), matchables)) {}
+
+      QueryFrame(const LocalMap* keyframe_): frame(keyframe_),
+                                             appearances(keyframe_->appearances()),
+                                             matchables(Utility::getMatchables(appearances)),
+                                             hbst_tree(new HBSTTree(keyframe_->index(), matchables)) {}
+
+      ~QueryFrame() {
+       for (const Appearance* appearance: appearances) {
+         delete appearance->item;
+         delete appearance;
+       }
+       for (const HBSTNode::BinaryMatchable* matchable: matchables) {
+         delete matchable;
+       }
+       delete hbst_tree;
+      }
+
+      const Frame* frame = 0;
+      const AppearancePtrVector appearances;
+      const HBSTNode::BinaryMatchableVector matchables;
+      const HBSTTree* hbst_tree = 0;
+    };
+
+  //ds object management
+  public:
+
     Relocalizer();
     ~Relocalizer();
 
+  //ds interface
   public:
 
     //ds initialize closer module for a new keyframe
@@ -30,7 +78,7 @@ namespace proslam {
     void compute();
 
     //ds retrieve correspondences from matches
-    inline const Correspondence* getCorrespondenceNN(const MatchPtrVector& matches_);
+    inline const Correspondence* getCorrespondenceNN(const Correspondence::MatchPtrVector& matches_);
 
     inline const CorrespondenceCollectionPointerVector& closures() const {return _closures;}
     inline void setClosures(CorrespondenceCollectionPointerVector& closures_) {_closures=closures_;}

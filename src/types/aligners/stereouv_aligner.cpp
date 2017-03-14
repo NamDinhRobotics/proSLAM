@@ -228,4 +228,4 @@ namespace proslam {
       }
     }
   }
-} //namespace gslam
+}

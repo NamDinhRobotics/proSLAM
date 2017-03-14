@@ -110,7 +110,4 @@ namespace proslam {
   //ds readability
   typedef BaseAligner<6, 3> BaseAligner6_3;
   typedef BaseAligner<6, 4> BaseAligner6_4;
-
-
-
-} //namespace gslam
+}

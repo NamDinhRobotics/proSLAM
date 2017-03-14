@@ -4,7 +4,30 @@
 namespace proslam {
 
   class Correspondence {
-  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+  //ds exported types
+  public:
+
+    struct Match {
+      EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+      Match(const LandmarkItem* item_query_,
+            const LandmarkItem* item_reference_,
+            const Count& matching_distance_hamming_): item_query(item_query_),
+                                                      item_reference(item_reference_),
+                                                      matching_distance_hamming(matching_distance_hamming_) {}
+
+      Match(const Match* match_): item_query(match_->item_query),
+                                  item_reference(match_->item_reference),
+                                  matching_distance_hamming(match_->matching_distance_hamming) {}
+
+      const LandmarkItem* item_query        = 0;
+      const LandmarkItem* item_reference    = 0;
+      const Count matching_distance_hamming = 0;
+    };
+    typedef std::vector<const Match*> MatchPtrVector;
+    typedef std::map<const Identifier, MatchPtrVector> MatchMap;
+    typedef std::pair<const Identifier, MatchPtrVector> MatchMapElement;
 
   //ds object handling
   public:
@@ -34,4 +57,4 @@ namespace proslam {
   };
 
   typedef std::vector<const Correspondence*> CorrespondencePointerVector;
-} //namespace gslam
+}

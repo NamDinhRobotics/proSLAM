@@ -1,12 +1,12 @@
 #pragma once
-#include "../types/stereo_triangulator.h"
+#include "types/stereo_triangulator.h"
 #include "types/contexts/world_map.h"
 #include "types/aligners/aligner_factory.h"
 
 namespace proslam {
 
   class Tracker {
-    public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds object handling
   public:
@@ -66,10 +66,11 @@ namespace proslam {
     std::vector<FramePoint*> _lost_points;
 
     //ds feature tracking criteria
-    int32_t _pixel_distance_tracking         = 0;
-    int32_t _pixel_distance_tracking_maximum = 49; //7x7 pixels
-    int32_t _pixel_distance_tracking_minimum = 16; //4x4 pixels
-    const int32_t _range_point_tracking      = 2;
+    int32_t _pixel_distance_tracking           = 0;
+    int32_t _pixel_distance_tracking_maximum   = 49; //7x7 pixels
+    int32_t _pixel_distance_tracking_minimum   = 16; //4x4 pixels
+    const int32_t _range_point_tracking        = 2;
+    const int32_t _maximum_flow_pixels_squared = 150*150;
 
     //ds pose solving
     StereoUVAligner* _aligner = 0;

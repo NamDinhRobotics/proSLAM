@@ -108,7 +108,7 @@ namespace proslam {
 
         //ds matches within the current reference
         HBSTTree::MatchVector matches_unfiltered;
-        MatchMap descriptor_matches_pointwise;
+        Correspondence::MatchMap descriptor_matches_pointwise;
 
         //ds get matches
         assert(0 < _query->matchables.size());
@@ -127,13 +127,13 @@ namespace proslam {
           try{
 
             //ds add a new match to the given query point
-            descriptor_matches_pointwise.at(query_index).push_back(new Match(appearance_query->item,
+            descriptor_matches_pointwise.at(query_index).push_back(new Correspondence::Match(appearance_query->item,
                                                                    appearance_reference->item,
                                                                    match.distance));
           } catch(const std::out_of_range& /*exception*/) {
 
             //ds initialize the first match for the given query point
-            descriptor_matches_pointwise.insert(std::make_pair(query_index, MatchPtrVector(1, new Match(appearance_query->item,
+            descriptor_matches_pointwise.insert(std::make_pair(query_index, Correspondence::MatchPtrVector(1, new Correspondence::Match(appearance_query->item,
                                                                                               appearance_reference->item,
                                                                                               match.distance))));
           }
@@ -153,7 +153,7 @@ namespace proslam {
           _mask_id_references_for_correspondences.clear();
 
           //ds compute point-to-point correspondences for all matches
-          for(const MatchMapElement matches_per_point: descriptor_matches_pointwise){
+          for(const Correspondence::MatchMapElement matches_per_point: descriptor_matches_pointwise){
             const Correspondence* correspondence = getCorrespondenceNN(matches_per_point.second);
             if (correspondence != 0) {
               correspondences.push_back(correspondence);
@@ -186,18 +186,18 @@ namespace proslam {
     CHRONOMETER_STOP(overall)
   }
 
-  const Correspondence* Relocalizer::getCorrespondenceNN(const MatchPtrVector& matches_) {
+  const Correspondence* Relocalizer::getCorrespondenceNN(const Correspondence::MatchPtrVector& matches_) {
     assert(0 < matches_.size());
 
     //ds point counts
     std::multiset<Count> counts;
 
     //ds best match and count so far
-    const Match* match_best = 0;
+    const Correspondence::Match* match_best = 0;
     Count count_best        = 0;
 
     //ds loop over the list and count entries
-    for(const Match* match: matches_){
+    for(const Correspondence::Match* match: matches_){
 
       //ds update count - if not in the mask
       if(0 == _mask_id_references_for_correspondences.count(match->item_reference->landmark()->index())) {

@@ -1,5 +1,7 @@
 #include "tracker.h"
 
+#include "types/utility.h"
+
 namespace proslam {
   using namespace srrg_core;
 
@@ -70,6 +72,8 @@ namespace proslam {
       //ds prior grid location
       const int32_t row_projection = std::round(projection_left.y());
       const int32_t col_projection = std::round(projection_left.x());
+      const int32_t row_previous = std::round(previous_point->imageCoordinates().y());
+      const int32_t col_previous = std::round(previous_point->imageCoordinates().x());
 
       //ds exhaustive search
       int32_t pixel_distance_best = _pixel_distance_tracking;
@@ -104,31 +108,35 @@ namespace proslam {
       //ds if we found a match
       if (pixel_distance_best < _pixel_distance_tracking) {
 
-        //ds allocate a new point connected to the previous one
-        FramePoint* current_point = current_frame_->createNewPoint(_preprocessor->framepointMap()[row_best][col_best].keypoint_left,
-                                                                  _preprocessor->framepointMap()[row_best][col_best].descriptor_left,
-                                                                  _preprocessor->framepointMap()[row_best][col_best].keypoint_right,
-                                                                  _preprocessor->framepointMap()[row_best][col_best].descriptor_right,
-                                                                  _preprocessor->framepointMap()[row_best][col_best].camera_coordinates_left.z(),
-                                                                  current_frame_->camera()->cameraToRobot()*_preprocessor->framepointMap()[row_best][col_best].camera_coordinates_left,
-                                                                  previous_point);
-        //ds set the point to the control structure
-        current_frame_->points()[_number_of_tracked_points] = current_point;
-        if (current_point->landmark()) {
-          if (current_point->hasDepth()) {
-            ++_number_of_tracked_landmarks_close;
-          } else {
-            ++_number_of_tracked_landmarks_far;
+        //ds check if track is consistent
+        if ((row_best-row_previous)*(row_best-row_previous)+(col_best-col_previous)*(col_best-col_previous) < _maximum_flow_pixels_squared) {
+
+          //ds allocate a new point connected to the previous one
+          FramePoint* current_point = current_frame_->createNewPoint(_preprocessor->framepointMap()[row_best][col_best].keypoint_left,
+                                                                    _preprocessor->framepointMap()[row_best][col_best].descriptor_left,
+                                                                    _preprocessor->framepointMap()[row_best][col_best].keypoint_right,
+                                                                    _preprocessor->framepointMap()[row_best][col_best].descriptor_right,
+                                                                    _preprocessor->framepointMap()[row_best][col_best].camera_coordinates_left.z(),
+                                                                    current_frame_->camera()->cameraToRobot()*_preprocessor->framepointMap()[row_best][col_best].camera_coordinates_left,
+                                                                    previous_point);
+          //ds set the point to the control structure
+          current_frame_->points()[_number_of_tracked_points] = current_point;
+          if (current_point->landmark()) {
+            if (current_point->hasDepth()) {
+              ++_number_of_tracked_landmarks_close;
+            } else {
+              ++_number_of_tracked_landmarks_far;
+            }
           }
+
+          const cv::Point2f point_previous(previous_point->imageCoordinates().x(), previous_point->imageCoordinates().y());
+          const cv::Point2f point_current(current_point->imageCoordinates().x(), current_point->imageCoordinates().y());
+          ++_number_of_tracked_points;
+
+          //ds disable further matching and reduce search time
+          _preprocessor->framepointMap()[row_best][col_best].is_available = false;
+          continue;
         }
-
-        const cv::Point2f point_previous(previous_point->imageCoordinates().x(), previous_point->imageCoordinates().y());
-        const cv::Point2f point_current(current_point->imageCoordinates().x(), current_point->imageCoordinates().y());
-        ++_number_of_tracked_points;
-
-        //ds disable further matching and reduce search time
-        _preprocessor->framepointMap()[row_best][col_best].is_available = false;
-        continue;
       }
 
 //ds ------------------------------------------- STAGE 2: REGIONAL TRACKING
@@ -169,31 +177,35 @@ namespace proslam {
       //ds if we found a match
       if (pixel_distance_best < _pixel_distance_tracking) {
 
-        //ds allocate a new point connected to the previous one
-        FramePoint* current_point = current_frame_->createNewPoint(_preprocessor->framepointMap()[row_best][col_best].keypoint_left,
-                                                                   _preprocessor->framepointMap()[row_best][col_best].descriptor_left,
-                                                                   _preprocessor->framepointMap()[row_best][col_best].keypoint_right,
-                                                                   _preprocessor->framepointMap()[row_best][col_best].descriptor_right,
-                                                                   _preprocessor->framepointMap()[row_best][col_best].camera_coordinates_left.z(),
-                                                                   current_frame_->camera()->cameraToRobot()*_preprocessor->framepointMap()[row_best][col_best].camera_coordinates_left,
-                                                                   previous_point);
-        //ds set the point to the control structure
-        current_frame_->points()[_number_of_tracked_points] = current_point;
-        if (current_point->landmark()) {
-          if (current_point->hasDepth()) {
-            ++_number_of_tracked_landmarks_close;
-          } else {
-            ++_number_of_tracked_landmarks_far;
+        //ds check if track is consistent
+        if ((row_best-row_previous)*(row_best-row_previous)+(col_best-col_previous)*(col_best-col_previous) < _maximum_flow_pixels_squared) {
+
+          //ds allocate a new point connected to the previous one
+          FramePoint* current_point = current_frame_->createNewPoint(_preprocessor->framepointMap()[row_best][col_best].keypoint_left,
+                                                                     _preprocessor->framepointMap()[row_best][col_best].descriptor_left,
+                                                                     _preprocessor->framepointMap()[row_best][col_best].keypoint_right,
+                                                                     _preprocessor->framepointMap()[row_best][col_best].descriptor_right,
+                                                                     _preprocessor->framepointMap()[row_best][col_best].camera_coordinates_left.z(),
+                                                                     current_frame_->camera()->cameraToRobot()*_preprocessor->framepointMap()[row_best][col_best].camera_coordinates_left,
+                                                                     previous_point);
+          //ds set the point to the control structure
+          current_frame_->points()[_number_of_tracked_points] = current_point;
+          if (current_point->landmark()) {
+            if (current_point->hasDepth()) {
+              ++_number_of_tracked_landmarks_close;
+            } else {
+              ++_number_of_tracked_landmarks_far;
+            }
           }
+
+          const cv::Point2f point_previous(previous_point->imageCoordinates().x(), previous_point->imageCoordinates().y());
+          const cv::Point2f point_current(current_point->imageCoordinates().x(), current_point->imageCoordinates().y());
+          ++_number_of_tracked_points;
+
+          //ds disable further matching and reduce search time
+          _preprocessor->framepointMap()[row_best][col_best].is_available = false;
+          continue;
         }
-
-        const cv::Point2f point_previous(previous_point->imageCoordinates().x(), previous_point->imageCoordinates().y());
-        const cv::Point2f point_current(current_point->imageCoordinates().x(), current_point->imageCoordinates().y());
-        ++_number_of_tracked_points;
-
-        //ds disable further matching and reduce search time
-        _preprocessor->framepointMap()[row_best][col_best].is_available = false;
-        continue;
       }
 
       //ds no match found
@@ -459,24 +471,6 @@ namespace proslam {
 
       //ds on the track
       case Frame::Tracking: {
-
-        //gg count the number of points old enough and with a landmark
-        const Count number_of_landmarks = current_frame->countPoints(Frame::minimum_landmark_age, True);
-        if (number_of_landmarks < _minimum_number_of_landmarks_to_track) {
-
-          //ds reset
-          std::cerr << "LOST TRACK due to insufficient good points" << std::endl;
-          _status_previous = Frame::Localizing;
-          _status          = Frame::Localizing;
-          current_frame->setStatus(_status);
-          current_frame->points().clear();
-
-          //ds keep previous solution
-          current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
-          world_previous_to_current = TransformMatrix3D::Identity();
-          context_->setRobotToWorldPrevious(current_frame->robotToWorld());
-          return world_previous_to_current;
-        }
 
         //ds compute far to close landmark ratio TODO simplify or get better logic: currently the idea is to give more weight to framepoints in case we have almost only far landmarks
         const real weight_framepoint = 1-(_number_of_tracked_landmarks_far+10*_number_of_tracked_landmarks_close)/static_cast<real>(_number_of_tracked_points);

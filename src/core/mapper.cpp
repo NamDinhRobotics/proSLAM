@@ -2,7 +2,7 @@
 
 namespace proslam {
 
-  Mapper::Mapper(): _optimizer(Optimizer::getOptimizer()) {
+  Mapper::Mapper(): _optimizer(Utility::getOptimizer()) {
     std::cerr << "Mapper::Mapper|constructed" << std::endl;
   }
 
@@ -76,10 +76,10 @@ namespace proslam {
       if (0 == vertex_keyframe_previous) {
         vertex_keyframe->setFixed(true);
       } else {
-        _optimizer->addEdge(Optimizer::getPoseEdge(_optimizer,
-                                                   vertex_keyframe->id(),
-                                                   vertex_keyframe_previous->id(),
-                                                   world_to_frame_previous*keyframe->robotToWorld()));
+        _optimizer->addEdge(Utility::getPoseEdge(_optimizer,
+                                                 vertex_keyframe->id(),
+                                                 vertex_keyframe_previous->id(),
+                                                 world_to_frame_previous*keyframe->robotToWorld()));
       }
 
       //ds update previous
@@ -106,10 +106,10 @@ namespace proslam {
         }
 
         //ds retrieve closure edge
-        g2o::EdgeSE3* edge_closure = Optimizer::getClosureEdge(_optimizer,
-                                                               keyframe_query->index(),
-                                                               keyframe_reference->index(),
-                                                               transform_query_to_reference);
+        g2o::EdgeSE3* edge_closure = Utility::getClosureEdge(_optimizer,
+                                                             keyframe_query->index(),
+                                                             keyframe_reference->index(),
+                                                             transform_query_to_reference);
         _optimizer->addEdge(edge_closure);
       }
     }

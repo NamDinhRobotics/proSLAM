@@ -62,5 +62,5 @@ namespace proslam {
     //ds grant access to factory: ctor/dtor
     friend AlignerFactory;
 
-  }; //class StereoUVAligner
-} //namespace gslam
+  };
+}

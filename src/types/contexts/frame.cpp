@@ -76,7 +76,7 @@ namespace proslam {
     }
   }
 
-  size_t Frame::countPoints(const Count min_age_,
+  const Count Frame::countPoints(const Count min_age_,
       const ThreeValued has_landmark,
       const ThreeValued has_depth) const{
     size_t count=0;

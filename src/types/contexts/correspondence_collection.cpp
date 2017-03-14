@@ -1,14 +1,16 @@
 #include "correspondence_collection.h"
 
+#include "local_map.h"
+
 namespace proslam {
 
   CorrespondenceCollection::CorrespondenceCollection(const LocalMap* keyframe_query_,
                                                      const LocalMap* keyframe_reference_,
                                                      const Count& absolute_number_of_matches_,
                                                      const real& relative_number_of_matches_,
-                                                     const MatchMap& matches_,
-                                                     const CorrespondencePointerVector& correspondences_): keyframe_query(keyframe_query_),
-                                                                                                           keyframe_reference(keyframe_reference_),
+                                                     const Correspondence::MatchMap& matches_,
+                                                     const CorrespondencePointerVector& correspondences_): local_map_query(keyframe_query_),
+                                                                                                           local_map_reference(keyframe_reference_),
                                                                                                            id_query(keyframe_query_->index()),
                                                                                                            id_reference(keyframe_reference_->index()),
                                                                                                            absolute_number_of_matches(absolute_number_of_matches_),
@@ -17,18 +19,18 @@ namespace proslam {
                                                                                                            correspondences(correspondences_) {}
 
     //ds deep copy ctor
-  CorrespondenceCollection::CorrespondenceCollection(CorrespondenceCollection* collection_): keyframe_query(collection_->keyframe_query),
-                                                                                             keyframe_reference(collection_->keyframe_reference),
-                                                                                             id_query(collection_->keyframe_query->index()),
-                                                                                             id_reference(collection_->keyframe_reference->index()),
+  CorrespondenceCollection::CorrespondenceCollection(CorrespondenceCollection* collection_): local_map_query(collection_->local_map_query),
+                                                                                             local_map_reference(collection_->local_map_reference),
+                                                                                             id_query(collection_->local_map_query->index()),
+                                                                                             id_reference(collection_->local_map_reference->index()),
                                                                                              absolute_number_of_matches(collection_->absolute_number_of_matches),
                                                                                              relative_number_of_matches(collection_->relative_number_of_matches),
                                                                                              matches_per_point(CorrespondenceCollection::getClone(collection_->matches_per_point)),
                                                                                              correspondences(CorrespondenceCollection::getClone(collection_->correspondences)) {}
 
   CorrespondenceCollection::~CorrespondenceCollection() {
-    for (const MatchMapElement matches_element: matches_per_point) {
-      for(const Match* match: matches_element.second) {
+    for (const Correspondence::MatchMapElement matches_element: matches_per_point) {
+      for(const Correspondence::Match* match: matches_element.second) {
         delete match;
       }
     }
@@ -60,4 +62,4 @@ namespace proslam {
       transform_frame_query_to_frame_reference = collection_->transform_frame_query_to_frame_reference;
     }
   }
-} //namespace gslam
+}

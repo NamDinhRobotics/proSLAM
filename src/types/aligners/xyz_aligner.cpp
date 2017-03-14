@@ -163,4 +163,4 @@ namespace proslam {
       }
     }
   }
-} //namespace gslam
+}

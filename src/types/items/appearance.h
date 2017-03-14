@@ -1,5 +1,5 @@
 #pragma once
-#include "../contexts/frame.h"
+#include "types/contexts/frame.h"
 
 namespace proslam {
 

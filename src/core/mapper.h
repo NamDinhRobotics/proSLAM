@@ -1,5 +1,5 @@
 #pragma once
-#include "../types/optimizer.h"
+#include "types/utility.h"
 #include "types/contexts/world_map.h"
 
 namespace proslam {

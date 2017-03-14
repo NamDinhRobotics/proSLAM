@@ -16,8 +16,10 @@ using namespace srrg_core;
 const char* banner[] = {
   "srrg_proslam_app: simple SLAM application",
   "",
-  "usage: srrg_proslam_app  [options] [-camera-left-topic <string>] [-camera-right-topic <string>] <messages>",
-  "options:",
+  "usage: srrg_proslam_app [options] <message_file> | <calibration_file>",
+  "<message_file>: path to a SRRG txt_io message file",
+  "<calibration_file>: path to a calibration file containing raw input information (see calibration_example.txt) TBD",
+  "[options]:",
   "-camera-left-topic <string>",
   "-camera-right-topic <string>",
   "-use-gui:  displays GUI elements",
@@ -175,7 +177,7 @@ int32_t main(int32_t argc, char ** argv) {
   //ds configure SLAM modules
   relocalizer->aligner()->setMaximumErrorKernel(0.5);
   relocalizer->aligner()->setMinimumNumberOfInliers(25);
-  relocalizer->aligner()->setMinimumInlierRatio(0.4);
+  relocalizer->aligner()->setMinimumInlierRatio(0.5);
   relocalizer->setMinimumAbsoluteNumberOfMatchesPointwise(25);
 
   //ds initialize gui
@@ -402,11 +404,11 @@ void process(WorldMap* world_map_,
         //ds check the closures
         for(CorrespondenceCollection* closure: relocalizer_->closures()) {
           if (closure->is_valid) {
-            assert(world_map_->currentLocalMap() == closure->keyframe_query);
+            assert(world_map_->currentLocalMap() == closure->local_map_query);
 
             //ds add loop closure constraint
             world_map_->closeLocalMaps(world_map_->currentLocalMap(),
-                                                                   closure->keyframe_reference,
+                                                                   closure->local_map_reference,
                                                                    closure->transform_frame_query_to_frame_reference);
             if (use_gui) {
               for (const Correspondence* match: closure->correspondences) {

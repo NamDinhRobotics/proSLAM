@@ -87,9 +87,9 @@ namespace proslam {
       //ds detection/generic
       const Count _number_of_rows_image = 0;
       const Count _number_of_cols_image = 0;
-      Count _target_number_of_points    = 750;
+      Count _target_number_of_points    = 700;
       int32_t _detector_threshold = 10;
-      int32_t _detector_threshold_minimum = 5;
+      int32_t _detector_threshold_minimum = 0;
       int32_t _detector_threshold_maximum = 50;
       int32_t _maximum_tracking_matching_distance = 50;
       const int32_t _tracking_matching_distance_threshold_maximum = 50;

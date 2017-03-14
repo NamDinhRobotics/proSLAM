@@ -89,9 +89,9 @@ namespace proslam {
     const LocalMap* keyframe() const {return _keyframe;}
     bool isKeyFrame() const;
 
-    size_t countPoints(const Count min_age_,
-		       const ThreeValued has_landmark = Unknown,
-		       const ThreeValued has_depth = Unknown) const ;
+    const Count countPoints(const Count min_age_,
+		                        const ThreeValued has_landmark = Unknown,
+		                        const ThreeValued has_depth = Unknown) const;
 
     void releaseImages();
 
