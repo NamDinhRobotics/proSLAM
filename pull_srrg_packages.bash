@@ -9,31 +9,41 @@ cd ${DIR_CATKIN_SOURCE}
 
 #ds start loading packages - first check if they exist
 if [ -d "${DIR_CATKIN_SOURCE}/srrg_boss" ]; then
-    echo "- srrg_boss already installed, nothing to do!"
+    echo "- srrg_boss already installed - updating code"
+    cd "${DIR_CATKIN_SOURCE}/srrg_boss"
+    git pull
 else
     echo "- installing srrg_boss:"
     git clone https://gitlab.com/srrg-software/srrg_boss
 fi
 if [ -d "${DIR_CATKIN_SOURCE}/srrg_core" ]; then
-    echo "- srrg_core already installed, nothing to do!"
+    echo "- srrg_core already installed - updating code"
+    cd "${DIR_CATKIN_SOURCE}/srrg_core"
+    git pull
 else
     echo "- installing srrg_core:"
     git clone https://gitlab.com/srrg-software/srrg_core
 fi
 if [ -d "${DIR_CATKIN_SOURCE}/srrg_gl_helpers" ]; then
-    echo "- srrg_gl_helpers already installed, nothing to do!"
+    echo "- srrg_gl_helpers already installed - updating code"
+    cd "${DIR_CATKIN_SOURCE}/srrg_gl_helpers"
+    git pull
 else
     echo "- installing srrg_gl_helpers:"
     git clone https://gitlab.com/srrg-software/srrg_gl_helpers
 fi
 if [ -d "${DIR_CATKIN_SOURCE}/srrg_core_viewers" ]; then
-    echo "- srrg_core_viewers already installed, nothing to do!"
+    echo "- srrg_core_viewers already installed - updating code"
+    cd "${DIR_CATKIN_SOURCE}/srrg_core_viewers"
+    git pull
 else
     echo "- installing srrg_core_viewers:"
     git clone https://gitlab.com/srrg-software/srrg_core_viewers
 fi
 if [ -d "${DIR_CATKIN_SOURCE}/srrg_hbst" ]; then
-    echo "- srrg_hbst already installed, nothing to do!"
+    echo "- srrg_hbst already installed - updating code"
+    cd "${DIR_CATKIN_SOURCE}/srrg_hbst"
+    git pull
 else
     echo "- installing srrg_hbst:"
     git clone https://gitlab.com/srrg-software/srrg_hbst
