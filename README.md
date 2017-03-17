@@ -32,8 +32,7 @@ Currently Linux only:
 The complete system **runs on a single thread** (including visualization components)
 
 ---
-### Code statistics ###
-Revision 7faff124
+### Code statistics (7faff124) ###
 
     cloc srrg_proslam/src/
 
