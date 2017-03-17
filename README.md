@@ -36,6 +36,8 @@ The complete system **runs on a single thread** (including visualization compone
 
 | http://cloc.sourceforge.net v 1.60  T=0.08 s (560.7 files/s, 71819.7 lines/s) |
 | :-: |
+
+
 | Language     | files | blank | comment | code |
 | :----------- | :---- | :---- | :------ | :--- |
 | C++          | 18    | 684   | 540     | 2764 |
