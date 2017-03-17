@@ -33,6 +33,7 @@ The complete system **runs on a single thread** (including visualization compone
 
 ---
 ### Code statistics ###
+Revision 7faff124
 
     cloc srrg_proslam/src/
 
