@@ -43,6 +43,7 @@ The complete system **runs on a single thread** (including visualization compone
 | C++          | 18    | 684   | 540     | 2764 |
 | C/C++ Header | 22    | 425   | 210     | 1319 |
 | CMake        | 7     | 8     | 1       | 69   |
+| :----------- | :---- | :---- | :------ | :--- |
 | SUM:         | 47    | 1117  | 751     | 4152 |
 
 ---
