@@ -1,6 +1,8 @@
 | **ProSLAM** |
 | :------: |
 | Dominik Schlegel, Mirco Colosi, Giorgio Grisetti |
+As this is a working repository the code is not static.
+For related publications please refer to revision: 7faff124
 
 ### Demo videos ###
 [ProSLAM: Full run KITTI Sequence 00 (real-time, 1 thread@2.40GHz/i7-4700MQ)][kitti_00]
