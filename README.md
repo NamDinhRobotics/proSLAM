@@ -32,7 +32,7 @@ The complete system **runs on a single thread** (including visualization compone
 ---
 ### Code statistics ###
 
-    cloc srrg_proslam/src/ - 49 text files. - 47 unique files. - 0 files ignored.
+    cloc srrg_proslam/src/
 
 | http://cloc.sourceforge.net v 1.60  T=0.08 s (560.7 files/s, 71819.7 lines/s) |
 | :----------- | :---- | :---- | :------ | :--- |
