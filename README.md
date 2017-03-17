@@ -31,21 +31,16 @@ The complete system **runs on a single thread** (including visualization compone
 
 ---
 ### Code statistics ###
-cloc srrg_proslam/src/
-      49 text files.
-      47 unique files.
-       0 files ignored.
 
-http://cloc.sourceforge.net v 1.60  T=0.08 s (560.7 files/s, 71819.7 lines/s)
--------------------------------------------------------------------------------
-Language                     files          blank        comment           code
--------------------------------------------------------------------------------
-C++                             18            684            540           2764
-C/C++ Header                    22            425            210           1319
-CMake                            7              8              1             69
--------------------------------------------------------------------------------
-SUM:                            47           1117            751           4152
--------------------------------------------------------------------------------
+    cloc srrg_proslam/src/ - 49 text files. - 47 unique files. - 0 files ignored.
+
+| http://cloc.sourceforge.net v 1.60  T=0.08 s (560.7 files/s, 71819.7 lines/s) |
+| :----------- | :---- | :---- | :------ | :--- |
+| Language     | files | blank | comment | code |
+| C++          | 18    | 684   | 540     | 2764 |
+| C/C++ Header | 22    | 425   | 210     | 1319 |
+| CMake        | 7     | 8     | 1       | 69   |
+| SUM:         | 47    | 1117  | 751     | 4152 |
 
 ---
 ### How do I get set up? ###
