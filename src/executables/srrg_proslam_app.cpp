@@ -3,9 +3,9 @@
 #include "srrg_txt_io/message_timestamp_synchronizer.h"
 #include "srrg_txt_io/pinhole_image_message.h"
 
-#include "core/mapper.h"
-#include "core/relocalizer.h"
-#include "core/tracker.h"
+#include "map_management/mapper.h"
+#include "relocalization/relocalizer.h"
+#include "motion_estimation/tracker.h"
 #include "visualization/viewer_input_images.h"
 #include "visualization/viewer_output_map.h"
 

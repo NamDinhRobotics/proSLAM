@@ -1,8 +1,6 @@
 #pragma once
 #include "srrg_core_viewers/simple_viewer.h"
-
-#include "core/relocalizer.h"
-#include "types/contexts/world_map.h"
+#include "types/world_map.h"
 
 namespace proslam {
 

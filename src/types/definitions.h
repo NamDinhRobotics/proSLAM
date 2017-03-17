@@ -1,5 +1,4 @@
 #pragma once
-
 #include <queue>
 #include <set>
 #include <vector>
@@ -25,6 +24,7 @@
 #include <stdint.h>
 #include "srrg_system_utils/system_utils.h"
 #include "srrg_hbst_types_core/BinaryTree.hpp"
+#include "srrg_types/types.hpp"
 
 
 

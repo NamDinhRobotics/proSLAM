@@ -1,5 +1,5 @@
 #pragma once
-#include "types/contexts/world_map.h"
+#include "types/world_map.h"
 
 namespace proslam {
 

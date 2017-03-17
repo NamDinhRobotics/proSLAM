@@ -1,0 +1,8 @@
+add_library(srrg_proslam_motion_estimation_library
+  tracker.cpp
+)
+
+target_link_libraries(srrg_proslam_motion_estimation_library
+  srrg_proslam_aligners_library
+  srrg_proslam_triangulation_library
+)

@@ -1,15 +1,10 @@
 add_library(srrg_proslam_types_library
-  aligners/aligner_factory.cpp
-  aligners/xyz_aligner.cpp
-  aligners/stereouv_aligner.cpp
-  contexts/frame.cpp
-  contexts/local_map.cpp
-  contexts/world_map.cpp
-  contexts/correspondence_collection.cpp
-  items/frame_point.cpp
-  items/landmark.cpp
+  frame.cpp
+  local_map.cpp
+  world_map.cpp
+  frame_point.cpp
+  landmark.cpp
   camera.cpp
-  stereo_triangulator.cpp
 )
 
 target_link_libraries(srrg_proslam_types_library
