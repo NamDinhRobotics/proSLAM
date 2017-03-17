@@ -2,7 +2,7 @@
 | :------: |
 | Dominik Schlegel, Mirco Colosi, Giorgio Grisetti |
 As this is a working repository, none of the code is assumed to be static.
-For related publications please refer to revision: 7faff124
+For related publications please refer to revision 7faff124
 
 ### Demo videos ###
 [ProSLAM: Full run KITTI Sequence 00 (real-time, 1 thread@2.40GHz/i7-4700MQ)][kitti_00]
@@ -32,7 +32,7 @@ Currently Linux only:
 The complete system **runs on a single thread** (including visualization components)
 
 ---
-### Code statistics (7faff124) ###
+### Code statistics | revision 7faff124 ###
 
     cloc srrg_proslam/src/
 
