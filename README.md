@@ -1,7 +1,7 @@
 | **ProSLAM** |
 | :------: |
 | Dominik Schlegel, Mirco Colosi, Giorgio Grisetti |
-As this is a working repository the code is not static.
+As this is a working repository, the code is not static.
 For related publications please refer to revision: 7faff124
 
 ### Demo videos ###
