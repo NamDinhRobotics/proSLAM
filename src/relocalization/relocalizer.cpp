@@ -5,11 +5,10 @@
 namespace proslam {
   using namespace srrg_core;
 
-  Relocalizer::Relocalizer(): _query(0) {
+  Relocalizer::Relocalizer(): _query(0), _aligner(new XYZAligner()) {
     clear();
     _query_history.clear();
     assert(_query_history_queue.empty());
-    _aligner = static_cast<XYZAligner*>(AlignerFactory::create(AlignerType6_3::xyz));
     assert(_aligner != 0);
     std::cerr << "Relocalizer::Relocalizer|constructed" << std::endl;
   }

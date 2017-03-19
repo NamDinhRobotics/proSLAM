@@ -53,7 +53,7 @@ namespace proslam {
     const LandmarkItem* item_query     = 0;
     const LandmarkItem* item_reference = 0;
     const Count matching_count         = 0;
-    const real matching_ratio       = 0.0;
+    const real matching_ratio          = 0.0;
   };
 
   typedef std::vector<const Correspondence*> CorrespondencePointerVector;

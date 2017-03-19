@@ -1,17 +1,17 @@
-#include "mapper.h"
+#include "graph_optimizer.h"
 
 namespace proslam {
 
-  Mapper::Mapper(): _optimizer(getOptimizer()) {
-    std::cerr << "Mapper::Mapper|constructed" << std::endl;
+  GraphOptimizer::GraphOptimizer(): _optimizer(getOptimizer()) {
+    std::cerr << "GraphOptimizer::GraphOptimizer|constructed" << std::endl;
   }
 
-  Mapper::~Mapper(){
-    std::cerr << "Mapper::Mapper|destroying" << std::endl;
-    std::cerr << "Mapper::Mapper|destroyed" << std::endl;
+  GraphOptimizer::~GraphOptimizer(){
+    std::cerr << "GraphOptimizer::GraphOptimizer|destroying" << std::endl;
+    std::cerr << "GraphOptimizer::GraphOptimizer|destroyed" << std::endl;
   }
 
-  void Mapper::optimize(WorldMap* context_) {
+  void GraphOptimizer::optimize(WorldMap* context_) {
     CHRONOMETER_START(overall)
     optimizePoses(context_);
     optimizeLandmarks(context_);
@@ -19,7 +19,7 @@ namespace proslam {
   }
 
   //ds optimizes all landmarks by computing rudely the average without using g2o
-  void Mapper::optimizeLandmarks(WorldMap* context_){
+  void GraphOptimizer::optimizeLandmarks(WorldMap* context_){
 
     //ds update all active landmark positions
     for (const LocalMap* keyframe: context_->localMaps()) {
@@ -37,18 +37,18 @@ namespace proslam {
     }
   }
 
-  void Mapper::optimizePoses(WorldMap* context_) {
+  void GraphOptimizer::optimizePoses(WorldMap* context_) {
     _optimizer->clear();
     _optimizer->clearParameters();
 
     //ds add the camera as parameter
     g2o::ParameterCamera* parameter_camera = new g2o::ParameterCamera();
     parameter_camera->setId(0);
-    parameter_camera->setOffset(context_->currentLocalMap()->camera()->cameraToRobot().cast<double>());
-    parameter_camera->setKcam(static_cast<double>(context_->currentLocalMap()->camera()->cameraMatrix()(0,0)),
-                              static_cast<double>(context_->currentLocalMap()->camera()->cameraMatrix()(1,1)),
-                              static_cast<double>(context_->currentLocalMap()->camera()->cameraMatrix()(0,2)),
-                              static_cast<double>(context_->currentLocalMap()->camera()->cameraMatrix()(1,2)));
+    parameter_camera->setOffset(context_->currentLocalMap()->cameraLeft()->cameraToRobot().cast<double>());
+    parameter_camera->setKcam(static_cast<double>(context_->currentLocalMap()->cameraLeft()->cameraMatrix()(0,0)),
+                              static_cast<double>(context_->currentLocalMap()->cameraLeft()->cameraMatrix()(1,1)),
+                              static_cast<double>(context_->currentLocalMap()->cameraLeft()->cameraMatrix()(0,2)),
+                              static_cast<double>(context_->currentLocalMap()->cameraLeft()->cameraMatrix()(1,2)));
     _optimizer->addParameter(parameter_camera);
 
     g2o::ParameterSE3Offset* camera_offset = new g2o::ParameterSE3Offset();

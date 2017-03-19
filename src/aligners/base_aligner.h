@@ -17,9 +17,8 @@ namespace proslam {
       typedef Eigen::Matrix<real, dimension, states> JacobianMatrix;
 
     //ds object handling
-    protected:
+    public:
 
-      //ds direct instantiation prohibited
       BaseAligner() {};
       BaseAligner(const real& error_delta_for_convergence_): _error_delta_for_convergence(error_delta_for_convergence_) {};
       BaseAligner(const real& error_delta_for_convergence_,
@@ -93,18 +92,6 @@ namespace proslam {
       InformationMatrix _omega = InformationMatrix::Identity();
       JacobianMatrix _jacobian = JacobianMatrix::Zero();
       AlignmentMatrix _information_matrix = AlignmentMatrix::Identity();
-
-    //ds grant access to factory: ctor/dtor
-    friend AlignerFactory;
-
-  }; //class BaseAligner
-
-  //ds aligner types
-  enum AlignerType6_3 {
-    xyz,
-  };
-  enum AlignerType6_4 {
-    stereouv
   };
 
   //ds readability

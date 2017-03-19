@@ -8,9 +8,8 @@ namespace proslam {
     public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds object handling
-    protected:
+    public:
 
-      //ds instantiation controlled by aligner factory
       XYZAligner(): BaseAligner6_3(1e-5, 0.05) {}
       ~XYZAligner() {}
 
@@ -54,9 +53,5 @@ namespace proslam {
 
       //ds enable deep correspondences -> landmarks, landmark views, etc..
       Count _context_depth = 0;
-
-    //ds grant access to factory: ctor/dtor
-    friend AlignerFactory;
-
   };
 }

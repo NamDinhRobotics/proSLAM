@@ -96,8 +96,8 @@ namespace proslam {
   const Count StereoTriangulator::triangulate(const Frame* frame_) {
 
     //ds buffer images
-    const cv::Mat& intensity_image_left  = frame_->intensityImage();
-    const cv::Mat& intensity_image_right = frame_->intensityImageExtra();
+    const cv::Mat& intensity_image_left  = frame_->intensityImageLeft();
+    const cv::Mat& intensity_image_right = frame_->intensityImageRight();
 
     //ds detect new features
     CHRONOMETER_START(feature_detection)

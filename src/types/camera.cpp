@@ -15,7 +15,6 @@ namespace proslam {
     setImageCols(image_cols_);
     setCameraMatrix(camera_matrix_);
     setOffset(offset_);
-    setDepthConversionFactor(1e-3);
   }
 
   const bool Camera::isInFieldOfView(const PointCoordinates& image_coordinates_) const {

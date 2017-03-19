@@ -1,5 +1,5 @@
 #pragma once
-#include "aligners/aligner_factory.h"
+#include "aligners/xyz_aligner.h"
 #include "types/local_map.h"
 
 namespace proslam {
@@ -31,7 +31,7 @@ namespace proslam {
       for (Index index_appearance = 0; index_appearance < appearances.size(); ++index_appearance) {
         FramePoint* point = framepoints_[index_appearance];
         if (point->landmark() != 0) {
-          appearances[number_of_added_appearances] = new Appearance(new LandmarkItem(point->landmark(), point->robotCoordinates()), point->descriptor());
+          appearances[number_of_added_appearances] = new Appearance(new LandmarkItem(point->landmark(), point->robotCoordinates()), point->descriptorLeft());
           ++number_of_added_appearances;
         }
       }

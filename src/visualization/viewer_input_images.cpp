@@ -18,9 +18,7 @@ namespace proslam {
     if(! current_frame) {
       return;
     }
-    if (current_frame->hasIntensity()) {
-      cv::cvtColor(current_frame->intensityImage(), _current_image, CV_GRAY2RGB);
-    }
+    cv::cvtColor(current_frame->intensityImageLeft(), _current_image, CV_GRAY2RGB);
   }
 
   void ViewerInputImages::drawFeatures(){
@@ -45,10 +43,10 @@ namespace proslam {
         if (point->landmark()->isValidated()) {
 
           //ds check landmark kind: by vision or by depth
-          if (point->landmark()->isByVision()) {
-            color = cv::Scalar(100+intensity*155, 0, 100+intensity*155);
-          } else {
+          if (point->landmark()->isClose()) {
             color = cv::Scalar(100+intensity*155, 0, 0);
+          } else {
+            color = cv::Scalar(100+intensity*155, 0, 100+intensity*155);
           }
         } else {
           color = CV_COLOR_CODE_RED;
@@ -60,20 +58,16 @@ namespace proslam {
         }
 
         //ds draw reprojection circle - if valid
-        if (point->reprojectionCoordinates().x() > 0 || point->reprojectionCoordinates().y() > 0) {
-          cv::circle(_current_image, cv::Point(point->reprojectionCoordinates().x(), point->reprojectionCoordinates().y()), 4, color);
-          if (current_frame->hasIntensityExtra()) {
-            cv::circle(_current_image, cv::Point(point->reprojectionCoordinatesExtra().x()+current_frame->camera()->imageCols(), point->reprojectionCoordinatesExtra().y()), 4, color);
-          }
+        if (point->reprojectionCoordinatesLeft().x() > 0 || point->reprojectionCoordinatesLeft().y() > 0) {
+          cv::circle(_current_image, cv::Point(point->reprojectionCoordinatesLeft().x(), point->reprojectionCoordinatesLeft().y()), 4, color);
+          cv::circle(_current_image, cv::Point(point->reprojectionCoordinatesRight().x()+current_frame->cameraLeft()->imageCols(), point->reprojectionCoordinatesRight().y()), 4, color);
         } /*else {
           cv::circle(_current_image, cv::Point(point->imageCoordinates().x(), point->imageCoordinates().y()), 4, CV_COLOR_CODE_RED);
-          if (current_frame->hasIntensityExtra()) {
-            cv::circle(_current_image, cv::Point(point->imageCoordinatesExtra().x()+current_frame->camera()->imageCols(), point->imageCoordinatesExtra().y()), 4, CV_COLOR_CODE_RED);
-          }
+          cv::circle(_current_image, cv::Point(point->imageCoordinatesExtra().x()+current_frame->camera()->imageCols(), point->imageCoordinatesExtra().y()), 4, CV_COLOR_CODE_RED);
         }*/
 
         //ds draw the point
-        cv::circle(_current_image, cv::Point(point->imageCoordinates().x(), point->imageCoordinates().y()), 2, color, -1);
+        cv::circle(_current_image, cv::Point(point->imageCoordinatesLeft().x(), point->imageCoordinatesLeft().y()), 2, color, -1);
       }
     }
   }
@@ -87,8 +81,8 @@ namespace proslam {
 
         //ds compute intensity -> old landmarks appear brighter
         const real intensity = std::min(static_cast<real>(1.0), frame_point->age()/static_cast<real>(25));
-        const cv::Point current_point(frame_point->imageCoordinates().x(), frame_point->imageCoordinates().y());
-        const cv::Point previous_point(frame_point->previous()->imageCoordinates().x(), frame_point->previous()->imageCoordinates().y());
+        const cv::Point current_point(frame_point->imageCoordinatesLeft().x(), frame_point->imageCoordinatesLeft().y());
+        const cv::Point previous_point(frame_point->previous()->imageCoordinatesLeft().x(), frame_point->previous()->imageCoordinatesLeft().y());
         cv::line(_current_image, current_point, previous_point, cv::Scalar(0, 100+intensity*155, 0));
       }
     }

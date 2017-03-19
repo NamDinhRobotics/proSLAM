@@ -1,5 +1,5 @@
 add_library(srrg_proslam_map_management_library
-  mapper.cpp
+  graph_optimizer.cpp
 )
 
 target_link_libraries(srrg_proslam_map_management_library

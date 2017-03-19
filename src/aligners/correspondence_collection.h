@@ -20,6 +20,7 @@ namespace proslam {
     //ds deep copy ctor
     CorrespondenceCollection(CorrespondenceCollection* collection_);
 
+    //ds dtor
     ~CorrespondenceCollection();
 
     //ds deep context merging (old element can be deleted)

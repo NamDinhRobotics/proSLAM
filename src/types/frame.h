@@ -8,16 +8,17 @@ namespace proslam {
   class LocalMap;
   class WorldMap;
   class Frame: public BaseContext {
-  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   public:
 
-    enum Status {Localizing, Tracking}; //< defines one of the two tracker states
+    //ds defines one of the two tracker states
+    enum Status {Localizing, Tracking};
     Frame(const WorldMap* context_,
-        Frame* previous_,
-        Frame* next_,
-        const TransformMatrix3D& robot_to_world_,
-        const real& maximum_depth_close_);
+          Frame* previous_,
+          Frame* next_,
+          const TransformMatrix3D& robot_to_world_,
+          const real& maximum_depth_close_);
     Frame(Frame* frame_);
     virtual ~Frame();
     Frame() = delete;
@@ -28,24 +29,24 @@ namespace proslam {
 
     inline Frame* previous() {return _previous;}
     inline const Frame* previous() const {return _previous;}
-    inline void setPrevious(Frame* previous_) {_previous=previous_;}
+    inline void setPrevious(Frame* previous_) {_previous = previous_;}
 
     inline Frame* next()  {return _next;}
     inline const Frame* next() const {return _next;}
-    inline void setNext(Frame* next_) {_next=next_;}
+    inline void setNext(Frame* next_) {_next = next_;}
 
-    inline const Camera* camera() const {return _camera;}
-    inline void setCamera(const Camera* camera_) {_camera = camera_;}
+    inline const Camera* cameraLeft() const {return _camera_left;}
+    inline void setCameraLeft(const Camera* camera_) {_camera_left = camera_;}
 
-    inline const Camera* cameraExtra() const {return _camera_extra;}
-    inline void setCameraExtra(const Camera* camera_extra_) {_camera_extra = camera_extra_;}
+    inline const Camera* cameraRight() const {return _camera_right;}
+    inline void setCameraRight(const Camera* camera_) {_camera_right = camera_;}
 
     inline const TransformMatrix3D& robotToWorld() const {return _robot_to_world;}
     void setRobotToWorld(const TransformMatrix3D& robot_to_world_);
     inline const TransformMatrix3D& worldToRobot() const {return _world_to_robot;}
     
-    inline const TransformMatrix3D& frameToKeyframe() const {return _frame_to_keyframe;}
-    inline const TransformMatrix3D& keyframeToFrame() const {return _keyframe_to_frame;}
+    inline const TransformMatrix3D& frameToLocalMap() const {return _frame_to_local_map;}
+    inline const TransformMatrix3D& localMapToFrame() const {return _local_map_to_frame;}
 
     //ds visualization only
     void setRobotToWorldOdometry(const TransformMatrix3D& robot_to_world_) {_robot_to_world_odometry = robot_to_world_;}
@@ -71,28 +72,23 @@ namespace proslam {
                                const PointCoordinates& coordinates_in_robot_,
                                FramePoint* previous_point_);
 
-    inline const IntensityImage& intensityImage() const {return _intensity_image;}
-    inline void  setIntensityImage(const IntensityImage& intensity_image_)  {_intensity_image = intensity_image_.clone(); _has_intensity = true;}
-    inline const bool hasIntensity() const {return _has_intensity;}
+    inline const IntensityImage& intensityImageLeft() const {return _intensity_image_left;}
+    inline void setIntensityImageLeft(const IntensityImage& intensity_image_)  {_intensity_image_left = intensity_image_.clone();}
 
-    inline const IntensityImage& intensityImageExtra() const {return _intensity_image_extra;}
-    inline void  setIntensityImageExtra(const IntensityImage& intensity_image_extra_)  {_intensity_image_extra = intensity_image_extra_.clone(); _has_intensity_extra = true;}
-    inline const bool hasIntensityExtra() const {return _has_intensity_extra;}
-
-    inline const bool hasDepth() const {return _has_depth;}
+    inline const IntensityImage& intensityImageRight() const {return _intensity_image_right;}
+    inline void setIntensityImageRight(const IntensityImage& intensity_image_)  {_intensity_image_right = intensity_image_.clone();}
 
     inline Status status() const {return _status;}
-    inline void setStatus(Status status_) {_status=status_;}
+    inline void setStatus(const Status& status_) {_status = status_;}
 
     inline const real maximumDepthClose() const {return _maximum_depth_close;}
 
-    void setKeyframe(const LocalMap* keyframe);
-    const LocalMap* keyframe() const {return _keyframe;}
-    bool isKeyFrame() const;
+    void setLocalMap(const LocalMap* local_map_);
+    const LocalMap* localMap() const {return _local_map;}
+    bool isLocalMapAnchor() const;
 
     const Count countPoints(const Count min_age_,
-		                        const ThreeValued has_landmark = Unknown,
-		                        const ThreeValued has_depth = Unknown) const;
+		                        const ThreeValued has_landmark_ = Unknown) const;
 
     void releaseImages();
 
@@ -116,25 +112,22 @@ namespace proslam {
     FramePointPtrVector _points;
 
     //ds spatials
-    TransformMatrix3D _frame_to_keyframe       = TransformMatrix3D::Identity();
-    TransformMatrix3D _keyframe_to_frame       = TransformMatrix3D::Identity();
+    TransformMatrix3D _frame_to_local_map      = TransformMatrix3D::Identity();
+    TransformMatrix3D _local_map_to_frame      = TransformMatrix3D::Identity();
     TransformMatrix3D _robot_to_world          = TransformMatrix3D::Identity();
     TransformMatrix3D _world_to_robot          = TransformMatrix3D::Identity();
     TransformMatrix3D _robot_to_world_odometry = TransformMatrix3D::Identity();
 
-    //ds TODO refactor to support arbitrary camera constellations -> check nicp
-    const Camera* _camera        = 0;
-    const Camera* _camera_extra  = 0;
+    //ds TODO refactor to support arbitrary camera constellations
+    const Camera* _camera_left   = 0;
+    const Camera* _camera_right  = 0;
 
     //ds TODO refactor to support arbitrary number of rgb/depth image combinations
-    IntensityImage _intensity_image;
-    bool _has_intensity                      = false;
-    IntensityImage _intensity_image_extra;
-    bool _has_intensity_extra                = false;
-    bool _has_depth                          = false;
-    const real _maximum_depth_close          = 0;
+    IntensityImage _intensity_image_left;
+    IntensityImage _intensity_image_right;
+    const real _maximum_depth_close = 0;
 
-    const LocalMap* _keyframe                = 0;
+    const LocalMap* _local_map = 0;
     static Identifier _instances;
 
   friend class Tracker;

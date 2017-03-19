@@ -1,5 +1,5 @@
 #pragma once
-#include "aligners/aligner_factory.h"
+#include "aligners/stereouv_aligner.h"
 #include "types/world_map.h"
 #include "triangulation/stereo_triangulator.h"
 

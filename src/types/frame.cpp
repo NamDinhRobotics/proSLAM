@@ -12,7 +12,7 @@ namespace proslam {
                const TransformMatrix3D& robot_to_world_,
                const real& maximum_depth_close_): _index(_instances),
                                                   _maximum_depth_close(maximum_depth_close_),
-                                                  _keyframe(0) {
+                                                  _local_map(0) {
     ++_instances;
     setPrevious(previous_);
     setNext(next_);
@@ -24,8 +24,8 @@ namespace proslam {
   //ds "deep" copy ctor used in keyframe generation - unfortunately error prone as shit currently
   Frame::Frame(Frame* frame_): _index(frame_->index()),
                                _maximum_depth_close(frame_->maximumDepthClose()),
-                               _keyframe(frame_->keyframe()) {
-    setCamera(frame_->camera());
+                               _local_map(frame_->localMap()) {
+    setCameraLeft(frame_->cameraLeft());
     setPrevious(frame_->previous());
     setNext(frame_->next());
     _status=frame_->status();
@@ -43,13 +43,10 @@ namespace proslam {
     _world_to_robot          = frame_->worldToRobot();
     _robot_to_world_odometry = frame_->robotToWorldOdometry();
 
-    _camera                = frame_->camera();
-    _camera_extra          = frame_->cameraExtra();
-    _intensity_image       = frame_->intensityImage();
-    _has_intensity         = frame_->hasIntensity();
-    _intensity_image_extra = frame_->intensityImageExtra();
-    _has_intensity_extra   = frame_->hasIntensityExtra();
-    _has_depth             = frame_->hasDepth();
+    _camera_left           = frame_->cameraLeft();
+    _camera_right          = frame_->cameraRight();
+    _intensity_image_left  = frame_->intensityImageLeft();
+    _intensity_image_right = frame_->intensityImageRight();
   }
 
   Frame::~Frame() {
@@ -59,43 +56,36 @@ namespace proslam {
     _points.clear();
   }
 
-  void Frame::setKeyframe(const LocalMap* keyframe_) {
-    _keyframe          = keyframe_;
-    _frame_to_keyframe = keyframe_->worldToRobot()*this->robotToWorld();
-    _keyframe_to_frame = _frame_to_keyframe.inverse();
+  void Frame::setLocalMap(const LocalMap* local_map_) {
+    _local_map          = local_map_;
+    _frame_to_local_map = local_map_->worldToRobot()*this->robotToWorld();
+    _local_map_to_frame = _frame_to_local_map.inverse();
   }
 
-  bool Frame::isKeyFrame() const {
-    if (0 != _keyframe) {
-      return (static_cast<const Frame*>(_keyframe) == this);
+  bool Frame::isLocalMapAnchor() const {
+    if (0 != _local_map) {
+      return (static_cast<const Frame*>(_local_map) == this);
     } else {
       return false;
     }
   }
 
   const Count Frame::countPoints(const Count min_age_,
-      const ThreeValued has_landmark,
-      const ThreeValued has_depth) const{
-    size_t count=0;
-    for (size_t i=0; i<points().size(); i++){
-      const FramePoint* frame_point=points()[i];
-      if(frame_point->age()<min_age_) {
-	continue;
+                                 const ThreeValued has_landmark_) const {
+    Count count = 0;
+    for (const FramePoint* frame_point: points()){
+      if(frame_point->age() < min_age_) {
+        continue;
       }
-      if(has_landmark!=Unknown){
-	if(has_landmark==True && ! frame_point->landmark())
-	  continue;
-	if(has_landmark==False && frame_point->landmark())
-	  continue;
+      if(has_landmark_!=Unknown){
+        if(has_landmark_ == True && !frame_point->landmark()) {
+          continue;
+        }
+        if(has_landmark_ == False && frame_point->landmark()) {
+          continue;
+        }
       }
-
-      if(has_depth!=Unknown){
-	if(has_depth==True && ! frame_point->hasDepth())
-	  continue;
-	if(has_depth==False && frame_point->hasDepth())
-	  continue;
-      }
-      count++;
+      ++count;
     }
     return count;
   }
@@ -127,10 +117,9 @@ namespace proslam {
     frame_point->setRobotCoordinates(coordinates_in_robot_);
 
     //ds update depth based on quality
+    frame_point->setDepth(depth_meters_);
     if (depth_meters_ < _maximum_depth_close) {
-      frame_point->setDepth(depth_meters_);
-    } else {
-      frame_point->setDepthByVision(depth_meters_);
+      frame_point->setIsClose(true);
     }
 
     //ds update point status
@@ -163,10 +152,9 @@ namespace proslam {
     frame_point->setRobotCoordinates(coordinates_in_robot_);
 
     //ds update depth based on quality
+    frame_point->setDepth(depth_meters_);
     if (depth_meters_ < _maximum_depth_close) {
-      frame_point->setDepth(depth_meters_);
-    } else {
-      frame_point->setDepthByVision(depth_meters_);
+      frame_point->setIsClose(true);
     }
 
     //ds update point status
@@ -187,8 +175,8 @@ namespace proslam {
   }
 
   void Frame::releaseImages() {
-    _intensity_image.release();
-    _intensity_image_extra.release();
+    _intensity_image_left.release();
+    _intensity_image_right.release();
   }
 
   void Frame::updateSubContext() {

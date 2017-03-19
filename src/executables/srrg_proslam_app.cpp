@@ -3,7 +3,7 @@
 #include "srrg_txt_io/message_timestamp_synchronizer.h"
 #include "srrg_txt_io/pinhole_image_message.h"
 
-#include "map_management/mapper.h"
+#include "map_management/graph_optimizer.h"
 #include "relocalization/relocalizer.h"
 #include "motion_estimation/tracker.h"
 #include "visualization/viewer_input_images.h"
@@ -43,7 +43,7 @@ ViewerOutputMap* context_viewer_top  = 0;
 //ds process a pair of rectified and undistorted stereo images
 void process(WorldMap* world_map_,
              Tracker* tracker_,
-             Mapper* mapper_,
+             GraphOptimizer* mapper_,
              Relocalizer* relocalizer_,
              const cv::Mat& intensity_image_left_,
              const cv::Mat& intensity_image_right_,
@@ -55,7 +55,7 @@ void printReport(const std::vector<TransformMatrix3D>& robot_to_world_ground_tru
                  const real& duration_total_seconds_,
                  const WorldMap* world_context_,
                  const Tracker* tracker_,
-                 const Mapper* mapper_,
+                 const GraphOptimizer* mapper_,
                  const Relocalizer* relocalizer_);
 
 //ds don't allow any windoof compilation attempt!
@@ -170,7 +170,7 @@ int32_t main(int32_t argc, char ** argv) {
 
   //ds allocate SLAM modules
   WorldMap* world_map      = new WorldMap();
-  Mapper* mapper           = new Mapper();
+  GraphOptimizer* mapper           = new GraphOptimizer();
   Relocalizer* relocalizer = new Relocalizer();
   Tracker* tracker         = new Tracker(cameras_by_topic.at(topic_image_stereo_left), cameras_by_topic.at(topic_image_stereo_right));
 
@@ -319,9 +319,6 @@ int32_t main(int32_t argc, char ** argv) {
               mapper,
               relocalizer);
   robot_to_world_ground_truth_poses.clear();
-
-  //ds factory cleanup
-  AlignerFactory::clear();
   sensor_message_reader.close();
 
   //ds save trajectory to disk
@@ -370,7 +367,7 @@ int32_t main(int32_t argc, char ** argv) {
 //ds process a pair of rectified and undistorted stereo images
 void process(WorldMap* world_map_,
              Tracker* tracker_,
-             Mapper* mapper_,
+             GraphOptimizer* mapper_,
              Relocalizer* relocalizer_,
              const cv::Mat& intensity_image_left_,
              const cv::Mat& intensity_image_right_,
@@ -440,7 +437,7 @@ void printReport(const std::vector<TransformMatrix3D>& robot_to_world_ground_tru
                  const real& duration_total_seconds_,
                  const WorldMap* world_context_,
                  const Tracker* tracker_,
-                 const Mapper* mapper_,
+                 const GraphOptimizer* mapper_,
                  const Relocalizer* relocalizer_) {
 
   //ds compute squared errors

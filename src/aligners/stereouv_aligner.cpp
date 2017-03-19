@@ -15,12 +15,12 @@ namespace proslam {
     _world_to_robot = _robot_to_world.inverse();
 
     //ds wrappers for optimization
-    _camera_left_to_world = _robot_to_world*_context->camera()->cameraToRobot();
+    _camera_left_to_world = _robot_to_world*_context->cameraLeft()->cameraToRobot();
     _world_to_camera_left = _camera_left_to_world.inverse();
-    _projection_matrix_left  = _context->camera()->projectionMatrix();
-    _projection_matrix_right = _context->cameraExtra()->projectionMatrix();
-    _image_rows = _context->camera()->imageRows();
-    _image_cols = _context->camera()->imageCols();
+    _projection_matrix_left  = _context->cameraLeft()->projectionMatrix();
+    _projection_matrix_right = _context->cameraRight()->projectionMatrix();
+    _image_rows = _context->cameraLeft()->imageRows();
+    _image_cols = _context->cameraLeft()->imageCols();
 
     //ds others
     _robot_to_world_previous = _context->previous()->robotToWorld();
@@ -46,8 +46,8 @@ namespace proslam {
       FramePoint* frame_point  = _context->points()[index_point];
       const Landmark* landmark = frame_point->landmark();
 
-      assert(_context->camera()->isInFieldOfView(frame_point->imageCoordinates()));
-      assert(_context->cameraExtra()->isInFieldOfView(frame_point->imageCoordinatesExtra()));
+      assert(_context->cameraLeft()->isInFieldOfView(frame_point->imageCoordinatesLeft()));
+      assert(_context->cameraRight()->isInFieldOfView(frame_point->imageCoordinatesRight()));
 
       //ds compute the point in the camera frame
       PointCoordinates sampled_point_in_camera_left = PointCoordinates::Zero();
@@ -82,22 +82,22 @@ namespace proslam {
           sampled_point_in_image_right.y() < 0 || sampled_point_in_image_right.y() > _image_rows) {
         continue;
       }
-      assert(_context->camera()->isInFieldOfView(sampled_point_in_image_left));
-      assert(_context->cameraExtra()->isInFieldOfView(sampled_point_in_image_right));
+      assert(_context->cameraLeft()->isInFieldOfView(sampled_point_in_image_left));
+      assert(_context->cameraRight()->isInFieldOfView(sampled_point_in_image_right));
 
       //ds precompute
       const real inverse_sampled_c_left  = 1/sampled_c_left;
       const real inverse_sampled_c_right = 1/sampled_c_right;
       const real inverse_sampled_c_squared_left  = inverse_sampled_c_left*inverse_sampled_c_left;
       const real inverse_sampled_c_squared_right = inverse_sampled_c_right*inverse_sampled_c_right;
-      frame_point->setReprojectionCoordinates(sampled_point_in_image_left);
-      frame_point->setReprojectionCoordinatesExtra(sampled_point_in_image_right);
+      frame_point->setReprojectionCoordinatesLeft(sampled_point_in_image_left);
+      frame_point->setReprojectionCoordinatesRight(sampled_point_in_image_right);
 
       //ds compute error
-      Vector4 error(sampled_point_in_image_left.x()-frame_point->imageCoordinates().x(),
-                    sampled_point_in_image_left.y()-frame_point->imageCoordinates().y(),
-                    sampled_point_in_image_right.x()-frame_point->imageCoordinatesExtra().x(),
-                    sampled_point_in_image_right.y()-frame_point->imageCoordinatesExtra().y());
+      Vector4 error(sampled_point_in_image_left.x()-frame_point->imageCoordinatesLeft().x(),
+                    sampled_point_in_image_left.y()-frame_point->imageCoordinatesLeft().y(),
+                    sampled_point_in_image_right.x()-frame_point->imageCoordinatesRight().x(),
+                    sampled_point_in_image_right.y()-frame_point->imageCoordinatesRight().y());
       assert(error(1) == error(3));
 
       //ds compute squared error
@@ -184,7 +184,7 @@ namespace proslam {
     _camera_left_to_world = _world_to_camera_left.inverse();
 
     //ds update wrapped structures
-    _robot_to_world = _camera_left_to_world*_context->camera()->robotToCamera();
+    _robot_to_world = _camera_left_to_world*_context->cameraLeft()->robotToCamera();
     _world_to_robot = _robot_to_world.inverse();
   }
 

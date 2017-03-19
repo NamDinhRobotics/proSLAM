@@ -11,7 +11,7 @@
 #include "types/world_map.h"
 
 namespace proslam {
-  class Mapper {
+  class GraphOptimizer {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds exported data types
@@ -23,8 +23,8 @@ namespace proslam {
   //ds object management
   public:
 
-    Mapper();
-    ~Mapper();
+    GraphOptimizer();
+    ~GraphOptimizer();
 
   //ds interface
   public:
@@ -91,7 +91,7 @@ namespace proslam {
     //ds optimization
     g2o::SparseOptimizer* _optimizer = 0;
     Identifier _id_last_optimization = 0;
-    const Identifier _id_interspace_poses   = 10000000; //ds limit: 2147483647
+    const Identifier _id_interspace_poses = 10000000; //ds limit: 2147483647
 
     CREATE_CHRONOMETER(overall)
 

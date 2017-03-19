@@ -27,14 +27,14 @@ namespace proslam {
 
   void ViewerOutputMap::drawFrame(const Frame* frame_, const Vector3& color_rgb_) {
     assert(frame_ != 0);
-    assert(frame_->camera() != 0);
-    const Camera* camera = frame_->camera();
+    assert(frame_->cameraLeft() != 0);
+    const Camera* camera = frame_->cameraLeft();
     const TransformMatrix3D camera_to_world_pose = frame_->robotToWorld()*camera->cameraToRobot();
     glPushMatrix();
     glMultMatrixf(camera_to_world_pose.cast<float>().data());
 
     //ds check if the frame is a closed keyframe and highlight it accordingly
-    if (frame_->isKeyFrame() && (static_cast<const LocalMap*>(frame_))->closures().size() > 0) {
+    if (frame_->isLocalMapAnchor() && (static_cast<const LocalMap*>(frame_))->closures().size() > 0) {
       glColor3f(0.0, 1.0, 0.0);
     } else {
       glColor3f(color_rgb_.x(), color_rgb_.y(), color_rgb_.z());
@@ -66,10 +66,10 @@ namespace proslam {
       if (landmark->isContained() && landmark->isValidated() && (landmark->numberOfUpdates() > 3 || landmark->isActive() || landmark->isClosed())) {
         Vector3 color = Vector3(0, 0, 0);
         if (landmark->isActive() && landmark->isValidated()) {
-          if (landmark->isByVision()) {
-            color = Vector3(1.0, 0.0, 1.0);
-          } else {
+          if (landmark->isClose()) {
             color = Vector3(0.0, 0.0, 1.0);
+          } else {
+            color = Vector3(1.0, 0.0, 1.0);
           }
         } /*else if (!landmark->isValidated()) {
           color = Vector3(1.0, 0.0, 0.0);
@@ -121,7 +121,7 @@ namespace proslam {
     for (FramePtrMap::const_iterator it = _context->frames().begin(); it != _context->frames().end(); it++){
 
       //ds check if we have a keyframe and drawing is enabled
-      if (it->second->isKeyFrame() && _local_maps_drawn) {
+      if (it->second->isLocalMapAnchor() && _local_maps_drawn) {
         drawFrame(it->second, Vector3(0.5, 0.5, 1));
       } else if (_frames_drawn) {
         drawFrame(it->second, Vector3(0.75, 0.75, 1));

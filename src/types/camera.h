@@ -29,8 +29,6 @@ namespace proslam {
     inline const TransformMatrix3D& cameraToRobot() const {return _camera_to_robot;}
     inline const TransformMatrix3D& robotToCamera() const {return _robot_to_camera;}
     void setOffset(const TransformMatrix3D& camera_to_robot_);
-    inline const real depthConversionFactor() const {return _depth_conversion_factor;}
-    void setDepthConversionFactor(const real& depth_conversion_factor_) {_depth_conversion_factor = depth_conversion_factor_;}
 
   protected:
 
@@ -41,8 +39,7 @@ namespace proslam {
 
     Count _image_rows = 0;
     Count _image_cols = 0;
-    real _depth_conversion_factor  = 0.0;
-    TransformMatrix3D _camera_to_robot         = TransformMatrix3D::Identity();
+    TransformMatrix3D _camera_to_robot = TransformMatrix3D::Identity();
     TransformMatrix3D _robot_to_camera = TransformMatrix3D::Identity();
 
   private:

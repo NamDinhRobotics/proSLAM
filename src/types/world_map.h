@@ -1,8 +1,9 @@
 #pragma once
 #include "local_map.h"
 
-namespace proslam{
-  class WorldMap{
+namespace proslam {
+
+  class WorldMap {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds public object handling
@@ -49,47 +50,28 @@ namespace proslam{
   //ds wrapped helpers TODO purge
   public:
 
-    static const Eigen::Matrix<real, 3, 1> toOrientationRodrigues(const Eigen::Matrix<real, 3, 3>& p_matRotation)
-    {
-        //ds orientation
-        cv::Mat vecOrientation;
-
-        //ds fill the matrix
-        cv::Rodrigues( toCVMatrix( p_matRotation ), vecOrientation );
-
-        //ds return in Eigen format
-        return fromCVVector< real, 3 >( vecOrientation );
+    static const Vector3 toOrientationRodrigues(const Matrix3& rotation_matrix_) {
+      cv::Mat rotation_angles;
+      cv::Rodrigues(toCVMatrix(rotation_matrix_), rotation_angles);
+      return fromCVVector<real, 3>(rotation_angles);
     }
 
-    static const cv::Mat_<real> toCVMatrix(const Eigen::Matrix<real, 3, 3>& p_matEigen)
-    {
-        //ds allocate cv vector
-        cv::Mat_< real > matCV( 3, 3 );
-
-        //ds fill the vector (column major)
-        for( uint32_t u = 0; u < 3; ++u )
-        {
-            for( uint32_t v = 0; v < 3; ++v )
-            {
-                matCV.at< real >( u, v ) = p_matEigen( u, v );
-            }
+    static const cv::Mat_<real> toCVMatrix(const Matrix3& matrix_eigen_) {
+      cv::Mat_<real> matrix_opencv(3, 3);
+      for(uint32_t u = 0; u < 3; ++u) {
+        for(uint32_t v = 0; v < 3; ++v) {
+          matrix_opencv.at<real>(u, v) = matrix_eigen_(u, v);
         }
-
-        return matCV;
+      }
+      return matrix_opencv;
     }
 
-    template<typename tType, uint32_t uRows> static const Eigen::Matrix<tType, uRows, 1> fromCVVector(const cv::Vec<tType, uRows>& p_vecCV)
-    {
-        //ds allocate eigen matrix
-        Eigen::Matrix< tType, uRows, 1 > vecEigen;
-
-        //ds fill the vector (column major)
-        for( uint32_t u = 0; u < uRows; ++u )
-        {
-            vecEigen( u ) = p_vecCV( u );
-        }
-
-        return vecEigen;
+    template<typename type, uint32_t rows> static const Eigen::Matrix<type, rows, 1> fromCVVector(const cv::Vec<type, rows>& vector_opencv_) {
+      Eigen::Matrix<type, rows, 1> vector_eigen;
+      for(uint32_t u = 0; u < rows; ++u) {
+        vector_eigen(u) = vector_opencv_(u);
+      }
+      return vector_eigen;
     }
 
   protected:

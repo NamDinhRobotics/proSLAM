@@ -8,7 +8,7 @@ namespace proslam {
     public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds object handling
-    protected:
+    public:
 
       //ds instantiation controlled by aligner factory
       StereoUVAligner(): BaseAligner6_4(1e-3, 9, 1, 1e3) {}
@@ -62,9 +62,5 @@ namespace proslam {
       real _weight_framepoint                 = 1;
       real _maximum_depth_close               = 0;
       real _maximum_depth_far                 = 0;
-
-    //ds grant access to factory: ctor/dtor
-    friend AlignerFactory;
-
   };
 }

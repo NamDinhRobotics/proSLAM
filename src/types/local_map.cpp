@@ -5,7 +5,7 @@ namespace proslam {
 
   LocalMap::LocalMap(Frame* frame_for_context_, 
 		                 FramePtrVector& frames_): Frame(frame_for_context_) {
-    _keyframe = this;
+    _local_map = this;
     _items.clear();
     _appearances.clear();
     _matches.clear();
@@ -14,7 +14,7 @@ namespace proslam {
     //ds keep track of added landmarks in order to add them only once
     std::set<Landmark*> landmarks_added_to_context;
 
-    //ds create item context for this keyframe: loop over all frames
+    //ds create item context for this local map: loop over all frames
     for (const Frame* frame: frames_) {
       const TransformMatrix3D& frame_to_context = frame_for_context_->worldToRobot()*frame->robotToWorld();
       for (FramePoint* frame_point: frame->points()) {
@@ -23,9 +23,9 @@ namespace proslam {
         Landmark* landmark = frame_point->landmark();
 
         //ds context item requirements TODO enable proper alignment for vision landmarks
-        if (landmark                                    &&
-            landmark->isValidated()                     &&
-            !landmark->isByVision()                     &&
+        if (landmark                                   &&
+            landmark->isValidated()                    &&
+            landmark->isClose()                        &&
             !landmarks_added_to_context.count(landmark)) {
 
           //ds bucket the item and transfer ownership from landmark to current context
@@ -53,7 +53,7 @@ namespace proslam {
     //ds propagate keyframe transform to contained frames
     for (Frame* frame: frames_) {
       if (frame != frame_for_context_) {
-        frame->setKeyframe(this);
+        frame->setLocalMap(this);
         _subcontext.push_back(frame);
       }
     }
@@ -78,7 +78,7 @@ namespace proslam {
     //ds update robot poses for all contained frames
     for (Frame* frame: _subcontext) {
       assert(frame != this);
-      frame->setRobotToWorld(this->robotToWorld()*frame->frameToKeyframe());
+      frame->setRobotToWorld(this->robotToWorld()*frame->frameToLocalMap());
     }
   }
 }

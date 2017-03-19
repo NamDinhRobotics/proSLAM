@@ -10,7 +10,7 @@ namespace proslam {
                                                                   _coordinates(point_coordinates_) {
     ++_instances;
     _is_validated      = false;
-    _is_by_vision      = false;
+    _is_close          = true;
     _is_active         = false;
     _first_observation = 0;
     _measurements_test.clear();
