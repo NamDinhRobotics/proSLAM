@@ -409,8 +409,8 @@ void process(WorldMap* world_map_,
                                                                    closure->transform_frame_query_to_frame_reference);
             if (use_gui) {
               for (const Correspondence* match: closure->correspondences) {
-                world_map_->landmarks().get(match->item_query->landmark()->index())->setIsInLoopClosureQuery(true);
-                world_map_->landmarks().get(match->item_reference->landmark()->index())->setIsInLoopClosureReference(true);
+                world_map_->landmarks().get(match->item_query->landmark->index())->setIsInLoopClosureQuery(true);
+                world_map_->landmarks().get(match->item_reference->landmark->index())->setIsInLoopClosureReference(true);
               }
             }
           }

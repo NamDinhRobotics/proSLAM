@@ -1,12 +1,65 @@
 #pragma once
-#include "appearance.h"
+#include "frame.h"
 
 namespace proslam {
 
-  class LandmarkItem;
-  class PoseItemCollection;
   class Landmark {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+  //ds exported types
+  public:
+
+    //ds converter TODO remove!
+    inline static HBSTMatchable::BinaryDescriptor getDescriptor(const cv::Mat& descriptor_cv_) {
+      HBSTMatchable::BinaryDescriptor binary_descriptor(DESCRIPTOR_SIZE_BITS);
+      for (uint32_t byte_index = 0 ; byte_index < DESCRIPTOR_SIZE_BYTES; ++byte_index) {
+
+        //ds get minimal datafrom cv::mat
+        const uchar value = descriptor_cv_.at<uchar>(byte_index);
+
+        //ds get bitstring
+        for (uint8_t v = 0; v < 8; ++v) {
+          binary_descriptor[byte_index*8+v] = (value >> v) & 1;
+        }
+      }
+      return binary_descriptor;
+    }
+
+    //ds landmark snapshot for a local map
+    struct Item;
+    struct Appearance {
+      EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+
+      Appearance(const Item* item_,
+                 const cv::Mat& descriptor_cv_): item(item_),
+                                                 descriptor_cv(descriptor_cv_),
+                                                 descriptor(getDescriptor(descriptor_cv_)) {}
+
+      const Item* item;
+      const cv::Mat descriptor_cv;
+      const HBSTMatchable::BinaryDescriptor descriptor;
+    };
+    typedef std::vector<const Appearance*> AppearancePtrVector;
+
+    struct Item {
+      EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+      Item(Landmark* landmark_): landmark(landmark_) {
+        appearances.clear();
+      }
+      ~Item() {
+        for (const Appearance* appearance: appearances) {
+          delete appearance;
+        }
+        appearances.clear();
+      }
+
+      Landmark* landmark = 0;
+      AppearancePtrVector appearances;
+      PointCoordinates robot_coordinates;
+      LocalMap* local_map = 0;
+    };
+    typedef std::vector<Item*> ItemPointerVector;
 
   //ds object handling
   protected:
@@ -22,8 +75,9 @@ namespace proslam {
     inline const Index index() const {return _index;}
     inline const PointCoordinates& coordinates() const { return _coordinates; }
     inline void setCoordinates(const PointCoordinates& coordinates_) {_coordinates = coordinates_;}
+    inline Item* item() {return _item;}
+    inline void releaseItem() {_item = new Item(this);}
 
-    inline const AppearancePtrVector& descriptor_track() const {return _descriptor_track;}
     inline const bool isValidated() const {return _is_validated;}
     inline const bool isActive() const {return _is_active; }
     inline void setIsActive(const bool& is_active) {_is_active = is_active;}
@@ -54,9 +108,6 @@ namespace proslam {
     //ds reset landmark coordinates to a certain position
     void resetCoordinates(const PointCoordinates& coordinates_);
 
-    void createNewItem(const PointCoordinates& spatials_in_world_);
-    void releaseItem();
-    LandmarkItem* currentItem() {return _current_item;}
     const Count numberOfUpdates() const {return _number_of_updates;}
     const Count numberOfFailedUpdates() const {return _number_of_failed_updates;}
 
@@ -64,9 +115,9 @@ namespace proslam {
 
     //ds point with index
     const Identifier _index;
-    PointCoordinates _coordinates = PointCoordinates::Zero();
+    PointCoordinates _coordinates;
+    Item* _item;
 
-    AppearancePtrVector _descriptor_track;
     FramePoint* _first_observation = 0;
     bool _is_validated = false;
     bool _is_active    = false;
@@ -84,8 +135,6 @@ namespace proslam {
     //ds visualization
     bool _is_in_loop_closure_query     = false;
     bool _is_in_loop_closure_reference = false;
-
-    LandmarkItem* _current_item = 0;
 
   //ds grant access to landmark producer
   friend WorldMap;

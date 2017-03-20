@@ -1,7 +1,5 @@
 #include "landmark.h"
 
-#include "landmark_item.h"
-
 namespace proslam {
 
   Identifier Landmark::_instances = 0;
@@ -14,21 +12,20 @@ namespace proslam {
     _is_active         = false;
     _first_observation = 0;
     _measurements_test.clear();
+
+    //ds allocate fresh item (trading construction correctness for enclosed generation)
+    _item = new Item(this);
   }
 
   Landmark::~Landmark() {
-
-    //ds clear appearances
-    for (const Appearance* appearance: _descriptor_track) {
-      delete appearance;
+    if (_item->local_map == 0) {
+      delete _item;
     }
-    _descriptor_track.clear();
     _measurements_test.clear();
   }
 
   void Landmark::update(const PointCoordinates& coordinates_in_world_,
                         const real& depth_meters_) {
-    assert(_current_item != 0);
 
     //ds if we got at least 2 previous measurements
     if (_measurements_test.size() > 1) {
@@ -73,9 +70,6 @@ namespace proslam {
     assert(!std::isnan(_coordinates.x()));
     assert(!std::isnan(_coordinates.y()));
     assert(!std::isnan(_coordinates.z()));
-
-    //ds always update item TODO check performance if only updated for valid update
-    _current_item->addSpatials(_coordinates);
     ++_number_of_updates;
   }
 
@@ -83,11 +77,10 @@ namespace proslam {
                         const cv::Mat& descriptor_left_,
                         const cv::Mat& descriptor_right_,
                         const real& depth_meters_) {
-    assert(_current_item != 0);
 
     //ds always update descriptors
-    _current_item->addAppearance(descriptor_left_);
-    _current_item->addAppearance(descriptor_right_);
+    _item->appearances.push_back(new Appearance(_item, descriptor_left_));
+    _item->appearances.push_back(new Appearance(_item, descriptor_right_));
 
     //ds update position
     update(coordinates_in_world_, depth_meters_);
@@ -102,15 +95,6 @@ namespace proslam {
 
     //ds add fresh measurement
     update(coordinates_);
-  }
-
-  void Landmark::createNewItem(const PointCoordinates& spatials_in_world_) {
-    _current_item = new LandmarkItem(this, spatials_in_world_);
-  }
-
-  void Landmark::releaseItem() {
-    _descriptor_track.insert(_descriptor_track.end(), _current_item->appearances().begin(), _current_item->appearances().end());
-    createNewItem(_current_item->spatials());
   }
 
   Landmark* LandmarkPtrMap::get(int index) {

@@ -43,8 +43,8 @@ namespace proslam {
         case 0: {
 
           //ds compute error based on items: keyframe merging
-          measured_point_in_reference = correspondence->item_reference->spatials();
-          sampled_point_in_reference  = _current_to_reference*correspondence->item_query->spatials();
+          measured_point_in_reference = correspondence->item_reference->robot_coordinates;
+          sampled_point_in_reference  = _current_to_reference*correspondence->item_query->robot_coordinates;
           error                       = sampled_point_in_reference-measured_point_in_reference;
 
           //ds adjust omega to inverse depth value (the further away the point, the less weight)
@@ -55,8 +55,8 @@ namespace proslam {
         case 1: {
 
           //ds compute error based on landmarks: map merging
-          measured_point_in_reference = correspondence->item_reference->landmark()->coordinates();
-          sampled_point_in_reference  = _current_to_reference*correspondence->item_query->landmark()->coordinates();
+          measured_point_in_reference = correspondence->item_reference->landmark->coordinates();
+          sampled_point_in_reference  = _current_to_reference*correspondence->item_query->landmark->coordinates();
           error                       = sampled_point_in_reference-measured_point_in_reference;
           break;
         }

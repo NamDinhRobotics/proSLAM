@@ -1,5 +1,5 @@
 #pragma once
-#include "types/landmark_item.h"
+#include "types/landmark.h"
 
 namespace proslam {
 
@@ -11,8 +11,8 @@ namespace proslam {
 
     struct Match {
       EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-      Match(const LandmarkItem* item_query_,
-            const LandmarkItem* item_reference_,
+      Match(const Landmark::Item* item_query_,
+            const Landmark::Item* item_reference_,
             const Count& matching_distance_hamming_): item_query(item_query_),
                                                       item_reference(item_reference_),
                                                       matching_distance_hamming(matching_distance_hamming_) {}
@@ -21,8 +21,8 @@ namespace proslam {
                                   item_reference(match_->item_reference),
                                   matching_distance_hamming(match_->matching_distance_hamming) {}
 
-      const LandmarkItem* item_query        = 0;
-      const LandmarkItem* item_reference    = 0;
+      const Landmark::Item* item_query      = 0;
+      const Landmark::Item* item_reference  = 0;
       const Count matching_distance_hamming = 0;
     };
     typedef std::vector<const Match*> MatchPtrVector;
@@ -33,8 +33,8 @@ namespace proslam {
   public:
 
     //ds ctor
-    Correspondence(const LandmarkItem* item_query_,
-                   const LandmarkItem* item_reference_,
+    Correspondence(const Landmark::Item* item_query_,
+                   const Landmark::Item* item_reference_,
                    const Count& matching_count_,
                    const real& matching_ratio_): item_query(item_query_),
                                                     item_reference(item_reference_),
@@ -50,8 +50,8 @@ namespace proslam {
   //ds public members
   public:
 
-    const LandmarkItem* item_query     = 0;
-    const LandmarkItem* item_reference = 0;
+    const Landmark::Item* item_query     = 0;
+    const Landmark::Item* item_reference = 0;
     const Count matching_count         = 0;
     const real matching_ratio          = 0.0;
   };

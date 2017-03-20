@@ -10,7 +10,7 @@ namespace proslam {
   public:
 
     //ds TODO remove
-    static const HBSTNode::BinaryMatchableVector getMatchables(const AppearancePtrVector& appearances_) {
+    static const HBSTNode::BinaryMatchableVector getMatchables(const Landmark::AppearancePtrVector& appearances_) {
       assert(appearances_.size() > 0);
       HBSTNode::BinaryMatchableVector matchables(appearances_.size());
 
@@ -19,25 +19,6 @@ namespace proslam {
         matchables[index_appearance] = new HBSTMatchable(index_appearance, appearances_[index_appearance]->descriptor);
       }
       return matchables;
-    }
-
-    //ds TODO remove
-    static const AppearancePtrVector getAppearances(const FramePointPtrVector& framepoints_) {
-      assert(framepoints_.size() > 0);
-      AppearancePtrVector appearances(framepoints_.size());
-
-      //ds copy raw data
-      Count number_of_added_appearances = 0;
-      for (Index index_appearance = 0; index_appearance < appearances.size(); ++index_appearance) {
-        FramePoint* point = framepoints_[index_appearance];
-        if (point->landmark() != 0) {
-          appearances[number_of_added_appearances] = new Appearance(new LandmarkItem(point->landmark(), point->robotCoordinates()), point->descriptorLeft());
-          ++number_of_added_appearances;
-        }
-      }
-
-      appearances.resize(number_of_added_appearances);
-      return appearances;
     }
 
   //ds exported types
@@ -50,36 +31,7 @@ namespace proslam {
                                         matchables(getMatchables(appearances)),
                                         hbst_tree(new HBSTTree(keyframe_->index(), matchables)) {}
       const LocalMap* keyframe = 0;
-      const AppearancePtrVector appearances;
-      const HBSTNode::BinaryMatchableVector matchables;
-      const HBSTTree* hbst_tree = 0;
-    };
-
-    struct QueryFrame {
-      EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-      QueryFrame(const Frame* frame_): frame(frame_),
-                                       appearances(getAppearances(frame_->points())),
-                                       matchables(getMatchables(appearances)),
-                                       hbst_tree(new HBSTTree(frame_->index(), matchables)) {}
-
-      QueryFrame(const LocalMap* keyframe_): frame(keyframe_),
-                                             appearances(keyframe_->appearances()),
-                                             matchables(getMatchables(appearances)),
-                                             hbst_tree(new HBSTTree(keyframe_->index(), matchables)) {}
-
-      ~QueryFrame() {
-       for (const Appearance* appearance: appearances) {
-         delete appearance->item;
-         delete appearance;
-       }
-       for (const HBSTNode::BinaryMatchable* matchable: matchables) {
-         delete matchable;
-       }
-       delete hbst_tree;
-      }
-
-      const Frame* frame = 0;
-      const AppearancePtrVector appearances;
+      const Landmark::AppearancePtrVector appearances;
       const HBSTNode::BinaryMatchableVector matchables;
       const HBSTTree* hbst_tree = 0;
     };

@@ -22,15 +22,15 @@ namespace proslam {
   void GraphOptimizer::optimizeLandmarks(WorldMap* context_){
 
     //ds update all active landmark positions
-    for (const LocalMap* keyframe: context_->localMaps()) {
-      for (LandmarkItem* item: keyframe->items()) {
+    for (const LocalMap* local_map: context_->localMaps()) {
+      for (Landmark::Item* item: local_map->items()) {
 
         //ds buffer current landmark
-        Landmark* landmark = item->landmark();
+        Landmark* landmark = item->landmark;
         assert(landmark);
 
         //ds update landmark position
-        landmark->resetCoordinates(keyframe->robotToWorld()*item->spatials());
+        landmark->resetCoordinates(local_map->robotToWorld()*item->robot_coordinates);
         landmark->setIsOptimized(true);
         landmark->setIsClosed(true);
       }

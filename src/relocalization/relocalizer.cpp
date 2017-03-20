@@ -119,9 +119,9 @@ namespace proslam {
         //ds loop over all matches
         for (const HBSTTree::Match match: matches_unfiltered) {
 
-          const Appearance* appearance_query     = _query->appearances[match.identifier_query];
-          const Appearance* appearance_reference = reference->appearances[match.identifier_reference];
-          const Identifier& query_index          = appearance_query->item->landmark()->index();
+          const Landmark::Appearance* appearance_query     = _query->appearances[match.identifier_query];
+          const Landmark::Appearance* appearance_reference = reference->appearances[match.identifier_reference];
+          const Identifier& query_index                    = appearance_query->item->landmark->index();
 
           try{
 
@@ -199,9 +199,9 @@ namespace proslam {
     for(const Correspondence::Match* match: matches_){
 
       //ds update count - if not in the mask
-      if(0 == _mask_id_references_for_correspondences.count(match->item_reference->landmark()->index())) {
-        counts.insert(match->item_reference->landmark()->index());
-        const Count count_current = counts.count(match->item_reference->landmark()->index());
+      if(0 == _mask_id_references_for_correspondences.count(match->item_reference->landmark->index())) {
+        counts.insert(match->item_reference->landmark->index());
+        const Count count_current = counts.count(match->item_reference->landmark->index());
 
         //ds if we get a better count
         if( count_best < count_current ){
@@ -214,7 +214,7 @@ namespace proslam {
     if(match_best != 0 && count_best > _minimum_matches_per_correspondence ) {
 
       //ds block matching against this point by adding it to the mask
-      _mask_id_references_for_correspondences.insert(match_best->item_reference->landmark()->index());
+      _mask_id_references_for_correspondences.insert(match_best->item_reference->landmark->index());
 
       //ds return the found correspondence
       return new Correspondence(match_best->item_query,

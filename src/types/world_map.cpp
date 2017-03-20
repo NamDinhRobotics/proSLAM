@@ -94,7 +94,6 @@ namespace proslam {
   
   Landmark* WorldMap::createLandmark(const PointCoordinates& coordinates_in_world_){
     Landmark* landmark = new Landmark(coordinates_in_world_);
-    landmark->createNewItem(landmark->coordinates());
     _landmarks.put(landmark);
     return landmark;
   }

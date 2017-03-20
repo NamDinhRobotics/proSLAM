@@ -29,14 +29,13 @@ namespace proslam {
             !landmarks_added_to_context.count(landmark)) {
 
           //ds bucket the item and transfer ownership from landmark to current context
-          LandmarkItem* item = landmark->currentItem();
+          Landmark::Item* item = landmark->item();
           assert(item != 0);
 
-          const PointCoordinates& coordinates_in_context = frame_to_context*frame_point->robotCoordinates();
-          item->addSpatials(coordinates_in_context);
-          item->setContext(this);
+          item->robot_coordinates = frame_to_context*frame_point->robotCoordinates();
+          item->local_map = this;
           _items.push_back(item);
-          _appearances.insert(_appearances.begin(), item->appearances().begin(), item->appearances().end());
+          _appearances.insert(_appearances.begin(), item->appearances.begin(), item->appearances.end());
           landmarks_added_to_context.insert(landmark);
 
           //ds take ownership from landmark view: forces the landmark to generate a new, decoupled view
@@ -65,7 +64,7 @@ namespace proslam {
   LocalMap::~LocalMap() {
 
     //ds free all items and their sub elements (e.g. appearances)
-    for (const LandmarkItem* item: _items) {
+    for (const Landmark::Item* item: _items) {
       delete item;
     }
     _items.clear();

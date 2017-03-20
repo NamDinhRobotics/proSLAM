@@ -1,6 +1,5 @@
 #pragma once
 #include "landmark.h"
-#include "landmark_item.h"
 
 namespace proslam {
 
@@ -52,8 +51,8 @@ namespace proslam {
 
     //ds descriptor tracks for all landmarks contained in the given frame
     const TransformMatrix3D& spatials() const {return robotToWorld();}
-    const AppearancePtrVector& appearances() const {return _appearances;}
-    const LandmarkItemPointerVector& items() const {return _items;}
+    const Landmark::AppearancePtrVector& appearances() const {return _appearances;}
+    const Landmark::ItemPointerVector& items() const {return _items;}
 
     void add(const LocalMap* keyframe_reference_,
              const TransformMatrix3D transform_query_to_reference_,
@@ -62,9 +61,9 @@ namespace proslam {
 
   protected:
 
-    AppearancePtrVector _appearances;
+    Landmark::AppearancePtrVector _appearances;
     KeyFrameCorrespondenceVector _matches;
-    LandmarkItemPointerVector _items;
+    Landmark::ItemPointerVector _items;
     FramePtrVector _subcontext;
     static constexpr Count _minimum_number_of_items = 100;
 
