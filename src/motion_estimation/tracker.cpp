@@ -354,7 +354,7 @@ namespace proslam {
 
       //ds depth must be within limits
       assert(depth_meters > 0);
-      assert(depth_meters < StereoTriangulator::maximum_depth_far);
+      assert(depth_meters <= StereoTriangulator::maximum_depth_far);
 
       //ds update landmark position
       landmark->update(current_frame->robotToWorld()*point->robotCoordinates(),

@@ -27,7 +27,8 @@ namespace proslam {
     const Count totalNumberOfTrackedPoints() const {return _total_number_of_tracked_points;}
     const Count totalNumberOfLandmarksClose() const {return _total_number_of_landmarks_close;}
     const Count totalNumberOfLandmarksFar() const {return _total_number_of_landmarks_far;}
-    void setMaximumPixelDistanceTrackingMinimum(const int32_t& maximum_pixel_distance_tracking_minimum_) {_pixel_distance_tracking_minimum = maximum_pixel_distance_tracking_minimum_;}
+    void setPixelDistanceTrackingMaximum(const int32_t& pixel_distance_tracking_) {_pixel_distance_tracking_maximum = pixel_distance_tracking_;}
+    void setPixelDistanceTrackingMinimum(const int32_t& pixel_distance_tracking_) {_pixel_distance_tracking_minimum = pixel_distance_tracking_;}
 
   //ds helpers
   protected:

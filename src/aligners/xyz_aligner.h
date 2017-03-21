@@ -5,7 +5,7 @@
 namespace proslam {
 
   class XYZAligner: public BaseAligner6_3 {
-    public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds object handling
     public:
@@ -35,8 +35,6 @@ namespace proslam {
       const TransformMatrix3D currentToReference() const {return _current_to_reference;}
       void setMinimumNumberOfInliers(const Count& minimum_number_of_inliers_) {_minimum_number_of_inliers = minimum_number_of_inliers_;}
       void setMinimumInlierRatio(const real& minimum_inlier_ratio_) {_minimum_inlier_ratio = minimum_inlier_ratio_;}
-      void setContextDepth(const Count& context_depth_) {_context_depth = context_depth_;}
-      const Count& contextDepth() const {return _context_depth;}
 
     //ds aligner specific
     protected:
@@ -49,9 +47,6 @@ namespace proslam {
 
       //ds validation criteria
       Count _minimum_number_of_inliers = 100;
-      real _minimum_inlier_ratio    = 0.75;
-
-      //ds enable deep correspondences -> landmarks, landmark views, etc..
-      Count _context_depth = 0;
+      real _minimum_inlier_ratio       = 0.75;
   };
 }

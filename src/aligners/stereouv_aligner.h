@@ -5,7 +5,7 @@
 namespace proslam {
 
   class StereoUVAligner: public BaseAligner6_4 {
-    public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds object handling
     public:

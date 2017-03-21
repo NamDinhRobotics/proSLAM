@@ -6,8 +6,6 @@ namespace proslam {
 
   //ds initialize aligner with minimal entity TODO purify this
   void XYZAligner::init(BaseContext* context_, const TransformMatrix3D& current_to_reference_) {
-    //_errors.resize(context_->correspondences.size());
-    //_inliers.resize(context_->correspondences.size());
     _context              = static_cast<CorrespondenceCollection*>(context_);
     _current_to_reference = current_to_reference_;
 
@@ -31,39 +29,13 @@ namespace proslam {
     for (const Correspondence* correspondence: _context->correspondences) {
       _omega.setIdentity();
 
-      //ds reference point
-      PointCoordinates measured_point_in_reference(PointCoordinates::Zero());
-      PointCoordinates sampled_point_in_reference(PointCoordinates::Zero());
+      //ds compute error based on items: local map merging
+      const PointCoordinates& measured_point_in_reference = correspondence->item_reference->robot_coordinates;
+      const PointCoordinates sampled_point_in_reference   = _current_to_reference*correspondence->item_query->robot_coordinates;
+      const Vector3 error                                 = sampled_point_in_reference-measured_point_in_reference;
 
-      //ds error vector
-      Vector3 error(Vector3::Zero());
-
-      //ds compute projection into closure: depending on desired context depth
-      switch(_context_depth) {
-        case 0: {
-
-          //ds compute error based on items: keyframe merging
-          measured_point_in_reference = correspondence->item_reference->robot_coordinates;
-          sampled_point_in_reference  = _current_to_reference*correspondence->item_query->robot_coordinates;
-          error                       = sampled_point_in_reference-measured_point_in_reference;
-
-          //ds adjust omega to inverse depth value (the further away the point, the less weight)
-          _omega(2,2) *= 1/sampled_point_in_reference.z();
-          //omega = correspondence->matching_ratio*Matrix3::Identity();
-          break;
-        }
-        case 1: {
-
-          //ds compute error based on landmarks: map merging
-          measured_point_in_reference = correspondence->item_reference->landmark->coordinates();
-          sampled_point_in_reference  = _current_to_reference*correspondence->item_query->landmark->coordinates();
-          error                       = sampled_point_in_reference-measured_point_in_reference;
-          break;
-        }
-        default: {
-          throw std::runtime_error("XYZAligner::linearize|invalid context depth");
-        }
-      }
+      //ds adjust omega to inverse depth value (the further away the point, the less weight)
+      _omega(2,2) *= 1/sampled_point_in_reference.z();
 
       //ds update chi
       const real error_squared = error.transpose()*error;

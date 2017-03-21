@@ -11,6 +11,7 @@
 #include "types/world_map.h"
 
 namespace proslam {
+
   class GraphOptimizer {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 

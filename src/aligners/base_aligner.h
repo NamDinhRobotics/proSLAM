@@ -3,10 +3,9 @@
 
 namespace proslam {
 
-  class AlignerFactory;
   template<uint64_t states, uint64_t dimension>
   class BaseAligner {
-    public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds readability
     public:
