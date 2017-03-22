@@ -8,6 +8,14 @@ echo "- updating SRRG packages in: ${DIR_CATKIN_SOURCE} (this should be your cat
 cd ${DIR_CATKIN_SOURCE}
 
 #ds start loading packages - first check if they exist
+if [ -d "${DIR_CATKIN_SOURCE}/srrg_cmake_modules" ]; then
+    echo "- srrg_cmake_modules already installed - updating code"
+    cd "${DIR_CATKIN_SOURCE}/srrg_cmake_modules"
+    git pull
+else
+    echo "- installing srrg_cmake_modules:"
+    git clone https://gitlab.com/srrg-software/srrg_cmake_modules
+fi
 if [ -d "${DIR_CATKIN_SOURCE}/srrg_boss" ]; then
     echo "- srrg_boss already installed - updating code"
     cd "${DIR_CATKIN_SOURCE}/srrg_boss"

@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(srrg_proslam)
 
-SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
+find_package(srrg_cmake_modules REQUIRED)
+set(CMAKE_MODULE_PATH ${srrg_cmake_modules_INCLUDE_DIRS})
+
 #set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_BUILD_TYPE Release)
 
