@@ -198,8 +198,6 @@ int32_t main(int32_t argc, char ** argv) {
     context_viewer_top->setWorldToRobotOrigin(center_for_kitti_sequence_00);
     context_viewer_top->setFollowRobot(false);
 
-//ds for Qt4 we have to flip the orientation..
-#if QT_VERSION < 0x050000
     TransformMatrix3D orientation_correction;
     orientation_correction.matrix() << 0, -1, 0, 0,
                                        -1, 0, 0, 0,
@@ -207,7 +205,6 @@ int32_t main(int32_t argc, char ** argv) {
                                        0, 0, 0, 1;
     context_viewer_bird->setRotationRobotView(orientation_correction);
     context_viewer_top->setWorldToRobotOrigin(orientation_correction*center_for_kitti_sequence_00);
-#endif
   }
 
   //ds error measurements
