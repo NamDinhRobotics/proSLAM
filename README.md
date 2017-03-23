@@ -62,7 +62,7 @@ or (OpenCV + Qt)
  - Qt5: https://wiki.qt.io/Install_Qt_5_on_Ubuntu (Version 5.7.0)              - used for visualization
 
 ---
-3) download and install the Colorful Catkin Command Line Tools: https://catkin-tools.readthedocs.io/en/latest/installing.html (currently required) if ROS is installed simply enter:
+3) download and install the Colorful Catkin Command Line Tools: https://catkin-tools.readthedocs.io/en/latest/installing.html (alternatively one can also use ROS catkin):
 
     sudo apt-get install python-catkin-tools
 
