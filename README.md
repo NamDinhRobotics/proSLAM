@@ -67,7 +67,7 @@ or (OpenCV + Qt)
     sudo apt-get install python-catkin-tools
 
 ---
-4) clone g2o for catkin (currently required) to your catkin workspace:
+4) clone g2o for catkin (https://github.com/yorsh87/g2o_catkin, currently required) to your catkin workspace:
 
     git clone https://github.com/yorsh87/g2o_catkin.git
     
