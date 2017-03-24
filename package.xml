@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>srrg_proslam</name>
-  <version>0.0.0</version>
+  <version>1.0.0</version>
   <description>The ProSLAM package</description>
   <maintainer email="schdomin@gmail.com">Dominik Schlegel</maintainer>
   <license>TBD</license>
@@ -13,10 +13,14 @@
   <build_depend>srrg_core_viewers</build_depend>
   <build_depend>srrg_gl_helpers</build_depend>
   <build_depend>g2o_catkin</build_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>sensor_msg</build_depend>
   <run_depend>srrg_cmake_modules</run_depend>
   <run_depend>srrg_core</run_depend>
   <run_depend>srrg_hbst</run_depend>
   <run_depend>srrg_core_viewers</run_depend>
   <run_depend>srrg_gl_helpers</run_depend>
   <run_depend>g2o_catkin</run_depend>
+  <run_depend>roscpp</run_depend>
+  <run_depend>sensor_msgs</run_depend>
 </package>

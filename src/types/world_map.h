@@ -51,27 +51,9 @@ namespace proslam {
   public:
 
     static const Vector3 toOrientationRodrigues(const Matrix3& rotation_matrix_) {
-      cv::Mat rotation_angles;
-      cv::Rodrigues(toCVMatrix(rotation_matrix_), rotation_angles);
-      return fromCVVector<real, 3>(rotation_angles);
-    }
-
-    static const cv::Mat_<real> toCVMatrix(const Matrix3& matrix_eigen_) {
-      cv::Mat_<real> matrix_opencv(3, 3);
-      for(uint32_t u = 0; u < 3; ++u) {
-        for(uint32_t v = 0; v < 3; ++v) {
-          matrix_opencv.at<real>(u, v) = matrix_eigen_(u, v);
-        }
-      }
-      return matrix_opencv;
-    }
-
-    template<typename type, uint32_t rows> static const Eigen::Matrix<type, rows, 1> fromCVVector(const cv::Vec<type, rows>& vector_opencv_) {
-      Eigen::Matrix<type, rows, 1> vector_eigen;
-      for(uint32_t u = 0; u < rows; ++u) {
-        vector_eigen(u) = vector_opencv_(u);
-      }
-      return vector_eigen;
+      cv::Vec<real, 3> rotation_angles;
+      cv::Rodrigues(srrg_core::toCv(rotation_matrix_), rotation_angles);
+      return srrg_core::fromCv(rotation_angles);
     }
 
   protected:

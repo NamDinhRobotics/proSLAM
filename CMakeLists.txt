@@ -53,6 +53,8 @@ find_package(catkin REQUIRED COMPONENTS
   srrg_core_viewers
   srrg_hbst
   g2o_catkin
+  roscpp
+  sensor_msgs
 )
 
 #ds flags

@@ -41,21 +41,6 @@ namespace proslam {
     _optimizer->clear();
     _optimizer->clearParameters();
 
-    //ds add the camera as parameter
-    g2o::ParameterCamera* parameter_camera = new g2o::ParameterCamera();
-    parameter_camera->setId(0);
-    parameter_camera->setOffset(context_->currentLocalMap()->cameraLeft()->cameraToRobot().cast<double>());
-    parameter_camera->setKcam(static_cast<double>(context_->currentLocalMap()->cameraLeft()->cameraMatrix()(0,0)),
-                              static_cast<double>(context_->currentLocalMap()->cameraLeft()->cameraMatrix()(1,1)),
-                              static_cast<double>(context_->currentLocalMap()->cameraLeft()->cameraMatrix()(0,2)),
-                              static_cast<double>(context_->currentLocalMap()->cameraLeft()->cameraMatrix()(1,2)));
-    _optimizer->addParameter(parameter_camera);
-
-    g2o::ParameterSE3Offset* camera_offset = new g2o::ParameterSE3Offset();
-    camera_offset->setId(1);
-    camera_offset->setOffset(Eigen::Isometry3d::Identity());
-    _optimizer->addParameter(camera_offset);
-
     //ds vertex linking
     g2o::VertexSE3* vertex_keyframe_previous = 0;
     TransformMatrix3D world_to_frame_previous(TransformMatrix3D::Identity());

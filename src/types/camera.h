@@ -23,12 +23,16 @@ namespace proslam {
     void setImageRows(const Count& image_rows_) {_image_rows = image_rows_;}
     void setImageCols(const Count& image_cols_) {_image_cols = image_cols_;}
     inline const CameraMatrix& cameraMatrix() const {return _camera_matrix;}
-    inline const CameraMatrix& inverseCameraMatrix() const {return _inverse_camera_matrix;}
     void setCameraMatrix(const CameraMatrix& camera_matrix_);
     inline const ProjectionMatrix& projectionMatrix() const {return _projection_matrix;}
+    void setProjectionMatrix(const ProjectionMatrix& projection_matrix_) {_projection_matrix = projection_matrix_;}
     inline const TransformMatrix3D& cameraToRobot() const {return _camera_to_robot;}
     inline const TransformMatrix3D& robotToCamera() const {return _robot_to_camera;}
     void setOffset(const TransformMatrix3D& camera_to_robot_);
+    inline const Matrix3 rectificationMatrix() const {return _rectification_matrix;}
+    void setRectificationMatrix(const Matrix3& rectification_matrix_) {_rectification_matrix = rectification_matrix_;}
+    inline const Vector5 distortionCoefficients() const {return _distortion_coefficients;}
+    void setDistortionCoefficients(const Vector5& distortion_coefficients_) {_distortion_coefficients = distortion_coefficients_;}
 
   protected:
 
@@ -36,6 +40,8 @@ namespace proslam {
     CameraMatrix  _camera_matrix        = CameraMatrix::Zero();
     CameraMatrix _inverse_camera_matrix = CameraMatrix::Zero();
     ProjectionMatrix _projection_matrix = ProjectionMatrix::Zero();
+    Matrix3 _rectification_matrix       = Matrix3::Zero();
+    Vector5 _distortion_coefficients    = Vector5::Zero();
 
     Count _image_rows = 0;
     Count _image_cols = 0;

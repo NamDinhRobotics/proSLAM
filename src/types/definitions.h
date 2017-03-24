@@ -68,6 +68,7 @@ namespace proslam{
   typedef Eigen::Matrix<real, 3, 3> Matrix3;
   typedef Eigen::Matrix<real, 4, 4> Matrix4;
   typedef Eigen::Matrix<real, 6, 6> Matrix6;
+  typedef Eigen::Matrix<real, 5, 1> Vector5;
   typedef Eigen::Matrix<real, 6, 1> Vector6;  
   typedef Eigen::Matrix<real, 1, 6> Matrix1_6;  
   typedef Eigen::Matrix<real, 3, 6> Matrix3_6;
@@ -76,6 +77,8 @@ namespace proslam{
   typedef Eigen::Matrix<real, 2, 3> Matrix2_3;
   typedef Eigen::Matrix<real, 6, 3> Matrix6_3;
   typedef Eigen::Matrix<real, 6, 4> Matrix6_4;
+  typedef Eigen::Matrix<real, 3, 4> Matrix3_4;
+  typedef Eigen::Matrix<real, 4, 3> Matrix4_3;
 
   //ds HBST
   typedef srrg_hbst::BinaryMatchable<DESCRIPTOR_SIZE_BITS> HBSTMatchable;
