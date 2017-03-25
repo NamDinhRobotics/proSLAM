@@ -2,45 +2,40 @@
 
 namespace proslam {
 
-  real StereoTriangulator::maximum_depth_close   = 0;
-  real StereoTriangulator::maximum_depth_far     = 0;
-
-  StereoTriangulator::StereoTriangulator(const Camera* camera_left_,
-                                         const Camera* camera_right_): _number_of_rows_image(camera_left_->imageRows()),
-                                                                       _number_of_cols_image(camera_left_->imageCols()),
-                                                                       _number_of_bins_u(std::floor(static_cast<real>(_number_of_cols_image)/_bin_size)),
-                                                                       _number_of_bins_v(std::floor(static_cast<real>(_number_of_rows_image)/_bin_size)),
-                                                                       _bin_map_left(0),
-//                                                                       _bin_map_right(0),
-                                                                       _triangulation_F(camera_left_->projectionMatrix()(0,0)),
-                                                                       _triangulation_Finverse(1/_triangulation_F),
-                                                                       _triangulation_Pu(camera_left_->projectionMatrix()(0,2)),
-                                                                       _triangulation_Pv(camera_left_->projectionMatrix()(1,2)),
-                                                                       _triangulation_DuR(camera_right_->projectionMatrix()(0,3)),
-                                                                       _triangulation_DuR_flipped(-_triangulation_DuR),
-                                                                       _baseline_meters(_triangulation_DuR_flipped/_triangulation_F),
+  StereoTriangulator::StereoTriangulator(const Camera* camera_left_, const Camera* camera_right_): _number_of_rows_image(camera_left_->imageRows()),
+                                                                                                   _number_of_cols_image(camera_left_->imageCols()),
+                                                                                                   _number_of_bins_u(std::floor(static_cast<real>(_number_of_cols_image)/_bin_size)),
+                                                                                                   _number_of_bins_v(std::floor(static_cast<real>(_number_of_rows_image)/_bin_size)),
+                                                                                                   _focal_length_pixels(camera_left_->projectionMatrix()(0,0)),
+                                                                                                   _focal_center_x_pixels(camera_left_->projectionMatrix()(0,2)),
+                                                                                                   _focal_center_y_pixels(camera_left_->projectionMatrix()(1,2)),
+                                                                                                   _baseline_pixelsmeters(camera_right_->projectionMatrix()(0,3)),
+                                                                                                   _baseline_meters(-_baseline_pixelsmeters/_focal_length_pixels),
+                                                                                                   _maximum_depth_close_meters(_baseline_factor*_baseline_meters),
+                                                                                                   _maximum_depth_far_meters(-_baseline_pixelsmeters/_minimum_disparity_pixels),
 #if CV_MAJOR_VERSION == 2
-                                                                       _feature_detector(new cv::FastFeatureDetector(_detector_threshold)),
-                                                                       _descriptor_extractor(new cv::BriefDescriptorExtractor(DESCRIPTOR_SIZE_BYTES)) {
+                                                                                                   _feature_detector(new cv::FastFeatureDetector(_detector_threshold)),
+                                                                                                   _descriptor_extractor(new cv::BriefDescriptorExtractor(DESCRIPTOR_SIZE_BYTES)) {
 #elif CV_MAJOR_VERSION == 3
-                                                                       _feature_detector(cv::FastFeatureDetector::create(_detector_threshold)),
-                                                                       _descriptor_extractor(cv::xfeatures2d::BriefDescriptorExtractor::create(DESCRIPTOR_SIZE_BYTES)) {
+                                                                                                   _feature_detector(cv::FastFeatureDetector::create(_detector_threshold)),
+                                                                                                   _descriptor_extractor(cv::xfeatures2d::BriefDescriptorExtractor::create(DESCRIPTOR_SIZE_BYTES)) {
 #else
   #error OpenCV version not supported
 #endif
     std::cerr << "StereoTriangulator::StereoTriangulator|constructing" << std::endl;
     assert(camera_left_->imageCols() == camera_right_->imageCols());
     assert(camera_left_->imageRows() == camera_right_->imageRows());
-    maximum_depth_close = _baseline_factor*_baseline_meters;
-    maximum_depth_far   = _triangulation_DuR_flipped/_minimum_disparity;
 
-    //ds allocate dynamic datastructures: simple maps
-    _triangulation_map = new TriangulatedPoint*[_number_of_rows_image];
+    //ds allocate and initialize framepoint map
+    _framepoints_in_image = new FramePoint**[_number_of_rows_image];
     for (Index row = 0; row < _number_of_rows_image; ++row) {
-      _triangulation_map[row] = new TriangulatedPoint[_number_of_cols_image];
+      _framepoints_in_image[row] = new FramePoint*[_number_of_cols_image];
+      for (Count col = 0; col < _number_of_cols_image; ++col) {
+        _framepoints_in_image[row][col] = 0;
+      }
     }
 
-    //ds allocate dynamic datastructures: bin grid
+    //ds allocate and initialize bin grid
     _bin_map_left = new cv::KeyPoint*[_number_of_bins_v];
     for (Count v = 0; v < _number_of_bins_v; ++v) {
       _bin_map_left[v] = new cv::KeyPoint[_number_of_bins_u];
@@ -49,22 +44,14 @@ namespace proslam {
       }
     }
 
-    //ds initialize data structures
-    for (Count row = 0; row < _number_of_rows_image; ++row) {
-      for (Count col = 0; col < _number_of_cols_image; ++col) {
-        _triangulation_map[row][col].is_available = false;
-      }
-    }
-
     _keypoints_left.clear();
     _keypoints_right.clear();
-    _keypoints_with_descriptor_left.clear();
-    _keypoints_with_descriptor_right.clear();
-    _stereo_keypoints.clear();
+    _keypoints_with_descriptors_left.clear();
+    _keypoints_with_descriptors_right.clear();
 
     std::cerr << "StereoTriangulator::StereoTriangulator|baseline (m): " << _baseline_meters << std::endl;
-    std::cerr << "StereoTriangulator::StereoTriangulator|maximum depth tracking close (m): " << maximum_depth_close << std::endl;
-    std::cerr << "StereoTriangulator::StereoTriangulator|maximum depth tracking far (m): " << maximum_depth_far << std::endl;
+    std::cerr << "StereoTriangulator::StereoTriangulator|maximum depth tracking close (m): " << _maximum_depth_close_meters << std::endl;
+    std::cerr << "StereoTriangulator::StereoTriangulator|maximum depth tracking far (m): " << _maximum_depth_far_meters << std::endl;
     std::cerr << "StereoTriangulator::StereoTriangulator|bin size (pixel): " << _bin_size << std::endl;
     std::cerr << "StereoTriangulator::StereoTriangulator|number of bins u: " << _number_of_bins_u << std::endl;
     std::cerr << "StereoTriangulator::StereoTriangulator|number of bins v: " << _number_of_bins_v << std::endl;
@@ -75,16 +62,24 @@ namespace proslam {
   StereoTriangulator::~StereoTriangulator() {
     std::cerr << "StereoTriangulator::StereoTriangulator|destroying" << std::endl;
 
-    //ds deallocate dynamic datastructures
+    //ds deallocate dynamic data structures
     for (Index row = 0; row < _number_of_rows_image; ++row) {
-      delete[] _triangulation_map[row];
+
+      //ds check for unclaimed framepoints and remove them
+      for (Index col = 0; col < _number_of_cols_image; ++col) {
+        if (_framepoints_in_image[row][col]) {
+          delete _framepoints_in_image[row][col];
+        }
+      }
+      delete[] _framepoints_in_image[row];
     }
-    delete[] _triangulation_map;
+    delete[] _framepoints_in_image;
     for (Count v = 0; v < _number_of_bins_v; ++v) {
       delete[] _bin_map_left[v];
     }
     delete[] _bin_map_left;
 
+    //ds cleanup opencv
 #if CV_MAJOR_VERSION == 2
     delete _feature_detector;
     delete _descriptor_extractor;
@@ -93,219 +88,43 @@ namespace proslam {
     std::cerr << "StereoTriangulator::StereoTriangulator|destroyed" << std::endl;
   }
 
-  const Count StereoTriangulator::triangulate(const Frame* frame_) {
-
-    //ds buffer images
-    const cv::Mat& intensity_image_left  = frame_->intensityImageLeft();
-    const cv::Mat& intensity_image_right = frame_->intensityImageRight();
+  //ds computes framepoints stored in a image-like matrix (_framepoints_in_image) for provided stereo images
+  void StereoTriangulator::compute(Frame* frame_) {
 
     //ds detect new features
     CHRONOMETER_START(feature_detection)
-    _feature_detector->detect(intensity_image_left, _keypoints_left);
-    _feature_detector->detect(intensity_image_right, _keypoints_right);
+    detectKeypoints(frame_->intensityImageLeft(), _keypoints_left);
+    detectKeypoints(frame_->intensityImageRight(), _keypoints_right);
     CHRONOMETER_STOP(feature_detection)
 
-    //ds keypoint pruning - prune only left and keep all potential epipolar matches on right
+    //ds keypoint pruning - prune only left side
     CHRONOMETER_START(keypoint_pruning)
-    _binKeypoints(_keypoints_left, _bin_map_left);
-//    _binKeypoints(keypoints_right, _bin_map_right);
+    binKeypoints(_keypoints_left, _bin_map_left);
     CHRONOMETER_STOP(keypoint_pruning)
 
     //ds extract descriptors for detected features
     CHRONOMETER_START(descriptor_extraction)
-    _descriptor_extractor->compute(intensity_image_left, _keypoints_left, _descriptors_left);
-    _descriptor_extractor->compute(intensity_image_right, _keypoints_right, _descriptors_right);
+    extractDescriptors(frame_->intensityImageLeft(), _keypoints_left, _descriptors_left);
+    extractDescriptors(frame_->intensityImageRight(), _keypoints_right, _descriptors_right);
     CHRONOMETER_STOP(descriptor_extraction)
 
-    //ds detector-driven TRIANGULATION: reset maps
+    //ds prepare and execute stereo keypoint search
     CHRONOMETER_START(point_triangulation)
-    for (uint32_t row = 0; row < _number_of_rows_image; ++row) {
-      for (uint32_t col = 0; col < _number_of_cols_image; ++col) {
-        _triangulation_map[row][col].is_available = false;
-      }
-    }
-
-    //ds fuse keypoints buffers
-    _keypoints_with_descriptor_left.resize(_keypoints_left.size());
-    _keypoints_with_descriptor_right.resize(_keypoints_right.size());
-    if (_keypoints_left.size() <= _keypoints_right.size()) {
-      for (Index u = 0; u < _keypoints_left.size(); ++u) {
-        _keypoints_with_descriptor_left[u].keypoint    = _keypoints_left[u];
-        _keypoints_with_descriptor_left[u].descriptor  = _descriptors_left.row(u);
-        _keypoints_with_descriptor_left[u].r           = _keypoints_left[u].pt.y;
-        _keypoints_with_descriptor_left[u].c           = _keypoints_left[u].pt.x;
-        _keypoints_with_descriptor_right[u].keypoint   = _keypoints_right[u];
-        _keypoints_with_descriptor_right[u].descriptor = _descriptors_right.row(u);
-        _keypoints_with_descriptor_right[u].r          = _keypoints_right[u].pt.y;
-        _keypoints_with_descriptor_right[u].c          = _keypoints_right[u].pt.x;
-      }
-      for (Index u = _keypoints_left.size(); u < _keypoints_right.size(); ++u) {
-        _keypoints_with_descriptor_right[u].keypoint   = _keypoints_right[u];
-        _keypoints_with_descriptor_right[u].descriptor = _descriptors_right.row(u);
-        _keypoints_with_descriptor_right[u].r          = _keypoints_right[u].pt.y;
-        _keypoints_with_descriptor_right[u].c          = _keypoints_right[u].pt.x;
-      }
-      _stereo_keypoints.resize(_keypoints_left.size());
-    } else {
-      for (Index u = 0; u < _keypoints_right.size(); ++u) {
-        _keypoints_with_descriptor_left[u].keypoint    = _keypoints_left[u];
-        _keypoints_with_descriptor_left[u].descriptor  = _descriptors_left.row(u);
-        _keypoints_with_descriptor_left[u].r           = _keypoints_left[u].pt.y;
-        _keypoints_with_descriptor_left[u].c           = _keypoints_left[u].pt.x;
-        _keypoints_with_descriptor_right[u].keypoint   = _keypoints_right[u];
-        _keypoints_with_descriptor_right[u].descriptor = _descriptors_right.row(u);
-        _keypoints_with_descriptor_right[u].r          = _keypoints_right[u].pt.y;
-        _keypoints_with_descriptor_right[u].c          = _keypoints_right[u].pt.x;
-      }
-      for (Index u = _keypoints_right.size(); u < _keypoints_left.size(); ++u) {
-        _keypoints_with_descriptor_left[u].keypoint   = _keypoints_left[u];
-        _keypoints_with_descriptor_left[u].descriptor = _descriptors_left.row(u);
-        _keypoints_with_descriptor_left[u].r          = _keypoints_left[u].pt.y;
-        _keypoints_with_descriptor_left[u].c          = _keypoints_left[u].pt.x;
-      }
-      _stereo_keypoints.resize(_keypoints_right.size());
-    }
-
-    //ds perform stereo keypoint search algorithm
-    //ds sort all input vectors in the order of the expression
-    std::sort(_keypoints_with_descriptor_left.begin(), _keypoints_with_descriptor_left.end(), [](const KeypointWithDescriptor& a_, const KeypointWithDescriptor& b_){return ((a_.r < b_.r) || (a_.r == b_.r && a_.c < b_.c));});
-    std::sort(_keypoints_with_descriptor_right.begin(), _keypoints_with_descriptor_right.end(), [](const KeypointWithDescriptor& a_, const KeypointWithDescriptor& b_){return ((a_.r < b_.r) || (a_.r == b_.r && a_.c < b_.c));});
-
-    //ds running variable
-    Index idx_R = 0;
-
-    //ds loop over all left keypoints
-    Count number_of_potential_points = 0;
-    for (Index idx_L = 0; idx_L < _keypoints_with_descriptor_left.size(); idx_L++) {
-      //stop condition
-      if (idx_R == _keypoints_with_descriptor_right.size()) {break;}
-      //the right keypoints are on an lower row - skip left
-      while (_keypoints_with_descriptor_left[idx_L].r < _keypoints_with_descriptor_right[idx_R].r) {
-        idx_L++; if (idx_L == _keypoints_with_descriptor_left.size()) {break;}
-      }
-      if (idx_L == _keypoints_with_descriptor_left.size()) {break;}
-      //the right keypoints are on an upper row - skip right
-      while (_keypoints_with_descriptor_left[idx_L].r > _keypoints_with_descriptor_right[idx_R].r) {
-        idx_R++; if (idx_R == _keypoints_with_descriptor_right.size()) {break;}
-      }
-      if (idx_R == _keypoints_with_descriptor_right.size()) {break;}
-      //search bookkeeping
-      Index idx_RS = idx_R;
-      real dist_best = _maximum_matching_distance_triangulation;
-      Index idx_best_R = 0;
-      //scan epipolar line for current keypoint at idx_L
-      while (_keypoints_with_descriptor_left[idx_L].r == _keypoints_with_descriptor_right[idx_RS].r) {
-        //zero disparity stop condition
-        if (_keypoints_with_descriptor_right[idx_RS].c >= _keypoints_with_descriptor_left[idx_L].c) {break;}
-        //compute descriptor distance
-        const real dist = cv::norm(_keypoints_with_descriptor_left[idx_L].descriptor, _keypoints_with_descriptor_right[idx_RS].descriptor, DESCRIPTOR_NORM);
-        if(dist < dist_best) {
-          dist_best = dist;
-          idx_best_R = idx_RS;
-        }
-        idx_RS++; if (idx_RS == _keypoints_with_descriptor_right.size()) {break;}
-      }
-      //check if something was found
-      if (dist_best < _maximum_matching_distance_triangulation) {
-
-        //ds add triangulation map entry
-        try {
-
-          const Index& row       = _keypoints_with_descriptor_left[idx_L].r;
-          const Index& col_left  = _keypoints_with_descriptor_left[idx_L].c;
-          assert(!_triangulation_map[row][col_left].is_available);
-
-          //ds directly attempt the triangulation - might throw
-          const PointCoordinates camera_coordinates(getCoordinatesInCamera(_keypoints_with_descriptor_left[idx_L].keypoint.pt,
-                                                                           _keypoints_with_descriptor_right[idx_best_R].keypoint.pt));
-
-          //ds set descriptor map
-          _triangulation_map[row][col_left].camera_coordinates_left = camera_coordinates;
-          _triangulation_map[row][col_left].keypoint_left    = _keypoints_with_descriptor_left[idx_L].keypoint;
-          _triangulation_map[row][col_left].keypoint_right   = _keypoints_with_descriptor_right[idx_best_R].keypoint;
-          _triangulation_map[row][col_left].descriptor_left  = _keypoints_with_descriptor_left[idx_L].descriptor;
-          _triangulation_map[row][col_left].descriptor_right = _keypoints_with_descriptor_right[idx_best_R].descriptor;
-          _triangulation_map[row][col_left].is_available     = true;
-          ++number_of_potential_points;
-
-          //ds reduce search space
-          idx_R = idx_best_R+1;
-        } catch (const ExceptionTriangulation& exception) {}
-      }
-    }
+    initialize(_keypoints_left, _keypoints_right, _descriptors_left, _descriptors_right);
+    findStereoKeypoints(_keypoints_with_descriptors_left, _keypoints_with_descriptors_right, frame_);
     CHRONOMETER_STOP(point_triangulation)
 
-    //ds check if there's a significant loss in target points
-    if (number_of_potential_points < _target_number_of_points) {
-
-      //ds lower detector threshold if possible to get more points
-      if (_detector_threshold > _detector_threshold_minimum) {
-        _detector_threshold -= 5;
-
-#if CV_MAJOR_VERSION == 2
-        _feature_detector->setInt("threshold", _detector_threshold);
-#elif CV_MAJOR_VERSION == 3
-        _feature_detector->setThreshold(_detector_threshold);
-#else
-  #error OpenCV version not supported
-#endif
-      }
-
-      //ds increase matching threshold if possible to get more matches
-      if (_maximum_tracking_matching_distance < _tracking_matching_distance_threshold_maximum) {
-        _maximum_tracking_matching_distance += 1;
-      }
-    }
-
-    //ds of if there is a overflow of points
-    else if (number_of_potential_points > _target_number_of_points) {
-
-      //ds raise detector threshold if possible to get less points
-      if (_detector_threshold < _detector_threshold_maximum) {
-        _detector_threshold += 5;
-#if CV_MAJOR_VERSION == 2
-        _feature_detector->setInt("threshold", _detector_threshold);
-#elif CV_MAJOR_VERSION == 3
-        _feature_detector->setThreshold(_detector_threshold);
-#else
-  #error OpenCV version not supported
-#endif
-      }
-
-      //ds decrease matching threshold if possible to get less matches
-      if (_maximum_tracking_matching_distance > _tracking_matching_distance_threshold_minimum) {
-        _maximum_tracking_matching_distance -= 1;
-      }
-    }
-
-    return number_of_potential_points;
+    //ds calibrate feature detector threshold to maintain the target number of tracked points
+    calibrateDetectionThresholds();
   }
 
-  const PointCoordinates StereoTriangulator::getCoordinatesInCamera(const cv::Point2f& image_coordinates_left_, const cv::Point2f& image_coordinates_right_) {
-
-    //ds check for minimal disparity
-    if (image_coordinates_left_.x-image_coordinates_right_.x < _minimum_disparity) {
-      throw ExceptionTriangulation("disparity value to low");
-    }
-
-    //ds input validation
-    assert(image_coordinates_right_.x < image_coordinates_left_.x);
-    assert(image_coordinates_right_.y == image_coordinates_left_.y);
-
-    //ds first compute depth (z in camera)
-    const real depth_meters = _triangulation_DuR_flipped/(image_coordinates_left_.x-image_coordinates_right_.x);
-    assert(depth_meters >= 0);
-
-    //ds set 3d point
-    const PointCoordinates coordinates_in_camera(_triangulation_Finverse*depth_meters*(image_coordinates_left_.x-_triangulation_Pu),
-                                                 _triangulation_Finverse*depth_meters*(image_coordinates_left_.y-_triangulation_Pv),
-                                                 depth_meters);
-
-    //ds return triangulated point
-    return coordinates_in_camera;
+  //ds detects keypoints and stores them in a vector (called within compute)
+  void StereoTriangulator::detectKeypoints(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_) const {
+    _feature_detector->detect(intensity_image_, keypoints_);
   }
 
-  void StereoTriangulator::_binKeypoints(std::vector<cv::KeyPoint>& keypoints_, cv::KeyPoint** bin_map_) {
+  //ds regularizes the detected keypoints using binning (called within compute)
+  void StereoTriangulator::binKeypoints(std::vector<cv::KeyPoint>& keypoints_, cv::KeyPoint** bin_map_) const {
 
     //ds sort by position in u
     std::sort(keypoints_.begin(), keypoints_.end(), [](const cv::KeyPoint& a_, const cv::KeyPoint& b_) {return a_.pt.x < b_.pt.x;});
@@ -353,5 +172,200 @@ namespace proslam {
       }
     }
     keypoints_.resize(index_keypoint);
+  }
+
+  //ds extracts the defined descriptors for the given keypoints (called within compute)
+  void StereoTriangulator::extractDescriptors(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_, cv::Mat& descriptors_) const {
+    _descriptor_extractor->compute(intensity_image_, keypoints_, descriptors_);
+  }
+
+  //ds initializes structures for the epipolar stereo keypoint search (called within compute)
+  void StereoTriangulator::initialize(const std::vector<cv::KeyPoint>& keypoints_left_,
+                                      const std::vector<cv::KeyPoint>& keypoints_right_,
+                                      const cv::Mat& descriptors_left_,
+                                      const cv::Mat& descriptors_right_) {
+
+    //ds prepare keypoint with descriptors vectors for stereo keypoint search
+    _keypoints_with_descriptors_left.resize(keypoints_left_.size());
+    _keypoints_with_descriptors_right.resize(keypoints_right_.size());
+    if (keypoints_left_.size() <= keypoints_right_.size()) {
+      for (Index u = 0; u < keypoints_left_.size(); ++u) {
+        _keypoints_with_descriptors_left[u].keypoint    = keypoints_left_[u];
+        _keypoints_with_descriptors_left[u].descriptor  = descriptors_left_.row(u);
+        _keypoints_with_descriptors_left[u].row           = keypoints_left_[u].pt.y;
+        _keypoints_with_descriptors_left[u].col           = keypoints_left_[u].pt.x;
+        _keypoints_with_descriptors_right[u].keypoint   = keypoints_right_[u];
+        _keypoints_with_descriptors_right[u].descriptor = descriptors_right_.row(u);
+        _keypoints_with_descriptors_right[u].row          = keypoints_right_[u].pt.y;
+        _keypoints_with_descriptors_right[u].col          = keypoints_right_[u].pt.x;
+      }
+      for (Index u = keypoints_left_.size(); u < keypoints_right_.size(); ++u) {
+        _keypoints_with_descriptors_right[u].keypoint   = keypoints_right_[u];
+        _keypoints_with_descriptors_right[u].descriptor = descriptors_right_.row(u);
+        _keypoints_with_descriptors_right[u].row          = keypoints_right_[u].pt.y;
+        _keypoints_with_descriptors_right[u].col          = keypoints_right_[u].pt.x;
+      }
+    } else {
+      for (Index u = 0; u < keypoints_right_.size(); ++u) {
+        _keypoints_with_descriptors_left[u].keypoint    = keypoints_left_[u];
+        _keypoints_with_descriptors_left[u].descriptor  = descriptors_left_.row(u);
+        _keypoints_with_descriptors_left[u].row           = keypoints_left_[u].pt.y;
+        _keypoints_with_descriptors_left[u].col           = keypoints_left_[u].pt.x;
+        _keypoints_with_descriptors_right[u].keypoint   = keypoints_right_[u];
+        _keypoints_with_descriptors_right[u].descriptor = descriptors_right_.row(u);
+        _keypoints_with_descriptors_right[u].row          = keypoints_right_[u].pt.y;
+        _keypoints_with_descriptors_right[u].col          = keypoints_right_[u].pt.x;
+      }
+      for (Index u = keypoints_right_.size(); u < keypoints_left_.size(); ++u) {
+        _keypoints_with_descriptors_left[u].keypoint   = keypoints_left_[u];
+        _keypoints_with_descriptors_left[u].descriptor = descriptors_left_.row(u);
+        _keypoints_with_descriptors_left[u].row          = keypoints_left_[u].pt.y;
+        _keypoints_with_descriptors_left[u].col          = keypoints_left_[u].pt.x;
+      }
+    }
+  }
+
+  //ds computes all potential stereo keypoints (exhaustive in matching distance) and stores them as framepoints (called within compute)
+  void StereoTriangulator::findStereoKeypoints(std::vector<KeypointWithDescriptor>& keypoints_left_,
+                                               std::vector<KeypointWithDescriptor>& keypoints_right_,
+                                               Frame* frame_) {
+
+    //ds sort all input vectors by ascending row positions
+    std::sort(keypoints_left_.begin(), keypoints_left_.end(), [](const KeypointWithDescriptor& a_, const KeypointWithDescriptor& b_){return ((a_.row < b_.row) || (a_.row == b_.row && a_.col < b_.col));});
+    std::sort(keypoints_right_.begin(), keypoints_right_.end(), [](const KeypointWithDescriptor& a_, const KeypointWithDescriptor& b_){return ((a_.row < b_.row) || (a_.row == b_.row && a_.col < b_.col));});
+
+    //ds running variable
+    Index idx_R = 0;
+
+    //ds loop over all left keypoints
+    _number_of_available_points = 0;
+    for (Index idx_L = 0; idx_L < keypoints_left_.size(); idx_L++) {
+      //stop condition
+      if (idx_R == keypoints_right_.size()) {break;}
+      //the right keypoints are on an lower row - skip left
+      while (keypoints_left_[idx_L].row < keypoints_right_[idx_R].row) {
+        idx_L++; if (idx_L == keypoints_left_.size()) {break;}
+      }
+      if (idx_L == keypoints_left_.size()) {break;}
+      //the right keypoints are on an upper row - skip right
+      while (keypoints_left_[idx_L].row > keypoints_right_[idx_R].row) {
+        idx_R++; if (idx_R == keypoints_right_.size()) {break;}
+      }
+      if (idx_R == keypoints_right_.size()) {break;}
+      //search bookkeeping
+      Index idx_RS = idx_R;
+      real dist_best = _maximum_matching_distance_triangulation;
+      Index idx_best_R = 0;
+      //scan epipolar line for current keypoint at idx_L
+      while (keypoints_left_[idx_L].row == keypoints_right_[idx_RS].row) {
+        //zero disparity stop condition
+        if (keypoints_right_[idx_RS].col >= keypoints_left_[idx_L].col) {break;}
+        //compute descriptor distance
+        const real dist = cv::norm(keypoints_left_[idx_L].descriptor, keypoints_right_[idx_RS].descriptor, DESCRIPTOR_NORM);
+        if(dist < dist_best) {
+          dist_best = dist;
+          idx_best_R = idx_RS;
+        }
+        idx_RS++; if (idx_RS == keypoints_right_.size()) {break;}
+      }
+      //check if something was found
+      if (dist_best < _maximum_matching_distance_triangulation) {
+
+        //ds add triangulation map entry
+        try {
+
+          const Index& row       = keypoints_left_[idx_L].row;
+          const Index& col_left  = keypoints_left_[idx_L].col;
+          assert(_framepoints_in_image[row][col_left] == 0);
+
+          //ds attempt the triangulation - might throw on failure
+          const PointCoordinates camera_coordinates(getCoordinatesInCameraLeft(keypoints_left_[idx_L].keypoint.pt, keypoints_right_[idx_best_R].keypoint.pt));
+
+          //ds add to framepoint map
+          _framepoints_in_image[row][col_left] = frame_->createNewPoint(keypoints_left_[idx_L].keypoint,
+                                                                        keypoints_left_[idx_L].descriptor,
+                                                                        keypoints_right_[idx_best_R].keypoint,
+                                                                        keypoints_right_[idx_best_R].descriptor,
+                                                                        camera_coordinates);
+          ++_number_of_available_points;
+
+          //ds reduce search space
+          idx_R = idx_best_R+1;
+        } catch (const ExceptionTriangulation& exception) {}
+      }
+    }
+  }
+
+  //ds adjusts the detector and matching thresholds to maintain constant detection (called within compute)
+  void StereoTriangulator::calibrateDetectionThresholds() {
+
+    //ds check if there's a significant loss in target points
+    if (_number_of_available_points < _target_number_of_points) {
+
+      //ds lower detector threshold if possible to get more points
+      if (_detector_threshold > _detector_threshold_minimum) {
+        _detector_threshold -= 5;
+
+#if CV_MAJOR_VERSION == 2
+        _feature_detector->setInt("threshold", _detector_threshold);
+#elif CV_MAJOR_VERSION == 3
+        _feature_detector->setThreshold(_detector_threshold);
+#else
+  #error OpenCV version not supported
+#endif
+      }
+
+      //ds increase matching threshold if possible to get more matches
+      if (_matching_distance_tracking_threshold < _matching_distance_tracking_threshold_maximum) {
+        _matching_distance_tracking_threshold += 1;
+      }
+    }
+
+    //ds of if there is a overflow of points
+    else if (_number_of_available_points > _target_number_of_points) {
+
+      //ds raise detector threshold if possible to get less points
+      if (_detector_threshold < _detector_threshold_maximum) {
+        _detector_threshold += 5;
+#if CV_MAJOR_VERSION == 2
+        _feature_detector->setInt("threshold", _detector_threshold);
+#elif CV_MAJOR_VERSION == 3
+        _feature_detector->setThreshold(_detector_threshold);
+#else
+  #error OpenCV version not supported
+#endif
+      }
+
+      //ds decrease matching threshold if possible to get less matches
+      if (_matching_distance_tracking_threshold > _matching_distance_tracking_threshold_minimum) {
+        _matching_distance_tracking_threshold -= 1;
+      }
+    }
+  }
+
+  //ds computes 3D position of a stereo keypoint pair in the keft camera frame (called within findStereoKeypoints)
+  const PointCoordinates StereoTriangulator::getCoordinatesInCameraLeft(const cv::Point2f& image_coordinates_left_, const cv::Point2f& image_coordinates_right_) const {
+
+    //ds check for minimal disparity
+    if (image_coordinates_left_.x-image_coordinates_right_.x < _minimum_disparity_pixels) {
+      throw ExceptionTriangulation("disparity value to low");
+    }
+
+    //ds input validation
+    assert(image_coordinates_right_.x < image_coordinates_left_.x);
+    assert(image_coordinates_right_.y == image_coordinates_left_.y);
+
+    //ds first compute depth (z in camera)
+    const real depth_meters = _baseline_pixelsmeters/(image_coordinates_right_.x-image_coordinates_left_.x);
+    assert(depth_meters >= 0);
+    const real depth_meters_per_pixel = depth_meters/_focal_length_pixels;
+
+    //ds set 3d point
+    const PointCoordinates coordinates_in_camera(depth_meters_per_pixel*(image_coordinates_left_.x-_focal_center_x_pixels),
+                                                 depth_meters_per_pixel*(image_coordinates_left_.y-_focal_center_y_pixels),
+                                                 depth_meters);
+
+    //ds return triangulated point
+    return coordinates_in_camera;
   }
 }

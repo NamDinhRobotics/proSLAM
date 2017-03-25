@@ -55,22 +55,13 @@ namespace proslam {
     inline const FramePointPtrVector& points() const {return _points;}
     inline FramePointPtrVector& points() {return _points;}
 
-    //ds stereo point factory method 1
+    //ds request new framepoint with optional link to a previous point (track)
     FramePoint* createNewPoint(const cv::KeyPoint& keypoint_left_,
                                const cv::Mat& descriptor_left_,
                                const cv::KeyPoint& keypoint_right_,
                                const cv::Mat& descriptor_right_,
-                               const real& depth_meters_,
-                               const PointCoordinates& coordinates_in_robot_);
-
-    //ds stereo factory method 2
-    FramePoint* createNewPoint(const cv::KeyPoint& keypoint_left_,
-                               const cv::Mat& descriptor_left_,
-                               const cv::KeyPoint& keypoint_right_,
-                               const cv::Mat& descriptor_right_,
-                               const real& depth_meters_,
-                               const PointCoordinates& coordinates_in_robot_,
-                               FramePoint* previous_point_);
+                               const PointCoordinates& camera_coordinates_left_,
+                               FramePoint* previous_point_ = 0);
 
     inline const IntensityImage& intensityImageLeft() const {return _intensity_image_left;}
     inline void setIntensityImageLeft(const IntensityImage& intensity_image_)  {_intensity_image_left = intensity_image_.clone();}

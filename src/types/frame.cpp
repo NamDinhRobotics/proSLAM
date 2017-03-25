@@ -96,48 +96,12 @@ namespace proslam {
     updateSubContext();
   }
 
+  //ds request new framepoint with optional link to a previous point (track)
   FramePoint* Frame::createNewPoint(const cv::KeyPoint& keypoint_left_,
                                     const cv::Mat& descriptor_left_,
                                     const cv::KeyPoint& keypoint_right_,
                                     const cv::Mat& descriptor_right_,
-                                    const real& depth_meters_,
-                                    const PointCoordinates& coordinates_in_robot_) {
-
-    //ds allocate a new point connected to the previous one
-    FramePoint* frame_point = new FramePoint(keypoint_left_,
-                                             descriptor_left_,
-                                             keypoint_right_,
-                                             descriptor_right_,
-                                             this);
-
-    //ds this point has no predecessor
-    frame_point->setRoot(frame_point);
-
-    //ds update spatials
-    frame_point->setRobotCoordinates(coordinates_in_robot_);
-
-    //ds update depth based on quality
-    frame_point->setDepth(depth_meters_);
-    if (depth_meters_ < _maximum_depth_close) {
-      frame_point->setIsClose(true);
-    }
-
-    //ds update point status
-    if (frame_point->age() > minimum_image_age) {
-      frame_point->setStatus(FramePoint::Confirmed);
-    }
-    if (frame_point->age() > minimum_landmark_age) {
-      frame_point->setStatus(FramePoint::Persistent);
-    }
-    return frame_point;
-  }
-
-  FramePoint* Frame::createNewPoint(const cv::KeyPoint& keypoint_left_,
-                                    const cv::Mat& descriptor_left_,
-                                    const cv::KeyPoint& keypoint_right_,
-                                    const cv::Mat& descriptor_right_,
-                                    const real& depth_meters_,
-                                    const PointCoordinates& coordinates_in_robot_,
+                                    const PointCoordinates& camera_coordinates_left_,
                                     FramePoint* previous_point_) {
 
     //ds allocate a new point connected to the previous one
@@ -145,15 +109,24 @@ namespace proslam {
                                              descriptor_left_,
                                              keypoint_right_,
                                              descriptor_right_,
-                                             this,
-                                             previous_point_);
+                                             this);
+    frame_point->setCameraCoordinatesLeft(camera_coordinates_left_);
+    frame_point->setRobotCoordinates(cameraLeft()->cameraToRobot()*camera_coordinates_left_);
 
-    //ds update spatials
-    frame_point->setRobotCoordinates(coordinates_in_robot_);
+    //ds if the point is not linked (no track)
+    if (previous_point_ == 0) {
+
+      //ds this point has no predecessor
+      frame_point->setRoot(frame_point);
+    } else {
+
+      //ds connect the framepoints
+      frame_point->setPrevious(previous_point_);
+    }
 
     //ds update depth based on quality
-    frame_point->setDepth(depth_meters_);
-    if (depth_meters_ < _maximum_depth_close) {
+    frame_point->setDepth(camera_coordinates_left_.z());
+    if (frame_point->depth() < _maximum_depth_close) {
       frame_point->setIsClose(true);
     }
 

@@ -19,8 +19,8 @@ namespace proslam {
     assert(_aligner != 0);
 
     //ds configure aligner
-    _aligner->setMaximumDepthClose(StereoTriangulator::maximum_depth_close);
-    _aligner->setMaximumDepthFar(StereoTriangulator::maximum_depth_far);
+    _aligner->setMaximumDepthClose(_preprocessor->maximumDepthCloseMeters());
+    _aligner->setMaximumDepthFar(_preprocessor->maximumDepthFarMeters());
 
     //ds clear buffers
     _projected_image_coordinates_left.clear();
@@ -61,8 +61,8 @@ namespace proslam {
       //ds narrow search limit closer to projection when we're in tracking mode
       _pixel_distance_tracking = _pixel_distance_tracking_minimum;
     }
-    const real _maximum_matching_distance_tracking_point  = _preprocessor->maximumTrackingMatchingDistance();
-    const real _maximum_matching_distance_tracking_region = _preprocessor->maximumTrackingMatchingDistance();
+    const real _maximum_matching_distance_tracking_point  = _preprocessor->matchingDistanceTrackingThreshold();
+    const real _maximum_matching_distance_tracking_region = _preprocessor->matchingDistanceTrackingThreshold();
 
     //ds loop over all past points
     for (Index index_point_previous = 0; index_point_previous < previous_frame_->points().size(); ++index_point_previous) {
@@ -92,11 +92,11 @@ namespace proslam {
       //ds locate best match
       for (int32_t row_point = row_start_point; row_point < row_end_point; ++row_point) {
         for (int32_t col_point = col_start_point; col_point < col_end_point; ++col_point) {
-          if (_preprocessor->framepointMap()[row_point][col_point].is_available) {
+          if (_preprocessor->framepointsInImage()[row_point][col_point]) {
             const int32_t pixel_distance = std::fabs(row_projection-row_point)+std::fabs(col_projection-col_point);
             const real matching_distance = cv::norm(previous_point->descriptorLeft(),
-                                                       _preprocessor->framepointMap()[row_point][col_point].descriptor_left,
-                                                       DESCRIPTOR_NORM);
+                                                    _preprocessor->framepointsInImage()[row_point][col_point]->descriptorLeft(),
+                                                    DESCRIPTOR_NORM);
 
             if (pixel_distance < pixel_distance_best && matching_distance < _maximum_matching_distance_tracking_point) {
               pixel_distance_best = pixel_distance;
@@ -114,13 +114,9 @@ namespace proslam {
         if ((row_best-row_previous)*(row_best-row_previous)+(col_best-col_previous)*(col_best-col_previous) < _maximum_flow_pixels_squared) {
 
           //ds allocate a new point connected to the previous one
-          FramePoint* current_point = current_frame_->createNewPoint(_preprocessor->framepointMap()[row_best][col_best].keypoint_left,
-                                                                    _preprocessor->framepointMap()[row_best][col_best].descriptor_left,
-                                                                    _preprocessor->framepointMap()[row_best][col_best].keypoint_right,
-                                                                    _preprocessor->framepointMap()[row_best][col_best].descriptor_right,
-                                                                    _preprocessor->framepointMap()[row_best][col_best].camera_coordinates_left.z(),
-                                                                    current_frame_->cameraLeft()->cameraToRobot()*_preprocessor->framepointMap()[row_best][col_best].camera_coordinates_left,
-                                                                    previous_point);
+          FramePoint* current_point = _preprocessor->framepointsInImage()[row_best][col_best];
+          current_point->setPrevious(previous_point);
+
           //ds set the point to the control structure
           current_frame_->points()[_number_of_tracked_points] = current_point;
           if (current_point->landmark()) {
@@ -136,7 +132,7 @@ namespace proslam {
           ++_number_of_tracked_points;
 
           //ds disable further matching and reduce search time
-          _preprocessor->framepointMap()[row_best][col_best].is_available = false;
+          _preprocessor->framepointsInImage()[row_best][col_best] = 0;
           continue;
         }
       }
@@ -153,7 +149,7 @@ namespace proslam {
       //ds locate best match
       for (int32_t row_region = row_start_region; row_region < row_end_region; ++row_region) {
         for (int32_t col_region = col_start_region; col_region < col_end_region; ++col_region) {
-          if (_preprocessor->framepointMap()[row_region][col_region].is_available) {
+          if (_preprocessor->framepointsInImage()[row_region][col_region]) {
 
             //ds if area has not been already evaluated in previous stage
             if (row_region < row_start_point||
@@ -163,8 +159,8 @@ namespace proslam {
 
               const int32_t pixel_distance = std::fabs(row_projection-row_region)+std::fabs(col_projection-col_region);
               const real matching_distance = cv::norm(previous_point->descriptorLeft(),
-                                                         _preprocessor->framepointMap()[row_region][col_region].descriptor_left,
-                                                         DESCRIPTOR_NORM);
+                                                      _preprocessor->framepointsInImage()[row_region][col_region]->descriptorLeft(),
+                                                      DESCRIPTOR_NORM);
 
               if (pixel_distance < pixel_distance_best && matching_distance < _maximum_matching_distance_tracking_region) {
                 pixel_distance_best = pixel_distance;
@@ -183,13 +179,9 @@ namespace proslam {
         if ((row_best-row_previous)*(row_best-row_previous)+(col_best-col_previous)*(col_best-col_previous) < _maximum_flow_pixels_squared) {
 
           //ds allocate a new point connected to the previous one
-          FramePoint* current_point = current_frame_->createNewPoint(_preprocessor->framepointMap()[row_best][col_best].keypoint_left,
-                                                                     _preprocessor->framepointMap()[row_best][col_best].descriptor_left,
-                                                                     _preprocessor->framepointMap()[row_best][col_best].keypoint_right,
-                                                                     _preprocessor->framepointMap()[row_best][col_best].descriptor_right,
-                                                                     _preprocessor->framepointMap()[row_best][col_best].camera_coordinates_left.z(),
-                                                                     current_frame_->cameraLeft()->cameraToRobot()*_preprocessor->framepointMap()[row_best][col_best].camera_coordinates_left,
-                                                                     previous_point);
+          FramePoint* current_point = _preprocessor->framepointsInImage()[row_best][col_best];
+          current_point->setPrevious(previous_point);
+
           //ds set the point to the control structure
           current_frame_->points()[_number_of_tracked_points] = current_point;
           if (current_point->landmark()) {
@@ -205,7 +197,7 @@ namespace proslam {
           ++_number_of_tracked_points;
 
           //ds disable further matching and reduce search time
-          _preprocessor->framepointMap()[row_best][col_best].is_available = false;
+          _preprocessor->framepointsInImage()[row_best][col_best] = 0;
           continue;
         }
       }
@@ -233,21 +225,16 @@ namespace proslam {
     //ds make space for all remaining points
     frame_->points().resize(_number_of_potential_points+_number_of_lost_points_recovered);
 
-    //ds check triangulation map for unmatched points TODO this can be done faster
+    //ds check triangulation map for unmatched points
     Index index_point_new = _number_of_tracked_points;
     for (uint32_t row = 0; row < _preprocessor->numberOfRowsImage(); ++row) {
       for (uint32_t col = 0; col < _preprocessor->numberOfColsImage(); ++col) {
-        if (_preprocessor->framepointMap()[row][col].is_available) {
+        if (_preprocessor->framepointsInImage()[row][col]) {
 
           //ds create a new point
-          frame_->points()[index_point_new] = frame_->createNewPoint(_preprocessor->framepointMap()[row][col].keypoint_left,
-                                                                     _preprocessor->framepointMap()[row][col].descriptor_left,
-                                                                     _preprocessor->framepointMap()[row][col].keypoint_right,
-                                                                     _preprocessor->framepointMap()[row][col].descriptor_right,
-                                                                     _preprocessor->framepointMap()[row][col].camera_coordinates_left.z(),
-                                                                     frame_->cameraLeft()->cameraToRobot()*_preprocessor->framepointMap()[row][col].camera_coordinates_left);
+          frame_->points()[index_point_new] = _preprocessor->framepointsInImage()[row][col];
           ++index_point_new;
-          _preprocessor->framepointMap()[row][col].is_available = false;
+          _preprocessor->framepointsInImage()[row][col] = 0;
         }
       }
     }
@@ -370,7 +357,6 @@ namespace proslam {
                                                const TransformMatrix3D& initial_guess_world_previous_to_current_) {
 
     //ds reset point configurations
-    _number_of_potential_points      = 0;
     _number_of_tracked_points        = 0;
     _number_of_lost_points           = 0;
     _number_of_lost_points_recovered = 0;
@@ -383,14 +369,15 @@ namespace proslam {
     context_->setRobotToWorldPrevious(robot_to_world_current);
 
     //ds create new frame (memory lock expected)
-    Frame* current_frame = context_->createFrame(robot_to_world_current, StereoTriangulator::maximum_depth_close);
+    Frame* current_frame = context_->createFrame(robot_to_world_current, _preprocessor->maximumDepthCloseMeters());
     current_frame->setCameraLeft(_camera_left);
     current_frame->setIntensityImageLeft(intensity_image_left_);
     current_frame->setCameraRight(_camera_right);
     current_frame->setIntensityImageRight(intensity_image_right_);
 
     //ds compute full sensory prior for the current frame
-    _number_of_potential_points = _preprocessor->triangulate(current_frame);
+    _preprocessor->compute(current_frame);
+    _number_of_potential_points = _preprocessor->numberOfAvailablePoints();
 
     //ds if available - attempt to track the points from the previous frame
     if (current_frame->previous()) {
@@ -481,39 +468,18 @@ namespace proslam {
         //ds if we don't have enough inliers - trigger fallback posit on last position
         if (number_of_inliers < _minimum_number_of_landmarks_to_track) {
 
-          //ds trigger identity movement posit
-          CHRONOMETER_START(pose_optimization)
-          context_->landmarks().clearActive();
-          _aligner->init(current_frame, current_frame->previous()->robotToWorld());
-          _aligner->setWeightFramepoint(std::max(weight_framepoint, static_cast<real>(0.1)));
-          _aligner->converge();
-          CHRONOMETER_STOP(pose_optimization)
+          //ds reset state
+          std::cerr << "LOST TRACK due to invalid position optimization" << std::endl;
+          _status_previous = Frame::Localizing;
+          _status          = Frame::Localizing;
+          current_frame->setStatus(_status);
+          current_frame->points().clear();
 
-          //ds update stats
-          number_of_inliers         = _aligner->numberOfInliers();
-          world_previous_to_current = _aligner->robotToWorld()*current_frame->previous()->robotToWorld().inverse();
-          delta_angular             = WorldMap::toOrientationRodrigues(world_previous_to_current.linear()).norm();
-          delta_translational       = world_previous_to_current.translation().norm();
-
-          //ds check if still insufficient
-          if (number_of_inliers < _minimum_number_of_landmarks_to_track) {
-
-            //ds reset state
-            std::cerr << "LOST TRACK due to invalid position optimization" << std::endl;
-            _status_previous = Frame::Localizing;
-            _status          = Frame::Localizing;
-            current_frame->setStatus(_status);
-            current_frame->points().clear();
-
-            //ds keep previous solution
-            current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
-            world_previous_to_current = TransformMatrix3D::Identity();
-            context_->setRobotToWorldPrevious(current_frame->robotToWorld());
-            return world_previous_to_current;
-          }
-
-          std::cerr << "Tracker::addImage|WARNING: using posit on identiy motion model (experimental) inliers: " << _aligner->numberOfInliers()
-                    << " outliers: " << _aligner->numberOfOutliers() << " average error: " << _aligner->totalError()/_aligner->numberOfInliers() <<  std::endl;
+          //ds keep previous solution
+          current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
+          world_previous_to_current = TransformMatrix3D::Identity();
+          context_->setRobotToWorldPrevious(current_frame->robotToWorld());
+          return world_previous_to_current;
         }
 
         //ds if the posit result is significant enough
@@ -678,21 +644,22 @@ namespace proslam {
       }
       keypoint_buffer_right[0].pt += corner_right;
 
-      if (cv::norm(point_previous->descriptorLeft(), descriptor_left, DESCRIPTOR_NORM) < _preprocessor->maximumTrackingMatchingDistance()      &&
-          cv::norm(point_previous->descriptorRight(), descriptor_right, DESCRIPTOR_NORM) < _preprocessor->maximumTrackingMatchingDistance()) {
-        try{
+      if (cv::norm(point_previous->descriptorLeft(), descriptor_left, DESCRIPTOR_NORM) < _preprocessor->matchingDistanceTrackingThreshold()      &&
+          cv::norm(point_previous->descriptorRight(), descriptor_right, DESCRIPTOR_NORM) < _preprocessor->matchingDistanceTrackingThreshold()) {
+        try {
 
           //ds triangulate point
-          const PointCoordinates camera_coordinates(_preprocessor->getCoordinatesInCamera(keypoint_buffer_left[0].pt, keypoint_buffer_right[0].pt));
+          const PointCoordinates camera_coordinates(_preprocessor->getCoordinatesInCameraLeft(keypoint_buffer_left[0].pt, keypoint_buffer_right[0].pt));
 
           //ds allocate a new point connected to the previous one
           FramePoint* current_point = current_frame->createNewPoint(keypoint_buffer_left[0],
                                                                     descriptor_left,
                                                                     keypoint_buffer_right[0],
                                                                     descriptor_right,
-                                                                    camera_coordinates.z(),
-                                                                    current_frame->cameraLeft()->cameraToRobot()*camera_coordinates,
+                                                                    camera_coordinates,
                                                                     point_previous);
+          current_point->setRobotCoordinates(current_frame->cameraLeft()->cameraToRobot()*camera_coordinates);
+
           //ds set the point to the control structure
           current_frame->points()[index_lost_point_recovered] = current_point;
           ++index_lost_point_recovered;
