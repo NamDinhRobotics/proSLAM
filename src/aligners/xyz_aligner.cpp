@@ -114,12 +114,12 @@ namespace proslam {
 
         //ds if the solution is acceptable
         if (_number_of_inliers > _minimum_number_of_inliers && inlier_ratio > _minimum_inlier_ratio) {
-          std::printf( "XYZAligner::converge|found closure: [%06lu] > [%06lu] (correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu, kernel size: %5.3f)\n",
+          std::printf( "XYZAligner::converge|found   alignment for local maps [%06lu] > [%06lu] (correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu, kernel size: %5.3f)\n",
           _context->id_query, _context->id_reference, _context->correspondences.size( ), iteration, inlier_ratio, _number_of_inliers, _maximum_error_kernel );
           _context->is_valid = true;
           break;
         } else {
-          std::printf( "XYZAligner::converge|dropped closure: [%06lu] > [%06lu] (correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu, kernel size: %5.3f)\n",
+          std::printf( "XYZAligner::converge|dropped alignment for local maps [%06lu] > [%06lu] (correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu, kernel size: %5.3f)\n",
           _context->id_query, _context->id_reference, _context->correspondences.size( ), iteration, inlier_ratio, _number_of_inliers, _maximum_error_kernel );
           _context->is_valid = false;
           break;

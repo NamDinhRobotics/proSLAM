@@ -34,7 +34,7 @@ namespace proslam {
     glMultMatrixf(camera_to_world_pose.cast<float>().data());
 
     //ds check if the frame is a closed keyframe and highlight it accordingly
-    if (frame_->isLocalMapAnchor() && (static_cast<const LocalMap*>(frame_))->closures().size() > 0) {
+    if (frame_->isLocalMapAnchor() && frame_->localMap()->closures().size() > 0) {
       glColor3f(0.0, 1.0, 0.0);
     } else {
       glColor3f(color_rgb_.x(), color_rgb_.y(), color_rgb_.z());
@@ -45,7 +45,7 @@ namespace proslam {
 
     //ds draw pure odometry pose in red
     if (_ground_truth_drawn) {
-      const TransformMatrix3D camera_to_world_pose_odometry = frame_->robotToWorldOdometry()*camera->cameraToRobot();
+      const TransformMatrix3D camera_to_world_pose_odometry = frame_->robotToWorldGroundTruth()*camera->cameraToRobot();
       glPushMatrix();
       glMultMatrixf(camera_to_world_pose_odometry.cast<float>().data());
       glColor3f(1.0, 0.0, 0.0);
@@ -57,16 +57,16 @@ namespace proslam {
   void ViewerOutputMap::drawLandmarks() {
     glPointSize(_point_size);
     glBegin(GL_POINTS);
-    for (LandmarkPtrMap::iterator it=_context->landmarks().begin(); it!=_context->landmarks().end(); it++) {
+    for (LandmarkPointerMap::iterator it=_context->landmarks().begin(); it!=_context->landmarks().end(); it++) {
 
       //ds buffer landmark
       const Landmark* landmark = it->second;
 
       //ds if in context
-      if (landmark->isContained() && landmark->isValidated() && (landmark->numberOfUpdates() > 3 || landmark->isActive() || landmark->isClosed())) {
+      if ((_is_open || landmark->isInPoseGraph()) && landmark->areCoordinatesValidated()) {
         Vector3 color = Vector3(0, 0, 0);
-        if (landmark->isActive() && landmark->isValidated()) {
-          if (landmark->isClose()) {
+        if (landmark->isActive() && landmark->areCoordinatesValidated()) {
+          if (landmark->isNear()) {
             color = Vector3(0.0, 0.0, 1.0);
           } else {
             color = Vector3(1.0, 0.0, 1.0);

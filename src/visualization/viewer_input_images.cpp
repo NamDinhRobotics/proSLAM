@@ -37,13 +37,13 @@ namespace proslam {
         cv::Scalar color = CV_COLOR_CODE_WHITE;
 
         //ds compute intensity -> old landmarks appear brighter
-        const real intensity = std::min(static_cast<real>(1.0), point->age()/static_cast<real>(25));
+        const real intensity = std::min(static_cast<real>(1.0), point->trackLength()/static_cast<real>(25));
 
         //ds check validity
-        if (point->landmark()->isValidated()) {
+        if (point->landmark()->areCoordinatesValidated()) {
 
           //ds check landmark kind: by vision or by depth
-          if (point->landmark()->isClose()) {
+          if (point->landmark()->isNear()) {
             color = cv::Scalar(100+intensity*155, 0, 0);
           } else {
             color = cv::Scalar(100+intensity*155, 0, 100+intensity*155);
@@ -80,7 +80,7 @@ namespace proslam {
       if (frame_point->landmark()) {
 
         //ds compute intensity -> old landmarks appear brighter
-        const real intensity = std::min(static_cast<real>(1.0), frame_point->age()/static_cast<real>(25));
+        const real intensity = std::min(static_cast<real>(1.0), frame_point->trackLength()/static_cast<real>(25));
         const cv::Point current_point(frame_point->imageCoordinatesLeft().x(), frame_point->imageCoordinatesLeft().y());
         const cv::Point previous_point(frame_point->previous()->imageCoordinatesLeft().x(), frame_point->previous()->imageCoordinatesLeft().y());
         cv::line(_current_image, current_point, previous_point, cv::Scalar(0, 100+intensity*155, 0));

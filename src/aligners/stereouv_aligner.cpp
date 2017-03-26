@@ -51,7 +51,7 @@ namespace proslam {
 
       //ds compute the point in the camera frame
       PointCoordinates sampled_point_in_camera_left = PointCoordinates::Zero();
-      if (landmark && landmark->isValidated()) {
+      if (landmark && landmark->areCoordinatesValidated()) {
         sampled_point_in_camera_left = _world_to_camera_left*landmark->coordinates();
       } else {
         sampled_point_in_camera_left = _world_to_camera_left*(_robot_to_world_previous*frame_point->previous()->robotCoordinates());

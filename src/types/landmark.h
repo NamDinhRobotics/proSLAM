@@ -3,153 +3,143 @@
 
 namespace proslam {
 
+  //ds this class represents a salient 3D point in the world, perceived in a sequence of images
   class Landmark {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds exported types
   public:
 
-    //ds converter TODO remove!
-    inline static HBSTMatchable::BinaryDescriptor getDescriptor(const cv::Mat& descriptor_cv_) {
-      HBSTMatchable::BinaryDescriptor binary_descriptor(DESCRIPTOR_SIZE_BITS);
-      for (uint32_t byte_index = 0 ; byte_index < DESCRIPTOR_SIZE_BYTES; ++byte_index) {
+    //ds inner forward declarations
+    struct State;
 
-        //ds get minimal datafrom cv::mat
-        const uchar value = descriptor_cv_.at<uchar>(byte_index);
-
-        //ds get bitstring
-        for (uint8_t v = 0; v < 8; ++v) {
-          binary_descriptor[byte_index*8+v] = (value >> v) & 1;
-        }
-      }
-      return binary_descriptor;
-    }
-
-    //ds landmark snapshot for a local map
-    struct Item;
+    //ds container encapsulating the visual information of the appearance of a landmark in an image
     struct Appearance {
-      EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-
-      Appearance(const Item* item_,
-                 const cv::Mat& descriptor_cv_): item(item_),
-                                                 descriptor_cv(descriptor_cv_),
+      Appearance(const State* landmark_state_,
+                 const cv::Mat& descriptor_cv_): landmark_state(landmark_state_),
                                                  descriptor(getDescriptor(descriptor_cv_)) {}
 
-      const Item* item;
-      const cv::Mat descriptor_cv;
+      const State* landmark_state;
       const HBSTMatchable::BinaryDescriptor descriptor;
     };
     typedef std::vector<const Appearance*> AppearancePtrVector;
 
-    struct Item {
-      EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
-      Item(Landmark* landmark_): landmark(landmark_) {
+    //ds container describing the landmark at the time of local map construction
+    struct State {
+      State(Landmark* landmark_): landmark(landmark_) {
         appearances.clear();
       }
-      ~Item() {
+      ~State() {
         for (const Appearance* appearance: appearances) {
           delete appearance;
         }
         appearances.clear();
       }
 
-      Landmark* landmark = 0;
+      Landmark* landmark;
       AppearancePtrVector appearances;
       PointCoordinates robot_coordinates;
-      LocalMap* local_map = 0;
+      const LocalMap* local_map = 0;
     };
-    typedef std::vector<Item*> ItemPointerVector;
+    typedef std::vector<State*> StatePointerVector;
 
-  //ds object handling
+  //ds object handling: specific instantiation controlled by WorldMap class (factory)
   protected:
 
-    //ds owned by world map
+    //ds initial landmark coordinates must be provided
     Landmark(const PointCoordinates& point_coordinates_);
+
+    //ds cleanup of dynamic structures
     ~Landmark();
+
+    //ds prohibit default construction
     Landmark() = delete;
 
+  //ds getters/setters
   public:
 
-    //ds point with index
-    inline const Index index() const {return _index;}
+    //ds unique identifier for a landmark (exists once in memory)
+    inline const Index identifier() const {return _identifier;}
+
     inline const PointCoordinates& coordinates() const { return _coordinates; }
     inline void setCoordinates(const PointCoordinates& coordinates_) {_coordinates = coordinates_;}
-    inline Item* item() {return _item;}
-    inline void releaseItem() {_item = new Item(this);}
 
-    inline const bool isValidated() const {return _is_validated;}
-    inline const bool isActive() const {return _is_active; }
-    inline void setIsActive(const bool& is_active) {_is_active = is_active;}
-    inline const bool isOptimized() const {return _is_optimized; }
-    inline void setIsOptimized(const bool& is_optimized_) {_is_optimized = is_optimized_;}
-    inline const bool isClose() const {return _is_close;}
-    inline void setIsClose(const bool& is_close_) {_is_close = is_close_;}
-    inline const bool isContained() const {return _is_contained;}
-    inline void setIsContained(const bool& is_contained_) {_is_contained = is_contained_;}
-    inline const bool isInLoopClosureQuery() const {return _is_in_loop_closure_query;}
-    inline const bool isInLoopClosureReference() const {return _is_in_loop_closure_reference;}
-    inline void setIsInLoopClosureQuery(const bool& is_in_loop_closure_query_) {_is_in_loop_closure_query = is_in_loop_closure_query_;}
-    inline void setIsInLoopClosureReference(const bool& is_in_loop_closure_reference_) {_is_in_loop_closure_reference = is_in_loop_closure_reference_;}
-    inline void setIsClosed(const bool& is_closed_) {_is_closed = is_closed_;}
-    inline const bool isClosed() const {return _is_closed;}
+    //ds reset landmark coordinates to a certain position (loss of past measurements!)
+    void resetCoordinates(const PointCoordinates& coordinates_);
 
-    inline FramePoint* firstObservation() const {return _first_observation;}
-    inline void firstObservation(FramePoint* first_observation) { _first_observation=first_observation;}
+    //ds landmark state - locked inside a local map and refreshed afterwards
+    inline State* state() {return _state;}
+    inline void refreshState() {_state = new State(this);}
 
-    //ds landmark coordinates update
+    inline const bool areCoordinatesValidated() const {return _are_coordinates_validated;}
+    inline const bool isInPoseGraph() const {return _is_in_pose_graph; }
+    inline void setIsInPoseGraph(const bool& is_in_pose_graph_) {_is_in_pose_graph = is_in_pose_graph_;}
+
+    //ds landmark coordinates update - no visual information (e.g. map optimization)
     void update(const PointCoordinates& coordinates_in_world_,
                 const real& depth_meters_ = 1);
+
+    //ds landmark coordinates update with visual information (tracking)
     void update(const PointCoordinates& coordinates_in_world_,
                 const cv::Mat& descriptor_left_,
                 const cv::Mat& descriptor_right_,
                 const real& depth_meters_);
 
-    //ds reset landmark coordinates to a certain position
-    void resetCoordinates(const PointCoordinates& coordinates_);
+    //ds visualization only
+    inline const bool isActive() const {return _is_active; }
+    inline void setIsActive(const bool& is_active) {_is_active = is_active;}
+    inline const bool isNear() const {return _is_near;}
+    inline void setIsNear(const bool& is_near_) {_is_near = is_near_;}
+    inline const bool isInLoopClosureQuery() const {return _is_in_loop_closure_query;}
+    inline const bool isInLoopClosureReference() const {return _is_in_loop_closure_reference;}
+    inline void setIsInLoopClosureQuery(const bool& is_in_loop_closure_query_) {_is_in_loop_closure_query = is_in_loop_closure_query_;}
+    inline void setIsInLoopClosureReference(const bool& is_in_loop_closure_reference_) {_is_in_loop_closure_reference = is_in_loop_closure_reference_;}
 
-    const Count numberOfUpdates() const {return _number_of_updates;}
-    const Count numberOfFailedUpdates() const {return _number_of_failed_updates;}
-
+  //ds attributes
   protected:
 
-    //ds point with index
-    const Identifier _index;
-    PointCoordinates _coordinates;
-    Item* _item;
+    //ds unique identifier for a landmark (exists once in memory)
+    const Identifier _identifier;
 
-    FramePoint* _first_observation = 0;
-    bool _is_validated = false;
-    bool _is_active    = false;
-    bool _is_optimized = false;
-    bool _is_close     = false;
-    bool _is_contained = true;
-    bool _is_closed    = false;
+    //ds the 3D point coordinates of the landmark expressed in the WorldMap coordinate frame
+    PointCoordinates _coordinates;
+
+    //ds the current connected state handle (links the landmark to the local map)
+    State* _state;
+
+    //ds flags
+    bool _are_coordinates_validated = false;
+    bool _is_in_pose_graph          = false;
 
     //ds landmark coordinates optimization
-    std::vector<std::pair<real, PointCoordinates>> _measurements_test;
+    std::vector<std::pair<real, PointCoordinates>> _updates;
     PointCoordinates _coordinates_average_previous;
-    Count _number_of_updates        = 0;
-    Count _number_of_failed_updates = 0;
 
-    //ds visualization
+    //ds grant access to landmark factory
+    friend WorldMap;
+
+    //ds visualization only
+    bool _is_active                    = false;
+    bool _is_near                      = false;
     bool _is_in_loop_closure_query     = false;
     bool _is_in_loop_closure_reference = false;
 
-  //ds grant access to landmark producer
-  friend WorldMap;
-
+  //ds class specific
   private:
-    static Identifier _instances;
+
+    //ds inner instance count - incremented upon constructor call (also unsuccessful calls)
+    static Count _instances;
   };
   
-  typedef std::vector<Landmark*> LandmarkPtrVector;
-  typedef std::pair<int, Landmark*> LandmarkPtrMapElement;
+  typedef std::vector<Landmark*> LandmarkPointerVector;
+  typedef std::pair<Identifier, Landmark*> LandmarkPointerMapElement;
 
-  class LandmarkPtrMap: public std::map<int, Landmark*> {
+  class LandmarkPointerMap: public std::map<Identifier, Landmark*> {
   public:
-    Landmark* get(int index);
+    Landmark* get(const Identifier& identifier_);
     void put(Landmark* landmark);
+
+    //ds visualization only
     void clearActive(); 
   };
 }

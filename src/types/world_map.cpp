@@ -7,31 +7,20 @@ namespace proslam {
 
   WorldMap::WorldMap() {
     std::cerr << "WorldMap::WorldMap|constructing" << std::endl;
-    clear();
-    std::cerr << "WorldMap::WorldMap|constructed" << std::endl;
-  };
-
-  WorldMap::~WorldMap() {
-
-    std::cerr << "WorldMap::WorldMap|destroying" << std::endl;
-    for(LandmarkPtrMap::iterator it=_landmarks.begin(); it!=_landmarks.end(); it++)
-      delete it->second;
-
-    for(FramePtrMap::iterator it=_frames.begin(); it!=_frames.end(); it++)
-      delete it->second;
-    std::cerr << "WorldMap::WorldMap|destroyed" << std::endl;
-  }
-
-  void WorldMap::clear() {
-    _root_frame        = 0;
-    _current_frame     = 0;
-    _previous_frame    = 0;
-    _current_local_map = 0;
     _frame_queue_for_local_map.clear();
     _landmarks.clear();
     _frames.clear();
     _local_maps.clear();
-    setRobotToWorldPrevious(TransformMatrix3D::Identity());
+    std::cerr << "WorldMap::WorldMap|constructed" << std::endl;
+  };
+
+  WorldMap::~WorldMap() {
+    std::cerr << "WorldMap::WorldMap|destroying" << std::endl;
+    for(LandmarkPointerMap::iterator it = _landmarks.begin(); it != _landmarks.end(); ++it)
+      delete it->second;
+    for(FramePtrMap::iterator it = _frames.begin(); it != _frames.end(); ++it)
+      delete it->second;
+    std::cerr << "WorldMap::WorldMap|destroyed" << std::endl;
   }
   
   Frame* WorldMap::createFrame(const TransformMatrix3D& frame_to_world_guess_, const real& maximum_depth_close_){
@@ -79,7 +68,7 @@ namespace proslam {
       //ds reset generation properties
       resetWindow();
 
-      //ds current frame is now a keyframe - update structures
+      //ds current frame is now center of a local map - update structures
       _current_frame = _current_local_map;
       _frames.replace(_current_frame);
 
@@ -103,21 +92,15 @@ namespace proslam {
                                        const TransformMatrix3D& transform_query_to_reference_) {
     query_->add(reference_, transform_query_to_reference_);
     _relocalized = true;
+
+    //ds informative only
+    ++_number_of_closures;
   }
 
   void WorldMap::resetWindow() {
-    _distance_traveled_window = 0.0;
-    _degrees_rotated_window   = 0.0;
-  }
-
-  void WorldMap::purifyLandmarks() {
-
-    //ds deactivate all landmarks which are not optimized
-    for (const LandmarkPtrMapElement landmark_element: _landmarks) {
-      if (!landmark_element.second->isOptimized()) {
-        landmark_element.second->setIsContained(false);
-      }
-    }
+    _distance_traveled_window = 0;
+    _degrees_rotated_window   = 0;
+    _frame_queue_for_local_map.clear();
   }
 
   //ds dump trajectory to file (in KITTI benchmark format only for now)

@@ -4,7 +4,7 @@
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/CameraInfo.h>
 
-#include "map_management/graph_optimizer.h"
+#include "map_optimization/graph_optimizer.h"
 #include "relocalization/relocalizer.h"
 #include "motion_estimation/tracker.h"
 #include "visualization/viewer_input_images.h"
@@ -219,7 +219,7 @@ void process(WorldMap* world_map_,
              const TransformMatrix3D& world_previous_to_current_estimate_) {
 
   //ds call the tracker
-  world_previous_to_current = tracker_->addImage(world_map_,
+  world_previous_to_current = tracker_->compute(world_map_,
                                                  intensity_image_left_,
                                                  intensity_image_right_,
                                                  world_previous_to_current_estimate_);
@@ -254,8 +254,8 @@ void process(WorldMap* world_map_,
                                                                    closure->transform_frame_query_to_frame_reference);
             if (use_gui) {
               for (const Correspondence* match: closure->correspondences) {
-                world_map_->landmarks().get(match->item_query->landmark->index())->setIsInLoopClosureQuery(true);
-                world_map_->landmarks().get(match->item_reference->landmark->index())->setIsInLoopClosureReference(true);
+                world_map_->landmarks().get(match->item_query->landmark->identifier())->setIsInLoopClosureQuery(true);
+                world_map_->landmarks().get(match->item_reference->landmark->identifier())->setIsInLoopClosureReference(true);
               }
             }
           }
@@ -268,9 +268,6 @@ void process(WorldMap* world_map_,
 
         //ds optimize graph
         mapper_->optimize(world_map_);
-
-        //ds wipe non-optimized landmarks
-        world_map_->purifyLandmarks();
       }
     }
   }

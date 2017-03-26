@@ -1,6 +1,6 @@
 add_subdirectory(aligners)
 add_subdirectory(executables)
-add_subdirectory(map_management)
+add_subdirectory(map_optimization)
 add_subdirectory(motion_estimation)
 add_subdirectory(relocalization)
 add_subdirectory(triangulation)

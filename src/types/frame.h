@@ -5,27 +5,43 @@
 
 namespace proslam {
   
+  //ds forward declarations
   class LocalMap;
   class WorldMap;
+
+  //ds this class encapsulates all data gained from the processing of a stereo image pair
   class Frame: public BaseContext {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
+  //ds exported types
   public:
 
     //ds defines one of the two tracker states
     enum Status {Localizing, Tracking};
+
+  //ds object handling
+  protected:
+
+    //ds frame construction in the WorldMap context
     Frame(const WorldMap* context_,
           Frame* previous_,
           Frame* next_,
           const TransformMatrix3D& robot_to_world_,
           const real& maximum_depth_close_);
+
+    //ds deep copy constructor
     Frame(Frame* frame_);
+
+    //ds FramePoints cleanup
     virtual ~Frame();
+
+    //ds prohibt default construction
     Frame() = delete;
 
+  //ds getters/setters
   public:
 
-    const Identifier& index() const {return _index;}
+    const Identifier& identifier() const {return _identifier;}
 
     inline Frame* previous() {return _previous;}
     inline const Frame* previous() const {return _previous;}
@@ -42,26 +58,26 @@ namespace proslam {
     inline void setCameraRight(const Camera* camera_) {_camera_right = camera_;}
 
     inline const TransformMatrix3D& robotToWorld() const {return _robot_to_world;}
-    void setRobotToWorld(const TransformMatrix3D& robot_to_world_);
+    virtual void setRobotToWorld(const TransformMatrix3D& robot_to_world_);
     inline const TransformMatrix3D& worldToRobot() const {return _world_to_robot;}
     
     inline const TransformMatrix3D& frameToLocalMap() const {return _frame_to_local_map;}
     inline const TransformMatrix3D& localMapToFrame() const {return _local_map_to_frame;}
 
     //ds visualization only
-    void setRobotToWorldOdometry(const TransformMatrix3D& robot_to_world_) {_robot_to_world_odometry = robot_to_world_;}
-    const TransformMatrix3D& robotToWorldOdometry() const {return _robot_to_world_odometry;}
+    void setRobotToWorldGroundTruth(const TransformMatrix3D& robot_to_world_ground_truth_) {_robot_to_world_ground_truth = robot_to_world_ground_truth_;}
+    const TransformMatrix3D& robotToWorldGroundTruth() const {return _robot_to_world_ground_truth;}
 
-    inline const FramePointPtrVector& points() const {return _points;}
-    inline FramePointPtrVector& points() {return _points;}
+    inline const FramePointPointerVector& points() const {return _points;}
+    inline FramePointPointerVector& points() {return _points;}
 
     //ds request new framepoint with optional link to a previous point (track)
-    FramePoint* createNewPoint(const cv::KeyPoint& keypoint_left_,
-                               const cv::Mat& descriptor_left_,
-                               const cv::KeyPoint& keypoint_right_,
-                               const cv::Mat& descriptor_right_,
-                               const PointCoordinates& camera_coordinates_left_,
-                               FramePoint* previous_point_ = 0);
+    FramePoint* create(const cv::KeyPoint& keypoint_left_,
+                       const cv::Mat& descriptor_left_,
+                       const cv::KeyPoint& keypoint_right_,
+                       const cv::Mat& descriptor_right_,
+                       const PointCoordinates& camera_coordinates_left_,
+                       FramePoint* previous_point_ = 0);
 
     inline const IntensityImage& intensityImageLeft() const {return _intensity_image_left;}
     inline void setIntensityImageLeft(const IntensityImage& intensity_image_)  {_intensity_image_left = intensity_image_.clone();}
@@ -76,53 +92,64 @@ namespace proslam {
 
     void setLocalMap(const LocalMap* local_map_);
     const LocalMap* localMap() const {return _local_map;}
-    bool isLocalMapAnchor() const;
+    void setIsLocalMapAnchor(const bool& is_local_map_anchor_) {_is_local_map_anchor = is_local_map_anchor_;}
+    const bool isLocalMapAnchor() const {return _is_local_map_anchor;}
 
     const Count countPoints(const Count min_age_,
 		                        const ThreeValued has_landmark_ = Unknown) const;
 
     void releaseImages();
+    void releasePoints();
 
-    //ds subcontext update: propagate changes to subcontext elements (e.g. frames in a keyframe)
-    virtual void updateSubContext();
-
+  //ds configuration attributes
   public:
 
     //ds singleton configuration
     static constexpr Count minimum_landmark_age = 3;
     static constexpr Count minimum_image_age    = 1;
 
+  //ds attributes
   protected:
 
-    const Identifier _index;
-    Status _status;
+    const Identifier _identifier;
+    Status _status   = Localizing;
     Frame* _previous = 0;
     Frame* _next     = 0;
 
     //ds frame point generation
-    FramePointPtrVector _points;
+    FramePointPointerVector _points;
 
     //ds spatials
-    TransformMatrix3D _frame_to_local_map      = TransformMatrix3D::Identity();
-    TransformMatrix3D _local_map_to_frame      = TransformMatrix3D::Identity();
-    TransformMatrix3D _robot_to_world          = TransformMatrix3D::Identity();
-    TransformMatrix3D _world_to_robot          = TransformMatrix3D::Identity();
-    TransformMatrix3D _robot_to_world_odometry = TransformMatrix3D::Identity();
+    TransformMatrix3D _frame_to_local_map = TransformMatrix3D::Identity();
+    TransformMatrix3D _local_map_to_frame = TransformMatrix3D::Identity();
+    TransformMatrix3D _robot_to_world     = TransformMatrix3D::Identity();
+    TransformMatrix3D _world_to_robot     = TransformMatrix3D::Identity();
 
-    //ds TODO refactor to support arbitrary camera constellations
+    //ds stereo camera configuration affiliated with this frame
     const Camera* _camera_left   = 0;
     const Camera* _camera_right  = 0;
 
-    //ds TODO refactor to support arbitrary number of rgb/depth image combinations
+    //ds to support arbitrary number of rgb/depth image combinations
     IntensityImage _intensity_image_left;
     IntensityImage _intensity_image_right;
     const real _maximum_depth_close = 0;
 
+    //ds link to a local map if the frame is part of one
     const LocalMap* _local_map = 0;
-    static Identifier _instances;
+    bool _is_local_map_anchor  = false;
 
-  friend class Tracker;
+    //ds visualization only
+    TransformMatrix3D _robot_to_world_ground_truth = TransformMatrix3D::Identity();
 
+    //ds access
+    friend class WorldMap;
+    friend class FramePtrMap;
+
+    //ds class specific
+    private:
+
+      //ds inner instance count - incremented upon constructor call (also unsuccessful calls)
+      static Count _instances;
   };
 
   typedef std::vector<Frame*> FramePtrVector;
@@ -134,6 +161,5 @@ namespace proslam {
     Frame* get(int index);
     void put(Frame* frame);
     void replace(Frame* frame);
-
   };
 }

@@ -1,36 +1,33 @@
 #include "frame.h"
-
 #include "local_map.h"
 
 namespace proslam {
 
-  Identifier Frame::_instances = 0;
+  Count Frame::_instances = 0;
 
   Frame::Frame(const WorldMap* context_,
                Frame* previous_,
                Frame* next_,
                const TransformMatrix3D& robot_to_world_,
-               const real& maximum_depth_close_): _index(_instances),
-                                                  _maximum_depth_close(maximum_depth_close_),
-                                                  _local_map(0) {
+               const real& maximum_depth_close_): _identifier(_instances),
+                                                  _maximum_depth_close(maximum_depth_close_) {
     ++_instances;
     setPrevious(previous_);
     setNext(next_);
     setRobotToWorld(robot_to_world_);
     _points.clear();
-    setStatus(Localizing);
   }
 
-  //ds "deep" copy ctor used in keyframe generation - unfortunately error prone as shit currently
-  Frame::Frame(Frame* frame_): _index(frame_->index()),
+  //ds deep copy constructor, used for local map generation
+  Frame::Frame(Frame* frame_): _identifier(frame_->identifier()),
                                _maximum_depth_close(frame_->maximumDepthClose()),
                                _local_map(frame_->localMap()) {
-    setCameraLeft(frame_->cameraLeft());
     setPrevious(frame_->previous());
     setNext(frame_->next());
-    _status=frame_->status();
+    _status = frame_->status();
 
-    //ds take over point references TODO improve keyframe generation copying
+    //ds take over point references
+    _points.clear();
     _points.insert(_points.end(), frame_->points().begin(), frame_->points().end());
     for (FramePoint* frame_point: _points) {
       frame_point->setFrame(this);
@@ -41,7 +38,7 @@ namespace proslam {
 
     _robot_to_world          = frame_->robotToWorld();
     _world_to_robot          = frame_->worldToRobot();
-    _robot_to_world_odometry = frame_->robotToWorldOdometry();
+    _robot_to_world_ground_truth = frame_->robotToWorldGroundTruth();
 
     _camera_left           = frame_->cameraLeft();
     _camera_right          = frame_->cameraRight();
@@ -62,22 +59,14 @@ namespace proslam {
     _local_map_to_frame = _frame_to_local_map.inverse();
   }
 
-  bool Frame::isLocalMapAnchor() const {
-    if (0 != _local_map) {
-      return (static_cast<const Frame*>(_local_map) == this);
-    } else {
-      return false;
-    }
-  }
-
   const Count Frame::countPoints(const Count min_age_,
                                  const ThreeValued has_landmark_) const {
     Count count = 0;
     for (const FramePoint* frame_point: points()){
-      if(frame_point->age() < min_age_) {
+      if(frame_point->trackLength() < min_age_) {
         continue;
       }
-      if(has_landmark_!=Unknown){
+      if(has_landmark_!= Unknown){
         if(has_landmark_ == True && !frame_point->landmark()) {
           continue;
         }
@@ -93,11 +82,10 @@ namespace proslam {
   void Frame::setRobotToWorld(const TransformMatrix3D& robot_to_world_) {
     _robot_to_world = robot_to_world_;
     _world_to_robot = _robot_to_world.inverse();
-    updateSubContext();
   }
 
   //ds request new framepoint with optional link to a previous point (track)
-  FramePoint* Frame::createNewPoint(const cv::KeyPoint& keypoint_left_,
+  FramePoint* Frame::create(const cv::KeyPoint& keypoint_left_,
                                     const cv::Mat& descriptor_left_,
                                     const cv::KeyPoint& keypoint_right_,
                                     const cv::Mat& descriptor_right_,
@@ -117,7 +105,7 @@ namespace proslam {
     if (previous_point_ == 0) {
 
       //ds this point has no predecessor
-      frame_point->setRoot(frame_point);
+      frame_point->setOrigin(frame_point);
     } else {
 
       //ds connect the framepoints
@@ -125,18 +113,11 @@ namespace proslam {
     }
 
     //ds update depth based on quality
-    frame_point->setDepth(camera_coordinates_left_.z());
-    if (frame_point->depth() < _maximum_depth_close) {
-      frame_point->setIsClose(true);
+    frame_point->setDepthMeters(camera_coordinates_left_.z());
+    if (frame_point->depthMeters() < _maximum_depth_close) {
+      frame_point->setIsNear(true);
     }
 
-    //ds update point status
-    if (frame_point->age() > minimum_image_age) {
-      frame_point->setStatus(FramePoint::Confirmed);
-    }
-    if (frame_point->age() > minimum_landmark_age) {
-      frame_point->setStatus(FramePoint::Persistent);
-    }
     return frame_point;
   }
 
@@ -152,20 +133,23 @@ namespace proslam {
     _intensity_image_right.release();
   }
 
-  void Frame::updateSubContext() {
-    //ds empty implementation in base
+  void Frame::releasePoints() {
+    for (const FramePoint* frame_point: _points) {
+      delete frame_point;
+    }
+    _points.clear();
   }
 
   void FramePtrMap::put(Frame* frame) {
-    FramePtrMap::iterator it=find(frame->index());
+    FramePtrMap::iterator it=find(frame->identifier());
     if (it!=end()){
       throw std::runtime_error("FramePtrMap::put(...), double insertion");
     }
-    insert(std::make_pair(frame->index(), frame));
+    insert(std::make_pair(frame->identifier(), frame));
   }
 
   void FramePtrMap::replace(Frame* frame) {
-    FramePtrMap::iterator it = find(frame->index());
+    FramePtrMap::iterator it = find(frame->identifier());
     if (it!=end()) {
       Frame* frame_to_be_replaced = it->second;
 

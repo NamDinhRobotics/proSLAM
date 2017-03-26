@@ -29,7 +29,7 @@ namespace proslam {
       Query(const LocalMap* keyframe_): keyframe(keyframe_),
                                         appearances(keyframe_->appearances()),
                                         matchables(getMatchables(appearances)),
-                                        hbst_tree(new HBSTTree(keyframe_->index(), matchables)) {}
+                                        hbst_tree(new HBSTTree(keyframe_->identifier(), matchables)) {}
       const LocalMap* keyframe = 0;
       const Landmark::AppearancePtrVector appearances;
       const HBSTNode::BinaryMatchableVector matchables;

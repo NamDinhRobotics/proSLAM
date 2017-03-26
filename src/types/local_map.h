@@ -3,72 +3,61 @@
 
 namespace proslam {
 
-  class LocalMap;
-  typedef std::vector<LocalMap*> LocalMapPointerVector;
-
+  //ds this class
   class LocalMap: public Frame {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds exported types
   public:
 
-      struct TransformMatrix3DWithInformation {
-        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+      //ds loop closure constraint element
+      struct Closure {
+      EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+        Closure(const LocalMap* local_map_,
+                const TransformMatrix3D& relation_): local_map(local_map_),
+                                                     relation(relation_) {}
 
-        TransformMatrix3DWithInformation(const TransformMatrix3D& transform_,
-                                         const Matrix6& information_): transform(transform_),
-                                                                       information(information_) {}
-
-        const TransformMatrix3D transform;
-        const Matrix6 information;
+        const LocalMap* local_map;
+        const TransformMatrix3D relation;
       };
-      struct LocalMapCorrespondence {
-        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
-        LocalMapCorrespondence(const LocalMap* keyframe_,
-                               const TransformMatrix3DWithInformation& relation_): keyframe(keyframe_),
-                                                                                   relation(relation_) {}
-
-        const LocalMap* keyframe = 0;
-        const TransformMatrix3DWithInformation relation;
-      };
-      typedef std::vector<LocalMapCorrespondence> KeyFrameCorrespondenceVector;
+      typedef std::vector<Closure> ClosureVector;
 
   //ds object handling
   protected:
 
     //ds owned by world map
     LocalMap(Frame* frame_for_context_, FramePtrVector& frames_);
+
+    //ds cleanup of dynamic structures
     virtual ~LocalMap();
+
+    //ds prohibit default construction
     LocalMap() = delete;
 
+  //ds getters/setters
   public:
 
-    //ds implement subcontext update
-    virtual void updateSubContext();
-
-  public:
-
-    //ds descriptor tracks for all landmarks contained in the given frame
-    const TransformMatrix3D& spatials() const {return robotToWorld();}
+    virtual void setRobotToWorld(const TransformMatrix3D& robot_to_world_);
     const Landmark::AppearancePtrVector& appearances() const {return _appearances;}
-    const Landmark::ItemPointerVector& items() const {return _items;}
+    const Landmark::StatePointerVector& landmarks() const {return _landmarks;}
+    void add(const LocalMap* local_map_reference_, const TransformMatrix3D& transform_query_to_reference_) {_closures.push_back(Closure(local_map_reference_, transform_query_to_reference_));}
+    const ClosureVector& closures() const {return _closures;}
 
-    void add(const LocalMap* keyframe_reference_,
-             const TransformMatrix3D transform_query_to_reference_,
-             const Matrix6& information_ = Matrix6::Identity()) {_matches.push_back(LocalMapCorrespondence(keyframe_reference_, TransformMatrix3DWithInformation(transform_query_to_reference_, information_)));}
-    const KeyFrameCorrespondenceVector& closures() const {return _matches;}
-
+  //ds attributes
   protected:
 
     Landmark::AppearancePtrVector _appearances;
-    KeyFrameCorrespondenceVector _matches;
-    Landmark::ItemPointerVector _items;
-    FramePtrVector _subcontext;
-    static constexpr Count _minimum_number_of_items = 100;
+    ClosureVector _closures;
+    Landmark::StatePointerVector _landmarks;
+    FramePtrVector _frames;
 
-  //ds grant access to local map producer
-  friend WorldMap;
+    //ds grant access to local map producer
+    friend WorldMap;
+
+    //ds informative only
+    const Count _minimum_number_of_landmarks = 50;
 
   };
+
+  typedef std::vector<LocalMap*> LocalMapPointerVector;
 }

@@ -8,19 +8,19 @@ namespace proslam {
                                                        _camera_right(camera_right_),
                                                        _camera_rows(camera_left_->imageRows()),
                                                        _camera_cols(camera_left_->imageCols()),
-                                                       _preprocessor(new StereoTriangulator(_camera_left, _camera_right)),
-                                                       _aligner(new StereoUVAligner()) {
+                                                       _framepoint_generator(new StereoTriangulator(_camera_left, _camera_right)),
+                                                       _pose_optimizer(new StereoUVAligner()) {
     std::cerr << "Tracker::Tracker|constructing" << std::endl;
 
     //ds request initial tracking context for the tracker
     _lost_points.clear();
 
     //ds allocate stereouv aligner for odometry computation
-    assert(_aligner != 0);
+    assert(_pose_optimizer != 0);
 
     //ds configure aligner
-    _aligner->setMaximumDepthClose(_preprocessor->maximumDepthCloseMeters());
-    _aligner->setMaximumDepthFar(_preprocessor->maximumDepthFarMeters());
+    _pose_optimizer->setMaximumDepthClose(_framepoint_generator->maximumDepthCloseMeters());
+    _pose_optimizer->setMaximumDepthFar(_framepoint_generator->maximumDepthFarMeters());
 
     //ds clear buffers
     _projected_image_coordinates_left.clear();
@@ -30,11 +30,11 @@ namespace proslam {
   Tracker::~Tracker() {
     std::cerr << "Tracker::Tracker|destroying" << std::endl;
     //ds TODO clear tracker owned scopes
-    delete _preprocessor;
+    delete _framepoint_generator;
     std::cerr << "Tracker::Tracker|destroyed" << std::endl;
   }
 
-  void Tracker::trackFeatures(Frame* previous_frame_, Frame* current_frame_) {
+  void Tracker::_trackFeatures(Frame* previous_frame_, Frame* current_frame_) {
     assert(previous_frame_ != 0);
     assert(current_frame_ != 0);
 
@@ -46,7 +46,7 @@ namespace proslam {
     _number_of_lost_points             = 0;
 
     //ds retrieve point predictions on current image plane
-    getImageCoordinates(_projected_image_coordinates_left, previous_frame_, current_frame_);
+    _getImageCoordinates(_projected_image_coordinates_left, previous_frame_, current_frame_);
 
     //ds prepare lost buffer
     _lost_points.resize(previous_frame_->points().size());
@@ -55,14 +55,14 @@ namespace proslam {
     if (_status_previous == Frame::Localizing) {
 
       //ds for localization mode we have a more relaxed tracking condition
-      _pixel_distance_tracking = _pixel_distance_tracking_maximum;
+      _pixel_distance_tracking_threshold = _pixel_distance_tracking_threshold_maximum;
     } else {
 
       //ds narrow search limit closer to projection when we're in tracking mode
-      _pixel_distance_tracking = _pixel_distance_tracking_minimum;
+      _pixel_distance_tracking_threshold = _pixel_distance_tracking_threshold_minimum;
     }
-    const real _maximum_matching_distance_tracking_point  = _preprocessor->matchingDistanceTrackingThreshold();
-    const real _maximum_matching_distance_tracking_region = _preprocessor->matchingDistanceTrackingThreshold();
+    const real _maximum_matching_distance_tracking_point  = _framepoint_generator->matchingDistanceTrackingThreshold();
+    const real _maximum_matching_distance_tracking_region = _framepoint_generator->matchingDistanceTrackingThreshold();
 
     //ds loop over all past points
     for (Index index_point_previous = 0; index_point_previous < previous_frame_->points().size(); ++index_point_previous) {
@@ -78,24 +78,24 @@ namespace proslam {
       const int32_t col_previous = std::round(previous_point->imageCoordinatesLeft().x());
 
       //ds exhaustive search
-      int32_t pixel_distance_best = _pixel_distance_tracking;
+      int32_t pixel_distance_best = _pixel_distance_tracking_threshold;
       int32_t row_best = -1;
       int32_t col_best = -1;
 
 //ds ------------------------------------------- STAGE 1: POINT VICINITY TRACKING
       //ds compute borders
       const int32_t row_start_point = std::max(row_projection-_range_point_tracking, static_cast<int32_t>(0));
-      const int32_t row_end_point   = std::min(row_projection+_range_point_tracking, static_cast<int32_t>(_preprocessor->numberOfRowsImage()));
+      const int32_t row_end_point   = std::min(row_projection+_range_point_tracking, static_cast<int32_t>(_framepoint_generator->numberOfRowsImage()));
       const int32_t col_start_point = std::max(col_projection-_range_point_tracking, static_cast<int32_t>(0));
-      const int32_t col_end_point   = std::min(col_projection+_range_point_tracking, static_cast<int32_t>(_preprocessor->numberOfColsImage()));
+      const int32_t col_end_point   = std::min(col_projection+_range_point_tracking, static_cast<int32_t>(_framepoint_generator->numberOfColsImage()));
 
       //ds locate best match
       for (int32_t row_point = row_start_point; row_point < row_end_point; ++row_point) {
         for (int32_t col_point = col_start_point; col_point < col_end_point; ++col_point) {
-          if (_preprocessor->framepointsInImage()[row_point][col_point]) {
+          if (_framepoint_generator->framepointsInImage()[row_point][col_point]) {
             const int32_t pixel_distance = std::fabs(row_projection-row_point)+std::fabs(col_projection-col_point);
             const real matching_distance = cv::norm(previous_point->descriptorLeft(),
-                                                    _preprocessor->framepointsInImage()[row_point][col_point]->descriptorLeft(),
+                                                    _framepoint_generator->framepointsInImage()[row_point][col_point]->descriptorLeft(),
                                                     DESCRIPTOR_NORM);
 
             if (pixel_distance < pixel_distance_best && matching_distance < _maximum_matching_distance_tracking_point) {
@@ -108,19 +108,19 @@ namespace proslam {
       }
 
       //ds if we found a match
-      if (pixel_distance_best < _pixel_distance_tracking) {
+      if (pixel_distance_best < _pixel_distance_tracking_threshold) {
 
         //ds check if track is consistent
         if ((row_best-row_previous)*(row_best-row_previous)+(col_best-col_previous)*(col_best-col_previous) < _maximum_flow_pixels_squared) {
 
           //ds allocate a new point connected to the previous one
-          FramePoint* current_point = _preprocessor->framepointsInImage()[row_best][col_best];
+          FramePoint* current_point = _framepoint_generator->framepointsInImage()[row_best][col_best];
           current_point->setPrevious(previous_point);
 
           //ds set the point to the control structure
           current_frame_->points()[_number_of_tracked_points] = current_point;
           if (current_point->landmark()) {
-            if (current_point->isClose()) {
+            if (current_point->isNear()) {
               ++_number_of_tracked_landmarks_close;
             } else {
               ++_number_of_tracked_landmarks_far;
@@ -132,24 +132,24 @@ namespace proslam {
           ++_number_of_tracked_points;
 
           //ds disable further matching and reduce search time
-          _preprocessor->framepointsInImage()[row_best][col_best] = 0;
+          _framepoint_generator->framepointsInImage()[row_best][col_best] = 0;
           continue;
         }
       }
 
 //ds ------------------------------------------- STAGE 2: REGIONAL TRACKING
-      pixel_distance_best = _pixel_distance_tracking;
+      pixel_distance_best = _pixel_distance_tracking_threshold;
 
       //ds compute borders
-      const int32_t row_start_region = std::max(row_projection-_pixel_distance_tracking, static_cast<int32_t>(0));
-      const int32_t row_end_region   = std::min(row_projection+_pixel_distance_tracking, static_cast<int32_t>(_preprocessor->numberOfRowsImage()));
-      const int32_t col_start_region = std::max(col_projection-_pixel_distance_tracking, static_cast<int32_t>(0));
-      const int32_t col_end_region   = std::min(col_projection+_pixel_distance_tracking, static_cast<int32_t>(_preprocessor->numberOfColsImage()));
+      const int32_t row_start_region = std::max(row_projection-_pixel_distance_tracking_threshold, static_cast<int32_t>(0));
+      const int32_t row_end_region   = std::min(row_projection+_pixel_distance_tracking_threshold, static_cast<int32_t>(_framepoint_generator->numberOfRowsImage()));
+      const int32_t col_start_region = std::max(col_projection-_pixel_distance_tracking_threshold, static_cast<int32_t>(0));
+      const int32_t col_end_region   = std::min(col_projection+_pixel_distance_tracking_threshold, static_cast<int32_t>(_framepoint_generator->numberOfColsImage()));
 
       //ds locate best match
       for (int32_t row_region = row_start_region; row_region < row_end_region; ++row_region) {
         for (int32_t col_region = col_start_region; col_region < col_end_region; ++col_region) {
-          if (_preprocessor->framepointsInImage()[row_region][col_region]) {
+          if (_framepoint_generator->framepointsInImage()[row_region][col_region]) {
 
             //ds if area has not been already evaluated in previous stage
             if (row_region < row_start_point||
@@ -159,7 +159,7 @@ namespace proslam {
 
               const int32_t pixel_distance = std::fabs(row_projection-row_region)+std::fabs(col_projection-col_region);
               const real matching_distance = cv::norm(previous_point->descriptorLeft(),
-                                                      _preprocessor->framepointsInImage()[row_region][col_region]->descriptorLeft(),
+                                                      _framepoint_generator->framepointsInImage()[row_region][col_region]->descriptorLeft(),
                                                       DESCRIPTOR_NORM);
 
               if (pixel_distance < pixel_distance_best && matching_distance < _maximum_matching_distance_tracking_region) {
@@ -173,19 +173,19 @@ namespace proslam {
       }
 
       //ds if we found a match
-      if (pixel_distance_best < _pixel_distance_tracking) {
+      if (pixel_distance_best < _pixel_distance_tracking_threshold) {
 
         //ds check if track is consistent
         if ((row_best-row_previous)*(row_best-row_previous)+(col_best-col_previous)*(col_best-col_previous) < _maximum_flow_pixels_squared) {
 
           //ds allocate a new point connected to the previous one
-          FramePoint* current_point = _preprocessor->framepointsInImage()[row_best][col_best];
+          FramePoint* current_point = _framepoint_generator->framepointsInImage()[row_best][col_best];
           current_point->setPrevious(previous_point);
 
           //ds set the point to the control structure
           current_frame_->points()[_number_of_tracked_points] = current_point;
           if (current_point->landmark()) {
-            if (current_point->isClose()) {
+            if (current_point->isNear()) {
               ++_number_of_tracked_landmarks_close;
             } else {
               ++_number_of_tracked_landmarks_far;
@@ -197,7 +197,7 @@ namespace proslam {
           ++_number_of_tracked_points;
 
           //ds disable further matching and reduce search time
-          _preprocessor->framepointsInImage()[row_best][col_best] = 0;
+          _framepoint_generator->framepointsInImage()[row_best][col_best] = 0;
           continue;
         }
       }
@@ -220,21 +220,21 @@ namespace proslam {
     _total_number_of_landmarks_far   += _number_of_tracked_landmarks_far;
   }
 
-  void Tracker::extractFeatures(Frame* frame_) {
+  void Tracker::_extractFeatures(Frame* frame_) {
 
     //ds make space for all remaining points
     frame_->points().resize(_number_of_potential_points+_number_of_lost_points_recovered);
 
     //ds check triangulation map for unmatched points
     Index index_point_new = _number_of_tracked_points;
-    for (uint32_t row = 0; row < _preprocessor->numberOfRowsImage(); ++row) {
-      for (uint32_t col = 0; col < _preprocessor->numberOfColsImage(); ++col) {
-        if (_preprocessor->framepointsInImage()[row][col]) {
+    for (uint32_t row = 0; row < _framepoint_generator->numberOfRowsImage(); ++row) {
+      for (uint32_t col = 0; col < _framepoint_generator->numberOfColsImage(); ++col) {
+        if (_framepoint_generator->framepointsInImage()[row][col]) {
 
           //ds create a new point
-          frame_->points()[index_point_new] = _preprocessor->framepointsInImage()[row][col];
+          frame_->points()[index_point_new] = _framepoint_generator->framepointsInImage()[row][col];
           ++index_point_new;
-          _preprocessor->framepointsInImage()[row][col] = 0;
+          _framepoint_generator->framepointsInImage()[row][col] = 0;
         }
       }
     }
@@ -242,9 +242,9 @@ namespace proslam {
 //    std::cerr << "Tracker::extractFeatures|new points: " << index_point_new-_number_of_tracked_points << std::endl;
   }
 
-  void Tracker::getImageCoordinates(std::vector<ImageCoordinates>& projected_image_coordinates_left_,
-                                       Frame* previous_frame_,
-                                       const Frame* current_frame_) const {
+  void Tracker::_getImageCoordinates(std::vector<ImageCoordinates>& projected_image_coordinates_left_,
+                                    Frame* previous_frame_,
+                                    const Frame* current_frame_) const {
     assert(previous_frame_ != 0);
     assert(current_frame_ != 0);
 
@@ -266,7 +266,7 @@ namespace proslam {
       Vector4 point_in_camera_homogeneous(Vector4::Ones());
 
       //ds if we have a valid landmark at hand
-      if (previous_frame_point->landmark() && previous_frame_point->landmark()->isValidated()) {
+      if (previous_frame_point->landmark() && previous_frame_point->landmark()->areCoordinatesValidated()) {
 
         //ds get point in camera frame based on landmark coordinates
         point_in_camera_homogeneous.head<3>() = world_to_camera*previous_frame_point->landmark()->coordinates();
@@ -291,7 +291,7 @@ namespace proslam {
       }
 
       //ds update predictions
-      projected_image_coordinates_left_[number_of_visible_points]  = point_in_image_left;
+      projected_image_coordinates_left_[number_of_visible_points] = point_in_image_left;
       previous_frame_->points()[number_of_visible_points] = previous_frame_point;
       ++number_of_visible_points;
     }
@@ -299,59 +299,49 @@ namespace proslam {
     projected_image_coordinates_left_.resize(number_of_visible_points);
   }
 
-  void Tracker::updateLandmarks(WorldMap* context_) {
+  void Tracker::_updateLandmarks(WorldMap* context_) {
     Frame* current_frame = context_->currentFrame();
 
     //ds start landmark generation/update
     for (FramePoint* point: current_frame->points()) {
 
       //ds skip point if tracking and not mature enough to be a landmark - for localizing state this is skipped
-      if (point->age() < Frame::minimum_landmark_age) {
+      if (point->trackLength() < Frame::minimum_landmark_age) {
         continue;
       }
 
       //ds initial update setup
       Landmark* landmark = point->landmark();
 
-      //ds initial guess
-      real depth_meters = point->depth();
-
-      //ds check depth situation: regular depth
-      if (point->isClose()) {
+      //ds if the point is close to the camera
+      if (point->isNear()) {
 
         //ds if no landmark yet - but point with depth information, create a new landmark using the given depth
         if (!landmark) {
           landmark = context_->createLandmark(current_frame->robotToWorld()*point->robotCoordinates());
           point->setLandmark(landmark);
         }
-        landmark->setIsClose(true);
-      }
-
-      //ds depth obtained by vision
-      else {
+        landmark->setIsNear(true);
+      } else {
 
         //ds create a new landmark using the vision depth
         if (!landmark) {
           landmark = context_->createLandmark(current_frame->robotToWorld()*point->robotCoordinates());
           point->setLandmark(landmark);
         }
-        landmark->setIsClose(false);
+        landmark->setIsNear(false);
       }
       assert(landmark != 0);
-
-      //ds depth must be within limits
-      assert(depth_meters > 0);
-      assert(depth_meters <= StereoTriangulator::maximum_depth_far);
 
       //ds update landmark position
       landmark->update(current_frame->robotToWorld()*point->robotCoordinates(),
                        point->descriptorLeft(),
                        point->descriptorRight(),
-                       depth_meters);
+                       point->depthMeters());
     }
   }
 
-  const TransformMatrix3D Tracker::addImage(WorldMap* context_,
+  const TransformMatrix3D Tracker::compute(WorldMap* context_,
                                                const cv::Mat& intensity_image_left_,
                                                const cv::Mat& intensity_image_right_,
                                                const TransformMatrix3D& initial_guess_world_previous_to_current_) {
@@ -369,20 +359,20 @@ namespace proslam {
     context_->setRobotToWorldPrevious(robot_to_world_current);
 
     //ds create new frame (memory lock expected)
-    Frame* current_frame = context_->createFrame(robot_to_world_current, _preprocessor->maximumDepthCloseMeters());
+    Frame* current_frame = context_->createFrame(robot_to_world_current, _framepoint_generator->maximumDepthCloseMeters());
     current_frame->setCameraLeft(_camera_left);
     current_frame->setIntensityImageLeft(intensity_image_left_);
     current_frame->setCameraRight(_camera_right);
     current_frame->setIntensityImageRight(intensity_image_right_);
 
     //ds compute full sensory prior for the current frame
-    _preprocessor->compute(current_frame);
-    _number_of_potential_points = _preprocessor->numberOfAvailablePoints();
+    _framepoint_generator->compute(current_frame);
+    _number_of_potential_points = _framepoint_generator->numberOfAvailablePoints();
 
     //ds if available - attempt to track the points from the previous frame
     if (current_frame->previous()) {
       CHRONOMETER_START(tracking)
-      trackFeatures(current_frame->previous(), current_frame);
+      _trackFeatures(current_frame->previous(), current_frame);
       CHRONOMETER_STOP(tracking)
     }
 
@@ -402,16 +392,16 @@ namespace proslam {
           //ds solve pose on frame points only
           CHRONOMETER_START(pose_optimization)
           context_->landmarks().clearActive();
-          _aligner->init(current_frame, current_frame->robotToWorld());
-          _aligner->setWeightFramepoint(1);
-          _aligner->converge();
+          _pose_optimizer->init(current_frame, current_frame->robotToWorld());
+          _pose_optimizer->setWeightFramepoint(1);
+          _pose_optimizer->converge();
           CHRONOMETER_STOP(pose_optimization)
 
           //ds if the pose computation is acceptable
-          if (_aligner->numberOfInliers() > 2*_minimum_number_of_landmarks_to_track) {
+          if (_pose_optimizer->numberOfInliers() > 2*_minimum_number_of_landmarks_to_track) {
 
             //ds solver deltas
-            world_previous_to_current      = _aligner->robotToWorld()*current_frame->previous()->robotToWorld().inverse();
+            world_previous_to_current      = _pose_optimizer->robotToWorld()*current_frame->previous()->robotToWorld().inverse();
             const real delta_angular       = WorldMap::toOrientationRodrigues(world_previous_to_current.linear()).norm();
             const real delta_translational = world_previous_to_current.translation().norm();
 
@@ -419,9 +409,9 @@ namespace proslam {
             if (delta_angular > 0.001 || delta_translational > 0.01) {
 
               //ds update tracker
-              current_frame->setRobotToWorld(_aligner->robotToWorld());
-              std::cerr << "Tracker::addImage|WARNING: using posit on frame points (experimental) inliers: " << _aligner->numberOfInliers()
-                        << " outliers: " << _aligner->numberOfOutliers() << " average error: " << _aligner->totalError()/_aligner->numberOfInliers() <<  std::endl;
+              current_frame->setRobotToWorld(_pose_optimizer->robotToWorld());
+              std::cerr << "Tracker::addImage|WARNING: using posit on frame points (experimental) inliers: " << _pose_optimizer->numberOfInliers()
+                        << " outliers: " << _pose_optimizer->numberOfOutliers() << " average error: " << _pose_optimizer->totalError()/_pose_optimizer->numberOfInliers() <<  std::endl;
             } else {
 
               //ds keep previous solution
@@ -437,7 +427,7 @@ namespace proslam {
         //ds check if we can switch the state
         const Count number_of_good_points = current_frame->countPoints(Frame::minimum_landmark_age);
         if (number_of_good_points > _minimum_number_of_landmarks_to_track) {
-          updateLandmarks(context_);
+          _updateLandmarks(context_);
           _status_previous = _status;
           _status = Frame::Tracking;
         }
@@ -454,14 +444,14 @@ namespace proslam {
         //ds call pose solver
         CHRONOMETER_START(pose_optimization)
         context_->landmarks().clearActive();
-        _aligner->init(current_frame, current_frame->robotToWorld());
-        _aligner->setWeightFramepoint(std::max(weight_framepoint, static_cast<real>(0.1)));
-        _aligner->converge();
+        _pose_optimizer->init(current_frame, current_frame->robotToWorld());
+        _pose_optimizer->setWeightFramepoint(std::max(weight_framepoint, static_cast<real>(0.1)));
+        _pose_optimizer->converge();
         CHRONOMETER_STOP(pose_optimization)
 
         //ds solver deltas
-        Count number_of_inliers    = _aligner->numberOfInliers();
-        world_previous_to_current  = _aligner->robotToWorld()*current_frame->previous()->robotToWorld().inverse();
+        Count number_of_inliers    = _pose_optimizer->numberOfInliers();
+        world_previous_to_current  = _pose_optimizer->robotToWorld()*current_frame->previous()->robotToWorld().inverse();
         real delta_angular         = WorldMap::toOrientationRodrigues(world_previous_to_current.linear()).norm();
         real delta_translational   = world_previous_to_current.translation().norm();
 
@@ -486,7 +476,7 @@ namespace proslam {
         if (delta_angular > 0.001 || delta_translational > 0.01) {
 
           //ds update robot pose with posit result
-          current_frame->setRobotToWorld(_aligner->robotToWorld());
+          current_frame->setRobotToWorld(_pose_optimizer->robotToWorld());
         } else {
 
           //ds keep previous solution
@@ -505,7 +495,7 @@ namespace proslam {
           }
 
           //ds keep the point if it has been skipped (due to insufficient maturity or invalidity) or is an inlier
-          else if (_aligner->errors()[index_point] == -1 || _aligner->inliers()[index_point]) {
+          else if (_pose_optimizer->errors()[index_point] == -1 || _pose_optimizer->inliers()[index_point]) {
             current_frame->points()[_number_of_tracked_points] = current_frame->points()[index_point];
             if (current_frame->points()[_number_of_tracked_points]->landmark() != 0) {
               current_frame->points()[_number_of_tracked_points]->landmark()->setIsActive(true);
@@ -520,13 +510,13 @@ namespace proslam {
 
         //ds recover lost points based on updated pose
         CHRONOMETER_START(point_recovery)
-        recoverPoints(context_);
+        _recoverPoints(context_);
         CHRONOMETER_STOP(point_recovery)
 
         //ds update tracks
         context_->setRobotToWorldPrevious(current_frame->robotToWorld());
         CHRONOMETER_START(landmark_optimization)
-        updateLandmarks(context_);
+        _updateLandmarks(context_);
         CHRONOMETER_STOP(landmark_optimization)
         _status_previous = _status;
         _status          = Frame::Tracking;
@@ -541,7 +531,7 @@ namespace proslam {
 
     assert(current_frame != 0);
     CHRONOMETER_START(track_creation)
-    extractFeatures(current_frame);
+    _extractFeatures(current_frame);
     CHRONOMETER_STOP(track_creation)
     current_frame->setStatus(_status);
 
@@ -550,7 +540,7 @@ namespace proslam {
     return world_previous_to_current;
   }
 
-  void Tracker::recoverPoints(WorldMap* context_) {
+  void Tracker::_recoverPoints(WorldMap* context_) {
     Frame* current_frame = context_->currentFrame();
 
     //ds precompute transforms
@@ -628,7 +618,7 @@ namespace proslam {
       keypoint_buffer_left[0] = point_previous->keypointLeft();
       keypoint_buffer_left[0].pt = offset_keypoint_half;
       cv::Mat descriptor_left;
-      _preprocessor->descriptorExtractor()->compute(current_frame->intensityImageLeft()(region_of_interest_left), keypoint_buffer_left, descriptor_left);
+      _framepoint_generator->descriptorExtractor()->compute(current_frame->intensityImageLeft()(region_of_interest_left), keypoint_buffer_left, descriptor_left);
       if (descriptor_left.rows == 0) {
         continue;
       }
@@ -638,21 +628,21 @@ namespace proslam {
       keypoint_buffer_right[0] = point_previous->keypointRight();
       keypoint_buffer_right[0].pt = offset_keypoint_half;
       cv::Mat descriptor_right;
-      _preprocessor->descriptorExtractor()->compute(current_frame->intensityImageRight()(region_of_interest_right), keypoint_buffer_right, descriptor_right);
+      _framepoint_generator->descriptorExtractor()->compute(current_frame->intensityImageRight()(region_of_interest_right), keypoint_buffer_right, descriptor_right);
       if (descriptor_right.rows == 0) {
         continue;
       }
       keypoint_buffer_right[0].pt += corner_right;
 
-      if (cv::norm(point_previous->descriptorLeft(), descriptor_left, DESCRIPTOR_NORM) < _preprocessor->matchingDistanceTrackingThreshold()      &&
-          cv::norm(point_previous->descriptorRight(), descriptor_right, DESCRIPTOR_NORM) < _preprocessor->matchingDistanceTrackingThreshold()) {
+      if (cv::norm(point_previous->descriptorLeft(), descriptor_left, DESCRIPTOR_NORM) < _framepoint_generator->matchingDistanceTrackingThreshold()      &&
+          cv::norm(point_previous->descriptorRight(), descriptor_right, DESCRIPTOR_NORM) < _framepoint_generator->matchingDistanceTrackingThreshold()) {
         try {
 
           //ds triangulate point
-          const PointCoordinates camera_coordinates(_preprocessor->getCoordinatesInCameraLeft(keypoint_buffer_left[0].pt, keypoint_buffer_right[0].pt));
+          const PointCoordinates camera_coordinates(_framepoint_generator->getCoordinatesInCameraLeft(keypoint_buffer_left[0].pt, keypoint_buffer_right[0].pt));
 
           //ds allocate a new point connected to the previous one
-          FramePoint* current_point = current_frame->createNewPoint(keypoint_buffer_left[0],
+          FramePoint* current_point = current_frame->create(keypoint_buffer_left[0],
                                                                     descriptor_left,
                                                                     keypoint_buffer_right[0],
                                                                     descriptor_right,

@@ -7,6 +7,7 @@
 #include <Eigen/StdVector>
 #include <opencv2/core/version.hpp>
 #include <opencv2/opencv.hpp>
+
 #if CV_MAJOR_VERSION == 2
   //ds no specifics
 #elif CV_MAJOR_VERSION == 3
@@ -20,6 +21,7 @@
 #else
   #error OpenCV version not supported
 #endif
+
 #include <iostream>
 #include <stdint.h>
 #include "srrg_system_utils/system_utils.h"
@@ -80,10 +82,26 @@ namespace proslam{
   typedef Eigen::Matrix<real, 3, 4> Matrix3_4;
   typedef Eigen::Matrix<real, 4, 3> Matrix4_3;
 
-  //ds HBST
+  //ds HBST: readability
   typedef srrg_hbst::BinaryMatchable<DESCRIPTOR_SIZE_BITS> HBSTMatchable;
   typedef srrg_hbst::BinaryNode<HBSTMatchable, 50, real> HBSTNode;
   typedef srrg_hbst::BinaryTree<HBSTNode, DESCRIPTOR_MAXIMUM_HAMMING_DISTANCE> HBSTTree;
+
+  //ds HBST: converts an opencv descriptor to hbst type
+  inline HBSTMatchable::BinaryDescriptor getDescriptor(const cv::Mat& descriptor_cv_) {
+    HBSTMatchable::BinaryDescriptor binary_descriptor(DESCRIPTOR_SIZE_BITS);
+    for (Count byte_index = 0 ; byte_index < DESCRIPTOR_SIZE_BYTES; ++byte_index) {
+
+      //ds get minimal datafrom cv::mat
+      const uchar value = descriptor_cv_.at<uchar>(byte_index);
+
+      //ds get bitstring
+      for (uint8_t v = 0; v < 8; ++v) {
+        binary_descriptor[byte_index*8+v] = (value >> v) & 1;
+      }
+    }
+    return binary_descriptor;
+  }
 
   //ds cv colors
   #define CV_COLOR_CODE_GREEN cv::Scalar(0, 200, 0)
@@ -99,12 +117,8 @@ namespace proslam{
   #define CV_COLOR_CODE_VIOLETT cv::Scalar(255, 0, 255)
   #define CV_COLOR_CODE_DARKVIOLETT cv::Scalar(150, 0, 150)
 
-  //ds good point counting - TODO rethink
-  enum ThreeValued{
-      False,
-      True,
-      Unknown
-  };
+  //ds extended boolean
+  enum ThreeValued{False, True, Unknown};
 
   //ds timing
   #define CREATE_CHRONOMETER(NAME) \

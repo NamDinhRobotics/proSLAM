@@ -3,7 +3,7 @@
 #include "srrg_txt_io/message_timestamp_synchronizer.h"
 #include "srrg_txt_io/pinhole_image_message.h"
 
-#include "map_management/graph_optimizer.h"
+#include "map_optimization/graph_optimizer.h"
 #include "relocalization/relocalizer.h"
 #include "motion_estimation/tracker.h"
 #include "visualization/viewer_input_images.h"
@@ -14,16 +14,19 @@ using namespace srrg_core;
 
 //ds TODO make sure this is up to date!
 const char* banner[] = {
+  "-------------------------------------------------------------------------",
   "srrg_proslam_app: simple SLAM application",
+  "usage: srrg_proslam_app [options] <dataset>",
   "",
-  "usage: srrg_proslam_app [options] <message_file> | <calibration_file>",
-  "<message_file>: path to a SRRG txt_io message file",
-  "<calibration_file>: path to a calibration file containing raw input information (see calibration_example.txt) TBD",
-  "[options]:",
-  "-camera-left-topic <string>",
-  "-camera-right-topic <string>",
-  "-use-gui:  displays GUI elements",
-  "-open: disables relocalization",
+  "<dataset>: path to a SRRG txt_io dataset file",
+  "",
+  "[options]",
+  "-camera-left-topic <string>:  topic name in txt_io dataset file)",
+  "-camera-right-topic <string>: topic name in txt_io dataset file)",
+  "-use-gui:                     displays GUI elements",
+  "-open:                        disables relocalization",
+  "-show-top:                    enable top map viewer",
+  "-------------------------------------------------------------------------",
   0
 };
 
@@ -72,6 +75,7 @@ int32_t main(int32_t argc, char ** argv) {
   std::string topic_image_stereo_right = "/camera_right/image_raw";
   std::string filename_sensor_messages = "";
   int32_t count_added_arguments        = 1;
+  bool show_top_viewer                 = false;
   while(count_added_arguments < argc){
     if (!std::strcmp(argv[count_added_arguments], "-camera-left-topic")){
       count_added_arguments++;
@@ -86,19 +90,24 @@ int32_t main(int32_t argc, char ** argv) {
       use_gui = true;
     } else if (!std::strcmp(argv[count_added_arguments], "-open")) {
       use_relocalization = false;
+    } else if (!std::strcmp(argv[count_added_arguments], "-show-top")) {
+      show_top_viewer = true;
     } else {
-      filename_sensor_messages=argv[count_added_arguments];
+      filename_sensor_messages = argv[count_added_arguments];
     }
     count_added_arguments++;
   }
 
   //ds log configuration
+  std::cerr << "main|-------------------------------------------------------------------------" << std::endl;
   std::cerr << "main|running with params: " << std::endl;
   std::cerr << "main|-camera-left-topic  " << topic_image_stereo_left << std::endl;
   std::cerr << "main|-camera-right-topic " << topic_image_stereo_right << std::endl;
   std::cerr << "main|-use-gui            " << use_gui << std::endl;
   std::cerr << "main|-open               " << !use_relocalization << std::endl;
-  std::cerr << "main|-messages           " << filename_sensor_messages << std::endl;
+  std::cerr << "main|-show-top           " << show_top_viewer << std::endl;
+  std::cerr << "main|-dataset            " << filename_sensor_messages << std::endl;
+  std::cerr << "main|-------------------------------------------------------------------------" << std::endl;
 
   //ds configure sensor message source
   if (filename_sensor_messages.length() == 0) {
@@ -170,7 +179,7 @@ int32_t main(int32_t argc, char ** argv) {
 
   //ds allocate SLAM modules
   WorldMap* world_map      = new WorldMap();
-  GraphOptimizer* mapper           = new GraphOptimizer();
+  GraphOptimizer* mapper   = new GraphOptimizer();
   Relocalizer* relocalizer = new Relocalizer();
   Tracker* tracker         = new Tracker(cameras_by_topic.at(topic_image_stereo_left), cameras_by_topic.at(topic_image_stereo_right));
 
@@ -187,24 +196,27 @@ int32_t main(int32_t argc, char ** argv) {
     context_viewer_bird = new ViewerOutputMap(world_map, 0.1, "output: map (bird view)");
     context_viewer_bird->show();
 
-    //ds configure custom top viewer
-    context_viewer_top = new ViewerOutputMap(world_map, 1, "output: map (top view)");
-    context_viewer_top->show();
-    TransformMatrix3D center_for_kitti_sequence_00;
-    center_for_kitti_sequence_00.matrix() << 1, 0, 0, 0,
-                                             0, 0, -1, 200,
-                                             0, 1, 0, 800,
-                                             0, 0, 0, 1;
-    context_viewer_top->setWorldToRobotOrigin(center_for_kitti_sequence_00);
-    context_viewer_top->setFollowRobot(false);
-
+    //ds orientation flip for proper camera following
     TransformMatrix3D orientation_correction;
     orientation_correction.matrix() << 0, -1, 0, 0,
                                        -1, 0, 0, 0,
                                        0, 0, -1, 0,
                                        0, 0, 0, 1;
     context_viewer_bird->setRotationRobotView(orientation_correction);
-    context_viewer_top->setWorldToRobotOrigin(orientation_correction*center_for_kitti_sequence_00);
+
+    //ds configure custom top viewer if requested
+    if (show_top_viewer) {
+      context_viewer_top = new ViewerOutputMap(world_map, 1, "output: map (top view)");
+      context_viewer_top->show();
+      TransformMatrix3D center_for_kitti_sequence_00;
+      center_for_kitti_sequence_00.matrix() << 1, 0, 0, 0,
+                                               0, 0, -1, 200,
+                                               0, 1, 0, 800,
+                                               0, 0, 0, 1;
+      context_viewer_top->setWorldToRobotOrigin(center_for_kitti_sequence_00);
+      context_viewer_top->setFollowRobot(false);
+      context_viewer_top->setWorldToRobotOrigin(orientation_correction*center_for_kitti_sequence_00);
+    }
   }
 
   //ds error measurements
@@ -268,7 +280,7 @@ int32_t main(int32_t argc, char ** argv) {
       if (message_image_left->hasOdom()) {
         const TransformMatrix3D robot_to_world_ground_truth = message_image_left->odometry().cast<real>()*camera_left->robotToCamera();
         robot_to_world_ground_truth_poses.push_back(robot_to_world_ground_truth);
-        world_map->currentFrame()->setRobotToWorldOdometry(robot_to_world_ground_truth);
+        world_map->currentFrame()->setRobotToWorldGroundTruth(robot_to_world_ground_truth);
       }
 
       //ds runtime info
@@ -281,26 +293,35 @@ int32_t main(int32_t argc, char ** argv) {
         const double total_duration_seconds_current = getTime()-time_start_seconds;
 
         //ds runtime info
-        std::cerr << "main|processed frames: " << number_of_processed_frames_total;
-        std::cerr << "|current fps: " << number_of_processed_frames_current/total_duration_seconds_current
-                              << " (" << number_of_processed_frames_current << "/" << total_duration_seconds_current << "s)";
-        std::cerr << "|local maps: " << world_map->localMaps().size()
-                                     << " (" << world_map->localMaps().size()/static_cast<real>(number_of_processed_frames_total) << ")" << std::endl;
+        std::printf("main|processed frames: %5lu|landmarks: %6lu|local maps: %4lu (%3.2f)|closures: %3lu (%3.2f)|current fps: %5.2f (%3lu/%3.2fs)\n",
+                    number_of_processed_frames_total,
+                    world_map->landmarks().size(),
+                    world_map->localMaps().size(),
+                    world_map->localMaps().size()/static_cast<real>(number_of_processed_frames_total),
+                    world_map->numberOfClosures(),
+                    world_map->numberOfClosures()/static_cast<real>(world_map->localMaps().size()),
+                    number_of_processed_frames_current/total_duration_seconds_current,
+                    number_of_processed_frames_current,
+                    total_duration_seconds_current);
 
         //ds reset stats
         time_start_seconds = getTime();
         number_of_processed_frames_current = 0;
       }
+      synchronizer.reset();
 
       //ds update ui
-      synchronizer.reset();
       if (use_gui) {
+        if (mapper->numberOfOptimizations() > 0) {
+          context_viewer_bird->setIsOpen(false);
+          if (context_viewer_top) context_viewer_top->setIsOpen(false);
+        }
         tracker_viewer->initDrawing();
         tracker_viewer->drawFeatureTracking();
         tracker_viewer->drawFeatures();
         running = context_viewer_bird->isVisible() && tracker_viewer->updateGUI();
         context_viewer_bird->updateGL();
-        context_viewer_top->updateGL();
+        if (context_viewer_top) context_viewer_top->updateGL();
         ui_server->processEvents();
       }
     }
@@ -354,7 +375,7 @@ int32_t main(int32_t argc, char ** argv) {
     delete world_map;
     if (use_gui) {
       delete context_viewer_bird;
-      delete context_viewer_top;
+      if (context_viewer_top) delete context_viewer_top;
       delete ui_server;
     }
     return 0;
@@ -371,10 +392,10 @@ void process(WorldMap* world_map_,
              const TransformMatrix3D& world_previous_to_current_estimate_) {
 
   //ds call the tracker
-  world_previous_to_current = tracker_->addImage(world_map_,
-                                                 intensity_image_left_,
-                                                 intensity_image_right_,
-                                                 world_previous_to_current_estimate_);
+  world_previous_to_current = tracker_->compute(world_map_,
+                                                intensity_image_left_,
+                                                intensity_image_right_,
+                                                world_previous_to_current_estimate_);
 
   //ds check if relocalization is desired
   if (use_relocalization) {
@@ -402,12 +423,12 @@ void process(WorldMap* world_map_,
 
             //ds add loop closure constraint
             world_map_->closeLocalMaps(world_map_->currentLocalMap(),
-                                                                   closure->local_map_reference,
-                                                                   closure->transform_frame_query_to_frame_reference);
+                                       closure->local_map_reference,
+                                       closure->transform_frame_query_to_frame_reference);
             if (use_gui) {
               for (const Correspondence* match: closure->correspondences) {
-                world_map_->landmarks().get(match->item_query->landmark->index())->setIsInLoopClosureQuery(true);
-                world_map_->landmarks().get(match->item_reference->landmark->index())->setIsInLoopClosureReference(true);
+                world_map_->landmarks().get(match->item_query->landmark->identifier())->setIsInLoopClosureQuery(true);
+                world_map_->landmarks().get(match->item_reference->landmark->identifier())->setIsInLoopClosureReference(true);
               }
             }
           }
@@ -420,9 +441,6 @@ void process(WorldMap* world_map_,
 
         //ds optimize graph
         mapper_->optimize(world_map_);
-
-        //ds wipe non-optimized landmarks
-        world_map_->purifyLandmarks();
       }
     }
   }

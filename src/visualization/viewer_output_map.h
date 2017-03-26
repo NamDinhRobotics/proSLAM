@@ -19,6 +19,7 @@ namespace proslam {
 
     void setWorldToRobotOrigin(const TransformMatrix3D& world_to_robot_origin_) {_world_to_robot_origin = world_to_robot_origin_;}
     void setRotationRobotView(const TransformMatrix3D& rotation_robot_view_) {_rotation_robot_view = rotation_robot_view_;}
+    void setIsOpen(const bool& is_open_) {_is_open = is_open_;}
 
   protected:
     
@@ -30,7 +31,6 @@ namespace proslam {
 
     void drawFrame(const Frame* frame_, const Vector3& color_rgb_);
     void drawLandmarks();
-    void drawOdometry();
 
   protected:
 
@@ -40,6 +40,7 @@ namespace proslam {
     bool _landmarks_drawn    = true;
     bool _follow_robot       = true;
     bool _ground_truth_drawn = false;
+    bool _is_open            = true;
     real _object_scale    = 0.1;
     real _point_size      = 2;
     TransformMatrix3D _world_to_robot_origin = TransformMatrix3D::Identity();

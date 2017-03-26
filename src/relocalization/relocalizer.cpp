@@ -6,6 +6,7 @@ namespace proslam {
   using namespace srrg_core;
 
   Relocalizer::Relocalizer(): _query(0), _aligner(new XYZAligner()) {
+    std::cerr << "Relocalizer::Relocalizer|constructing" << std::endl;
     clear();
     _query_history.clear();
     assert(_query_history_queue.empty());
@@ -14,7 +15,6 @@ namespace proslam {
   }
 
   Relocalizer::~Relocalizer() {
-
     std::cerr << "Relocalizer::Relocalizer|destroying" << std::endl;
 
     //ds free closure buffer
@@ -81,7 +81,7 @@ namespace proslam {
     //ds for all elements in the current history
     while (_query_history_queue.size() > 0) {
       _query_history.push_back(_query_history_queue.front());
-      std::cerr << "flushed to history: " << _query_history_queue.front()->keyframe->index() << std::endl;
+      std::cerr << "flushed to history: " << _query_history_queue.front()->keyframe->identifier() << std::endl;
       _query_history_queue.pop();
     }
 
@@ -121,19 +121,19 @@ namespace proslam {
 
           const Landmark::Appearance* appearance_query     = _query->appearances[match.identifier_query];
           const Landmark::Appearance* appearance_reference = reference->appearances[match.identifier_reference];
-          const Identifier& query_index                    = appearance_query->item->landmark->index();
+          const Identifier& query_index                    = appearance_query->landmark_state->landmark->identifier();
 
           try{
 
             //ds add a new match to the given query point
-            descriptor_matches_pointwise.at(query_index).push_back(new Correspondence::Match(appearance_query->item,
-                                                                   appearance_reference->item,
+            descriptor_matches_pointwise.at(query_index).push_back(new Correspondence::Match(appearance_query->landmark_state,
+                                                                   appearance_reference->landmark_state,
                                                                    match.distance));
           } catch(const std::out_of_range& /*exception*/) {
 
             //ds initialize the first match for the given query point
-            descriptor_matches_pointwise.insert(std::make_pair(query_index, Correspondence::MatchPtrVector(1, new Correspondence::Match(appearance_query->item,
-                                                                                              appearance_reference->item,
+            descriptor_matches_pointwise.insert(std::make_pair(query_index, Correspondence::MatchPtrVector(1, new Correspondence::Match(appearance_query->landmark_state,
+                                                                                              appearance_reference->landmark_state,
                                                                                               match.distance))));
           }
         }
@@ -199,9 +199,9 @@ namespace proslam {
     for(const Correspondence::Match* match: matches_){
 
       //ds update count - if not in the mask
-      if(0 == _mask_id_references_for_correspondences.count(match->item_reference->landmark->index())) {
-        counts.insert(match->item_reference->landmark->index());
-        const Count count_current = counts.count(match->item_reference->landmark->index());
+      if(0 == _mask_id_references_for_correspondences.count(match->item_reference->landmark->identifier())) {
+        counts.insert(match->item_reference->landmark->identifier());
+        const Count count_current = counts.count(match->item_reference->landmark->identifier());
 
         //ds if we get a better count
         if( count_best < count_current ){
@@ -214,7 +214,7 @@ namespace proslam {
     if(match_best != 0 && count_best > _minimum_matches_per_correspondence ) {
 
       //ds block matching against this point by adding it to the mask
-      _mask_id_references_for_correspondences.insert(match_best->item_reference->landmark->index());
+      _mask_id_references_for_correspondences.insert(match_best->item_reference->landmark->identifier());
 
       //ds return the found correspondence
       return new Correspondence(match_best->item_query,

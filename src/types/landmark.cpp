@@ -2,33 +2,47 @@
 
 namespace proslam {
 
-  Identifier Landmark::_instances = 0;
+  //ds inner instance count - incremented upon constructor call (also unsuccessful calls)
+  Count Landmark::_instances = 0;
 
-  Landmark::Landmark(const PointCoordinates& point_coordinates_): _index(_instances),
+  //ds initial landmark coordinates must be provided
+  Landmark::Landmark(const PointCoordinates& point_coordinates_): _identifier(_instances),
                                                                   _coordinates(point_coordinates_) {
     ++_instances;
-    _is_validated      = false;
-    _is_close          = true;
-    _is_active         = false;
-    _first_observation = 0;
-    _measurements_test.clear();
+    _updates.clear();
 
-    //ds allocate fresh item (trading construction correctness for enclosed generation)
-    _item = new Item(this);
+    //ds allocate fresh state (trading construction correctness for enclosed generation)
+    _state = new State(this);
   }
 
+  //ds cleanup of dynamic structures
   Landmark::~Landmark() {
-    if (_item->local_map == 0) {
-      delete _item;
+
+    //ds if the current state is not connected to a local map yet - we have to clean it up
+    if (_state->local_map == 0) {
+      delete _state;
     }
-    _measurements_test.clear();
+
+    //ds clear measurements
+    _updates.clear();
   }
 
+  //ds reset landmark coordinates to a certain position (loss of past measurements!)
+  void Landmark::resetCoordinates(const PointCoordinates& coordinates_) {
+
+    //ds clear past measurements
+    _updates.clear();
+
+    //ds add fresh measurement
+    update(coordinates_);
+  }
+
+  //ds landmark coordinates update - no visual information (e.g. map optimization)
   void Landmark::update(const PointCoordinates& coordinates_in_world_,
                         const real& depth_meters_) {
 
     //ds if we got at least 2 previous measurements
-    if (_measurements_test.size() > 1) {
+    if (_updates.size() > 1) {
 
       //ds compute average delta
       const real relative_delta = (_coordinates_average_previous-coordinates_in_world_).norm()/depth_meters_;
@@ -37,83 +51,72 @@ namespace proslam {
       if (relative_delta < 0.5) {
 
         //ds update average for next measurement addition
-        _coordinates_average_previous = (_measurements_test.size()*_coordinates_average_previous+coordinates_in_world_)/(_measurements_test.size()+1);
+        _coordinates_average_previous = (_updates.size()*_coordinates_average_previous+coordinates_in_world_)/(_updates.size()+1);
 
         //ds update coordinates
-        _measurements_test.push_back(std::make_pair(1/depth_meters_, coordinates_in_world_));
+        _updates.push_back(std::make_pair(1/depth_meters_, coordinates_in_world_));
         PointCoordinates coordinates_final(PointCoordinates::Zero());
         real total_weight = 0;
-        for (const std::pair<real, PointCoordinates> measurement: _measurements_test) {
+        for (const std::pair<real, PointCoordinates> measurement: _updates) {
           total_weight      += measurement.first;
           coordinates_final += measurement.first*measurement.second;
         }
         _coordinates = coordinates_final/total_weight;
-        _is_validated = true;
+        _are_coordinates_validated = true;
       } else {
 
-        //ds discard measurement completely TODO add kernel?
-        _is_validated = false;
-        ++_number_of_failed_updates;
+        //ds discard measurement completely
+        _are_coordinates_validated = false;
       }
     } else {
 
       //ds update coordinates based on average
-      _measurements_test.push_back(std::make_pair(1/depth_meters_, coordinates_in_world_));
+      _updates.push_back(std::make_pair(1/depth_meters_, coordinates_in_world_));
       PointCoordinates coordinates_average(PointCoordinates::Zero());
-      for (const std::pair<real, PointCoordinates> measurement: _measurements_test) {
+      for (const std::pair<real, PointCoordinates> measurement: _updates) {
         coordinates_average += measurement.second;
       }
-      _coordinates                  = coordinates_average/_measurements_test.size();
+      _coordinates                  = coordinates_average/_updates.size();
       _coordinates_average_previous = _coordinates;
-      _is_validated                 = true;
+      _are_coordinates_validated    = true;
     }
     assert(!std::isnan(_coordinates.x()));
     assert(!std::isnan(_coordinates.y()));
     assert(!std::isnan(_coordinates.z()));
-    ++_number_of_updates;
   }
 
+  //ds landmark coordinates update with visual information (tracking)
   void Landmark::update(const PointCoordinates& coordinates_in_world_,
                         const cv::Mat& descriptor_left_,
                         const cv::Mat& descriptor_right_,
                         const real& depth_meters_) {
 
     //ds always update descriptors
-    _item->appearances.push_back(new Appearance(_item, descriptor_left_));
-    _item->appearances.push_back(new Appearance(_item, descriptor_right_));
+    _state->appearances.push_back(new Appearance(_state, descriptor_left_));
+    _state->appearances.push_back(new Appearance(_state, descriptor_right_));
 
     //ds update position
     update(coordinates_in_world_, depth_meters_);
   }
 
-  void Landmark::resetCoordinates(const PointCoordinates& coordinates_) {
-
-    //ds clear past measurements
-    _measurements_test.clear();
-    _number_of_failed_updates = 0;
-    _number_of_updates        = 0;
-
-    //ds add fresh measurement
-    update(coordinates_);
-  }
-
-  Landmark* LandmarkPtrMap::get(int index) {
-    LandmarkPtrMap::iterator it=find(index);
-    if (it==end())
+  Landmark* LandmarkPointerMap::get(const Identifier& identifier_) {
+    LandmarkPointerMap::iterator iterator = find(identifier_);
+    if (iterator == end()) {
       return 0;
-    return it->second;
+    } else {
+      return iterator->second;
+    }
   }
 
-  void LandmarkPtrMap::put(Landmark* landmark) {
-    LandmarkPtrMap::iterator it=find(landmark->index());
-    if (it!=end())
-      throw std::runtime_error("LandmarkPtrMap::put(...), double insertion");
-    insert(std::make_pair(landmark->index(), landmark));
+  void LandmarkPointerMap::put(Landmark* landmark) {
+    assert(find(landmark->identifier()) == end());
+    insert(std::make_pair(landmark->identifier(), landmark));
   }
 
-  void LandmarkPtrMap::clearActive() {
-    for (iterator it=begin(); it!=end(); it++)
-      it->second->setIsActive(false);
+  //ds visualization only
+  void LandmarkPointerMap::clearActive() {
+    for (iterator iterator = begin(); iterator != end(); ++iterator) {
+      iterator->second->setIsActive(false);
+    }
   }
-
 }

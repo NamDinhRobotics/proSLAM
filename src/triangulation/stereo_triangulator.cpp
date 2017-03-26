@@ -2,13 +2,14 @@
 
 namespace proslam {
 
+  //ds the stereo camera setup must be provided
   StereoTriangulator::StereoTriangulator(const Camera* camera_left_, const Camera* camera_right_): _number_of_rows_image(camera_left_->imageRows()),
                                                                                                    _number_of_cols_image(camera_left_->imageCols()),
                                                                                                    _number_of_bins_u(std::floor(static_cast<real>(_number_of_cols_image)/_bin_size)),
                                                                                                    _number_of_bins_v(std::floor(static_cast<real>(_number_of_rows_image)/_bin_size)),
                                                                                                    _focal_length_pixels(camera_left_->projectionMatrix()(0,0)),
-                                                                                                   _focal_center_x_pixels(camera_left_->projectionMatrix()(0,2)),
-                                                                                                   _focal_center_y_pixels(camera_left_->projectionMatrix()(1,2)),
+                                                                                                   _principal_point_offset_u_pixels(camera_left_->projectionMatrix()(0,2)),
+                                                                                                   _principal_point_offset_v_pixels(camera_left_->projectionMatrix()(1,2)),
                                                                                                    _baseline_pixelsmeters(camera_right_->projectionMatrix()(0,3)),
                                                                                                    _baseline_meters(-_baseline_pixelsmeters/_focal_length_pixels),
                                                                                                    _maximum_depth_close_meters(_baseline_factor*_baseline_meters),
@@ -44,11 +45,13 @@ namespace proslam {
       }
     }
 
+    //ds clear buffers
     _keypoints_left.clear();
     _keypoints_right.clear();
     _keypoints_with_descriptors_left.clear();
     _keypoints_with_descriptors_right.clear();
 
+    //ds info
     std::cerr << "StereoTriangulator::StereoTriangulator|baseline (m): " << _baseline_meters << std::endl;
     std::cerr << "StereoTriangulator::StereoTriangulator|maximum depth tracking close (m): " << _maximum_depth_close_meters << std::endl;
     std::cerr << "StereoTriangulator::StereoTriangulator|maximum depth tracking far (m): " << _maximum_depth_far_meters << std::endl;
@@ -59,6 +62,7 @@ namespace proslam {
     std::cerr << "StereoTriangulator::StereoTriangulator|constructed" << std::endl;
   }
 
+  //ds cleanup of dynamic structures
   StereoTriangulator::~StereoTriangulator() {
     std::cerr << "StereoTriangulator::StereoTriangulator|destroying" << std::endl;
 
@@ -192,35 +196,35 @@ namespace proslam {
       for (Index u = 0; u < keypoints_left_.size(); ++u) {
         _keypoints_with_descriptors_left[u].keypoint    = keypoints_left_[u];
         _keypoints_with_descriptors_left[u].descriptor  = descriptors_left_.row(u);
-        _keypoints_with_descriptors_left[u].row           = keypoints_left_[u].pt.y;
-        _keypoints_with_descriptors_left[u].col           = keypoints_left_[u].pt.x;
+        _keypoints_with_descriptors_left[u].row         = keypoints_left_[u].pt.y;
+        _keypoints_with_descriptors_left[u].col         = keypoints_left_[u].pt.x;
         _keypoints_with_descriptors_right[u].keypoint   = keypoints_right_[u];
         _keypoints_with_descriptors_right[u].descriptor = descriptors_right_.row(u);
-        _keypoints_with_descriptors_right[u].row          = keypoints_right_[u].pt.y;
-        _keypoints_with_descriptors_right[u].col          = keypoints_right_[u].pt.x;
+        _keypoints_with_descriptors_right[u].row        = keypoints_right_[u].pt.y;
+        _keypoints_with_descriptors_right[u].col        = keypoints_right_[u].pt.x;
       }
       for (Index u = keypoints_left_.size(); u < keypoints_right_.size(); ++u) {
         _keypoints_with_descriptors_right[u].keypoint   = keypoints_right_[u];
         _keypoints_with_descriptors_right[u].descriptor = descriptors_right_.row(u);
-        _keypoints_with_descriptors_right[u].row          = keypoints_right_[u].pt.y;
-        _keypoints_with_descriptors_right[u].col          = keypoints_right_[u].pt.x;
+        _keypoints_with_descriptors_right[u].row        = keypoints_right_[u].pt.y;
+        _keypoints_with_descriptors_right[u].col        = keypoints_right_[u].pt.x;
       }
     } else {
       for (Index u = 0; u < keypoints_right_.size(); ++u) {
         _keypoints_with_descriptors_left[u].keypoint    = keypoints_left_[u];
         _keypoints_with_descriptors_left[u].descriptor  = descriptors_left_.row(u);
-        _keypoints_with_descriptors_left[u].row           = keypoints_left_[u].pt.y;
-        _keypoints_with_descriptors_left[u].col           = keypoints_left_[u].pt.x;
+        _keypoints_with_descriptors_left[u].row         = keypoints_left_[u].pt.y;
+        _keypoints_with_descriptors_left[u].col         = keypoints_left_[u].pt.x;
         _keypoints_with_descriptors_right[u].keypoint   = keypoints_right_[u];
         _keypoints_with_descriptors_right[u].descriptor = descriptors_right_.row(u);
-        _keypoints_with_descriptors_right[u].row          = keypoints_right_[u].pt.y;
-        _keypoints_with_descriptors_right[u].col          = keypoints_right_[u].pt.x;
+        _keypoints_with_descriptors_right[u].row        = keypoints_right_[u].pt.y;
+        _keypoints_with_descriptors_right[u].col        = keypoints_right_[u].pt.x;
       }
       for (Index u = keypoints_right_.size(); u < keypoints_left_.size(); ++u) {
         _keypoints_with_descriptors_left[u].keypoint   = keypoints_left_[u];
         _keypoints_with_descriptors_left[u].descriptor = descriptors_left_.row(u);
-        _keypoints_with_descriptors_left[u].row          = keypoints_left_[u].pt.y;
-        _keypoints_with_descriptors_left[u].col          = keypoints_left_[u].pt.x;
+        _keypoints_with_descriptors_left[u].row        = keypoints_left_[u].pt.y;
+        _keypoints_with_descriptors_left[u].col        = keypoints_left_[u].pt.x;
       }
     }
   }
@@ -282,7 +286,7 @@ namespace proslam {
           const PointCoordinates camera_coordinates(getCoordinatesInCameraLeft(keypoints_left_[idx_L].keypoint.pt, keypoints_right_[idx_best_R].keypoint.pt));
 
           //ds add to framepoint map
-          _framepoints_in_image[row][col_left] = frame_->createNewPoint(keypoints_left_[idx_L].keypoint,
+          _framepoints_in_image[row][col_left] = frame_->create(keypoints_left_[idx_L].keypoint,
                                                                         keypoints_left_[idx_L].descriptor,
                                                                         keypoints_right_[idx_best_R].keypoint,
                                                                         keypoints_right_[idx_best_R].descriptor,
@@ -361,8 +365,8 @@ namespace proslam {
     const real depth_meters_per_pixel = depth_meters/_focal_length_pixels;
 
     //ds set 3d point
-    const PointCoordinates coordinates_in_camera(depth_meters_per_pixel*(image_coordinates_left_.x-_focal_center_x_pixels),
-                                                 depth_meters_per_pixel*(image_coordinates_left_.y-_focal_center_y_pixels),
+    const PointCoordinates coordinates_in_camera(depth_meters_per_pixel*(image_coordinates_left_.x-_principal_point_offset_u_pixels),
+                                                 depth_meters_per_pixel*(image_coordinates_left_.y-_principal_point_offset_v_pixels),
                                                  depth_meters);
 
     //ds return triangulated point

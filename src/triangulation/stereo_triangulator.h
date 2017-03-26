@@ -3,7 +3,7 @@
 
 namespace proslam {
 
-  //ds module that computes potential framepoints in a stereo image pair by triangulation
+  //ds this class computes potential framepoints in a stereo image pair by triangulation
   class StereoTriangulator {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
@@ -24,8 +24,13 @@ namespace proslam {
     //ds object handling
     public:
 
+      //ds the stereo camera setup must be provided
       StereoTriangulator(const Camera* camera_left_, const Camera* camera_right_);
+
+      //ds cleanup of dynamic structures
       ~StereoTriangulator();
+
+      //ds prohibit default construction
       StereoTriangulator() = delete;
 
     //ds functionality
@@ -60,7 +65,7 @@ namespace proslam {
       //ds computes 3D position of a stereo keypoint pair in the keft camera frame (called within findStereoKeypoints)
       const PointCoordinates getCoordinatesInCameraLeft(const cv::Point2f& image_coordinates_left_, const cv::Point2f& image_coordinates_right_) const;
 
-    //ds configuration
+    //ds getters/setters
     public:
 
       //ds enable external access to descriptor computation
@@ -75,7 +80,7 @@ namespace proslam {
       //ds access to framepoints stored in an image-like matrix (pixel wise)
       FramePointMatrix framepointsInImage() {return _framepoints_in_image;}
 
-      //ds getters/setters
+      //ds other properties
       const Count numberOfRowsImage() const {return _number_of_rows_image;}
       const Count numberOfColsImage() const {return _number_of_cols_image;}
       const real maximumDepthCloseMeters() const {return _maximum_depth_close_meters;}
@@ -118,8 +123,8 @@ namespace proslam {
       //ds triangulation properties
       int32_t _maximum_matching_distance_triangulation = 50;
       const real _focal_length_pixels;
-      const real _focal_center_x_pixels;
-      const real _focal_center_y_pixels;
+      const real _principal_point_offset_u_pixels;
+      const real _principal_point_offset_v_pixels;
       const real _baseline_pixelsmeters;
       const real _baseline_meters;
       const real _baseline_factor          = 50;
@@ -156,7 +161,7 @@ namespace proslam {
       std::vector<KeypointWithDescriptor> _keypoints_with_descriptors_left;
       std::vector<KeypointWithDescriptor> _keypoints_with_descriptors_right;
 
-      //ds timing
+      //ds informative only
       CREATE_CHRONOMETER(feature_detection)
       CREATE_CHRONOMETER(descriptor_extraction)
       CREATE_CHRONOMETER(keypoint_pruning)

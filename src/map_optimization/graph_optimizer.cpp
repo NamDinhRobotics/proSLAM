@@ -1,8 +1,9 @@
-#include "graph_optimizer.h"
+#include "../map_optimization/graph_optimizer.h"
 
 namespace proslam {
 
   GraphOptimizer::GraphOptimizer(): _optimizer(getOptimizer()) {
+    std::cerr << "GraphOptimizer::GraphOptimizer|constructing" << std::endl;
     std::cerr << "GraphOptimizer::GraphOptimizer|constructed" << std::endl;
   }
 
@@ -15,6 +16,7 @@ namespace proslam {
     CHRONOMETER_START(overall)
     optimizePoses(context_);
     optimizeLandmarks(context_);
+    ++_number_of_optimizations;
     CHRONOMETER_STOP(overall)
   }
 
@@ -23,7 +25,7 @@ namespace proslam {
 
     //ds update all active landmark positions
     for (const LocalMap* local_map: context_->localMaps()) {
-      for (Landmark::Item* item: local_map->items()) {
+      for (Landmark::State* item: local_map->landmarks()) {
 
         //ds buffer current landmark
         Landmark* landmark = item->landmark;
@@ -31,8 +33,7 @@ namespace proslam {
 
         //ds update landmark position
         landmark->resetCoordinates(local_map->robotToWorld()*item->robot_coordinates);
-        landmark->setIsOptimized(true);
-        landmark->setIsClosed(true);
+        landmark->setIsInPoseGraph(true);
       }
     }
   }
@@ -42,58 +43,58 @@ namespace proslam {
     _optimizer->clearParameters();
 
     //ds vertex linking
-    g2o::VertexSE3* vertex_keyframe_previous = 0;
+    g2o::VertexSE3* vertex_local_map_previous = 0;
     TransformMatrix3D world_to_frame_previous(TransformMatrix3D::Identity());
 
     //ds added measurements
-    LocalMapPointerVector keyframes_in_graph(0);
+    LocalMapPointerVector local_maps_in_graph(0);
     
     //ds pose measurements
-    for (LocalMap* keyframe: context_->localMaps()) {
+    for (LocalMap* local_map: context_->localMaps()) {
 
       //ds add the pose to g2o
-      g2o::VertexSE3* vertex_keyframe = new g2o::VertexSE3;
-      vertex_keyframe->setId(keyframe->index());
-      vertex_keyframe->setEstimate(keyframe->robotToWorld().cast<double>());
-      _optimizer->addVertex(vertex_keyframe);
+      g2o::VertexSE3* vertex_local_map = new g2o::VertexSE3;
+      vertex_local_map->setId(local_map->identifier());
+      vertex_local_map->setEstimate(local_map->robotToWorld().cast<double>());
+      _optimizer->addVertex(vertex_local_map);
 
       //ds if previous pose is not set (first frame)
-      if (0 == vertex_keyframe_previous) {
-        vertex_keyframe->setFixed(true);
+      if (0 == vertex_local_map_previous) {
+        vertex_local_map->setFixed(true);
       } else {
         _optimizer->addEdge(getPoseEdge(_optimizer,
-                                        vertex_keyframe->id(),
-                                        vertex_keyframe_previous->id(),
-                                        world_to_frame_previous*keyframe->robotToWorld()));
+                                        vertex_local_map->id(),
+                                        vertex_local_map_previous->id(),
+                                        world_to_frame_previous*local_map->robotToWorld()));
       }
 
       //ds update previous
-      vertex_keyframe_previous = vertex_keyframe;
-      world_to_frame_previous = keyframe->worldToRobot();
-      keyframes_in_graph.push_back(keyframe);
+      vertex_local_map_previous = vertex_local_map;
+      world_to_frame_previous = local_map->worldToRobot();
+      local_maps_in_graph.push_back(local_map);
     }
 
     //ds pose measurements: check for closures now as all id's are in the graph
-    for (const LocalMap* keyframe_query: context_->localMaps()) {
+    for (const LocalMap* local_map_query: context_->localMaps()) {
 
-      for (const LocalMap::LocalMapCorrespondence& keyframe_correspondence: keyframe_query->closures()) {
-        const LocalMap* keyframe_reference = keyframe_correspondence.keyframe;
-        const TransformMatrix3D transform_query_to_reference = keyframe_correspondence.relation.transform;
+      for (const LocalMap::Closure& closure: local_map_query->closures()) {
+        const LocalMap* local_map_reference = closure.local_map;
+        const TransformMatrix3D transform_query_to_reference = closure.relation;
 
         //ds compute required transform delta
-        const TransformMatrix3D transform_query_to_reference_current = keyframe_reference->worldToRobot()*keyframe_query->robotToWorld();
+        const TransformMatrix3D transform_query_to_reference_current = local_map_reference->worldToRobot()*local_map_query->robotToWorld();
         const Vector3 translation_delta = transform_query_to_reference.translation()-transform_query_to_reference_current.translation();
 
-        //ds check threshold
+        //ds informative only
         if (4.0 < translation_delta.norm()) {
-          std::cerr << "Mapper::optimizePoses|WARNING: adding large impact closure: " << keyframe_query->index() << " > " << keyframe_reference->index() 
-                    << " translation L1: " << translation_delta.norm() << std::endl;
+          std::printf("Mapper::optimizePoses|WARNING: adding large impact closure: [%06lu] > [%06lu] absolute translation (m): %f\n",
+                      local_map_query->identifier(), local_map_reference->identifier(), translation_delta.norm());
         }
 
         //ds retrieve closure edge
         g2o::EdgeSE3* edge_closure = getClosureEdge(_optimizer,
-                                                    keyframe_query->index(),
-                                                    keyframe_reference->index(),
+                                                    local_map_query->identifier(),
+                                                    local_map_reference->identifier(),
                                                     transform_query_to_reference);
         _optimizer->addEdge(edge_closure);
       }
@@ -105,10 +106,10 @@ namespace proslam {
     _optimizer->optimize(10);
 
     //ds backpropagate solution to tracking context: keyframes
-    for (LocalMap* keyframe: keyframes_in_graph) {
-      g2o::VertexSE3* vertex_keyframe = dynamic_cast<g2o::VertexSE3*>(_optimizer->vertex(keyframe->index()));
-      assert(0 != vertex_keyframe);
-      keyframe->setRobotToWorld(vertex_keyframe->estimate().cast<real>());
+    for (LocalMap* local_map: local_maps_in_graph) {
+      g2o::VertexSE3* vertex_local_map = dynamic_cast<g2o::VertexSE3*>(_optimizer->vertex(local_map->identifier()));
+      assert(0 != vertex_local_map);
+      local_map->setRobotToWorld(vertex_local_map->estimate().cast<real>());
     }
     context_->setRobotToWorldPrevious(context_->currentLocalMap()->robotToWorld());
   }

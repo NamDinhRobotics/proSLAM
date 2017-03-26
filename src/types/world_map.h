@@ -6,7 +6,7 @@ namespace proslam {
   class WorldMap {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  //ds public object handling
+  //ds object handling
   public:
 
     WorldMap();
@@ -17,15 +17,23 @@ namespace proslam {
 
     void clear();
 
-    FramePtrMap& frames() {return _frames;}
+    //FramePtrMap& frames() {return _frames;}
     const FramePtrMap& frames() const {return _frames;}
     LocalMapPointerVector& localMaps() {return _local_maps;}
     const LocalMapPointerVector& localMaps() const {return _local_maps;}
     Frame* createFrame(const TransformMatrix3D& robot_pose, const real& maximum_depth_close_);
     const bool createLocalMap();
+
+    //ds visualization only
     const FramePtrVector frameQueueForLocalMap() const {return _frame_queue_for_local_map;}
 
-    LandmarkPtrMap& landmarks() {return _landmarks;}
+    //ds dump trajectory to file (in KITTI benchmark format only for now)
+    void writeTrajectory(const std::string& filename_ = "") const;
+
+  //ds getters/setters
+  public:
+
+    LandmarkPointerMap& landmarks() {return _landmarks;}
     Landmark* createLandmark(const PointCoordinates& coordinates_in_world_ = PointCoordinates::Zero());
 
     Frame* rootFrame() {return _root_frame;}
@@ -42,10 +50,7 @@ namespace proslam {
     const bool relocalized() const {return _relocalized;}
 
     void resetWindow();
-    void purifyLandmarks();
-
-    //ds dump trajectory to file (in KITTI benchmark format only for now)
-    void writeTrajectory(const std::string& filename_ = "") const;
+    const Count numberOfClosures() const {return _number_of_closures;}
 
   //ds wrapped helpers TODO purge
   public:
@@ -61,7 +66,7 @@ namespace proslam {
     Frame* _root_frame     = 0;
     Frame* _current_frame  = 0;
     Frame* _previous_frame = 0;
-    LandmarkPtrMap _landmarks;
+    LandmarkPointerMap _landmarks;
     FramePtrMap _frames;
 
     //ds localization
@@ -81,5 +86,8 @@ namespace proslam {
     FramePtrVector _frame_queue_for_local_map;
     LocalMap* _current_local_map  = 0;
     LocalMapPointerVector _local_maps;
+
+    //ds informative only
+    Count _number_of_closures = 0;
   };
 }
