@@ -3,6 +3,7 @@
 
 namespace proslam {
 
+  //ds inner instance count - incremented upon constructor call (also unsuccessful calls)
   Count Frame::_instances = 0;
 
   Frame::Frame(const WorldMap* context_,
@@ -10,21 +11,21 @@ namespace proslam {
                Frame* next_,
                const TransformMatrix3D& robot_to_world_,
                const real& maximum_depth_close_): _identifier(_instances),
+                                                  _previous(previous_),
+                                                  _next(next_),
                                                   _maximum_depth_close(maximum_depth_close_) {
     ++_instances;
-    setPrevious(previous_);
-    setNext(next_);
     setRobotToWorld(robot_to_world_);
     _points.clear();
   }
 
-  //ds deep copy constructor, used for local map generation
+  //ds deep clone constructor, used for local map generation - without incrementing the identifier!
   Frame::Frame(Frame* frame_): _identifier(frame_->identifier()),
+                               _status(frame_->status()),
+                               _previous(frame_->previous()),
+                               _next(frame_->next()),
                                _maximum_depth_close(frame_->maximumDepthClose()),
                                _local_map(frame_->localMap()) {
-    setPrevious(frame_->previous());
-    setNext(frame_->next());
-    _status = frame_->status();
 
     //ds take over point references
     _points.clear();
@@ -33,24 +34,19 @@ namespace proslam {
       frame_point->setFrame(this);
     }
 
-    //ds release points from old frame
+    //ds release points from old frame - without releasing the memory!
     frame_->points().clear();
 
-    _robot_to_world          = frame_->robotToWorld();
-    _world_to_robot          = frame_->worldToRobot();
+    //ds spatial properties
+    _robot_to_world              = frame_->robotToWorld();
+    _world_to_robot              = frame_->worldToRobot();
     _robot_to_world_ground_truth = frame_->robotToWorldGroundTruth();
 
+    //ds camera properties
     _camera_left           = frame_->cameraLeft();
     _camera_right          = frame_->cameraRight();
     _intensity_image_left  = frame_->intensityImageLeft();
     _intensity_image_right = frame_->intensityImageRight();
-  }
-
-  Frame::~Frame() {
-    for (const FramePoint* frame_point: _points) {
-      delete frame_point;
-    }
-    _points.clear();
   }
 
   void Frame::setLocalMap(const LocalMap* local_map_) {
@@ -59,11 +55,11 @@ namespace proslam {
     _local_map_to_frame = _frame_to_local_map.inverse();
   }
 
-  const Count Frame::countPoints(const Count min_age_,
-                                 const ThreeValued has_landmark_) const {
+  const Count Frame::countPoints(const Count& min_track_length_,
+                                 const ThreeValued& has_landmark_) const {
     Count count = 0;
     for (const FramePoint* frame_point: points()){
-      if(frame_point->trackLength() < min_age_) {
+      if(frame_point->trackLength() < min_track_length_) {
         continue;
       }
       if(has_landmark_!= Unknown){
@@ -86,11 +82,11 @@ namespace proslam {
 
   //ds request new framepoint with optional link to a previous point (track)
   FramePoint* Frame::create(const cv::KeyPoint& keypoint_left_,
-                                    const cv::Mat& descriptor_left_,
-                                    const cv::KeyPoint& keypoint_right_,
-                                    const cv::Mat& descriptor_right_,
-                                    const PointCoordinates& camera_coordinates_left_,
-                                    FramePoint* previous_point_) {
+                            const cv::Mat& descriptor_left_,
+                            const cv::KeyPoint& keypoint_right_,
+                            const cv::Mat& descriptor_right_,
+                            const PointCoordinates& camera_coordinates_left_,
+                            FramePoint* previous_point_) {
 
     //ds allocate a new point connected to the previous one
     FramePoint* frame_point = new FramePoint(keypoint_left_,
@@ -117,15 +113,7 @@ namespace proslam {
     if (frame_point->depthMeters() < _maximum_depth_close) {
       frame_point->setIsNear(true);
     }
-
     return frame_point;
-  }
-
-  Frame* FramePtrMap::get(int index) {
-    FramePtrMap::iterator it=find(index);
-    if (it==end())
-      return 0;
-    return it->second;
   }
 
   void Frame::releaseImages() {
@@ -140,31 +128,31 @@ namespace proslam {
     _points.clear();
   }
 
-  void FramePtrMap::put(Frame* frame) {
-    FramePtrMap::iterator it=find(frame->identifier());
-    if (it!=end()){
-      throw std::runtime_error("FramePtrMap::put(...), double insertion");
-    }
-    insert(std::make_pair(frame->identifier(), frame));
+  Frame* FramePointerMap::get(const Identifier& identifier_) {
+    FramePointerMap::iterator it = find(identifier_);
+    assert(it != end());
+    return it->second;
   }
 
-  void FramePtrMap::replace(Frame* frame) {
-    FramePtrMap::iterator it = find(frame->identifier());
-    if (it!=end()) {
-      Frame* frame_to_be_replaced = it->second;
+  void FramePointerMap::put(Frame* frame_) {
+    assert(find(frame_->identifier()) == end());
+    insert(std::make_pair(frame_->identifier(), frame_));
+  }
 
-      //ds update parent/child
-      frame_to_be_replaced->previous()->setNext(frame);
-      frame->setPrevious(frame_to_be_replaced->previous());
-      if (0 != frame_to_be_replaced->next()) {
-        frame->setNext(frame_to_be_replaced->next());
-      }
+  void FramePointerMap::replace(Frame* frame_) {
+    FramePointerMap::iterator it = find(frame_->identifier());
+    assert(it != end());
+    Frame* frame_to_be_replaced = it->second;
 
-      //ds free old frame and set new
-      delete frame_to_be_replaced;
-      it->second = frame;
-    } else {
-      throw std::runtime_error("cannot replace inexisting frame");
+    //ds update parent/child
+    frame_to_be_replaced->previous()->setNext(frame_);
+    frame_->setPrevious(frame_to_be_replaced->previous());
+    if (frame_to_be_replaced->next() != 0) {
+      frame_->setNext(frame_to_be_replaced->next());
     }
+
+    //ds free old frame and set new
+    delete frame_to_be_replaced;
+    it->second = frame_;
   }
 }

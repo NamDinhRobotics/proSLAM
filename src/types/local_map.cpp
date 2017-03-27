@@ -4,7 +4,7 @@ namespace proslam {
   using namespace srrg_core;
 
   LocalMap::LocalMap(Frame* frame_for_context_, 
-		                 FramePtrVector& frames_): Frame(frame_for_context_) {
+		                 FramePointerVector& frames_): Frame(frame_for_context_) {
 
     //ds link anchor frame
     Frame::_is_local_map_anchor = true;

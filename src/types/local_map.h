@@ -26,7 +26,7 @@ namespace proslam {
   protected:
 
     //ds owned by world map
-    LocalMap(Frame* frame_for_context_, FramePtrVector& frames_);
+    LocalMap(Frame* frame_for_context_, FramePointerVector& frames_);
 
     //ds cleanup of dynamic structures
     virtual ~LocalMap();
@@ -49,7 +49,7 @@ namespace proslam {
     Landmark::AppearancePtrVector _appearances;
     ClosureVector _closures;
     Landmark::StatePointerVector _landmarks;
-    FramePtrVector _frames;
+    FramePointerVector _frames;
 
     //ds grant access to local map producer
     friend WorldMap;

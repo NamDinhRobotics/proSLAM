@@ -18,7 +18,7 @@ namespace proslam {
     std::cerr << "WorldMap::WorldMap|destroying" << std::endl;
     for(LandmarkPointerMap::iterator it = _landmarks.begin(); it != _landmarks.end(); ++it)
       delete it->second;
-    for(FramePtrMap::iterator it = _frames.begin(); it != _frames.end(); ++it)
+    for(FramePointerMap::iterator it = _frames.begin(); it != _frames.end(); ++it)
       delete it->second;
     std::cerr << "WorldMap::WorldMap|destroyed" << std::endl;
   }

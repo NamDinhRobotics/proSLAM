@@ -118,7 +118,7 @@ namespace proslam {
     }
 
     //ds for all frames in the map
-    for (FramePtrMap::const_iterator it = _context->frames().begin(); it != _context->frames().end(); it++){
+    for (FramePointerMap::const_iterator it = _context->frames().begin(); it != _context->frames().end(); it++){
 
       //ds check if we have a keyframe and drawing is enabled
       if (it->second->isLocalMapAnchor() && _local_maps_drawn) {

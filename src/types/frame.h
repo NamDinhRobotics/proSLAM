@@ -29,11 +29,11 @@ namespace proslam {
           const TransformMatrix3D& robot_to_world_,
           const real& maximum_depth_close_);
 
-    //ds deep copy constructor
+    //ds deep clone constructor - without incrementing the identifier!
     Frame(Frame* frame_);
 
     //ds FramePoints cleanup
-    virtual ~Frame();
+    virtual ~Frame() {releasePoints();}
 
     //ds prohibt default construction
     Frame() = delete;
@@ -41,21 +41,22 @@ namespace proslam {
   //ds getters/setters
   public:
 
+    //ds unique identifier for a frame instance (exists once in memory)
     const Identifier& identifier() const {return _identifier;}
 
     inline Frame* previous() {return _previous;}
     inline const Frame* previous() const {return _previous;}
-    inline void setPrevious(Frame* previous_) {_previous = previous_;}
+    void setPrevious(Frame* previous_) {_previous = previous_;}
 
     inline Frame* next()  {return _next;}
     inline const Frame* next() const {return _next;}
-    inline void setNext(Frame* next_) {_next = next_;}
+    void setNext(Frame* next_) {_next = next_;}
 
     inline const Camera* cameraLeft() const {return _camera_left;}
-    inline void setCameraLeft(const Camera* camera_) {_camera_left = camera_;}
+    void setCameraLeft(const Camera* camera_) {_camera_left = camera_;}
 
     inline const Camera* cameraRight() const {return _camera_right;}
-    inline void setCameraRight(const Camera* camera_) {_camera_right = camera_;}
+    void setCameraRight(const Camera* camera_) {_camera_right = camera_;}
 
     inline const TransformMatrix3D& robotToWorld() const {return _robot_to_world;}
     virtual void setRobotToWorld(const TransformMatrix3D& robot_to_world_);
@@ -71,6 +72,9 @@ namespace proslam {
     inline const FramePointPointerVector& points() const {return _points;}
     inline FramePointPointerVector& points() {return _points;}
 
+    //ds this criteria is used for the decision of creating a landmark or not from a track of framepoints
+    const Count& minimumTrackLengthForLandmarkCreation() const {return _minimum_track_length_for_landmark_creation;}
+
     //ds request new framepoint with optional link to a previous point (track)
     FramePoint* create(const cv::KeyPoint& keypoint_left_,
                        const cv::Mat& descriptor_left_,
@@ -80,44 +84,45 @@ namespace proslam {
                        FramePoint* previous_point_ = 0);
 
     inline const IntensityImage& intensityImageLeft() const {return _intensity_image_left;}
-    inline void setIntensityImageLeft(const IntensityImage& intensity_image_)  {_intensity_image_left = intensity_image_.clone();}
+    void setIntensityImageLeft(const IntensityImage& intensity_image_)  {_intensity_image_left = intensity_image_.clone();}
 
     inline const IntensityImage& intensityImageRight() const {return _intensity_image_right;}
-    inline void setIntensityImageRight(const IntensityImage& intensity_image_)  {_intensity_image_right = intensity_image_.clone();}
+    void setIntensityImageRight(const IntensityImage& intensity_image_)  {_intensity_image_right = intensity_image_.clone();}
 
-    inline Status status() const {return _status;}
-    inline void setStatus(const Status& status_) {_status = status_;}
+    inline const Status& status() const {return _status;}
+    void setStatus(const Status& status_) {_status = status_;}
 
     inline const real maximumDepthClose() const {return _maximum_depth_close;}
 
     void setLocalMap(const LocalMap* local_map_);
-    const LocalMap* localMap() const {return _local_map;}
+    inline const LocalMap* localMap() const {return _local_map;}
     void setIsLocalMapAnchor(const bool& is_local_map_anchor_) {_is_local_map_anchor = is_local_map_anchor_;}
-    const bool isLocalMapAnchor() const {return _is_local_map_anchor;}
+    inline const bool isLocalMapAnchor() const {return _is_local_map_anchor;}
 
-    const Count countPoints(const Count min_age_,
-		                        const ThreeValued has_landmark_ = Unknown) const;
+    const Count countPoints(const Count& min_track_length_,
+		                        const ThreeValued& has_landmark_ = Unknown) const;
 
     void releaseImages();
     void releasePoints();
 
-  //ds configuration attributes
-  public:
-
-    //ds singleton configuration
-    static constexpr Count minimum_landmark_age = 3;
-    static constexpr Count minimum_image_age    = 1;
-
   //ds attributes
   protected:
 
+    //ds unique identifier for a landmark (exists once in memory)
     const Identifier _identifier;
-    Status _status   = Localizing;
+
+    //ds tracker status at the time of creation of this instance
+    Status _status = Localizing;
+
+    //ds links to preceding and subsequent instances
     Frame* _previous = 0;
     Frame* _next     = 0;
 
-    //ds frame point generation
+    //ds contained framepoints
     FramePointPointerVector _points;
+
+    //ds this criteria is used for the decision of creating a landmark or not from a track of framepoints
+    const Count _minimum_track_length_for_landmark_creation = 3;
 
     //ds spatials
     TransformMatrix3D _frame_to_local_map = TransformMatrix3D::Identity();
@@ -132,18 +137,20 @@ namespace proslam {
     //ds to support arbitrary number of rgb/depth image combinations
     IntensityImage _intensity_image_left;
     IntensityImage _intensity_image_right;
-    const real _maximum_depth_close = 0;
+
+    //ds
+    const real _maximum_depth_close;
 
     //ds link to a local map if the frame is part of one
     const LocalMap* _local_map = 0;
     bool _is_local_map_anchor  = false;
 
-    //ds visualization only
-    TransformMatrix3D _robot_to_world_ground_truth = TransformMatrix3D::Identity();
-
     //ds access
     friend class WorldMap;
-    friend class FramePtrMap;
+    friend class FramePointerMap;
+
+    //ds visualization only
+    TransformMatrix3D _robot_to_world_ground_truth = TransformMatrix3D::Identity();
 
     //ds class specific
     private:
@@ -152,14 +159,13 @@ namespace proslam {
       static Count _instances;
   };
 
-  typedef std::vector<Frame*> FramePtrVector;
-  typedef std::pair<int, Frame*> FramePtrMapElement;
+  typedef std::vector<Frame*> FramePointerVector;
+  typedef std::pair<Identifier, Frame*> FramePointerMapElement;
 
-  class FramePtrMap: public std::map<int, Frame*>{
+  class FramePointerMap: public std::map<Identifier, Frame*>{
   public:
-
-    Frame* get(int index);
-    void put(Frame* frame);
-    void replace(Frame* frame);
+    Frame* get(const Identifier& identifier_);
+    void put(Frame* frame_);
+    void replace(Frame* frame_);
   };
 }

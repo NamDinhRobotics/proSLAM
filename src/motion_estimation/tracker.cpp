@@ -306,7 +306,7 @@ namespace proslam {
     for (FramePoint* point: current_frame->points()) {
 
       //ds skip point if tracking and not mature enough to be a landmark - for localizing state this is skipped
-      if (point->trackLength() < Frame::minimum_landmark_age) {
+      if (point->trackLength() < current_frame->minimumTrackLengthForLandmarkCreation()) {
         continue;
       }
 
@@ -358,7 +358,7 @@ namespace proslam {
     }
     context_->setRobotToWorldPrevious(robot_to_world_current);
 
-    //ds create new frame (memory lock expected)
+    //ds create new frame
     Frame* current_frame = context_->createFrame(robot_to_world_current, _framepoint_generator->maximumDepthCloseMeters());
     current_frame->setCameraLeft(_camera_left);
     current_frame->setIntensityImageLeft(intensity_image_left_);
@@ -425,7 +425,7 @@ namespace proslam {
         }
 
         //ds check if we can switch the state
-        const Count number_of_good_points = current_frame->countPoints(Frame::minimum_landmark_age);
+        const Count number_of_good_points = current_frame->countPoints(current_frame->minimumTrackLengthForLandmarkCreation());
         if (number_of_good_points > _minimum_number_of_landmarks_to_track) {
           _updateLandmarks(context_);
           _status_previous = _status;

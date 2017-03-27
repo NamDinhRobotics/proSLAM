@@ -18,14 +18,14 @@ namespace proslam {
     void clear();
 
     //FramePtrMap& frames() {return _frames;}
-    const FramePtrMap& frames() const {return _frames;}
+    const FramePointerMap& frames() const {return _frames;}
     LocalMapPointerVector& localMaps() {return _local_maps;}
     const LocalMapPointerVector& localMaps() const {return _local_maps;}
     Frame* createFrame(const TransformMatrix3D& robot_pose, const real& maximum_depth_close_);
     const bool createLocalMap();
 
     //ds visualization only
-    const FramePtrVector frameQueueForLocalMap() const {return _frame_queue_for_local_map;}
+    const FramePointerVector frameQueueForLocalMap() const {return _frame_queue_for_local_map;}
 
     //ds dump trajectory to file (in KITTI benchmark format only for now)
     void writeTrajectory(const std::string& filename_ = "") const;
@@ -67,7 +67,7 @@ namespace proslam {
     Frame* _current_frame  = 0;
     Frame* _previous_frame = 0;
     LandmarkPointerMap _landmarks;
-    FramePtrMap _frames;
+    FramePointerMap _frames;
 
     //ds localization
     TransformMatrix3D _last_good_robot_pose = TransformMatrix3D::Identity();
@@ -83,7 +83,7 @@ namespace proslam {
     const Count _minimum_number_of_frames_for_local_map = 4;   //ds in case translational local map generation is triggered, this value enforces a reasonable trajectory granularity
 
     //ds local map control structures
-    FramePtrVector _frame_queue_for_local_map;
+    FramePointerVector _frame_queue_for_local_map;
     LocalMap* _current_local_map  = 0;
     LocalMapPointerVector _local_maps;
 

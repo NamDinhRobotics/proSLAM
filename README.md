@@ -95,7 +95,7 @@ CMake variables that must be set when building without ROS or to select specific
 ---
 ### How do I check if it works? ###
 
-1) download the KITTI sequence 00 into a folder on your computer: https://drive.google.com/open?id=0ByaBRAPfmgEqdXhJRmktQ2lsMEE (2.8GB)
+1) download the KITTI Sequence 00 into a folder on your computer: https://drive.google.com/open?id=0ByaBRAPfmgEqdXhJRmktQ2lsMEE (2.8GB)
 
 ---
 2) launch a terminal in that folder and uncompress the tarball:
@@ -121,16 +121,19 @@ Three windows will pop up - "input: images", "output: map (bird view)" and "outp
 6) press [Esc] to terminate the system prematurely
 
 ---
-### Additional pre-formatted datasets ###
+### Pre-formatted datasets ###
 
-EuRoC MH_01_easy: https://drive.google.com/open?id=0ByaBRAPfmgEqbUctejZwb0xRaFk (1.9GB)
+ - KITTI Sequence 01: https://drive.google.com/open?id=0ByaBRAPfmgEqdXhJRmktQ2lsMEE (2.8GB)
+ - KITTI Sequence 00: https://drive.google.com/open?id=0ByaBRAPfmgEqN19hTUJjRG9XV3M (0.7GB)
+ - EuRoC MH_01_easy: https://drive.google.com/open?id=0ByaBRAPfmgEqbUctejZwb0xRaFk (1.9GB)<br/>
 
 Run procedure remains identical to the one above (only the dataset name has to be adjusted, e.g. 00.txt -> MH_01_easy.txt)
 
 ---
-### Custom stereo camera sensor input ###
+### Custom stereo camera sensor input / ROS node ###
 
-On-the-fly raw stereo image processing with custom stereo camera parameters will be supported shortly.
+On-the-fly raw stereo image processing with custom stereo camera parameters will be supported shortly.<br/>
+Please use the provided datasets in SRRG format.
 
 ---
 ### It doesn't work? ###

@@ -461,7 +461,7 @@ void printReport(const std::vector<TransformMatrix3D>& robot_to_world_ground_tru
   TransformMatrix3D odometry_robot_to_world_previous_ground_truth = TransformMatrix3D::Identity();
   Index index_frame     = 0;
   Frame* previous_frame = 0;
-  for (FramePtrMapElement frame: world_context_->frames()) {
+  for (FramePointerMapElement frame: world_context_->frames()) {
 
     //ds compute squared errors between frames
     if (index_frame > 0) {
