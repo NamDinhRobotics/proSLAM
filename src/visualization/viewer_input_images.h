@@ -41,7 +41,7 @@ namespace proslam {
     void drawFeatureTracking();
     //void drawSolverState();
     const bool updateGUI();
-    void switchToStepwiseMode();
+    void switchMode();
 
   protected:
     WorldMap* _world;

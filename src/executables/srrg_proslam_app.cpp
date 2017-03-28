@@ -26,6 +26,8 @@ const char* banner[] = {
   "-use-gui:                     displays GUI elements",
   "-open:                        disables relocalization",
   "-show-top:                    enable top map viewer",
+  "-save-memory:                 enforce deallocation of unused memory at runtime",
+  "-equalize-histogram           equalize stereo image histogram before processing",
   "-------------------------------------------------------------------------",
   0
 };
@@ -76,6 +78,8 @@ int32_t main(int32_t argc, char ** argv) {
   std::string filename_sensor_messages = "";
   int32_t count_added_arguments        = 1;
   bool show_top_viewer                 = false;
+  bool save_memory                     = false;
+  bool equalize_histogram              = false;
   while(count_added_arguments < argc){
     if (!std::strcmp(argv[count_added_arguments], "-camera-left-topic")){
       count_added_arguments++;
@@ -92,6 +96,10 @@ int32_t main(int32_t argc, char ** argv) {
       use_relocalization = false;
     } else if (!std::strcmp(argv[count_added_arguments], "-show-top")) {
       show_top_viewer = true;
+    } else if (!std::strcmp(argv[count_added_arguments], "-save-memory")) {
+      save_memory = true;
+    } else if (!std::strcmp(argv[count_added_arguments], "-equalize-histogram")) {
+      equalize_histogram = true;
     } else {
       filename_sensor_messages = argv[count_added_arguments];
     }
@@ -106,6 +114,8 @@ int32_t main(int32_t argc, char ** argv) {
   std::cerr << "main|-use-gui            " << use_gui << std::endl;
   std::cerr << "main|-open               " << !use_relocalization << std::endl;
   std::cerr << "main|-show-top           " << show_top_viewer << std::endl;
+  std::cerr << "main|-save-memory        " << save_memory << std::endl;
+  std::cerr << "main|-equalize-histogram " << equalize_histogram << std::endl;
   std::cerr << "main|-dataset            " << filename_sensor_messages << std::endl;
   std::cerr << "main|-------------------------------------------------------------------------" << std::endl;
 
@@ -184,6 +194,7 @@ int32_t main(int32_t argc, char ** argv) {
   Tracker* tracker         = new Tracker(cameras_by_topic.at(topic_image_stereo_left), cameras_by_topic.at(topic_image_stereo_right));
 
   //ds configure SLAM modules
+  world_map->setSaveMemory(save_memory);
   relocalizer->aligner()->setMaximumErrorKernel(0.5);
   relocalizer->aligner()->setMinimumNumberOfInliers(25);
   relocalizer->aligner()->setMinimumInlierRatio(0.5);
@@ -257,7 +268,13 @@ int32_t main(int32_t argc, char ** argv) {
       //ds buffer images and cameras
       cv::Mat intensity_image_left_rectified  = message_image_left->image();
       cv::Mat intensity_image_right_rectified = message_image_right->image();
-      Camera* camera_left  = cameras_by_topic.at(message_image_left->topic());
+      Camera* camera_left = cameras_by_topic.at(message_image_left->topic());
+
+      //ds preprocess the images if desired
+      if (equalize_histogram) {
+        cv::equalizeHist(intensity_image_left_rectified, intensity_image_left_rectified);
+        cv::equalizeHist(intensity_image_right_rectified, intensity_image_right_rectified);
+      }
 
       //ds check if first frame and odometry is available
       if (world_map->frames().size() == 0 && message_image_left->hasOdom()) {

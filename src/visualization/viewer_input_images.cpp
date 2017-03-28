@@ -101,14 +101,7 @@ namespace proslam {
             return false;
           }
           case KeyStroke::Backspace: {
-            if(_cv_wait_key_timeout_milliseconds > 0) {
-              _cv_wait_key_timeout_milliseconds = 0;
-              std::cerr << "switched to stepwise mode (press backspace for switch, press space for stepping)" << std::endl;
-            }
-            else {
-              _cv_wait_key_timeout_milliseconds = 1;
-              std::cerr << "switched to benchmark mode (press backspace for switch)" << std::endl;
-            }
+            switchMode();
             break;
           }
           case KeyStroke::Num1: {
@@ -125,8 +118,14 @@ namespace proslam {
     return true;
   }
 
-  void ViewerInputImages::switchToStepwiseMode() {
-    _cv_wait_key_timeout_milliseconds = 0;
-    std::cerr << "switched to stepwise mode (press backspace for switch, press space for stepping)" << std::endl;
+  void ViewerInputImages::switchMode() {
+    if(_cv_wait_key_timeout_milliseconds > 0) {
+      _cv_wait_key_timeout_milliseconds = 0;
+      std::cerr << "switched to stepwise mode (press backspace for switch, press space for stepping)" << std::endl;
+    }
+    else {
+      _cv_wait_key_timeout_milliseconds = 1;
+      std::cerr << "switched to benchmark mode (press backspace for switch)" << std::endl;
+    }
   }
 }

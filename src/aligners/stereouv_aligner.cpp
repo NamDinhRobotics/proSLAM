@@ -42,14 +42,20 @@ namespace proslam {
       _inliers[index_point] = false;
       _omega.setIdentity();
 
-      //ds buffer references
-      FramePoint* frame_point  = _context->points()[index_point];
-      const Landmark* landmark = frame_point->landmark();
-
+      //ds buffer framepoint
+      FramePoint* frame_point = _context->points()[index_point];
       assert(_context->cameraLeft()->isInFieldOfView(frame_point->imageCoordinatesLeft()));
       assert(_context->cameraRight()->isInFieldOfView(frame_point->imageCoordinatesRight()));
 
-      //ds compute the point in the camera frame
+      //ds skip non linked points
+      if (frame_point->previous() == 0) {
+        continue;
+      }
+
+      //ds buffer landmark
+      const Landmark* landmark = frame_point->landmark();
+
+      //ds compute the point in the camera frame - prefering a landmark estimate if available
       PointCoordinates sampled_point_in_camera_left = PointCoordinates::Zero();
       if (landmark && landmark->areCoordinatesValidated()) {
         sampled_point_in_camera_left = _world_to_camera_left*landmark->coordinates();

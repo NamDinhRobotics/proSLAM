@@ -7,19 +7,9 @@ set(CMAKE_MODULE_PATH ${srrg_cmake_modules_INCLUDE_DIRS})
 #set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_BUILD_TYPE Release)
 
-#ds fetch srrg packages - retrieve catkin workspace source folder - brutal, disabled for now
-#string(REPLACE "srrg_proslam" "" CATKIN_SOURCE_DIR ${PROJECT_SOURCE_DIR})
-
-#ds start fetching all packages - this will fail automatically if the given package already exists - brutal, disabled for now
-#execute_process(COMMAND bash "-c" "git clone https://gitlab.com/srrg-software/srrg_boss ${CATKIN_SOURCE_DIR}srrg_boss")
-#execute_process(COMMAND bash "-c" "git clone https://gitlab.com/srrg-software/srrg_core ${CATKIN_SOURCE_DIR}srrg_core")
-#execute_process(COMMAND bash "-c" "git clone https://gitlab.com/srrg-software/srrg_gl_helpers ${CATKIN_SOURCE_DIR}srrg_gl_helpers")
-#execute_process(COMMAND bash "-c" "git clone https://gitlab.com/srrg-software/srrg_core_viewers ${CATKIN_SOURCE_DIR}srrg_core_viewers")
-#execute_process(COMMAND bash "-c" "git clone https://gitlab.com/srrg-software/srrg_hbst ${CATKIN_SOURCE_DIR}srrg_hbst")
-
 #ds OpenCV - OpenCV_DIR might be overwritten by user
 find_package(OpenCV REQUIRED)
-message("using OpenCV version ${OpenCV_VERSION} (${OpenCV_DIR})")
+message("using OpenCV version '${OpenCV_VERSION}' (${OpenCV_DIR})")
 
 find_package(Eigen3 REQUIRED)
 find_package(QGLViewer REQUIRED)
@@ -37,25 +27,39 @@ endif()
 
 #ds depending on found qt installation
 if(${SRRG_PROSLAM_USE_QT_5})
-  message("using Qt version 5")
+  message("using Qt version '5'")
   find_package(Qt5 COMPONENTS Xml OpenGL Widgets REQUIRED)
 else()
-  message("using Qt version 4")
+  message("using Qt version '4'")
   find_package(Qt4 REQUIRED)
 endif()
 
 find_package(SuiteSparse REQUIRED)
 
-#ds find catkin macros and libraries
-find_package(catkin REQUIRED COMPONENTS
-  srrg_core
-  srrg_gl_helpers
-  srrg_core_viewers
-  srrg_hbst
-  g2o_catkin
-  roscpp
-  sensor_msgs
-)
+#ds check if a supported ros version is installed to determine which packages we include
+set(SRRG_PROSLAM_HAS_ROS false)
+if("$ENV{ROS_DISTRO}" STREQUAL "kinetic" OR "$ENV{ROS_DISTRO}" STREQUAL "indigo")
+  message("using ROS version '$ENV{ROS_DISTRO}' (building nodes)")
+  set(SRRG_PROSLAM_HAS_ROS true)
+  find_package(catkin REQUIRED COMPONENTS
+    srrg_core
+    srrg_gl_helpers
+    srrg_core_viewers
+    srrg_hbst
+    g2o_catkin
+    roscpp
+    sensor_msgs
+    cv_bridge
+  )
+else()
+  find_package(catkin REQUIRED COMPONENTS
+    srrg_core
+    srrg_gl_helpers
+    srrg_core_viewers
+    srrg_hbst
+    g2o_catkin
+  )
+endif()
 
 #ds flags
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -Wall -O0 -g -fPIC -fstack-check")

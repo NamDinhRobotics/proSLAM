@@ -51,8 +51,9 @@ namespace proslam {
 
     void resetWindow();
     const Count numberOfClosures() const {return _number_of_closures;}
+    void setSaveMemory(const bool& save_memory_) {_save_memory = save_memory_;}
 
-  //ds wrapped helpers TODO purge
+  //ds wrapped helpers
   public:
 
     static const Vector3 toOrientationRodrigues(const Matrix3& rotation_matrix_) {
@@ -86,6 +87,9 @@ namespace proslam {
     FramePointerVector _frame_queue_for_local_map;
     LocalMap* _current_local_map  = 0;
     LocalMapPointerVector _local_maps;
+
+    //ds memory saving option (slightly less processing speed)
+    bool _save_memory = false;
 
     //ds informative only
     Count _number_of_closures = 0;

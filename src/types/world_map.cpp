@@ -36,6 +36,11 @@ namespace proslam {
 
     if (_previous_frame) {
       _previous_frame->setNext(_current_frame);
+
+      //ds free memory if desired (saves a lot of memory costs a little computation)
+      if (_save_memory && _previous_frame->previous()) {
+        _previous_frame->previous()->releasePoints();
+      }
     }
 
     _frames.put(_current_frame);

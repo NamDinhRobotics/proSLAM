@@ -47,9 +47,6 @@ namespace proslam {
           landmark->refreshState();
         }
       }
-
-      //ds release all points of a frame (saves a lot of memory costs a little computation)
-      frame->releasePoints();
     }
 
     //ds check for low item counts
