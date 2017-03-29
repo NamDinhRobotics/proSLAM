@@ -80,6 +80,9 @@ namespace proslam {
       //ds access to framepoints stored in an image-like matrix (pixel wise)
       FramePointMatrix framepointsInImage() {return _framepoints_in_image;}
 
+      //ds clears framepoint image matrix
+      void clearFramepointsInImage();
+
       //ds other properties
       const Count numberOfRowsImage() const {return _number_of_rows_image;}
       const Count numberOfColsImage() const {return _number_of_cols_image;}

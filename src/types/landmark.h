@@ -103,6 +103,7 @@ namespace proslam {
 
     //ds the 3D point coordinates of the landmark expressed in the WorldMap coordinate frame
     PointCoordinates _coordinates;
+    PointCoordinates _coordinates_alt = PointCoordinates::Zero();
 
     //ds the current connected state handle (links the landmark to the local map)
     State* _state;
@@ -112,8 +113,9 @@ namespace proslam {
     bool _is_in_pose_graph          = false;
 
     //ds landmark coordinates optimization
-    std::vector<std::pair<real, PointCoordinates>> _updates;
-    PointCoordinates _coordinates_average_previous;
+    real _total_weight = 0;
+    const real _maximum_acceptable_relative_displacement = 0.75;
+    Count _number_of_updates = 0;
 
     //ds grant access to landmark factory
     friend WorldMap;

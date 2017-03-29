@@ -458,12 +458,13 @@ namespace proslam {
         //ds if we don't have enough inliers - trigger fallback posit on last position
         if (number_of_inliers < _minimum_number_of_landmarks_to_track) {
 
-          //ds reset state
+          //ds reset state - also purging points to fully reinitialize the tracking
           std::cerr << "LOST TRACK due to invalid position optimization" << std::endl;
           _status_previous = Frame::Localizing;
           _status          = Frame::Localizing;
           current_frame->setStatus(_status);
-          current_frame->points().clear();
+          current_frame->releasePoints();
+          _framepoint_generator->clearFramepointsInImage();
 
           //ds keep previous solution
           current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
@@ -487,6 +488,7 @@ namespace proslam {
         //ds update current frame points
         _number_of_tracked_points = 0;
         for (Index index_point = 0; index_point < current_frame->points().size(); index_point++) {
+          assert(current_frame->points()[index_point]->previous());
 
           //ds points without landmarks are always kept
           if (!current_frame->points()[index_point]->landmark()) {
@@ -497,7 +499,7 @@ namespace proslam {
           //ds keep the point if it has been skipped (due to insufficient maturity or invalidity) or is an inlier
           else if (_pose_optimizer->errors()[index_point] == -1 || _pose_optimizer->inliers()[index_point]) {
             current_frame->points()[_number_of_tracked_points] = current_frame->points()[index_point];
-            if (current_frame->points()[_number_of_tracked_points]->landmark() != 0) {
+            if (current_frame->points()[_number_of_tracked_points]->landmark()) {
               current_frame->points()[_number_of_tracked_points]->landmark()->setIsActive(true);
             }
             ++_number_of_tracked_points;

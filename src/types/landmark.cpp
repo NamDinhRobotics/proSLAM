@@ -9,7 +9,6 @@ namespace proslam {
   Landmark::Landmark(const PointCoordinates& point_coordinates_): _identifier(_instances),
                                                                   _coordinates(point_coordinates_) {
     ++_instances;
-    _updates.clear();
 
     //ds allocate fresh state (trading construction correctness for enclosed generation)
     _state = new State(this);
@@ -22,16 +21,14 @@ namespace proslam {
     if (_state->local_map == 0) {
       delete _state;
     }
-
-    //ds clear measurements
-    _updates.clear();
   }
 
   //ds reset landmark coordinates to a certain position (loss of past measurements!)
   void Landmark::resetCoordinates(const PointCoordinates& coordinates_) {
 
     //ds clear past measurements
-    _updates.clear();
+    _total_weight = 0;
+    _number_of_updates = 0;
 
     //ds add fresh measurement
     update(coordinates_);
@@ -41,44 +38,26 @@ namespace proslam {
   void Landmark::update(const PointCoordinates& coordinates_in_world_,
                         const real& depth_meters_) {
 
-    //ds if we got at least 2 previous measurements
-    if (_updates.size() > 1) {
+    //ds compute relative delta to the current coordinate estimate
+    const real relative_delta = (_coordinates-coordinates_in_world_).norm()/depth_meters_;
 
-      //ds compute average delta
-      const real relative_delta = (_coordinates_average_previous-coordinates_in_world_).norm()/depth_meters_;
+    //ds check if inlier measurement
+    if (relative_delta < _maximum_acceptable_relative_displacement || _number_of_updates < 2) {
 
-      //ds if inlier measurement
-      if (relative_delta < 0.5) {
+      //ds current weight
+      const real weight_new_measurement = 1/depth_meters_;
 
-        //ds update average for next measurement addition
-        _coordinates_average_previous = (_updates.size()*_coordinates_average_previous+coordinates_in_world_)/(_updates.size()+1);
+      //ds update total weight
+      _total_weight += weight_new_measurement;
 
-        //ds update coordinates
-        _updates.push_back(std::make_pair(1/depth_meters_, coordinates_in_world_));
-        PointCoordinates coordinates_final(PointCoordinates::Zero());
-        real total_weight = 0;
-        for (const std::pair<real, PointCoordinates> measurement: _updates) {
-          total_weight      += measurement.first;
-          coordinates_final += measurement.first*measurement.second;
-        }
-        _coordinates = coordinates_final/total_weight;
-        _are_coordinates_validated = true;
-      } else {
-
-        //ds discard measurement completely
-        _are_coordinates_validated = false;
-      }
+      //ds update coordinates (http://people.ds.cam.ac.uk/fanf2/hermes/doc/antiforgery/stats.pdf)
+      _coordinates += weight_new_measurement/_total_weight*(coordinates_in_world_-_coordinates);
+      _are_coordinates_validated = true;
+      ++_number_of_updates;
     } else {
 
-      //ds update coordinates based on average
-      _updates.push_back(std::make_pair(1/depth_meters_, coordinates_in_world_));
-      PointCoordinates coordinates_average(PointCoordinates::Zero());
-      for (const std::pair<real, PointCoordinates> measurement: _updates) {
-        coordinates_average += measurement.second;
-      }
-      _coordinates                  = coordinates_average/_updates.size();
-      _coordinates_average_previous = _coordinates;
-      _are_coordinates_validated    = true;
+      //ds discard measurement completely
+      _are_coordinates_validated = false;
     }
     assert(!std::isnan(_coordinates.x()));
     assert(!std::isnan(_coordinates.y()));

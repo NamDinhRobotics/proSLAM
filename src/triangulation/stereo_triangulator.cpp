@@ -372,4 +372,12 @@ namespace proslam {
     //ds return triangulated point
     return coordinates_in_camera;
   }
+
+  void StereoTriangulator::clearFramepointsInImage() {
+    for (Index row = 0; row < _number_of_rows_image; ++row) {
+      for (Count col = 0; col < _number_of_cols_image; ++col) {
+        _framepoints_in_image[row][col] = 0;
+      }
+    }
+  }
 }

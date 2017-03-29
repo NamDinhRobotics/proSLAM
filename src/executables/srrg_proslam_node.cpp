@@ -51,8 +51,8 @@ Camera* camera_right = 0;
 //ds image handling globals
 cv::Mat undistort_rectify_maps_left[2];
 cv::Mat undistort_rectify_maps_right[2];
-cv::Mat intensity_image_left;
-cv::Mat intensity_image_right;
+std::pair<double, cv::Mat> image_left;
+std::pair<double, cv::Mat> image_right;
 bool is_set_image_left = false;
 bool is_set_image_right = false;
 
@@ -69,15 +69,6 @@ void process(WorldMap* world_map_,
              const cv::Mat& intensity_image_left_,
              const cv::Mat& intensity_image_right_,
              const TransformMatrix3D& world_previous_to_current_estimate_ = TransformMatrix3D::Identity());
-
-//ds prints extensive run summary
-void printReport(const std::vector<TransformMatrix3D>& robot_to_world_ground_truth_poses_,
-                 const Count& number_of_processed_frames_total_,
-                 const real& duration_total_seconds_,
-                 const WorldMap* world_context_,
-                 const Tracker* tracker_,
-                 const GraphOptimizer* mapper_,
-                 const Relocalizer* relocalizer_);
 
 //ds ros synchronization
 void callbackCameraInfoLeft(const sensor_msgs::CameraInfoConstPtr& message_) {
@@ -129,7 +120,10 @@ void callbackImageLeft(const sensor_msgs::ImageConstPtr& message_) {
     cv_bridge::CvImagePtr image_pointer = cv_bridge::toCvCopy(message_, sensor_msgs::image_encodings::MONO8);
 
     //ds rectify image
-    cv::remap(image_pointer->image, intensity_image_left, undistort_rectify_maps_left[0], undistort_rectify_maps_left[1], cv::INTER_LINEAR);
+    cv::remap(image_pointer->image, image_left.second, undistort_rectify_maps_left[0], undistort_rectify_maps_left[1], cv::INTER_LINEAR);
+
+    //ds set timestmap
+    image_left.first = image_pointer->header.stamp.toSec();
 
     //ds set image
     is_set_image_left = true;
@@ -146,7 +140,10 @@ void callbackImageRight(const sensor_msgs::ImageConstPtr& message_) {
     cv_bridge::CvImagePtr image_pointer = cv_bridge::toCvCopy(message_, sensor_msgs::image_encodings::MONO8);
 
     //ds rectify image
-    cv::remap(image_pointer->image, intensity_image_right, undistort_rectify_maps_right[0], undistort_rectify_maps_right[1], cv::INTER_LINEAR);
+    cv::remap(image_pointer->image, image_right.second, undistort_rectify_maps_right[0], undistort_rectify_maps_right[1], cv::INTER_LINEAR);
+
+    //ds set timestmap
+    image_right.first = image_pointer->header.stamp.toSec();
 
     //ds set image
     is_set_image_right = true;
@@ -263,6 +260,9 @@ int32_t main(int32_t argc, char ** argv) {
   Tracker* tracker         = new Tracker(camera_left, camera_right);
 
   //ds configure SLAM modules
+  tracker->setPixelDistanceTrackingMinimum(50);
+  tracker->setPixelDistanceTrackingMaximum(50);
+  tracker->aligner()->setMaximumErrorKernel(25);
   tracker->preprocessor()->setTargetNumberOfPoints(500);
   relocalizer->aligner()->setMaximumErrorKernel(0.5);
   relocalizer->aligner()->setMinimumNumberOfInliers(25);
@@ -303,8 +303,13 @@ int32_t main(int32_t argc, char ** argv) {
 
       //ds preprocess the images if desired
       if (equalize_histogram) {
-        cv::equalizeHist(intensity_image_left, intensity_image_left);
-        cv::equalizeHist(intensity_image_right, intensity_image_right);
+        cv::equalizeHist(image_left.second, image_left.second);
+        cv::equalizeHist(image_right.second, image_right.second);
+      }
+
+      //ds check large time delta (more than 100ms -> 10Hz)
+      if (std::fabs(image_left.first-image_right.first) > 0.1) {
+        std::cerr << "main|WARNING: received large timestamp delta between stereo images" << std::endl;
       }
 
       //ds process images
@@ -312,8 +317,8 @@ int32_t main(int32_t argc, char ** argv) {
               tracker,
               mapper,
               relocalizer,
-              intensity_image_left,
-              intensity_image_right,
+              image_left.second,
+              image_right.second,
               world_previous_to_current);
 
       //ds update ui
@@ -350,9 +355,9 @@ void process(WorldMap* world_map_,
 
   //ds call the tracker
   world_previous_to_current = tracker_->compute(world_map_,
-                                                 intensity_image_left_,
-                                                 intensity_image_right_,
-                                                 world_previous_to_current_estimate_);
+                                                intensity_image_left_,
+                                                intensity_image_right_,
+                                                world_previous_to_current_estimate_);
 
   //ds check if relocalization is desired
   if (use_relocalization) {
@@ -380,8 +385,8 @@ void process(WorldMap* world_map_,
 
             //ds add loop closure constraint
             world_map_->closeLocalMaps(world_map_->currentLocalMap(),
-                                                                   closure->local_map_reference,
-                                                                   closure->transform_frame_query_to_frame_reference);
+                                       closure->local_map_reference,
+                                       closure->transform_frame_query_to_frame_reference);
             if (use_gui) {
               for (const Correspondence* match: closure->correspondences) {
                 world_map_->landmarks().get(match->item_query->landmark->identifier())->setIsInLoopClosureQuery(true);
@@ -401,90 +406,4 @@ void process(WorldMap* world_map_,
       }
     }
   }
-}
-
-//ds prints extensive run summary
-void printReport(const std::vector<TransformMatrix3D>& robot_to_world_ground_truth_poses_,
-                 const Count& number_of_processed_frames_total_,
-                 const real& duration_total_seconds_,
-                 const WorldMap* world_context_,
-                 const Tracker* tracker_,
-                 const GraphOptimizer* mapper_,
-                 const Relocalizer* relocalizer_) {
-
-  //ds compute squared errors
-  std::vector<real> errors_translation_relative(0);
-  std::vector<real> squared_errors_translation_absolute(0);
-  TransformMatrix3D odometry_robot_to_world_previous_ground_truth = TransformMatrix3D::Identity();
-  Index index_frame     = 0;
-  Frame* previous_frame = 0;
-  for (FramePointerMapElement frame: world_context_->frames()) {
-
-    //ds compute squared errors between frames
-    if (index_frame > 0) {
-      const TransformMatrix3D world_previous_to_current_ground_truth = robot_to_world_ground_truth_poses_[index_frame]*odometry_robot_to_world_previous_ground_truth.inverse();
-      errors_translation_relative.push_back(((frame.second->robotToWorld()*previous_frame->robotToWorld().inverse()).translation()-world_previous_to_current_ground_truth.translation()).norm());
-    }
-    squared_errors_translation_absolute.push_back((frame.second->robotToWorld().translation()-robot_to_world_ground_truth_poses_[index_frame].translation()).squaredNorm());
-    odometry_robot_to_world_previous_ground_truth = robot_to_world_ground_truth_poses_[index_frame];
-    previous_frame = frame.second;
-    index_frame++;
-  }
-
-  //ds compute RMSEs
-  real root_mean_squared_error_translation_absolute = 0;
-  for (const real squared_error: squared_errors_translation_absolute) {
-    root_mean_squared_error_translation_absolute += squared_error;
-  }
-  root_mean_squared_error_translation_absolute /= squared_errors_translation_absolute.size();
-  root_mean_squared_error_translation_absolute = std::sqrt(root_mean_squared_error_translation_absolute);
-  real mean_error_translation_relative = 0;
-  for (const real error: errors_translation_relative) {
-    mean_error_translation_relative += error;
-  }
-  mean_error_translation_relative /= errors_translation_relative.size();
-
-  //ds report
-  std::cerr << "main|printReport|-------------------------------------------------------------------------" << std::endl;
-  std::cerr << "main|printReport|dataset completed" << std::endl;
-  std::cerr << "main|printReport|-------------------------------------------------------------------------" << std::endl;
-  if (number_of_processed_frames_total_ == 0) {
-    std::cerr << "main|no frames processed" << std::endl;
-  } else {
-    std::cerr << "main|printReport|    absolute translation RMSE (m): " << root_mean_squared_error_translation_absolute << std::endl;
-    std::cerr << "main|printReport|    relative translation   ME (m): " << mean_error_translation_relative << std::endl;
-    std::cerr << "main|printReport|    final translational error (m): " << (world_context_->currentFrame()->robotToWorld().translation()-odometry_robot_to_world_previous_ground_truth.translation()).norm() << std::endl;
-    std::cerr << "main|printReport|              total stereo frames: " << number_of_processed_frames_total_ << std::endl;
-    std::cerr << "main|printReport|               total duration (s): " << duration_total_seconds_ << std::endl;
-    std::cerr << "main|printReport|                      average fps: " << number_of_processed_frames_total_/duration_total_seconds_ << std::endl;
-    std::cerr << "main|printReport|average processing time (s/frame): " << duration_total_seconds_/number_of_processed_frames_total_ << std::endl;
-    std::cerr << "main|printReport|average landmarks close per frame: " << tracker_->totalNumberOfLandmarksClose()/number_of_processed_frames_total_ << std::endl;
-    std::cerr << "main|printReport|  average landmarks far per frame: " << tracker_->totalNumberOfLandmarksFar()/number_of_processed_frames_total_ << std::endl;
-    std::cerr << "main|printReport|         average tracks per frame: " << tracker_->totalNumberOfTrackedPoints()/number_of_processed_frames_total_ << std::endl;
-    std::cerr << "main|printReport|        average tracks per second: " << tracker_->totalNumberOfTrackedPoints()/duration_total_seconds_ << std::endl;
-    std::cerr << "main|printReport|-------------------------------------------------------------------------" << std::endl;
-    std::cerr << "main|printReport|runtime" << std::endl;
-    std::cerr << "main|printReport|-------------------------------------------------------------------------" << std::endl;
-    std::cerr << "main|printReport|       feature detection: " << tracker_->getTimeConsumptionSeconds_feature_detection()/duration_total_seconds_
-                                             << " (" << tracker_->getTimeConsumptionSeconds_feature_detection() << "s)" << std::endl;
-    std::cerr << "main|printReport| keypoint regularization: " << tracker_->getTimeConsumptionSeconds_keypoint_pruning()/duration_total_seconds_
-                                              << " (" << tracker_->getTimeConsumptionSeconds_keypoint_pruning() << "s)" << std::endl;
-    std::cerr << "main|printReport|   descriptor extraction: " << tracker_->getTimeConsumptionSeconds_descriptor_extraction()/duration_total_seconds_
-                                             << " (" << tracker_->getTimeConsumptionSeconds_descriptor_extraction() << "s)" << std::endl;
-    std::cerr << "main|printReport|  stereo keypoint search: " << tracker_->getTimeConsumptionSeconds_point_triangulation()/duration_total_seconds_
-                                             << " (" << tracker_->getTimeConsumptionSeconds_point_triangulation() << "s)" << std::endl;
-    std::cerr << "main|printReport|                tracking: " << tracker_->getTimeConsumptionSeconds_tracking()/duration_total_seconds_
-                                             << " (" << tracker_->getTimeConsumptionSeconds_tracking() << "s)" << std::endl;
-    std::cerr << "main|printReport|       pose optimization: " << tracker_->getTimeConsumptionSeconds_pose_optimization()/duration_total_seconds_
-                                             << " (" << tracker_->getTimeConsumptionSeconds_pose_optimization() << "s)" << std::endl;
-    std::cerr << "main|printReport|   landmark optimization: " << tracker_->getTimeConsumptionSeconds_landmark_optimization()/duration_total_seconds_
-                                             << " (" << tracker_->getTimeConsumptionSeconds_landmark_optimization() << "s)" << std::endl;
-    std::cerr << "main|printReport| correspondence recovery: " << tracker_->getTimeConsumptionSeconds_point_recovery()/duration_total_seconds_
-                                             << " (" << tracker_->getTimeConsumptionSeconds_point_recovery() << "s)" << std::endl;
-    std::cerr << "main|printReport|similarity search (HBST): " << relocalizer_->getTimeConsumptionSeconds_overall()/duration_total_seconds_
-                                             << " (" << relocalizer_->getTimeConsumptionSeconds_overall() << "s)" << std::endl;
-    std::cerr << "main|printReport|              map update: " << mapper_->getTimeConsumptionSeconds_overall()/duration_total_seconds_
-                                             << " (" << mapper_->getTimeConsumptionSeconds_overall() << "s)" << std::endl;
-  }
-  std::cerr << "main|printReport|-------------------------------------------------------------------------" << std::endl;
 }

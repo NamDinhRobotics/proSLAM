@@ -91,6 +91,31 @@ namespace proslam {
     glEnd();
   }
 
+  void ViewerOutputMap::drawLandmarksActiveOnly() {
+    glPointSize(_point_size);
+    glBegin(GL_POINTS);
+    for (LandmarkPointerMap::iterator it=_context->landmarks().begin(); it!=_context->landmarks().end(); it++) {
+
+      //ds buffer landmark
+      const Landmark* landmark = it->second;
+
+      //ds if in context
+      if ((_is_open || landmark->isInPoseGraph()) && landmark->areCoordinatesValidated()) {
+        Vector3 color = Vector3(0, 0, 0);
+        if (landmark->isActive() && landmark->areCoordinatesValidated()) {
+          if (landmark->isNear()) {
+            color = Vector3(0.0, 0.0, 1.0);
+          } else {
+            color = Vector3(1.0, 0.0, 1.0);
+          }
+          glColor3f(color.x(), color.y(), color.z());
+          glVertex3f(landmark->coordinates().x(), landmark->coordinates().y(), landmark->coordinates().z());
+        }
+      }
+    }
+    glEnd();
+  }
+
   void ViewerOutputMap::draw(){
     if (!_context) {
       return;
@@ -107,9 +132,8 @@ namespace proslam {
 
     glPushMatrix();
     glMultMatrixf(world_to_robot.cast<float>().data());
-    glPushAttrib(GL_POINT_SIZE|GL_COLOR);
+    glPushAttrib(GL_POINT_SIZE|GL_COLOR|GL_LINE_WIDTH);
     glPointSize(_point_size);
-    glPushAttrib(GL_LINE_WIDTH|GL_POINT_SIZE);
     glLineWidth(0.1);
 
     //ds always draw the keyframe generating head
@@ -130,6 +154,8 @@ namespace proslam {
 
     if (_landmarks_drawn) {
       drawLandmarks();
+    } else {
+      drawLandmarksActiveOnly();
     }
     glPopMatrix();
   }
