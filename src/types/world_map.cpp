@@ -36,11 +36,6 @@ namespace proslam {
 
     if (_previous_frame) {
       _previous_frame->setNext(_current_frame);
-
-      //ds free memory if desired (saves a lot of memory costs a little computation)
-      if (_save_memory && _previous_frame->previous()) {
-        _previous_frame->previous()->releasePoints();
-      }
     }
 
     _frames.put(_current_frame);
@@ -105,6 +100,18 @@ namespace proslam {
   void WorldMap::resetWindow() {
     _distance_traveled_window = 0;
     _degrees_rotated_window   = 0;
+
+    //ds free memory if desired (saves a lot of memory costs a little computation)
+    if (_save_memory) {
+
+      //ds the last frame well need for the next tracking step
+      _frame_queue_for_local_map.pop_back();
+
+      //ds purge the rest
+      for (Frame* frame: _frame_queue_for_local_map) {
+        frame->releasePoints();
+      }
+    }
     _frame_queue_for_local_map.clear();
   }
 

@@ -6,7 +6,7 @@ namespace proslam {
 
   using namespace srrg_core;
 
-  //ds initialize aligner with minimal entity (TODO purify this, currently Frame)
+  //ds initialize aligner with minimal entity
   void StereoUVAligner::init(BaseContext* context_, const TransformMatrix3D& robot_to_world_) {
     _context = static_cast<Frame*>(context_);
     _errors.resize(_context->points().size());
@@ -36,7 +36,7 @@ namespace proslam {
     _number_of_outliers = 0;
     _total_error        = 0;
 
-    //ds loop over all points
+    //ds loop over all points (assumed to have previous points)
     for (Index index_point = 0; index_point < _context->points().size(); index_point++) {
       _errors[index_point]  = -1;
       _inliers[index_point] = false;
@@ -46,11 +46,7 @@ namespace proslam {
       FramePoint* frame_point = _context->points()[index_point];
       assert(_context->cameraLeft()->isInFieldOfView(frame_point->imageCoordinatesLeft()));
       assert(_context->cameraRight()->isInFieldOfView(frame_point->imageCoordinatesRight()));
-
-      //ds skip non linked points
-      if (frame_point->previous() == 0) {
-        continue;
-      }
+      assert(frame_point->previous());
 
       //ds buffer landmark
       const Landmark* landmark = frame_point->landmark();
