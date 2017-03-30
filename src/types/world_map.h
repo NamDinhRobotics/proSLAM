@@ -23,6 +23,7 @@ namespace proslam {
     const LocalMapPointerVector& localMaps() const {return _local_maps;}
     Frame* createFrame(const TransformMatrix3D& robot_pose, const real& maximum_depth_close_);
     const bool createLocalMap();
+    Landmark* createLandmark(const PointCoordinates& coordinates_in_world_, const FramePoint* origin_);
 
     //ds visualization only
     const FramePointerVector frameQueueForLocalMap() const {return _frame_queue_for_local_map;}
@@ -34,7 +35,7 @@ namespace proslam {
   public:
 
     LandmarkPointerMap& landmarks() {return _landmarks;}
-    Landmark* createLandmark(const PointCoordinates& coordinates_in_world_ = PointCoordinates::Zero());
+    std::vector<Landmark*>& currentlyTrackedLandmarks() {return _currently_tracked_landmarks;}
 
     Frame* rootFrame() {return _root_frame;}
     const Frame* currentFrame() const {return _current_frame;}
@@ -49,9 +50,9 @@ namespace proslam {
     const TransformMatrix3D robotToWorldPrevious() const {return _last_good_robot_pose;}
     const bool relocalized() const {return _relocalized;}
 
-    void resetWindow();
+    void resetWindowForLocalMapCreation();
     const Count numberOfClosures() const {return _number_of_closures;}
-    void setSaveMemory(const bool& save_memory_) {_save_memory = save_memory_;}
+    void setDropFramepoints(const bool& drop_framepoints_) {_drop_framepoints = drop_framepoints_;}
 
   //ds wrapped helpers
   public:
@@ -68,6 +69,7 @@ namespace proslam {
     Frame* _current_frame  = 0;
     Frame* _previous_frame = 0;
     LandmarkPointerMap _landmarks;
+    std::vector<Landmark*> _currently_tracked_landmarks;
     FramePointerMap _frames;
 
     //ds localization
@@ -88,10 +90,10 @@ namespace proslam {
     LocalMap* _current_local_map  = 0;
     LocalMapPointerVector _local_maps;
 
-    //ds memory saving option (slightly less processing speed)
-    bool _save_memory = false;
+    //ds memory saving options (slightly less processing speed)
+    bool _drop_framepoints = false;
 
-    //ds informative only
+    //ds informative/visualization only
     Count _number_of_closures = 0;
   };
 }

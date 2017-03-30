@@ -25,15 +25,14 @@ namespace proslam {
 
     //ds update all active landmark positions
     for (const LocalMap* local_map: context_->localMaps()) {
-      for (Landmark::State* item: local_map->landmarks()) {
+      for (Landmark::State* landmark_state: local_map->landmarks()) {
 
         //ds buffer current landmark
-        Landmark* landmark = item->landmark;
+        Landmark* landmark = landmark_state->landmark;
         assert(landmark);
 
         //ds update landmark position
-        landmark->resetCoordinates(local_map->robotToWorld()*item->robot_coordinates);
-        landmark->setIsInPoseGraph(true);
+        landmark->resetCoordinates(local_map->robotToWorld()*landmark_state->robot_coordinates);
       }
     }
   }

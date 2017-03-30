@@ -6,8 +6,9 @@ namespace proslam {
   Count Landmark::_instances = 0;
 
   //ds initial landmark coordinates must be provided
-  Landmark::Landmark(const PointCoordinates& point_coordinates_): _identifier(_instances),
-                                                                  _coordinates(point_coordinates_) {
+  Landmark::Landmark(const PointCoordinates& point_coordinates_, const FramePoint* origin_): _identifier(_instances),
+                                                                                             _origin(origin_),
+                                                                                             _coordinates(point_coordinates_) {
     ++_instances;
 
     //ds allocate fresh state (trading construction correctness for enclosed generation)
@@ -90,12 +91,5 @@ namespace proslam {
   void LandmarkPointerMap::put(Landmark* landmark) {
     assert(find(landmark->identifier()) == end());
     insert(std::make_pair(landmark->identifier(), landmark));
-  }
-
-  //ds visualization only
-  void LandmarkPointerMap::clearActive() {
-    for (iterator iterator = begin(); iterator != end(); ++iterator) {
-      iterator->second->setIsActive(false);
-    }
   }
 }

@@ -31,7 +31,6 @@ namespace proslam {
 
     void drawFrame(const Frame* frame_, const Vector3& color_rgb_);
     void drawLandmarks();
-    void drawLandmarksActiveOnly();
 
   protected:
 

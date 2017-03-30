@@ -166,7 +166,6 @@ int32_t main(int32_t argc, char ** argv) {
   //ds obtain configuration
   int32_t count_added_arguments = 1;
   bool show_top_viewer          = false;
-  bool save_memory              = false;
   bool equalize_histogram       = false;
   while(count_added_arguments < argc){
     if (!std::strcmp(argv[count_added_arguments], "-camera-left-image-topic")){
@@ -184,8 +183,6 @@ int32_t main(int32_t argc, char ** argv) {
       use_relocalization = false;
     } else if (!std::strcmp(argv[count_added_arguments], "-show-top")) {
       show_top_viewer = true;
-    } else if (!std::strcmp(argv[count_added_arguments], "-save-memory")) {
-      save_memory = true;
     } else if (!std::strcmp(argv[count_added_arguments], "-equalize-histogram")) {
       equalize_histogram = true;
     }
@@ -200,7 +197,6 @@ int32_t main(int32_t argc, char ** argv) {
   std::cerr << "main|-use-gui            " << use_gui << std::endl;
   std::cerr << "main|-open               " << !use_relocalization << std::endl;
   std::cerr << "main|-show-top           " << show_top_viewer << std::endl;
-  std::cerr << "main|-save-memory        " << save_memory << std::endl;
   std::cerr << "main|-equalize-histogram " << equalize_histogram << std::endl;
   std::cerr << "main|-------------------------------------------------------------------------" << std::endl;
 

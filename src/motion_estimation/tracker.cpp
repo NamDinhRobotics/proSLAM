@@ -318,7 +318,7 @@ namespace proslam {
 
         //ds if no landmark yet - but point with depth information, create a new landmark using the given depth
         if (!landmark) {
-          landmark = context_->createLandmark(current_frame->robotToWorld()*point->robotCoordinates());
+          landmark = context_->createLandmark(current_frame->robotToWorld()*point->robotCoordinates(), point);
           point->setLandmark(landmark);
         }
         landmark->setIsNear(true);
@@ -326,7 +326,7 @@ namespace proslam {
 
         //ds create a new landmark using the vision depth
         if (!landmark) {
-          landmark = context_->createLandmark(current_frame->robotToWorld()*point->robotCoordinates());
+          landmark = context_->createLandmark(current_frame->robotToWorld()*point->robotCoordinates(), point);
           point->setLandmark(landmark);
         }
         landmark->setIsNear(false);
@@ -338,6 +338,10 @@ namespace proslam {
                        point->descriptorLeft(),
                        point->descriptorRight(),
                        point->depthMeters());
+
+      //ds add landmarks to currently visible ones
+      landmark->setIsCurrentlyTracked(true);
+      context_->currentlyTrackedLandmarks().push_back(landmark);
     }
   }
 
@@ -350,6 +354,10 @@ namespace proslam {
     _number_of_tracked_points        = 0;
     _number_of_lost_points           = 0;
     _number_of_lost_points_recovered = 0;
+    for (Landmark* landmark: context_->currentlyTrackedLandmarks()) {
+      landmark->setIsCurrentlyTracked(false);
+    }
+    context_->currentlyTrackedLandmarks().clear();
 
     //ds retrieve odometry prior - might be identity
     TransformMatrix3D robot_to_world_current = context_->robotToWorldPrevious();
@@ -391,7 +399,6 @@ namespace proslam {
 
           //ds solve pose on frame points only
           CHRONOMETER_START(pose_optimization)
-          context_->landmarks().clearActive();
           _pose_optimizer->init(current_frame, current_frame->robotToWorld());
           _pose_optimizer->setWeightFramepoint(1);
           _pose_optimizer->converge();
@@ -443,7 +450,6 @@ namespace proslam {
 
         //ds call pose solver
         CHRONOMETER_START(pose_optimization)
-        context_->landmarks().clearActive();
         _pose_optimizer->init(current_frame, current_frame->robotToWorld());
         _pose_optimizer->setWeightFramepoint(std::max(weight_framepoint, static_cast<real>(0.1)));
         _pose_optimizer->converge();
@@ -465,6 +471,7 @@ namespace proslam {
           current_frame->setStatus(_status);
           current_frame->releasePoints();
           _framepoint_generator->clearFramepointsInImage();
+          context_->currentlyTrackedLandmarks().clear();
 
           //ds keep previous solution
           current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
@@ -485,13 +492,19 @@ namespace proslam {
           world_previous_to_current = TransformMatrix3D::Identity();
         }
 
+        //ds visualization only (we need to clear and push_back in order to not crash the gui since its decoupled - otherwise we could use resize)
+        context_->currentlyTrackedLandmarks().reserve(_number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
+
         //ds update current frame points
         _number_of_tracked_points = 0;
         for (Index index_point = 0; index_point < current_frame->points().size(); index_point++) {
           assert(current_frame->points()[index_point]->previous());
 
+          //ds buffer current landmark
+          Landmark* landmark = current_frame->points()[index_point]->landmark();
+
           //ds points without landmarks are always kept
-          if (!current_frame->points()[index_point]->landmark()) {
+          if (landmark == 0) {
             current_frame->points()[_number_of_tracked_points] = current_frame->points()[index_point];
             ++_number_of_tracked_points;
           }
@@ -499,12 +512,10 @@ namespace proslam {
           //ds keep the point if it has been skipped (due to insufficient maturity or invalidity) or is an inlier
           else if (_pose_optimizer->errors()[index_point] == -1 || _pose_optimizer->inliers()[index_point]) {
             current_frame->points()[_number_of_tracked_points] = current_frame->points()[index_point];
-            if (current_frame->points()[_number_of_tracked_points]->landmark()) {
-              current_frame->points()[_number_of_tracked_points]->landmark()->setIsActive(true);
-            }
             ++_number_of_tracked_points;
           }
         }
+        assert(context_->currentlyTrackedLandmarks().size() <= _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
 
         //ds update point container
         current_frame->points().resize(_number_of_tracked_points);

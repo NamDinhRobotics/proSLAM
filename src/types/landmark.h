@@ -47,7 +47,7 @@ namespace proslam {
   protected:
 
     //ds initial landmark coordinates must be provided
-    Landmark(const PointCoordinates& point_coordinates_);
+    Landmark(const PointCoordinates& point_coordinates_, const FramePoint* origin_);
 
     //ds cleanup of dynamic structures
     ~Landmark();
@@ -61,6 +61,8 @@ namespace proslam {
     //ds unique identifier for a landmark (exists once in memory)
     inline const Index identifier() const {return _identifier;}
 
+    inline const FramePoint* origin() const {return _origin;}
+
     inline const PointCoordinates& coordinates() const { return _coordinates; }
     inline void setCoordinates(const PointCoordinates& coordinates_) {_coordinates = coordinates_;}
 
@@ -70,10 +72,12 @@ namespace proslam {
     //ds landmark state - locked inside a local map and refreshed afterwards
     inline State* state() {return _state;}
     inline void refreshState() {_state = new State(this);}
+    inline const LocalMap* localMap() const {return _local_map;}
+    inline void setLocalMap(const LocalMap* local_map_) {_local_map = local_map_;}
 
     inline const bool areCoordinatesValidated() const {return _are_coordinates_validated;}
-    inline const bool isInPoseGraph() const {return _is_in_pose_graph; }
-    inline void setIsInPoseGraph(const bool& is_in_pose_graph_) {_is_in_pose_graph = is_in_pose_graph_;}
+    inline const bool isCurrentlyTracked() const {return _is_currently_tracked;}
+    inline void setIsCurrentlyTracked(const bool& is_currently_tracked_) {_is_currently_tracked = is_currently_tracked_;}
 
     //ds landmark coordinates update - no visual information (e.g. map optimization)
     void update(const PointCoordinates& coordinates_in_world_,
@@ -85,9 +89,9 @@ namespace proslam {
                 const cv::Mat& descriptor_right_,
                 const real& depth_meters_);
 
+    const Count numberOfUpdates() const {return _number_of_updates;}
+
     //ds visualization only
-    inline const bool isActive() const {return _is_active; }
-    inline void setIsActive(const bool& is_active) {_is_active = is_active;}
     inline const bool isNear() const {return _is_near;}
     inline void setIsNear(const bool& is_near_) {_is_near = is_near_;}
     inline const bool isInLoopClosureQuery() const {return _is_in_loop_closure_query;}
@@ -101,16 +105,20 @@ namespace proslam {
     //ds unique identifier for a landmark (exists once in memory)
     const Identifier _identifier;
 
+    //ds linked FramePoint in an image at the time of creation of this instance
+    const FramePoint* _origin;
+
     //ds the 3D point coordinates of the landmark expressed in the WorldMap coordinate frame
     PointCoordinates _coordinates;
     PointCoordinates _coordinates_alt = PointCoordinates::Zero();
 
     //ds the current connected state handle (links the landmark to the local map)
     State* _state;
+    const LocalMap* _local_map = 0;
 
     //ds flags
     bool _are_coordinates_validated = false;
-    bool _is_in_pose_graph          = false;
+    bool _is_currently_tracked      = false;
 
     //ds landmark coordinates optimization
     real _total_weight = 0;
@@ -121,7 +129,6 @@ namespace proslam {
     friend WorldMap;
 
     //ds visualization only
-    bool _is_active                    = false;
     bool _is_near                      = false;
     bool _is_in_loop_closure_query     = false;
     bool _is_in_loop_closure_reference = false;
@@ -140,8 +147,5 @@ namespace proslam {
   public:
     Landmark* get(const Identifier& identifier_);
     void put(Landmark* landmark);
-
-    //ds visualization only
-    void clearActive(); 
   };
 }

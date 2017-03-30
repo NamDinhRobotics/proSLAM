@@ -17,7 +17,7 @@ namespace proslam {
     _frames.clear();
 
     //ds keep track of added landmarks in order to add them only once
-    std::set<Landmark*> landmarks_added_to_context;
+    std::set<const Landmark*> landmarks_added_to_context;
 
     //ds create item context for this local map: loop over all frames
     for (Frame* frame: frames_) {
@@ -45,6 +45,7 @@ namespace proslam {
 
           //ds take ownership from landmark view: forces the landmark to generate a new, decoupled view
           landmark->refreshState();
+          landmark->setLocalMap(this);
         }
       }
     }

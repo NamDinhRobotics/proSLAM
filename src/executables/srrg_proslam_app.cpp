@@ -24,9 +24,9 @@ const char* banner[] = {
   "-camera-left-topic <string>:  topic name in txt_io dataset file)",
   "-camera-right-topic <string>: topic name in txt_io dataset file)",
   "-use-gui:                     displays GUI elements",
-  "-open:                        disables relocalization",
+  "-open:                        disables relocalization (open loop mode)",
   "-show-top:                    enable top map viewer",
-  "-save-memory:                 enforce deallocation of unused memory at runtime",
+  "-drop-framepoints:            deallocation of past framepoints at runtime (reduces memory demand)",
   "-equalize-histogram           equalize stereo image histogram before processing",
   "-------------------------------------------------------------------------",
   0
@@ -78,7 +78,7 @@ int32_t main(int32_t argc, char ** argv) {
   std::string filename_sensor_messages = "";
   int32_t count_added_arguments        = 1;
   bool show_top_viewer                 = false;
-  bool save_memory                     = false;
+  bool drop_framepoints                = false;
   bool equalize_histogram              = false;
   while(count_added_arguments < argc){
     if (!std::strcmp(argv[count_added_arguments], "-camera-left-topic")){
@@ -96,8 +96,8 @@ int32_t main(int32_t argc, char ** argv) {
       use_relocalization = false;
     } else if (!std::strcmp(argv[count_added_arguments], "-show-top")) {
       show_top_viewer = true;
-    } else if (!std::strcmp(argv[count_added_arguments], "-save-memory")) {
-      save_memory = true;
+    } else if (!std::strcmp(argv[count_added_arguments], "-drop-framepoints")) {
+      drop_framepoints = true;
     } else if (!std::strcmp(argv[count_added_arguments], "-equalize-histogram")) {
       equalize_histogram = true;
     } else {
@@ -114,7 +114,7 @@ int32_t main(int32_t argc, char ** argv) {
   std::cerr << "main|-use-gui            " << use_gui << std::endl;
   std::cerr << "main|-open               " << !use_relocalization << std::endl;
   std::cerr << "main|-show-top           " << show_top_viewer << std::endl;
-  std::cerr << "main|-save-memory        " << save_memory << std::endl;
+  std::cerr << "main|-drop-framepoints   " << drop_framepoints << std::endl;
   std::cerr << "main|-equalize-histogram " << equalize_histogram << std::endl;
   std::cerr << "main|-dataset            " << filename_sensor_messages << std::endl;
   std::cerr << "main|-------------------------------------------------------------------------" << std::endl;
@@ -194,7 +194,7 @@ int32_t main(int32_t argc, char ** argv) {
   Tracker* tracker         = new Tracker(cameras_by_topic.at(topic_image_stereo_left), cameras_by_topic.at(topic_image_stereo_right));
 
   //ds configure SLAM modules
-  world_map->setSaveMemory(save_memory);
+  world_map->setDropFramepoints(drop_framepoints);
   relocalizer->aligner()->setMaximumErrorKernel(0.5);
   relocalizer->aligner()->setMinimumNumberOfInliers(25);
   relocalizer->aligner()->setMinimumInlierRatio(0.5);

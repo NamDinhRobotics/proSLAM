@@ -57,58 +57,39 @@ namespace proslam {
   void ViewerOutputMap::drawLandmarks() {
     glPointSize(_point_size);
     glBegin(GL_POINTS);
-    for (LandmarkPointerMap::iterator it=_context->landmarks().begin(); it!=_context->landmarks().end(); it++) {
 
-      //ds buffer landmark
-      const Landmark* landmark = it->second;
+    //ds always highlight the currently seen landmarks
+    for (const Landmark* landmark: _context->currentlyTrackedLandmarks()) {
 
       //ds if in context
-      if ((_is_open || landmark->isInPoseGraph()) && landmark->areCoordinatesValidated()) {
-        Vector3 color = Vector3(0, 0, 0);
-        if (landmark->isActive() && landmark->areCoordinatesValidated()) {
+      if (landmark->areCoordinatesValidated()) {
           if (landmark->isNear()) {
-            color = Vector3(0.0, 0.0, 1.0);
+            glColor3f(0.0, 0.0, 1.0);
           } else {
-            color = Vector3(1.0, 0.0, 1.0);
+            glColor3f(1.0, 0.0, 1.0);
           }
-        } /*else if (!landmark->isValidated()) {
-          color = Vector3(1.0, 0.0, 0.0);
-        }*/ else if (landmark->isInLoopClosureQuery()) {
-          color = Vector3(0.0, 1.0, 0.0);
-        } else if (landmark->isInLoopClosureReference()) {
-          color = Vector3(0.0, 0.5, 0.0);
-        } else {
-//          if (landmark->isByVision()) {
-//            color = Vector3(0.5, 0.0, 0.5);
-//          } else {
-            color = Vector3(0.5, 0.5, 0.5);
-//          }
-        }
-        glColor3f(color.x(), color.y(), color.z());
-        glVertex3f(landmark->coordinates().x(), landmark->coordinates().y(), landmark->coordinates().z());
+          glVertex3f(landmark->coordinates().x(), landmark->coordinates().y(), landmark->coordinates().z());
       }
     }
-    glEnd();
-  }
 
-  void ViewerOutputMap::drawLandmarksActiveOnly() {
-    glPointSize(_point_size);
-    glBegin(GL_POINTS);
-    for (LandmarkPointerMap::iterator it=_context->landmarks().begin(); it!=_context->landmarks().end(); it++) {
+    //ds if full landmark view is desired
+    if (_landmarks_drawn) {
+      for (LandmarkPointerMap::iterator it = _context->landmarks().begin(); it != _context->landmarks().end(); it++) {
 
-      //ds buffer landmark
-      const Landmark* landmark = it->second;
+        //ds buffer landmark
+        const Landmark* landmark = it->second;
 
-      //ds if in context
-      if ((_is_open || landmark->isInPoseGraph()) && landmark->areCoordinatesValidated()) {
-        Vector3 color = Vector3(0, 0, 0);
-        if (landmark->isActive() && landmark->areCoordinatesValidated()) {
-          if (landmark->isNear()) {
-            color = Vector3(0.0, 0.0, 1.0);
+        //ds if in context and valid
+        if (landmark->areCoordinatesValidated()) {
+
+          //ds specific coloring for closure landmarks
+          if (landmark->isInLoopClosureQuery()) {
+            glColor3f(0.0, 1.0, 0.0);
+          } else if (landmark->isInLoopClosureReference()) {
+            glColor3f(0.0, 0.5, 0.0);
           } else {
-            color = Vector3(1.0, 0.0, 1.0);
+            glColor3f(0.5, 0.5, 0.5);
           }
-          glColor3f(color.x(), color.y(), color.z());
           glVertex3f(landmark->coordinates().x(), landmark->coordinates().y(), landmark->coordinates().z());
         }
       }
@@ -152,11 +133,8 @@ namespace proslam {
       }
     }
 
-    if (_landmarks_drawn) {
-      drawLandmarks();
-    } else {
-      drawLandmarksActiveOnly();
-    }
+    //ds draw landmarks into map
+    drawLandmarks();
     glPopMatrix();
   }
 

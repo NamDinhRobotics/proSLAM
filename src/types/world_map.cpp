@@ -11,15 +11,22 @@ namespace proslam {
     _landmarks.clear();
     _frames.clear();
     _local_maps.clear();
+    _currently_tracked_landmarks.clear();
     std::cerr << "WorldMap::WorldMap|constructed" << std::endl;
   };
 
   WorldMap::~WorldMap() {
     std::cerr << "WorldMap::WorldMap|destroying" << std::endl;
-    for(LandmarkPointerMap::iterator it = _landmarks.begin(); it != _landmarks.end(); ++it)
+
+    //ds free landmarks
+    for(LandmarkPointerMap::iterator it = _landmarks.begin(); it != _landmarks.end(); ++it) {
       delete it->second;
-    for(FramePointerMap::iterator it = _frames.begin(); it != _frames.end(); ++it)
+    }
+
+    //ds free all frames (also destroys local maps by their anchors)
+    for(FramePointerMap::iterator it = _frames.begin(); it != _frames.end(); ++it) {
       delete it->second;
+    }
     std::cerr << "WorldMap::WorldMap|destroyed" << std::endl;
   }
   
@@ -66,7 +73,7 @@ namespace proslam {
       _local_maps.push_back(_current_local_map);
 
       //ds reset generation properties
-      resetWindow();
+      resetWindowForLocalMapCreation();
 
       //ds current frame is now center of a local map - update structures
       _current_frame = _current_local_map;
@@ -81,8 +88,8 @@ namespace proslam {
     }
   }
   
-  Landmark* WorldMap::createLandmark(const PointCoordinates& coordinates_in_world_){
-    Landmark* landmark = new Landmark(coordinates_in_world_);
+  Landmark* WorldMap::createLandmark(const PointCoordinates& coordinates_in_world_, const FramePoint* origin_){
+    Landmark* landmark = new Landmark(coordinates_in_world_, origin_);
     _landmarks.put(landmark);
     return landmark;
   }
@@ -97,12 +104,12 @@ namespace proslam {
     ++_number_of_closures;
   }
 
-  void WorldMap::resetWindow() {
+  void WorldMap::resetWindowForLocalMapCreation() {
     _distance_traveled_window = 0;
     _degrees_rotated_window   = 0;
 
     //ds free memory if desired (saves a lot of memory costs a little computation)
-    if (_save_memory) {
+    if (_drop_framepoints) {
 
       //ds the last frame well need for the next tracking step
       _frame_queue_for_local_map.pop_back();
@@ -113,6 +120,31 @@ namespace proslam {
       }
     }
     _frame_queue_for_local_map.clear();
+
+    //ds allocate a clean new landmarks map
+    LandmarkPointerMap landmarks_cleaned;
+    landmarks_cleaned.clear();
+
+    //ds also clean up unused landmarks - first free memory for unused landmarks
+    for(LandmarkPointerMap::iterator it = _landmarks.begin(); it != _landmarks.end(); ++it) {
+
+      //ds if the landmark is not part of a local map and is not currently tracked
+      if (it->second->localMap() == 0 && !it->second->isCurrentlyTracked()) {
+
+        //ds free it
+        delete it->second;
+      } else {
+
+        //ds keep the landmark
+        landmarks_cleaned.put(it->second);
+      }
+    }
+
+    //ds clear reference
+    _landmarks.clear();
+
+    //ds and reassign
+    _landmarks.swap(landmarks_cleaned);
   }
 
   //ds dump trajectory to file (in KITTI benchmark format only for now)

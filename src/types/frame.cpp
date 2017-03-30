@@ -139,20 +139,23 @@ namespace proslam {
     insert(std::make_pair(frame_->identifier(), frame_));
   }
 
-  void FramePointerMap::replace(Frame* frame_) {
-    FramePointerMap::iterator it = find(frame_->identifier());
+  void FramePointerMap::replace(Frame* replacing_frame_) {
+    FramePointerMap::iterator it = find(replacing_frame_->identifier());
     assert(it != end());
     Frame* frame_to_be_replaced = it->second;
 
     //ds update parent/child
-    frame_to_be_replaced->previous()->setNext(frame_);
-    frame_->setPrevious(frame_to_be_replaced->previous());
+    frame_to_be_replaced->previous()->setNext(replacing_frame_);
+    replacing_frame_->setPrevious(frame_to_be_replaced->previous());
     if (frame_to_be_replaced->next() != 0) {
-      frame_->setNext(frame_to_be_replaced->next());
+      replacing_frame_->setNext(frame_to_be_replaced->next());
     }
 
-    //ds free old frame and set new
+    //ds free old frame
     delete frame_to_be_replaced;
-    it->second = frame_;
+
+    //ds reinsert new frame porperly
+    erase(replacing_frame_->identifier());
+    put(replacing_frame_);
   }
 }
