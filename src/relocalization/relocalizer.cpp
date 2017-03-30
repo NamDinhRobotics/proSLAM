@@ -98,78 +98,85 @@ namespace proslam {
     //ds evaluate all past queries
     for (const Query* reference: _query_history) {
 
-      //ds get match count
-      const real matching_ratio = reference->hbst_tree->getMatchingRatioFlat(_query->matchables);
+      //ds compute absolute distance
+      const real distance_meters_squared = (reference->keyframe->robotToWorld().translation()-_query->keyframe->robotToWorld().translation()).squaredNorm();
 
-      //ds if acceptable
-      if (matching_ratio > _preliminary_minimum_matching_ratio || force_matching_) {
-        assert(reference != 0);
+      //ds if roughly in vicinity
+      if (distance_meters_squared < 25*25) {
 
-        //ds matches within the current reference
-        HBSTTree::MatchVector matches_unfiltered;
-        Correspondence::MatchMap descriptor_matches_pointwise;
+        //ds get match count
+        const real matching_ratio = reference->hbst_tree->getMatchingRatioFlat(_query->matchables);
 
-        //ds get matches
-        assert(0 < _query->matchables.size());
-        assert(0 < reference->matchables.size());
-        reference->hbst_tree->match(_query->matchables, matches_unfiltered);
-        assert(0 < matches_unfiltered.size());
-        const Count absolute_number_of_descriptor_matches = matches_unfiltered.size();
+        //ds if acceptable
+        if (matching_ratio > _preliminary_minimum_matching_ratio || force_matching_) {
+          assert(reference != 0);
 
-        //ds loop over all matches
-        for (const HBSTTree::Match match: matches_unfiltered) {
+          //ds matches within the current reference
+          HBSTTree::MatchVector matches_unfiltered;
+          Correspondence::MatchMap descriptor_matches_pointwise;
 
-          const Landmark::Appearance* appearance_query     = _query->appearances[match.identifier_query];
-          const Landmark::Appearance* appearance_reference = reference->appearances[match.identifier_reference];
-          const Identifier& query_index                    = appearance_query->landmark_state->landmark->identifier();
+          //ds get matches
+          assert(0 < _query->matchables.size());
+          assert(0 < reference->matchables.size());
+          reference->hbst_tree->match(_query->matchables, matches_unfiltered);
+          assert(0 < matches_unfiltered.size());
+          const Count absolute_number_of_descriptor_matches = matches_unfiltered.size();
 
-          try{
+          //ds loop over all matches
+          for (const HBSTTree::Match match: matches_unfiltered) {
 
-            //ds add a new match to the given query point
-            descriptor_matches_pointwise.at(query_index).push_back(new Correspondence::Match(appearance_query->landmark_state,
-                                                                   appearance_reference->landmark_state,
-                                                                   match.distance));
-          } catch(const std::out_of_range& /*exception*/) {
+            const Landmark::Appearance* appearance_query     = _query->appearances[match.identifier_query];
+            const Landmark::Appearance* appearance_reference = reference->appearances[match.identifier_reference];
+            const Identifier& query_index                    = appearance_query->landmark_state->landmark->identifier();
 
-            //ds initialize the first match for the given query point
-            descriptor_matches_pointwise.insert(std::make_pair(query_index, Correspondence::MatchPtrVector(1, new Correspondence::Match(appearance_query->landmark_state,
-                                                                                              appearance_reference->landmark_state,
-                                                                                              match.distance))));
-          }
-        }
-        assert(0 < absolute_number_of_descriptor_matches);
-        assert(0 < _query->appearances.size());
-        assert(0 < descriptor_matches_pointwise.size());
-        const real relative_number_of_descriptor_matches_query     = static_cast<real>(absolute_number_of_descriptor_matches)/_query->appearances.size();
-        //const gt_real relative_number_of_descriptor_matches_reference = static_cast<gt_real>(absolute_number_of_descriptor_matches)/reference->appearances.size();
-        //const gt_real relative_delta = std::fabs(relative_number_of_descriptor_matches_query-relative_number_of_descriptor_matches_reference)/relative_number_of_descriptor_matches_reference;
+            try{
 
-        //ds if the result quality is sufficient
-        if (descriptor_matches_pointwise.size() > _minimum_absolute_number_of_matches_pointwise) {
+              //ds add a new match to the given query point
+              descriptor_matches_pointwise.at(query_index).push_back(new Correspondence::Match(appearance_query->landmark_state,
+                                                                     appearance_reference->landmark_state,
+                                                                     match.distance));
+            } catch(const std::out_of_range& /*exception*/) {
 
-          //ds correspondences
-          CorrespondencePointerVector correspondences;
-          _mask_id_references_for_correspondences.clear();
-
-          //ds compute point-to-point correspondences for all matches
-          for(const Correspondence::MatchMapElement matches_per_point: descriptor_matches_pointwise){
-            const Correspondence* correspondence = getCorrespondenceNN(matches_per_point.second);
-            if (correspondence != 0) {
-              correspondences.push_back(correspondence);
+              //ds initialize the first match for the given query point
+              descriptor_matches_pointwise.insert(std::make_pair(query_index, Correspondence::MatchPtrVector(1, new Correspondence::Match(appearance_query->landmark_state,
+                                                                                                appearance_reference->landmark_state,
+                                                                                                match.distance))));
             }
           }
-          assert(0 < correspondences.size());
+          assert(0 < absolute_number_of_descriptor_matches);
+          assert(0 < _query->appearances.size());
+          assert(0 < descriptor_matches_pointwise.size());
+          const real relative_number_of_descriptor_matches_query     = static_cast<real>(absolute_number_of_descriptor_matches)/_query->appearances.size();
+          //const gt_real relative_number_of_descriptor_matches_reference = static_cast<gt_real>(absolute_number_of_descriptor_matches)/reference->appearances.size();
+          //const gt_real relative_delta = std::fabs(relative_number_of_descriptor_matches_query-relative_number_of_descriptor_matches_reference)/relative_number_of_descriptor_matches_reference;
 
-            //ds update closures
-          _closures.push_back(new CorrespondenceCollection(_query->keyframe,
-                                          reference->keyframe,
-                                          absolute_number_of_descriptor_matches,
-                                          relative_number_of_descriptor_matches_query,
-                                          descriptor_matches_pointwise,
-                                          correspondences));
-        } /*else {
-          std::cerr << _query->keyframe->index() << " | " << reference->keyframe->index() << " not enough matches: " << descriptor_matches_pointwise.size() << std::endl;
-        }*/
+          //ds if the result quality is sufficient
+          if (descriptor_matches_pointwise.size() > _minimum_absolute_number_of_matches_pointwise) {
+
+            //ds correspondences
+            CorrespondencePointerVector correspondences;
+            _mask_id_references_for_correspondences.clear();
+
+            //ds compute point-to-point correspondences for all matches
+            for(const Correspondence::MatchMapElement matches_per_point: descriptor_matches_pointwise){
+              const Correspondence* correspondence = getCorrespondenceNN(matches_per_point.second);
+              if (correspondence != 0) {
+                correspondences.push_back(correspondence);
+              }
+            }
+            assert(0 < correspondences.size());
+
+              //ds update closures
+            _closures.push_back(new CorrespondenceCollection(_query->keyframe,
+                                            reference->keyframe,
+                                            absolute_number_of_descriptor_matches,
+                                            relative_number_of_descriptor_matches_query,
+                                            descriptor_matches_pointwise,
+                                            correspondences));
+          } /*else {
+            std::cerr << _query->keyframe->index() << " | " << reference->keyframe->index() << " not enough matches: " << descriptor_matches_pointwise.size() << std::endl;
+          }*/
+        }
       }
     }
     CHRONOMETER_STOP(overall)
