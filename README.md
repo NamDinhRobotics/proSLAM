@@ -125,6 +125,7 @@ Three windows will pop up - "input: images", "output: map (bird view)" and "outp
 
  - KITTI Sequence 01: https://drive.google.com/open?id=0ByaBRAPfmgEqdXhJRmktQ2lsMEE (2.8GB)
  - KITTI Sequence 00: https://drive.google.com/open?id=0ByaBRAPfmgEqN19hTUJjRG9XV3M (0.7GB)
+ - KITTI Sequence 04: https://drive.google.com/open?id=0ByaBRAPfmgEqOEhEdEdLcUJUMlE (0.2GB)
  - EuRoC MH_01_easy: https://drive.google.com/open?id=0ByaBRAPfmgEqbUctejZwb0xRaFk (1.9GB)<br/>
 
 Run procedure remains identical to the one above (only the dataset name has to be adjusted, e.g. 00.txt -> MH_01_easy.txt)
