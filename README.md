@@ -5,6 +5,8 @@ As this is a working repository, none of the code is assumed to be static.
 For related publications please refer to revision 7faff124
 
 ### Demo videos ###
+[ProSLAM: Full run KITTI Sequence 00 updated (real-time, 1 thread@2.40GHz/i7-4700MQ)][kitti_00_updated]
+
 [ProSLAM: Full run KITTI Sequence 00 (real-time, 1 thread@2.40GHz/i7-4700MQ)][kitti_00]
 
 [ProSLAM: Full run KITTI Sequence 01 (real-time, 1 thread@2.40GHz/i7-4700MQ)][kitti_01]
@@ -17,6 +19,7 @@ For related publications please refer to revision 7faff124
 
 (All of the above are clickable YouTube links)
 
+[kitti_00_updated]: https://www.youtube.com/watch?v=yvxix6-9ZEA
 [kitti_00]: https://www.youtube.com/watch?v=n_UmEpIwb9Y
 [kitti_01]: https://www.youtube.com/watch?v=iGSCOEn5Nx8
 [kitti_06]: https://www.youtube.com/watch?v=Bmig0ASFOY4
