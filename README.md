@@ -137,7 +137,9 @@ Run procedure remains identical to the one above (only the dataset name has to b
 ### Custom stereo camera sensor input / ROS node ###
 
 On-the-fly raw stereo image processing with custom stereo camera parameters will be supported shortly.<br/>
-Please use the provided datasets in SRRG format.
+Please use the provided datasets in SRRG format.<br/>
+
+The ROS node (srrg_proslam_node) is currently under development.
 
 ---
 ### It doesn't work? ###
