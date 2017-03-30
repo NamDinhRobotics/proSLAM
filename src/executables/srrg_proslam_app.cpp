@@ -460,6 +460,12 @@ void process(WorldMap* world_map_,
         mapper_->optimize(world_map_);
       }
     }
+  } else {
+
+    //ds if we have a valid frame (not the case after the track is lost)
+    if (world_map_->currentFrame() != 0) {
+      world_map_->createLocalMap();
+    }
   }
 }
 

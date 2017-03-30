@@ -34,6 +34,7 @@ namespace proslam {
   //ds getters/setters
   public:
 
+    const LandmarkPointerMap& landmarksInWindowForLocalMap() const {return _landmarks_in_window_for_local_map;}
     LandmarkPointerMap& landmarks() {return _landmarks;}
     std::vector<Landmark*>& currentlyTrackedLandmarks() {return _currently_tracked_landmarks;}
 
@@ -68,6 +69,7 @@ namespace proslam {
     Frame* _root_frame     = 0;
     Frame* _current_frame  = 0;
     Frame* _previous_frame = 0;
+    LandmarkPointerMap _landmarks_in_window_for_local_map;
     LandmarkPointerMap _landmarks;
     std::vector<Landmark*> _currently_tracked_landmarks;
     FramePointerMap _frames;

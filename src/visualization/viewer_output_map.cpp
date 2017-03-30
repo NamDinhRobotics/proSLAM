@@ -74,7 +74,26 @@ namespace proslam {
 
     //ds if full landmark view is desired
     if (_landmarks_drawn) {
-      for (LandmarkPointerMap::iterator it = _context->landmarks().begin(); it != _context->landmarks().end(); it++) {
+      for (LandmarkPointerMap::const_iterator it = _context->landmarksInWindowForLocalMap().begin(); it != _context->landmarksInWindowForLocalMap().end(); it++) {
+
+        //ds buffer landmark
+        const Landmark* landmark = it->second;
+
+        //ds if in context and valid
+        if (landmark->areCoordinatesValidated()) {
+
+          //ds specific coloring for closure landmarks
+          if (landmark->isInLoopClosureQuery()) {
+            glColor3f(0.0, 1.0, 0.0);
+          } else if (landmark->isInLoopClosureReference()) {
+            glColor3f(0.0, 0.5, 0.0);
+          } else {
+            glColor3f(0.5, 0.5, 0.5);
+          }
+          glVertex3f(landmark->coordinates().x(), landmark->coordinates().y(), landmark->coordinates().z());
+        }
+      }
+      for (LandmarkPointerMap::const_iterator it = _context->landmarks().begin(); it != _context->landmarks().end(); it++) {
 
         //ds buffer landmark
         const Landmark* landmark = it->second;

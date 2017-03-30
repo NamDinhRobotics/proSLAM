@@ -92,7 +92,7 @@ namespace proslam {
     Count _preliminary_minimum_interspace_queries = 5;
 
     //ds minimum relative number of matches
-    real _preliminary_minimum_matching_ratio = 0.1;
+    real _preliminary_minimum_matching_ratio = 0.15;
 
     //ds minimum absolute number of matches
     Count _minimum_absolute_number_of_matches_pointwise = 100;
