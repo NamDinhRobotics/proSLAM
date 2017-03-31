@@ -19,7 +19,7 @@ For related publications please refer to revision 7faff124
 
 (All of the above are clickable YouTube links)
 
-[kitti_00_updated]: https://www.youtube.com/watch?v=yvxix6-9ZEA
+[kitti_00_updated]: https://www.youtube.com/watch?v=hIeaB-MMJMo
 [kitti_00]: https://www.youtube.com/watch?v=n_UmEpIwb9Y
 [kitti_01]: https://www.youtube.com/watch?v=iGSCOEn5Nx8
 [kitti_06]: https://www.youtube.com/watch?v=Bmig0ASFOY4
