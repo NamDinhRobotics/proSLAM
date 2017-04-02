@@ -9,7 +9,8 @@ target_link_libraries(srrg_proslam_visualization_library
   ${OPENGL_glu_LIBRARY}
   ${QGLVIEWER_LIBRARY}
   ${catkin_LIBRARIES}
-  GL GLU
+  ${OPENGL_gl_LIBRARY} 
+  ${OPENGL_glu_LIBRARY}
 )
 
 #ds package specific linkage: qt
