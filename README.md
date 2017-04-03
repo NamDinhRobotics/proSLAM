@@ -142,7 +142,8 @@ After a complete run we can evaluate the KITTI error statistics by calling:
  - `EuRoC MH_01_easy`: https://drive.google.com/open?id=0ByaBRAPfmgEqbUctejZwb0xRaFk (1.9GB)
  - `EuRoC MH_05_difficult`: https://drive.google.com/open?id=0ByaBRAPfmgEqTWVCZDVqNTY2QXc (0.9GB)<br/>
 
-Run procedure remains identical to the one above (only the dataset name has to be adjusted, e.g. `00.txt` becomes `MH_01_easy.txt`)
+Run procedure remains identical to the one above (only the dataset name has to be adjusted, e.g. `00.txt` becomes `MH_01_easy.txt`)<br/>
+The EuRoC datasets generally require image histogram equalization for best performance (option -equalize-histogram/-eh)
 
 ---
 ### Custom stereo camera sensor input / ROS node ###
