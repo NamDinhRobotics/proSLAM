@@ -52,9 +52,9 @@ The complete system **runs on a single thread** (visualization components are sy
 
 ---
 ### How do I get set up? ###
-1) install the Ubuntu packages (`ninja-build` is not required when using an existing g2o installation)
+1) install the Ubuntu packages
 
-    sudo apt-get install build-essential libeigen3-dev libsuitesparse-dev freeglut3-dev libqglviewer-dev ninja-build
+    sudo apt-get install build-essential libeigen3-dev libsuitesparse-dev freeglut3-dev libqglviewer-dev
 
 ---
 2) download and install
@@ -72,6 +72,7 @@ or (OpenCV + Qt)
 ---
 4) set the environment variable `$G2O_ROOT` to use your own g2o installation - or clone `g2o for catkin` (https://github.com/yorsh87/g2o_catkin) to your catkin workspace:
 
+    sudo apt-get install ninja-build
     git clone https://github.com/yorsh87/g2o_catkin.git
     
 and build it (slow as it will perform a download using unladen swallows):
