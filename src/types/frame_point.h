@@ -61,22 +61,26 @@ namespace proslam {
     inline const PointCoordinates& imageCoordinatesLeft() const {return _image_coordinates_left;}
     inline const PointCoordinates& imageCoordinatesRight() const {return _image_coordinates_right;}
 
-    inline const PointCoordinates reprojectionCoordinatesLeft() const {return _reprojection_coordinates_left;}
-    void setReprojectionCoordinatesLeft(const PointCoordinates& reprojection_coordinates_) {_reprojection_coordinates_left = reprojection_coordinates_; }
-    inline const PointCoordinates reprojectionCoordinatesRight() const {return _reprojection_coordinates_right;}
-    void setReprojectionCoordinatesRight(const PointCoordinates& reprojection_coordinates_) {_reprojection_coordinates_right = reprojection_coordinates_;}
-
     inline const PointCoordinates cameraCoordinatesLeft() const {return _camera_coordinates_left;}
     void setCameraCoordinatesLeft(const PointCoordinates& coordinates_) {_camera_coordinates_left = coordinates_;}
 
     inline const PointCoordinates robotCoordinates() const {return _robot_coordinates;}
     void setRobotCoordinates(const PointCoordinates& robot_coordinates_) {_robot_coordinates = robot_coordinates_;}
 
+    inline const PointCoordinates worldCoordinates() const {return _world_coordinates;}
+    void setWorldCoordinates(const PointCoordinates& world_coordinates_) {_world_coordinates = world_coordinates_;}
+
     inline const cv::KeyPoint& keypointLeft() const {return _keypoint_left;}
     inline const cv::KeyPoint& keypointRight() const {return _keypoint_right;}
 
     inline const cv::Mat& descriptorLeft() const {return _descriptor_left;}
     inline const cv::Mat& descriptorRight() const {return _descriptor_right;}
+
+    //ds visualization only
+    inline const PointCoordinates reprojectionCoordinatesLeft() const {return _reprojection_coordinates_left;}
+    void setReprojectionCoordinatesLeft(const PointCoordinates& reprojection_coordinates_) {_reprojection_coordinates_left = reprojection_coordinates_; }
+    inline const PointCoordinates reprojectionCoordinatesRight() const {return _reprojection_coordinates_right;}
+    void setReprojectionCoordinatesRight(const PointCoordinates& reprojection_coordinates_) {_reprojection_coordinates_right = reprojection_coordinates_;}
 
   //ds attributes
   protected:
@@ -98,10 +102,9 @@ namespace proslam {
     //ds spatial properties
     PointCoordinates _image_coordinates_left;
     PointCoordinates _image_coordinates_right;
-    PointCoordinates _reprojection_coordinates_left  = PointCoordinates::Zero();
-    PointCoordinates _reprojection_coordinates_right = PointCoordinates::Zero();
-    PointCoordinates _camera_coordinates_left        = PointCoordinates::Zero(); //ds 3D point in left camera coordinate frame
-    PointCoordinates _robot_coordinates              = PointCoordinates::Zero(); //ds 3D point in robot coordinate frame
+    PointCoordinates _camera_coordinates_left = PointCoordinates::Zero(); //ds 3D point in left camera coordinate frame
+    PointCoordinates _robot_coordinates       = PointCoordinates::Zero(); //ds 3D point in robot coordinate frame
+    PointCoordinates _world_coordinates       = PointCoordinates::Zero(); //ds 3D point in world coordinate frame (make sure they are updated!)
     real _depth_meters = -1;
 
     //ds connected landmark (if any)
@@ -115,6 +118,10 @@ namespace proslam {
 
     //ds grant access to factory for constructor calls
     friend Frame;
+
+    //ds visualization only
+    PointCoordinates _reprojection_coordinates_left  = PointCoordinates::Zero();
+    PointCoordinates _reprojection_coordinates_right = PointCoordinates::Zero();
 
   //ds class specific
   private:

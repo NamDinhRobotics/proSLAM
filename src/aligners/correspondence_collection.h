@@ -3,7 +3,7 @@
 
 namespace proslam {
 
-  class CorrespondenceCollection: public BaseContext {
+  class CorrespondenceCollection {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds object handling

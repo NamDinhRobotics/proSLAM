@@ -3,12 +3,11 @@
 #include "types/landmark.h"
 
 namespace proslam {
-
   using namespace srrg_core;
 
   //ds initialize aligner with minimal entity
-  void StereoUVAligner::init(BaseContext* context_, const TransformMatrix3D& robot_to_world_) {
-    _context = static_cast<Frame*>(context_);
+  void StereoUVAligner::init(Frame* context_, const TransformMatrix3D& robot_to_world_) {
+    _context = context_;
     _errors.resize(_context->points().size());
     _inliers.resize(_context->points().size());
     _robot_to_world = robot_to_world_;
@@ -21,9 +20,6 @@ namespace proslam {
     _projection_matrix_right = _context->cameraRight()->projectionMatrix();
     _image_rows = _context->cameraLeft()->imageRows();
     _image_cols = _context->cameraLeft()->imageCols();
-
-    //ds others
-    _robot_to_world_previous = _context->previous()->robotToWorld();
   }
 
   //ds linearize the system: to be called inside oneRound
@@ -56,7 +52,7 @@ namespace proslam {
       if (landmark && landmark->areCoordinatesValidated()) {
         sampled_point_in_camera_left = _world_to_camera_left*landmark->coordinates();
       } else {
-        sampled_point_in_camera_left = _world_to_camera_left*(_robot_to_world_previous*frame_point->previous()->robotCoordinates());
+        sampled_point_in_camera_left = _world_to_camera_left*frame_point->previous()->worldCoordinates();
         _omega *= _weight_framepoint;
       }
       const real& depth_meters = sampled_point_in_camera_left.z();
@@ -92,14 +88,16 @@ namespace proslam {
       const real inverse_sampled_c_right = 1/sampled_c_right;
       const real inverse_sampled_c_squared_left  = inverse_sampled_c_left*inverse_sampled_c_left;
       const real inverse_sampled_c_squared_right = inverse_sampled_c_right*inverse_sampled_c_right;
+
+      //ds visualization only
       frame_point->setReprojectionCoordinatesLeft(sampled_point_in_image_left);
       frame_point->setReprojectionCoordinatesRight(sampled_point_in_image_right);
 
       //ds compute error
-      Vector4 error(sampled_point_in_image_left.x()-frame_point->imageCoordinatesLeft().x(),
-                    sampled_point_in_image_left.y()-frame_point->imageCoordinatesLeft().y(),
-                    sampled_point_in_image_right.x()-frame_point->imageCoordinatesRight().x(),
-                    sampled_point_in_image_right.y()-frame_point->imageCoordinatesRight().y());
+      const Vector4 error(sampled_point_in_image_left.x()-frame_point->imageCoordinatesLeft().x(),
+                          sampled_point_in_image_left.y()-frame_point->imageCoordinatesLeft().y(),
+                          sampled_point_in_image_right.x()-frame_point->imageCoordinatesRight().x(),
+                          sampled_point_in_image_right.y()-frame_point->imageCoordinatesRight().y());
       assert(error(1) == error(3));
 
       //ds compute squared error
@@ -115,7 +113,7 @@ namespace proslam {
           continue;
         }
 
-        //ds encode weight in omega
+        //ds include kernel in omega
         _omega *= _maximum_error_kernel/chi;
       } else {
         _inliers[index_point] = true;
@@ -194,7 +192,7 @@ namespace proslam {
   void StereoUVAligner::converge() {
 
     //ds previous error to check for convergence
-    real total_error_previous = 0.0;
+    real total_error_previous = 0;
 
     //ds start LS
     for (Count iteration = 0; iteration < _maximum_number_of_iterations; ++iteration) {

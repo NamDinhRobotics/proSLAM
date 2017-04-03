@@ -6,9 +6,9 @@ namespace proslam {
   Count Landmark::_instances = 0;
 
   //ds initial landmark coordinates must be provided
-  Landmark::Landmark(const PointCoordinates& point_coordinates_, const FramePoint* origin_): _identifier(_instances),
-                                                                                             _origin(origin_),
-                                                                                             _coordinates(point_coordinates_) {
+  Landmark::Landmark(const FramePoint* origin_): _identifier(_instances),
+                                                 _origin(origin_),
+                                                 _coordinates(origin_->worldCoordinates()) {
     ++_instances;
 
     //ds allocate fresh state (trading construction correctness for enclosed generation)
@@ -36,8 +36,7 @@ namespace proslam {
   }
 
   //ds landmark coordinates update - no visual information (e.g. map optimization)
-  void Landmark::update(const PointCoordinates& coordinates_in_world_,
-                        const real& depth_meters_) {
+  void Landmark::update(const PointCoordinates& coordinates_in_world_, const real& depth_meters_) {
 
     //ds compute relative delta to the current coordinate estimate
     const real relative_delta = (_coordinates-coordinates_in_world_).norm()/depth_meters_;
@@ -66,17 +65,14 @@ namespace proslam {
   }
 
   //ds landmark coordinates update with visual information (tracking)
-  void Landmark::update(const PointCoordinates& coordinates_in_world_,
-                        const cv::Mat& descriptor_left_,
-                        const cv::Mat& descriptor_right_,
-                        const real& depth_meters_) {
+  void Landmark::update(const FramePoint* point_) {
 
     //ds always update descriptors
-    _state->appearances.push_back(new Appearance(_state, descriptor_left_));
-    _state->appearances.push_back(new Appearance(_state, descriptor_right_));
+    _state->appearances.push_back(new Appearance(_state, point_->descriptorLeft()));
+    _state->appearances.push_back(new Appearance(_state, point_->descriptorRight()));
 
     //ds update position
-    update(coordinates_in_world_, depth_meters_);
+    update(point_->worldCoordinates(), point_->depthMeters());
   }
 
   Landmark* LandmarkPointerMap::get(const Identifier& identifier_) {

@@ -47,9 +47,9 @@ namespace proslam {
     std::cerr << "Relocalizer::Relocalizer|destroyed" << std::endl;
   }
 
-  void Relocalizer::init(const LocalMap* keyframe) {
+  void Relocalizer::init(const LocalMap* local_map_) {
     CHRONOMETER_START(overall)
-    _query = new Query(keyframe);
+    _query = new Query(local_map_);
     CHRONOMETER_STOP(overall)
   }
 
@@ -81,7 +81,7 @@ namespace proslam {
     //ds for all elements in the current history
     while (_query_history_queue.size() > 0) {
       _query_history.push_back(_query_history_queue.front());
-      std::cerr << "flushed to history: " << _query_history_queue.front()->keyframe->identifier() << std::endl;
+      std::cerr << "flushed to history: " << _query_history_queue.front()->local_map->identifier() << std::endl;
       _query_history_queue.pop();
     }
 
@@ -99,7 +99,7 @@ namespace proslam {
     for (const Query* reference: _query_history) {
 
       //ds compute absolute distance
-      const real distance_meters_squared = (reference->keyframe->robotToWorld().translation()-_query->keyframe->robotToWorld().translation()).squaredNorm();
+      const real distance_meters_squared = (reference->local_map->robotToWorld().translation()-_query->local_map->robotToWorld().translation()).squaredNorm();
 
       //ds if roughly in vicinity
       if (distance_meters_squared < 25*25) {
@@ -167,8 +167,8 @@ namespace proslam {
             assert(0 < correspondences.size());
 
               //ds update closures
-            _closures.push_back(new CorrespondenceCollection(_query->keyframe,
-                                            reference->keyframe,
+            _closures.push_back(new CorrespondenceCollection(_query->local_map,
+                                            reference->local_map,
                                             absolute_number_of_descriptor_matches,
                                             relative_number_of_descriptor_matches_query,
                                             descriptor_matches_pointwise,

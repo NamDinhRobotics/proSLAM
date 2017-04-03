@@ -3,20 +3,23 @@
 
 namespace proslam {
 
+  //ds pinhole camera object
   class Camera {
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds object handling
   public:
 
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    //ds a camera can be constructed based on image dimensions and a camera matrix
     Camera(const Count& image_rows_,
            const Count& image_cols_,
            const CameraMatrix& camera_matrix_,
            const TransformMatrix3D& offset_  = TransformMatrix3D::Identity());
 
+  //ds getters/setters
   public:
 
-    inline const Identifier index() const {return _index;}
+    inline const Identifier identifier() const {return _identifier;}
     inline const Count imageRows() const {return _image_rows;}
     inline const Count imageCols() const {return _image_cols;}
     const bool isInFieldOfView(const PointCoordinates& image_coordinates_) const;
@@ -34,27 +37,31 @@ namespace proslam {
     inline const Vector5 distortionCoefficients() const {return _distortion_coefficients;}
     void setDistortionCoefficients(const Vector5& distortion_coefficients_) {_distortion_coefficients = distortion_coefficients_;}
 
+  //ds attributes
   protected:
 
-    Identifier _index = 0;
+    Identifier _identifier = 0;
+    Count _image_rows      = 0;
+    Count _image_cols      = 0;
     CameraMatrix  _camera_matrix        = CameraMatrix::Zero();
     CameraMatrix _inverse_camera_matrix = CameraMatrix::Zero();
     ProjectionMatrix _projection_matrix = ProjectionMatrix::Zero();
     Matrix3 _rectification_matrix       = Matrix3::Zero();
     Vector5 _distortion_coefficients    = Vector5::Zero();
 
-    Count _image_rows = 0;
-    Count _image_cols = 0;
+    //ds configuration on robot
     TransformMatrix3D _camera_to_robot = TransformMatrix3D::Identity();
     TransformMatrix3D _robot_to_camera = TransformMatrix3D::Identity();
 
+  //ds class specific
   private:
 
-    static Identifier _instances;
+    //ds inner instance count
+    static Count _instances;
 
   };
 
-  typedef std::vector<Camera*> CameraPtrVector;
-  typedef std::map<std::string, Camera*> StringCameraMap;
-  typedef std::pair<std::string, Camera*> StringCameraMapElement;
+  typedef std::vector<Camera*> CameraPointerVector;
+  typedef std::map<std::string, Camera*> CameraMap;
+  typedef std::pair<std::string, Camera*> CameraMapElement;
 }

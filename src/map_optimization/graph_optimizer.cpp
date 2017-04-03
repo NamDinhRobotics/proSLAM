@@ -104,12 +104,12 @@ namespace proslam {
     _optimizer->setVerbose(false);
     _optimizer->optimize(10);
 
-    //ds backpropagate solution to tracking context: keyframes
+    //ds backpropagate solution to tracking context: local maps
     for (LocalMap* local_map: local_maps_in_graph) {
       g2o::VertexSE3* vertex_local_map = dynamic_cast<g2o::VertexSE3*>(_optimizer->vertex(local_map->identifier()));
       assert(0 != vertex_local_map);
       local_map->setRobotToWorld(vertex_local_map->estimate().cast<real>());
     }
-    context_->setRobotToWorldPrevious(context_->currentLocalMap()->robotToWorld());
+    context_->setRobotToWorld(context_->currentLocalMap()->robotToWorld());
   }
 }

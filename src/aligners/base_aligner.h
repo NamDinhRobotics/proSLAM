@@ -10,9 +10,9 @@ namespace proslam {
     //ds readability
     public:
 
-      typedef Eigen::Matrix<real, states, states> AlignmentMatrix;
-      typedef Eigen::Matrix<real, states, 1> AlignmentVector;
-      typedef Eigen::Matrix<real, dimension, dimension> InformationMatrix;
+      typedef Eigen::Matrix<real, states, states> StateMatrix;
+      typedef Eigen::Matrix<real, states, 1> StateVector;
+      typedef Eigen::Matrix<real, dimension, dimension> DimensionMatrix;
       typedef Eigen::Matrix<real, dimension, states> JacobianMatrix;
 
     //ds object handling
@@ -39,9 +39,6 @@ namespace proslam {
 
     //ds access
     public:
-
-      //ds initialize aligner with minimal entity TODO enforce this for all sub classes once purified
-      virtual void init(BaseContext* context_, const TransformMatrix3D& initial_guess_) = 0;
 
       //ds linearize the system: to be called inside oneRound
       virtual void linearize(const bool& ignore_outliers_) = 0;
@@ -79,18 +76,18 @@ namespace proslam {
 
       //ds convergence criteria
       real _error_delta_for_convergence = 1e-5;
-      real _maximum_error_kernel        = 1.0;
-      real _damping                     = 1.0;
-      Count _maximum_number_of_iterations  = 100;
-      bool _has_system_converged           = false;
+      real _maximum_error_kernel        = 1;
+      real _damping                     = 1;
+      Count _maximum_number_of_iterations = 100;
+      bool _has_system_converged          = false;
 
       //ds general LS parameters
-      real _total_error     = 0.0;
-      AlignmentMatrix _H       = AlignmentMatrix::Zero();
-      AlignmentVector _b       = AlignmentVector::Zero();
-      InformationMatrix _omega = InformationMatrix::Identity();
-      JacobianMatrix _jacobian = JacobianMatrix::Zero();
-      AlignmentMatrix _information_matrix = AlignmentMatrix::Identity();
+      real _total_error               = 0;
+      StateMatrix _H                  = StateMatrix::Zero();
+      StateVector _b                  = StateVector::Zero();
+      DimensionMatrix _omega          = DimensionMatrix::Identity();
+      JacobianMatrix _jacobian        = JacobianMatrix::Zero();
+      StateMatrix _information_matrix = StateMatrix::Identity();
   };
 
   //ds readability

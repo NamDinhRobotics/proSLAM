@@ -2,13 +2,15 @@
 
 namespace proslam {
 
-  Identifier Camera::_instances = 0;
+//ds inner instance count
+Count Camera::_instances = 0;
 
+  //ds a camera can be constructed based on image dimensions and a camera matrix
   Camera::Camera(const Count& image_rows_,
                  const Count& image_cols_,
                  const CameraMatrix& camera_matrix_,
                  const TransformMatrix3D& offset_) {
-    _index = _instances;
+    _identifier = _instances;
     ++_instances;
 
     setImageRows(image_rows_);

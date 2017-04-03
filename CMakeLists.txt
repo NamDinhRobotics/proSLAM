@@ -34,8 +34,6 @@ else()
   find_package(Qt4 REQUIRED)
 endif()
 
-find_package(SuiteSparse REQUIRED)
-
 #ds check if a supported ros version is installed to determine which packages we include
 set(SRRG_PROSLAM_HAS_ROS false)
 if("$ENV{ROS_DISTRO}" STREQUAL "kinetic" OR "$ENV{ROS_DISTRO}" STREQUAL "indigo")
@@ -46,7 +44,6 @@ if("$ENV{ROS_DISTRO}" STREQUAL "kinetic" OR "$ENV{ROS_DISTRO}" STREQUAL "indigo"
     srrg_gl_helpers
     srrg_core_viewers
     srrg_hbst
-    g2o_catkin
     roscpp
     sensor_msgs
     cv_bridge
@@ -57,9 +54,32 @@ else()
     srrg_gl_helpers
     srrg_core_viewers
     srrg_hbst
-    g2o_catkin
   )
 endif()
+
+#ds check if a custom g2o library is installed
+set(SRRG_PROSLAM_HAS_OWN_G2O false)
+if("$ENV{G2O_ROOT}" STREQUAL "")
+  message("using catkin g2o")
+else()
+  message("using custom g2o: $ENV{G2O_ROOT}")
+  set(SRRG_PROSLAM_HAS_OWN_G2O true)
+endif()
+
+#ds if a custom g2o was found
+if(SRRG_PROSLAM_HAS_OWN_G2O)
+
+  #ds locate g2o package
+  find_package(G2O REQUIRED)
+  
+  #ds add it to the catkin variables
+  set(g2o_catkin_INCLUDE_DIRS "${G2O_INCLUDE_DIR}")
+  set(g2o_catkin_LIBRARIES ${G2O_SOLVER_CSPARSE_EXTENSION} ${G2O_TYPES_SLAM3D} ${G2O_CORE_LIBRARY})
+  
+else()
+  find_package(g2o_catkin)
+endif()
+find_package(SuiteSparse REQUIRED)
 
 #ds flags
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -Wall -O0 -g -fPIC -fstack-check")

@@ -3,12 +3,8 @@
 namespace proslam {
   using namespace srrg_core;
 
-  LocalMap::LocalMap(Frame* frame_for_context_, 
-		                 FramePointerVector& frames_): Frame(frame_for_context_) {
-
-    //ds link anchor frame
-    Frame::_is_local_map_anchor = true;
-    Frame::setLocalMap(this);
+  //ds the local map is by the WorldMap and is created from a batch of Frames
+  LocalMap::LocalMap(FramePointerVector& frames_): Frame(frames_.back()) {
 
     //ds clear structures
     _landmarks.clear();
@@ -19,9 +15,13 @@ namespace proslam {
     //ds keep track of added landmarks in order to add them only once
     std::set<const Landmark*> landmarks_added_to_context;
 
+    const TransformMatrix3D& world_to_local_map = frames_.back()->worldToRobot();
+
     //ds create item context for this local map: loop over all frames
     for (Frame* frame: frames_) {
-      const TransformMatrix3D& frame_to_context = frame_for_context_->worldToRobot()*frame->robotToWorld();
+      const TransformMatrix3D& frame_to_local_map = world_to_local_map*frame->robotToWorld();
+      frame->setLocalMap(this);
+      frame->setFrameToLocalMap(frame_to_local_map);
       for (FramePoint* frame_point: frame->points()) {
 
         //ds buffer current landmark
@@ -37,7 +37,7 @@ namespace proslam {
           Landmark::State* landmark_state = landmark->state();
           assert(landmark_state != 0);
 
-          landmark_state->robot_coordinates = frame_to_context*frame_point->robotCoordinates();
+          landmark_state->robot_coordinates = frame_to_local_map*frame_point->robotCoordinates();
           landmark_state->local_map = this;
           _landmarks.push_back(landmark_state);
           _appearances.insert(_appearances.begin(), landmark_state->appearances.begin(), landmark_state->appearances.end());
@@ -57,12 +57,12 @@ namespace proslam {
 
     //ds remove the last frame (being the one become this local map)
     frames_.pop_back();
+    _frames.insert(_frames.end(), frames_.begin(), frames_.end());
 
-    //ds propagate keyframe transform to contained frames
-    for (Frame* frame: frames_) {
-      frame->setLocalMap(this);
-      _frames.push_back(frame);
-    }
+    //ds set anchor frame (this)
+    Frame::setFrameToLocalMap(TransformMatrix3D::Identity());
+    Frame::setIsLocalMapAnchor(true);
+    Frame::setLocalMap(this);
   }
 
   //ds cleanup of dynamic structures
@@ -77,6 +77,7 @@ namespace proslam {
     _closures.clear();
   }
 
+  //ds overridden pose method - automatically updating contained Frame poses
   void LocalMap::setRobotToWorld(const TransformMatrix3D& robot_to_world_) {
 
     //ds set own position

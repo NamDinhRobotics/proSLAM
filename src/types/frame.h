@@ -1,5 +1,4 @@
 #pragma once
-#include "base_context.h"
 #include "camera.h"
 #include "frame_point.h"
 
@@ -10,7 +9,7 @@ namespace proslam {
   class WorldMap;
 
   //ds this class encapsulates all data gained from the processing of a stereo image pair
-  class Frame: public BaseContext {
+  class Frame {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds exported types
@@ -35,7 +34,7 @@ namespace proslam {
     //ds FramePoints cleanup
     virtual ~Frame() {releasePoints();}
 
-    //ds prohibt default construction
+    //ds prohibit default construction
     Frame() = delete;
 
   //ds getters/setters
@@ -75,7 +74,7 @@ namespace proslam {
     //ds this criteria is used for the decision of creating a landmark or not from a track of framepoints
     const Count& minimumTrackLengthForLandmarkCreation() const {return _minimum_track_length_for_landmark_creation;}
 
-    //ds request new framepoint with optional link to a previous point (track)
+    //ds request a new framepoint instance with an optional link to a previous point (track)
     FramePoint* create(const cv::KeyPoint& keypoint_left_,
                        const cv::Mat& descriptor_left_,
                        const cv::KeyPoint& keypoint_right_,
@@ -92,18 +91,27 @@ namespace proslam {
     inline const Status& status() const {return _status;}
     void setStatus(const Status& status_) {_status = status_;}
 
-    inline const real maximumDepthClose() const {return _maximum_depth_close;}
+    //ds the maximum allowed depth for framepoints to become classified as near - everything above is far
+    inline const real maximumDepthNear() const {return _maximum_depth_near;}
 
-    void setLocalMap(const LocalMap* local_map_);
+    void setLocalMap(const LocalMap* local_map_) {_local_map = local_map_;}
     inline const LocalMap* localMap() const {return _local_map;}
+    void setFrameToLocalMap(const TransformMatrix3D& frame_to_local_map_) {_frame_to_local_map = frame_to_local_map_; _local_map_to_frame = _frame_to_local_map.inverse();}
     void setIsLocalMapAnchor(const bool& is_local_map_anchor_) {_is_local_map_anchor = is_local_map_anchor_;}
     inline const bool isLocalMapAnchor() const {return _is_local_map_anchor;}
 
+    //ds get a quick overview of the overall point status in the frame
     const Count countPoints(const Count& min_track_length_,
 		                        const ThreeValued& has_landmark_ = Unknown) const;
 
+    //ds free open cv images
     void releaseImages();
+
+    //ds free all point instances
     void releasePoints();
+
+    //ds update framepoint world coordinates
+    void updatePoints();
 
   //ds attributes
   protected:
@@ -138,8 +146,8 @@ namespace proslam {
     IntensityImage _intensity_image_left;
     IntensityImage _intensity_image_right;
 
-    //ds
-    const real _maximum_depth_close;
+    //ds the maximum allowed depth for framepoints to become classified as near - everything above is far
+    const real _maximum_depth_near;
 
     //ds link to a local map if the frame is part of one
     const LocalMap* _local_map = 0;

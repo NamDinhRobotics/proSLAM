@@ -35,9 +35,8 @@ const char* banner[] = {
 //ds playback modules - lazy globals
 static SystemUsageCounter system_usage;
 MessageTimestampSynchronizer synchronizer;
-bool use_gui                                = false;
-bool use_relocalization                     = true;
-TransformMatrix3D world_previous_to_current = TransformMatrix3D::Identity();
+bool use_gui            = false;
+bool use_relocalization = true;
 
 //ds user interface related
 QApplication* ui_server              = 0;
@@ -51,8 +50,7 @@ void process(WorldMap* world_map_,
              GraphOptimizer* mapper_,
              Relocalizer* relocalizer_,
              const cv::Mat& intensity_image_left_,
-             const cv::Mat& intensity_image_right_,
-             const TransformMatrix3D& world_previous_to_current_estimate_ = TransformMatrix3D::Identity());
+             const cv::Mat& intensity_image_right_);
 
 //ds prints extensive run summary
 void printReport(const std::vector<TransformMatrix3D>& robot_to_world_ground_truth_poses_,
@@ -133,7 +131,7 @@ int32_t main(int32_t argc, char ** argv) {
   camera_topics_synchronized.push_back(topic_image_stereo_right);
   synchronizer.setTimeInterval(0.001);
   synchronizer.setTopics(camera_topics_synchronized);
-  StringCameraMap cameras_by_topic;
+  CameraMap cameras_by_topic;
   cameras_by_topic.clear();
 
   //ds quickly read the first messages to buffer camera info
@@ -182,7 +180,7 @@ int32_t main(int32_t argc, char ** argv) {
   sensor_message_reader.open(filename_sensor_messages);
 
   std::cerr << "main|loaded cameras: " << cameras_by_topic.size() << std::endl;
-  for (StringCameraMapElement camera: cameras_by_topic) {
+  for (CameraMapElement camera: cameras_by_topic) {
     std::cerr << "main|" << camera.first << " - resolution: " << camera.second->imageCols() << " x " << camera.second->imageRows()
                                          << " aspect ratio: " << static_cast<real>(camera.second->imageCols())/camera.second->imageRows() << std::endl;
   }
@@ -278,7 +276,7 @@ int32_t main(int32_t argc, char ** argv) {
 
       //ds check if first frame and odometry is available
       if (world_map->frames().size() == 0 && message_image_left->hasOdom()) {
-        world_map->setRobotToWorldPrevious(message_image_left->odometry().cast<real>()*camera_left->robotToCamera());
+        world_map->setRobotToWorld(message_image_left->odometry().cast<real>()*camera_left->robotToCamera());
         if (use_gui) {
           context_viewer_bird->setWorldToRobotOrigin((message_image_left->odometry().cast<real>()*camera_left->robotToCamera()).inverse());
         }
@@ -290,14 +288,13 @@ int32_t main(int32_t argc, char ** argv) {
               mapper,
               relocalizer,
               intensity_image_left_rectified,
-              intensity_image_right_rectified,
-              world_previous_to_current);
+              intensity_image_right_rectified);
 
       //ds record ground truth history for error computation
       if (message_image_left->hasOdom()) {
         const TransformMatrix3D robot_to_world_ground_truth = message_image_left->odometry().cast<real>()*camera_left->robotToCamera();
         robot_to_world_ground_truth_poses.push_back(robot_to_world_ground_truth);
-        world_map->currentFrame()->setRobotToWorldGroundTruth(robot_to_world_ground_truth);
+        world_map->setRobotToWorldGroundTruth(robot_to_world_ground_truth);
       }
 
       //ds runtime info
@@ -365,7 +362,7 @@ int32_t main(int32_t argc, char ** argv) {
   delete relocalizer;
 
   //ds other structures
-  for (StringCameraMapElement camera_element: cameras_by_topic) {
+  for (CameraMapElement camera_element: cameras_by_topic) {
     delete camera_element.second;
   }
 
@@ -405,14 +402,10 @@ void process(WorldMap* world_map_,
              GraphOptimizer* mapper_,
              Relocalizer* relocalizer_,
              const cv::Mat& intensity_image_left_,
-             const cv::Mat& intensity_image_right_,
-             const TransformMatrix3D& world_previous_to_current_estimate_) {
+             const cv::Mat& intensity_image_right_) {
 
   //ds call the tracker
-  world_previous_to_current = tracker_->compute(world_map_,
-                                                intensity_image_left_,
-                                                intensity_image_right_,
-                                                world_previous_to_current_estimate_);
+  tracker_->compute(world_map_, intensity_image_left_, intensity_image_right_);
 
   //ds check if relocalization is desired
   if (use_relocalization) {
@@ -439,7 +432,7 @@ void process(WorldMap* world_map_,
             assert(world_map_->currentLocalMap() == closure->local_map_query);
 
             //ds add loop closure constraint
-            world_map_->closeLocalMaps(world_map_->currentLocalMap(),
+            world_map_->addLoopClosure(world_map_->currentLocalMap(),
                                        closure->local_map_reference,
                                        closure->transform_frame_query_to_frame_reference);
             if (use_gui) {
@@ -459,12 +452,6 @@ void process(WorldMap* world_map_,
         //ds optimize graph
         mapper_->optimize(world_map_);
       }
-    }
-  } else {
-
-    //ds if we have a valid frame (not the case after the track is lost)
-    if (world_map_->currentFrame() != 0) {
-      world_map_->createLocalMap();
     }
   }
 }

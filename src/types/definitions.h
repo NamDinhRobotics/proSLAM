@@ -1,5 +1,6 @@
 #pragma once
-#include <queue>
+#include <iostream>
+#include <stdint.h>
 #include <set>
 #include <vector>
 #include <map>
@@ -22,8 +23,7 @@
   #error OpenCV version not supported
 #endif
 
-#include <iostream>
-#include <stdint.h>
+
 #include "srrg_system_utils/system_utils.h"
 #include "srrg_hbst_types_core/BinaryTree.hpp"
 #include "srrg_types/types.hpp"
@@ -127,6 +127,7 @@ namespace proslam{
   #define CHRONOMETER_START(NAME) const double time_start_seconds_##NAME = srrg_core::getTime();
   #define CHRONOMETER_STOP(NAME) _time_consumption_seconds_##NAME += srrg_core::getTime()-time_start_seconds_##NAME;
 
+  //ds release assertions
   #define ASSERT(CONDITION) \
     if (!CONDITION) { \
       throw std::runtime_error("flying polar buffalo error"); \

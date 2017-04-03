@@ -67,8 +67,7 @@ void process(WorldMap* world_map_,
              GraphOptimizer* mapper_,
              Relocalizer* relocalizer_,
              const cv::Mat& intensity_image_left_,
-             const cv::Mat& intensity_image_right_,
-             const TransformMatrix3D& world_previous_to_current_estimate_ = TransformMatrix3D::Identity());
+             const cv::Mat& intensity_image_right_);
 
 //ds ros synchronization
 void callbackCameraInfoLeft(const sensor_msgs::CameraInfoConstPtr& message_) {
@@ -314,8 +313,7 @@ int32_t main(int32_t argc, char ** argv) {
               mapper,
               relocalizer,
               image_left.second,
-              image_right.second,
-              world_previous_to_current);
+              image_right.second);
 
       //ds update ui
       if (use_gui) {
@@ -346,14 +344,10 @@ void process(WorldMap* world_map_,
              GraphOptimizer* mapper_,
              Relocalizer* relocalizer_,
              const cv::Mat& intensity_image_left_,
-             const cv::Mat& intensity_image_right_,
-             const TransformMatrix3D& world_previous_to_current_estimate_) {
+             const cv::Mat& intensity_image_right_) {
 
   //ds call the tracker
-  world_previous_to_current = tracker_->compute(world_map_,
-                                                intensity_image_left_,
-                                                intensity_image_right_,
-                                                world_previous_to_current_estimate_);
+  tracker_->compute(world_map_, intensity_image_left_, intensity_image_right_);
 
   //ds check if relocalization is desired
   if (use_relocalization) {
@@ -380,7 +374,7 @@ void process(WorldMap* world_map_,
             assert(world_map_->currentLocalMap() == closure->local_map_query);
 
             //ds add loop closure constraint
-            world_map_->closeLocalMaps(world_map_->currentLocalMap(),
+            world_map_->addLoopClosure(world_map_->currentLocalMap(),
                                        closure->local_map_reference,
                                        closure->transform_frame_query_to_frame_reference);
             if (use_gui) {

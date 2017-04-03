@@ -1,4 +1,5 @@
 #pragma once
+#include <queue>
 #include "aligners/xyz_aligner.h"
 #include "types/local_map.h"
 
@@ -26,11 +27,11 @@ namespace proslam {
 
     struct Query {
       EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-      Query(const LocalMap* keyframe_): keyframe(keyframe_),
-                                        appearances(keyframe_->appearances()),
-                                        matchables(getMatchables(appearances)),
-                                        hbst_tree(new HBSTTree(keyframe_->identifier(), matchables)) {}
-      const LocalMap* keyframe = 0;
+      Query(const LocalMap* local_map_): local_map(local_map_),
+                                         appearances(local_map_->appearances()),
+                                         matchables(getMatchables(appearances)),
+                                         hbst_tree(new HBSTTree(local_map_->identifier(), matchables)) {}
+      const LocalMap* local_map = 0;
       const Landmark::AppearancePtrVector appearances;
       const HBSTNode::BinaryMatchableVector matchables;
       const HBSTTree* hbst_tree = 0;
@@ -46,7 +47,7 @@ namespace proslam {
   public:
 
     //ds initialize closer module for a new keyframe
-    void init(const LocalMap* keyframe);
+    void init(const LocalMap* local_map_);
 
     //ds integrate frame into loop closing pool
     void train();
@@ -92,7 +93,7 @@ namespace proslam {
     Count _preliminary_minimum_interspace_queries = 5;
 
     //ds minimum relative number of matches
-    real _preliminary_minimum_matching_ratio = 0.15;
+    real _preliminary_minimum_matching_ratio = 0.1;
 
     //ds minimum absolute number of matches
     Count _minimum_absolute_number_of_matches_pointwise = 100;

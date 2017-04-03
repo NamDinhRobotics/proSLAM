@@ -13,7 +13,7 @@ namespace proslam {
                const real& maximum_depth_close_): _identifier(_instances),
                                                   _previous(previous_),
                                                   _next(next_),
-                                                  _maximum_depth_close(maximum_depth_close_) {
+                                                  _maximum_depth_near(maximum_depth_close_) {
     ++_instances;
     setRobotToWorld(robot_to_world_);
     _points.clear();
@@ -24,7 +24,7 @@ namespace proslam {
                                _status(frame_->status()),
                                _previous(frame_->previous()),
                                _next(frame_->next()),
-                               _maximum_depth_close(frame_->maximumDepthClose()),
+                               _maximum_depth_near(frame_->maximumDepthNear()),
                                _local_map(frame_->localMap()) {
 
     //ds take over point references
@@ -49,12 +49,7 @@ namespace proslam {
     _intensity_image_right = frame_->intensityImageRight();
   }
 
-  void Frame::setLocalMap(const LocalMap* local_map_) {
-    _local_map          = local_map_;
-    _frame_to_local_map = local_map_->worldToRobot()*this->robotToWorld();
-    _local_map_to_frame = _frame_to_local_map.inverse();
-  }
-
+  //ds get a quick overview of the overall point status in the frame
   const Count Frame::countPoints(const Count& min_track_length_,
                                  const ThreeValued& has_landmark_) const {
     Count count = 0;
@@ -78,6 +73,11 @@ namespace proslam {
   void Frame::setRobotToWorld(const TransformMatrix3D& robot_to_world_) {
     _robot_to_world = robot_to_world_;
     _world_to_robot = _robot_to_world.inverse();
+
+    //ds update framepoint world coordinates
+    for (FramePoint* point: _points) {
+      point->setWorldCoordinates(_robot_to_world*point->robotCoordinates());
+    }
   }
 
   //ds request new framepoint with optional link to a previous point (track)
@@ -96,6 +96,7 @@ namespace proslam {
                                              this);
     frame_point->setCameraCoordinatesLeft(camera_coordinates_left_);
     frame_point->setRobotCoordinates(cameraLeft()->cameraToRobot()*camera_coordinates_left_);
+    frame_point->setWorldCoordinates(this->robotToWorld()*frame_point->robotCoordinates());
 
     //ds if the point is not linked (no track)
     if (previous_point_ == 0) {
@@ -110,22 +111,31 @@ namespace proslam {
 
     //ds update depth based on quality
     frame_point->setDepthMeters(camera_coordinates_left_.z());
-    if (frame_point->depthMeters() < _maximum_depth_close) {
+    if (frame_point->depthMeters() < _maximum_depth_near) {
       frame_point->setIsNear(true);
     }
     return frame_point;
   }
 
+  //ds free open cv images
   void Frame::releaseImages() {
     _intensity_image_left.release();
     _intensity_image_right.release();
   }
 
+  //ds free all point instances
   void Frame::releasePoints() {
     for (const FramePoint* frame_point: _points) {
       delete frame_point;
     }
     _points.clear();
+  }
+
+  //ds update framepoint world coordinates
+  void Frame::updatePoints() {
+    for (FramePoint* point: _points) {
+      point->setWorldCoordinates(_robot_to_world*point->robotCoordinates());
+    }
   }
 
   Frame* FramePointerMap::get(const Identifier& identifier_) {

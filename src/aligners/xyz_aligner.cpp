@@ -1,12 +1,10 @@
 #include "xyz_aligner.h"
 
-#include "srrg_types/types.hpp"
-
 namespace proslam {
 
   //ds initialize aligner with minimal entity TODO purify this
-  void XYZAligner::init(BaseContext* context_, const TransformMatrix3D& current_to_reference_) {
-    _context              = static_cast<CorrespondenceCollection*>(context_);
+  void XYZAligner::init(CorrespondenceCollection* context_, const TransformMatrix3D& current_to_reference_) {
+    _context              = context_;
     _current_to_reference = current_to_reference_;
 
     //ds unused

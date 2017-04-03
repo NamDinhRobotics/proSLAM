@@ -17,7 +17,7 @@ namespace proslam {
     public:
 
       //ds initialize aligner with minimal entity TODO purify this
-      void init(BaseContext* context_, const TransformMatrix3D& current_to_reference_ = TransformMatrix3D::Identity());
+      void init(CorrespondenceCollection* context_, const TransformMatrix3D& current_to_reference_ = TransformMatrix3D::Identity());
 
       //ds linearize the system: to be called inside oneRound
       void linearize(const bool& ignore_outliers_);

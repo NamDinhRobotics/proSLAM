@@ -19,15 +19,13 @@ namespace proslam {
   //ds functionality
   public:
 
-    const TransformMatrix3D compute(WorldMap* context_,
-                                    const cv::Mat& intensity_image_left_,
-                                    const cv::Mat& intensity_image_right_,
-                                    const TransformMatrix3D& initial_guess_transform_previous_to_current_ = TransformMatrix3D::Identity());
+    void compute(WorldMap* context_, const cv::Mat& intensity_image_left_, const cv::Mat& intensity_image_right_);
 
   //ds getters/setters
   public:
 
     BaseAligner6_4* aligner() {return _pose_optimizer;}
+    void setMotionPreviousToCurrent(const TransformMatrix3D& motion_previous_to_current_) {_motion_previous_to_current = motion_previous_to_current_;}
     StereoTriangulator* preprocessor() {return _framepoint_generator;}
     const Count totalNumberOfTrackedPoints() const {return _total_number_of_tracked_points;}
     const Count totalNumberOfLandmarksClose() const {return _total_number_of_landmarks_close;}
@@ -38,13 +36,14 @@ namespace proslam {
   //ds helpers
   protected:
 
-    void _trackFeatures(Frame* previous_frame_, Frame* current_frame_);
-    void _extractFeatures(Frame* frame_);
+    void _trackFramepoints(Frame* previous_frame_, Frame* current_frame_);
+    void _addNewFramepoints(Frame* frame_);
     void _getImageCoordinates(std::vector<ImageCoordinates>& predictions_left,
                               Frame* previous_frame_,
                               const Frame* current_frame_) const;
-    void _updateLandmarks(WorldMap* context_);
-    void _recoverPoints(WorldMap* context_);
+    void _pruneFramepoints(Frame* frame_);
+    void _updateLandmarks(WorldMap* context_, Frame* frame_);
+    void _recoverPoints(Frame* current_frame_);
 
   protected:
 
@@ -67,14 +66,15 @@ namespace proslam {
     StereoTriangulator* _framepoint_generator;
 
     //ds framepoint tracking configuration
-    int32_t _pixel_distance_tracking_threshold           = 0;   //ds current pixel distance threshold for framepoint tracking - lower means higher precision
-    int32_t _pixel_distance_tracking_threshold_maximum   = 7*7; //ds upper limit: 7x7 pixels
-    int32_t _pixel_distance_tracking_threshold_minimum   = 4*4; //ds lower limit: 4x4 pixels
+    int32_t _pixel_distance_tracking_threshold         = 0;   //ds current pixel distance threshold for framepoint tracking - lower means higher precision
+    int32_t _pixel_distance_tracking_threshold_maximum = 7*7; //ds upper limit: 7x7 pixels
+    int32_t _pixel_distance_tracking_threshold_minimum = 4*4; //ds lower limit: 4x4 pixels
     const int32_t _range_point_tracking        = 2;       //ds pixel search range width for point vicinity tracking
     const int32_t _maximum_flow_pixels_squared = 150*150; //ds maximum allowed pixel distance between image coordinates prediction and actual detection
 
     //ds pose solving
     StereoUVAligner* _pose_optimizer;
+    TransformMatrix3D _motion_previous_to_current;
 
     //ds framepoint track recovery
     Count _number_of_lost_points           = 0;

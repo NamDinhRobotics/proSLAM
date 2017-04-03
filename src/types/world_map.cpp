@@ -7,12 +7,7 @@ namespace proslam {
 
   WorldMap::WorldMap() {
     std::cerr << "WorldMap::WorldMap|constructing" << std::endl;
-    _frame_queue_for_local_map.clear();
-    _landmarks_in_window_for_local_map.clear();
-    _landmarks.clear();
-    _frames.clear();
-    _local_maps.clear();
-    _currently_tracked_landmarks.clear();
+    clear();
     std::cerr << "WorldMap::WorldMap|constructed" << std::endl;
   };
 
@@ -33,35 +28,50 @@ namespace proslam {
     for(FramePointerMap::iterator it = _frames.begin(); it != _frames.end(); ++it) {
       delete it->second;
     }
+
+    //ds clear all stacks
+    clear();
+    std::cerr << "WorldMap::WorldMap|destroyed" << std::endl;
+  }
+  
+  //ds clears all internal structures
+  void WorldMap::clear() {
     _frame_queue_for_local_map.clear();
     _landmarks_in_window_for_local_map.clear();
     _landmarks.clear();
     _frames.clear();
     _local_maps.clear();
     _currently_tracked_landmarks.clear();
-    std::cerr << "WorldMap::WorldMap|destroyed" << std::endl;
   }
-  
-  Frame* WorldMap::createFrame(const TransformMatrix3D& frame_to_world_guess_, const real& maximum_depth_close_){
+
+  //ds creates a new frame living in this instance at the provided pose
+  Frame* WorldMap::createFrame(const TransformMatrix3D& robot_to_world_, const real& maximum_depth_close_){
     if (_previous_frame) {
       _previous_frame->releaseImages();
     }
     _previous_frame = _current_frame;
-    _current_frame  = new Frame(this, _previous_frame, 0, frame_to_world_guess_, maximum_depth_close_);
-
+    _current_frame  = new Frame(this, _previous_frame, 0, robot_to_world_, maximum_depth_close_);
     if (_root_frame == 0) {
       _root_frame = _current_frame;
     }
-
     if (_previous_frame) {
       _previous_frame->setNext(_current_frame);
     }
 
+    //ds bookkeeping
     _frames.put(_current_frame);
     _frame_queue_for_local_map.push_back(_current_frame);
     return _current_frame;
   }
 
+  //ds creates a new landmark living in this instance, using the provided framepoint as origin
+  Landmark* WorldMap::createLandmark(const FramePoint* origin_){
+    Landmark* landmark = new Landmark(origin_);
+    _landmarks_in_window_for_local_map.put(landmark);
+    return landmark;
+  }
+
+  //ds attempts to create a new local map if the generation criteria are met (returns true if a local map was generated)
   const bool WorldMap::createLocalMap() {
     if (_previous_frame == 0) {
       return false;
@@ -81,7 +91,7 @@ namespace proslam {
         (_frame_queue_for_local_map.size() > _minimum_number_of_frames_for_local_map && _local_maps.size() < 5)                                              ) {
 
       //ds create the new keyframe and add it to the keyframe database
-      _current_local_map = new LocalMap(_current_frame, _frame_queue_for_local_map);
+      _current_local_map = new LocalMap(_frame_queue_for_local_map);
       _local_maps.push_back(_current_local_map);
 
       //ds reset generation properties
@@ -99,23 +109,8 @@ namespace proslam {
       return false;
     }
   }
-  
-  Landmark* WorldMap::createLandmark(const PointCoordinates& coordinates_in_world_, const FramePoint* origin_){
-    Landmark* landmark = new Landmark(coordinates_in_world_, origin_);
-    _landmarks_in_window_for_local_map.put(landmark);
-    return landmark;
-  }
 
-  void WorldMap::closeLocalMaps(LocalMap* query_,
-                                       const LocalMap* reference_,
-                                       const TransformMatrix3D& transform_query_to_reference_) {
-    query_->add(reference_, transform_query_to_reference_);
-    _relocalized = true;
-
-    //ds informative only
-    ++_number_of_closures;
-  }
-
+  //ds resets the window for the local map generation
   void WorldMap::resetWindowForLocalMapCreation() {
     _distance_traveled_window = 0;
     _degrees_rotated_window   = 0;
@@ -165,7 +160,18 @@ namespace proslam {
     _landmarks_in_window_for_local_map.swap(landmarks_in_window_tracked);
   }
 
-  //ds dump trajectory to file (in KITTI benchmark format only for now)
+  //ds adds a loop closure constraint between 2 local maps
+  void WorldMap::addLoopClosure(LocalMap* query_,
+                                const LocalMap* reference_,
+                                const TransformMatrix3D& transform_query_to_reference_) {
+    query_->add(reference_, transform_query_to_reference_);
+    _relocalized = true;
+
+    //ds informative only
+    ++_number_of_closures;
+  }
+
+  //ds dump trajectory to file (in KITTI benchmark format: 4x4 isometries per line)
   void WorldMap::writeTrajectory(const std::string& filename_) const {
 
     //ds construct filename

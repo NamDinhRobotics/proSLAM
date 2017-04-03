@@ -47,7 +47,7 @@ namespace proslam {
   protected:
 
     //ds initial landmark coordinates must be provided
-    Landmark(const PointCoordinates& point_coordinates_, const FramePoint* origin_);
+    Landmark(const FramePoint* origin_);
 
     //ds cleanup of dynamic structures
     ~Landmark();
@@ -61,6 +61,7 @@ namespace proslam {
     //ds unique identifier for a landmark (exists once in memory)
     inline const Index identifier() const {return _identifier;}
 
+    //ds framepoint in an image at the time when the landmark was created
     inline const FramePoint* origin() const {return _origin;}
 
     inline const PointCoordinates& coordinates() const { return _coordinates; }
@@ -75,21 +76,19 @@ namespace proslam {
     inline const LocalMap* localMap() const {return _local_map;}
     inline void setLocalMap(const LocalMap* local_map_) {_local_map = local_map_;}
 
+    //ds position related
     inline const bool areCoordinatesValidated() const {return _are_coordinates_validated;}
+    const Count numberOfUpdates() const {return _number_of_updates;}
+
+    //ds information about whether the landmark is visible in the current image
     inline const bool isCurrentlyTracked() const {return _is_currently_tracked;}
     inline void setIsCurrentlyTracked(const bool& is_currently_tracked_) {_is_currently_tracked = is_currently_tracked_;}
 
     //ds landmark coordinates update - no visual information (e.g. map optimization)
-    void update(const PointCoordinates& coordinates_in_world_,
-                const real& depth_meters_ = 1);
+    void update(const PointCoordinates& coordinates_in_world_, const real& depth_meters_ = 1);
 
     //ds landmark coordinates update with visual information (tracking)
-    void update(const PointCoordinates& coordinates_in_world_,
-                const cv::Mat& descriptor_left_,
-                const cv::Mat& descriptor_right_,
-                const real& depth_meters_);
-
-    const Count numberOfUpdates() const {return _number_of_updates;}
+    void update(const FramePoint* point_);
 
     //ds visualization only
     inline const bool isNear() const {return _is_near;}
@@ -117,8 +116,9 @@ namespace proslam {
     const LocalMap* _local_map = 0;
 
     //ds flags
-    bool _are_coordinates_validated = false;
-    bool _is_currently_tracked      = false;
+    bool _are_coordinates_validated = false; //ds 3D coordinates have been updated successfully with new measurements (updates)
+    bool _is_currently_tracked      = false; //ds set if the landmark is visible (=tracked) in the current image
+    bool _is_near                   = false; //ds set if the landmark coordinates are within a certain threshold (close to the camera)
 
     //ds landmark coordinates optimization
     real _total_weight = 0;
@@ -129,7 +129,6 @@ namespace proslam {
     friend WorldMap;
 
     //ds visualization only
-    bool _is_near                      = false;
     bool _is_in_loop_closure_query     = false;
     bool _is_in_loop_closure_reference = false;
 

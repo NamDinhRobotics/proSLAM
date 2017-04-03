@@ -18,7 +18,7 @@ namespace proslam {
     public:
 
       //ds initialize aligner with minimal entity TODO purify this
-      virtual void init(BaseContext* context_, const TransformMatrix3D& robot_to_world_ = TransformMatrix3D::Identity());
+      void init(Frame* context_, const TransformMatrix3D& robot_to_world_ = TransformMatrix3D::Identity());
 
       //ds linearize the system: to be called inside oneRound
       virtual void linearize(const bool& ignore_outliers_);
@@ -42,25 +42,24 @@ namespace proslam {
     //ds aligner specific
     protected:
 
-      //ds context
+      //ds alignment context
       Frame* _context = 0;
 
       //ds objective
       TransformMatrix3D _world_to_camera_left = TransformMatrix3D::Identity();
       TransformMatrix3D _camera_left_to_world = TransformMatrix3D::Identity();
 
-      //ds optimization wrapping
-      TransformMatrix3D _world_to_robot = TransformMatrix3D::Identity();
-      TransformMatrix3D _robot_to_world = TransformMatrix3D::Identity();
+      //ds buffers
+      TransformMatrix3D _world_to_robot         = TransformMatrix3D::Identity();
+      TransformMatrix3D _robot_to_world         = TransformMatrix3D::Identity();
       ProjectionMatrix _projection_matrix_left  = ProjectionMatrix::Zero();
       ProjectionMatrix _projection_matrix_right = ProjectionMatrix::Zero();
       Count _image_rows                         = 0;
       Count _image_cols                         = 0;
 
-      //ds others - think about wrapping these into the factory
-      TransformMatrix3D _robot_to_world_previous = TransformMatrix3D::Identity();
-      real _weight_framepoint                 = 1;
-      real _maximum_depth_close               = 0;
-      real _maximum_depth_far                 = 0;
+      //ds others - think about wrapping these into the base aligner
+      real _weight_framepoint   = 1;
+      real _maximum_depth_close = 0;
+      real _maximum_depth_far   = 0;
   };
 }

@@ -124,7 +124,7 @@ namespace proslam {
     if(! current_frame) {
       return;
     }
-    
+
     TransformMatrix3D world_to_robot(_world_to_robot_origin);
     if(_follow_robot) {
       world_to_robot = _rotation_robot_view*current_frame->worldToRobot();
