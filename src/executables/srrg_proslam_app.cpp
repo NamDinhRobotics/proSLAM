@@ -21,13 +21,13 @@ const char* banner[] = {
   "<dataset>: path to a SRRG txt_io dataset file",
   "",
   "[options]",
-  "-camera-left-topic <string>:  topic name in txt_io dataset file)",
-  "-camera-right-topic <string>: topic name in txt_io dataset file)",
-  "-use-gui:                     displays GUI elements",
+  "-camera-left-topic <string>:  set left camera topic name (as set in txt_io dataset file)",
+  "-camera-right-topic <string>: set left camera topic name (as set in txt_io dataset file)",
+  "-use-gui (-ug):               displays GUI elements",
   "-open:                        disables relocalization (open loop mode)",
-  "-show-top:                    enable top map viewer",
-  "-drop-framepoints:            deallocation of past framepoints at runtime (reduces memory demand)",
-  "-equalize-histogram           equalize stereo image histogram before processing",
+  "-show-top (-st):              enable top map viewer",
+  "-drop-framepoints (-df):      deallocation of past framepoints at runtime (reduces memory demand)",
+  "-equalize-histogram (-eh):    equalize stereo image histogram before processing",
   "-------------------------------------------------------------------------",
   0
 };
@@ -88,15 +88,15 @@ int32_t main(int32_t argc, char ** argv) {
     } else if (!std::strcmp(argv[count_added_arguments], "-h")) {
       printBanner(banner);
       return 0;
-    } else if (!std::strcmp(argv[count_added_arguments], "-use-gui")) {
+    } else if (!std::strcmp(argv[count_added_arguments], "-use-gui") || !std::strcmp(argv[count_added_arguments], "-ug")) {
       use_gui = true;
     } else if (!std::strcmp(argv[count_added_arguments], "-open")) {
       use_relocalization = false;
-    } else if (!std::strcmp(argv[count_added_arguments], "-show-top")) {
+    } else if (!std::strcmp(argv[count_added_arguments], "-show-top") || !std::strcmp(argv[count_added_arguments], "-st")) {
       show_top_viewer = true;
-    } else if (!std::strcmp(argv[count_added_arguments], "-drop-framepoints")) {
+    } else if (!std::strcmp(argv[count_added_arguments], "-drop-framepoints") || !std::strcmp(argv[count_added_arguments], "-df")) {
       drop_framepoints = true;
-    } else if (!std::strcmp(argv[count_added_arguments], "-equalize-histogram")) {
+    } else if (!std::strcmp(argv[count_added_arguments], "-equalize-histogram") || !std::strcmp(argv[count_added_arguments], "-eh")) {
       equalize_histogram = true;
     } else {
       filename_sensor_messages = argv[count_added_arguments];
@@ -104,24 +104,13 @@ int32_t main(int32_t argc, char ** argv) {
     count_added_arguments++;
   }
 
-  //ds log configuration
-  std::cerr << "main|-------------------------------------------------------------------------" << std::endl;
-  std::cerr << "main|running with params: " << std::endl;
-  std::cerr << "main|-camera-left-topic  " << topic_image_stereo_left << std::endl;
-  std::cerr << "main|-camera-right-topic " << topic_image_stereo_right << std::endl;
-  std::cerr << "main|-use-gui            " << use_gui << std::endl;
-  std::cerr << "main|-open               " << !use_relocalization << std::endl;
-  std::cerr << "main|-show-top           " << show_top_viewer << std::endl;
-  std::cerr << "main|-drop-framepoints   " << drop_framepoints << std::endl;
-  std::cerr << "main|-equalize-histogram " << equalize_histogram << std::endl;
-  std::cerr << "main|-dataset            " << filename_sensor_messages << std::endl;
-  std::cerr << "main|-------------------------------------------------------------------------" << std::endl;
-
   //ds configure sensor message source
   if (filename_sensor_messages.length() == 0) {
-      printBanner(banner);
-      return 0;
+    printBanner(banner);
+    return 0;
   }
+
+  //ds configure sensor message source
   MessageReader sensor_message_reader;
   sensor_message_reader.open(filename_sensor_messages);
 
@@ -174,6 +163,19 @@ int32_t main(int32_t argc, char ** argv) {
     printBanner(banner);
     return 0;
   }
+
+  //ds log configuration
+  std::cerr << "main|-------------------------------------------------------------------------" << std::endl;
+  std::cerr << "main|running with params: " << std::endl;
+  std::cerr << "main|-camera-left-topic  " << topic_image_stereo_left << std::endl;
+  std::cerr << "main|-camera-right-topic " << topic_image_stereo_right << std::endl;
+  std::cerr << "main|-use-gui            " << use_gui << std::endl;
+  std::cerr << "main|-open               " << !use_relocalization << std::endl;
+  std::cerr << "main|-show-top           " << show_top_viewer << std::endl;
+  std::cerr << "main|-drop-framepoints   " << drop_framepoints << std::endl;
+  std::cerr << "main|-equalize-histogram " << equalize_histogram << std::endl;
+  std::cerr << "main|-dataset            " << filename_sensor_messages << std::endl;
+  std::cerr << "main|-------------------------------------------------------------------------" << std::endl;
 
   //ds restart stream
   sensor_message_reader.close();

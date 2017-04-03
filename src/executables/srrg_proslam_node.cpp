@@ -41,10 +41,10 @@ static SystemUsageCounter system_usage;
 bool use_gui                                = false;
 bool use_relocalization                     = true;
 TransformMatrix3D world_previous_to_current = TransformMatrix3D::Identity();
-std::string topic_camera_image_left  = "/wide_stereo/left/image_raw";
-std::string topic_camera_image_right = "/wide_stereo/right/image_raw";
-std::string topic_camera_info_left   = "/wide_stereo/left/camera_info";
-std::string topic_camera_info_right  = "/wide_stereo/right/camera_info";
+std::string topic_camera_image_left  = "/stereo/left/image_raw";
+std::string topic_camera_image_right = "/stereo/right/image_raw";
+std::string topic_camera_info_left   = "/stereo/left/camera_info";
+std::string topic_camera_info_right  = "/stereo/right/camera_info";
 Camera* camera_left  = 0;
 Camera* camera_right = 0;
 
