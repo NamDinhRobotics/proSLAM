@@ -109,7 +109,7 @@ CMake variables that must be set when building without ROS or to select specific
 The folder should now contain 4 files (.txt) and 1 folder (.txt.d) plus the tarball 00.tar.gz
 
 ---
-3) run the system directly in the folder:
+3) run the system directly in the folder (`rosrun` is used for convenience only, the binary can also be launched normally with `./srrg_proslam_app`):
 
     rosrun srrg_proslam srrg_proslam_app 00.txt -use-gui -show-top
 
