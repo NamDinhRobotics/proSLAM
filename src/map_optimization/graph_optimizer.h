@@ -31,12 +31,11 @@ namespace proslam {
   //ds interface
   public:
 
-    void closeKeyFrames(const Identifier& id_query_, const Identifier& id_reference_, const TransformMatrix3D& transform_query_to_reference_);
     void optimize(WorldMap* context_);
     void optimizeLandmarks(WorldMap* context_);
     void optimizePoses(WorldMap* context_);
 
-    //ds getters/setters
+  //ds getters/setters
   public:
 
     const Count numberOfOptimizations() const {return _number_of_optimizations;}
@@ -96,7 +95,7 @@ namespace proslam {
   protected:
 
     //ds optimization
-    g2o::SparseOptimizer* _optimizer = 0;
+    g2o::SparseOptimizer* _optimizer;
 
     //ds informative only
     CREATE_CHRONOMETER(overall)

@@ -86,7 +86,7 @@ namespace proslam {
       //ds other properties
       const Count numberOfRowsImage() const {return _number_of_rows_image;}
       const Count numberOfColsImage() const {return _number_of_cols_image;}
-      const real maximumDepthCloseMeters() const {return _maximum_depth_close_meters;}
+      const real maximumDepthNearMeters() const {return _maximum_depth_near_meters;}
       const real maximumDepthFarMeters() const {return _maximum_depth_far_meters;}
       void setTargetNumberOfPoints(const Count& target_number_of_points_) {_target_number_of_points = target_number_of_points_;}
       void setDetectorThreshold(const int32_t& detector_threshold_) {_detector_threshold = detector_threshold_;}
@@ -132,7 +132,7 @@ namespace proslam {
       const real _baseline_meters;
       const real _baseline_factor          = 50;
       const real _minimum_disparity_pixels = 1;
-      const real _maximum_depth_close_meters;
+      const real _maximum_depth_near_meters;
       const real _maximum_depth_far_meters;
 
       //ds currently triangulated framepoints stored in a image-like matrix (pixel access)

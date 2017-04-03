@@ -12,7 +12,7 @@ namespace proslam {
                                                                                                    _principal_point_offset_v_pixels(camera_left_->projectionMatrix()(1,2)),
                                                                                                    _baseline_pixelsmeters(camera_right_->projectionMatrix()(0,3)),
                                                                                                    _baseline_meters(-_baseline_pixelsmeters/_focal_length_pixels),
-                                                                                                   _maximum_depth_close_meters(_baseline_factor*_baseline_meters),
+                                                                                                   _maximum_depth_near_meters(_baseline_factor*_baseline_meters),
                                                                                                    _maximum_depth_far_meters(-_baseline_pixelsmeters/_minimum_disparity_pixels),
 #if CV_MAJOR_VERSION == 2
                                                                                                    _feature_detector(new cv::FastFeatureDetector(_detector_threshold)),
@@ -53,7 +53,7 @@ namespace proslam {
 
     //ds info
     std::cerr << "StereoTriangulator::StereoTriangulator|baseline (m): " << _baseline_meters << std::endl;
-    std::cerr << "StereoTriangulator::StereoTriangulator|maximum depth tracking close (m): " << _maximum_depth_close_meters << std::endl;
+    std::cerr << "StereoTriangulator::StereoTriangulator|maximum depth tracking close (m): " << _maximum_depth_near_meters << std::endl;
     std::cerr << "StereoTriangulator::StereoTriangulator|maximum depth tracking far (m): " << _maximum_depth_far_meters << std::endl;
     std::cerr << "StereoTriangulator::StereoTriangulator|bin size (pixel): " << _bin_size << std::endl;
     std::cerr << "StereoTriangulator::StereoTriangulator|number of bins u: " << _number_of_bins_u << std::endl;

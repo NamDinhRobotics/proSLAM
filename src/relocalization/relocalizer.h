@@ -4,14 +4,16 @@
 #include "types/local_map.h"
 
 namespace proslam {
+
+  //ds this class computes potential loop closures for a given local map query (the extent of computed detail can be steered easily using the different methods)
   class Relocalizer {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds wrappers
   public:
 
-    //ds TODO remove
-    static const HBSTNode::BinaryMatchableVector getMatchables(const Landmark::AppearancePtrVector& appearances_) {
+    //ds retrieves HBST matchables from a vector of appearances
+    static const HBSTNode::BinaryMatchableVector getMatchables(const Landmark::AppearancePointerVector& appearances_) {
       assert(appearances_.size() > 0);
       HBSTNode::BinaryMatchableVector matchables(appearances_.size());
 
@@ -25,16 +27,17 @@ namespace proslam {
   //ds exported types
   public:
 
+    //ds augmented container, wrapping a local map with additional information required by the relocalization module
     struct Query {
       EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
       Query(const LocalMap* local_map_): local_map(local_map_),
                                          appearances(local_map_->appearances()),
                                          matchables(getMatchables(appearances)),
                                          hbst_tree(new HBSTTree(local_map_->identifier(), matchables)) {}
-      const LocalMap* local_map = 0;
-      const Landmark::AppearancePtrVector appearances;
+      const LocalMap* local_map;
+      const Landmark::AppearancePointerVector appearances;
       const HBSTNode::BinaryMatchableVector matchables;
-      const HBSTTree* hbst_tree = 0;
+      const HBSTTree* hbst_tree;
     };
 
   //ds object management
@@ -43,32 +46,34 @@ namespace proslam {
     Relocalizer();
     ~Relocalizer();
 
-  //ds interface
+  //ds functionality
   public:
 
-    //ds initialize closer module for a new keyframe
+    //ds initialize relocalization module for a new local map
     void init(const LocalMap* local_map_);
 
     //ds integrate frame into loop closing pool
     void train();
 
-    //ds flushes all frames in current queue
+    //ds flushes all frames in current queue (narrow closing)
     void flush();
 
     //ds retrieve loop closure candidates for the given cloud
     void detect(const bool& force_matching_ = false);
 
-    //ds geometric verification
+    //ds geometric verification and determination of spatial relation between set closures
     void compute();
 
     //ds retrieve correspondences from matches
-    inline const Correspondence* getCorrespondenceNN(const Correspondence::MatchPtrVector& matches_);
+    inline const Correspondence* getCorrespondenceNN(const Correspondence::MatchPointerVector& matches_);
+
+  //ds getters/setters
+  public:
 
     inline const CorrespondenceCollectionPointerVector& closures() const {return _closures;}
-    inline void setClosures(CorrespondenceCollectionPointerVector& closures_) {_closures=closures_;}
+    void setClosures(CorrespondenceCollectionPointerVector& closures_) {_closures = closures_;}
     void clear();
 
-    //ds configuration
     void setPreliminaryMinimumInterspaceQueries(const Count& preliminary_minimum_interspace_queries_) {_preliminary_minimum_interspace_queries = preliminary_minimum_interspace_queries_;}
     void setPreliminaryMinimumMatchingRatio(const real& preliminary_minimum_matching_ratio_) {_preliminary_minimum_matching_ratio = preliminary_minimum_matching_ratio_;}
     void setMinimumAbsoluteNumberOfMatchesPointwise(const Count& minimum_absolute_number_of_matches_pointwise_) {_minimum_absolute_number_of_matches_pointwise = minimum_absolute_number_of_matches_pointwise_;}
@@ -101,10 +106,11 @@ namespace proslam {
     //ds correspondence retrieval
     std::set<Identifier> _mask_id_references_for_correspondences;
     Count _minimum_matches_per_correspondence = 0;
+
+    //ds local map to local map alignment
     XYZAligner* _aligner = 0;
 
     //ds module time consumption
     CREATE_CHRONOMETER(overall)
-
   };
 }

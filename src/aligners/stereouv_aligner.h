@@ -4,20 +4,19 @@
 
 namespace proslam {
 
+  //ds this class specifies an aligner for pose optimization by minimizing the reprojection errors in the image plane (used to determine the robots odometry)
   class StereoUVAligner: public BaseAligner6_4 {
-  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds object handling
     public:
 
-      //ds instantiation controlled by aligner factory
       StereoUVAligner(): BaseAligner6_4(1e-3, 9, 1, 1e3) {}
       ~StereoUVAligner() {}
 
     //ds required interface
     public:
 
-      //ds initialize aligner with minimal entity TODO purify this
+      //ds initialize aligner with minimal entity
       void init(Frame* context_, const TransformMatrix3D& robot_to_world_ = TransformMatrix3D::Identity());
 
       //ds linearize the system: to be called inside oneRound
@@ -29,15 +28,14 @@ namespace proslam {
       //ds solve alignment problem until convergence is reached
       virtual void converge();
 
-      //ds additional accessors
+    //ds getters/setters
     public:
 
-      //ds getters/setters
-      const TransformMatrix3D robotToWorld() const {return _robot_to_world;}
-      const TransformMatrix3D worldToRobot() const {return _world_to_robot;}
+      const TransformMatrix3D& robotToWorld() const {return _robot_to_world;}
+      const TransformMatrix3D& worldToRobot() const {return _world_to_robot;}
       void setWeightFramepoint(const real& weight_framepoint_) {_weight_framepoint = weight_framepoint_;}
-      void setMaximumDepthClose(const real& maximum_depth_close_) {_maximum_depth_close = maximum_depth_close_;}
-      void setMaximumDepthFar(const real& maximum_depth_far_) {_maximum_depth_far = maximum_depth_far_;}
+      void setMaximumDepthNearMeters(const real& maximum_depth_near_meters_) {_maximum_depth_near_meters = maximum_depth_near_meters_;}
+      void setMaximumDepthFarMeters(const real& maximum_depth_far_meters_) {_maximum_depth_far_meters = maximum_depth_far_meters_;}
 
     //ds aligner specific
     protected:
@@ -58,8 +56,8 @@ namespace proslam {
       Count _image_cols                         = 0;
 
       //ds others - think about wrapping these into the base aligner
-      real _weight_framepoint   = 1;
-      real _maximum_depth_close = 0;
-      real _maximum_depth_far   = 0;
+      real _weight_framepoint         = 1;
+      real _maximum_depth_near_meters = 0;
+      real _maximum_depth_far_meters  = 0;
   };
 }

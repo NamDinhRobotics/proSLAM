@@ -11,18 +11,5 @@ target_link_libraries(srrg_proslam_visualization_library
   ${catkin_LIBRARIES}
   ${OPENGL_gl_LIBRARY} 
   ${OPENGL_glu_LIBRARY}
+  ${SRRG_QT_LIBRARIES}
 )
-
-#ds package specific linkage: qt
-if(${SRRG_PROSLAM_USE_QT_5})
-  target_link_libraries(srrg_proslam_visualization_library
-    Qt5::Widgets
-  )
-else()
-  target_link_libraries(srrg_proslam_visualization_library
-    ${QT_QTCORE_LIBRARY}
-    ${QT_QTGUI_LIBRARY}
-    ${QT_QTXML_LIBRARY}
-    ${QT_QTOPENGL_LIBRARY}
-  )
-endif()

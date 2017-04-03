@@ -1,11 +1,11 @@
 #pragma once
-#include "correspondence_collection.h"
+#include "relocalization/correspondence_collection.h"
 #include "base_aligner.h"
 
 namespace proslam {
 
+  //ds this class specifies an aligner for camera centric point clouds (used to compute the spatial relation between local maps for a loop closure)
   class XYZAligner: public BaseAligner6_3 {
-  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds object handling
     public:
@@ -16,7 +16,7 @@ namespace proslam {
     //ds required interface
     public:
 
-      //ds initialize aligner with minimal entity TODO purify this
+      //ds initialize aligner with minimal entity
       void init(CorrespondenceCollection* context_, const TransformMatrix3D& current_to_reference_ = TransformMatrix3D::Identity());
 
       //ds linearize the system: to be called inside oneRound
@@ -28,11 +28,10 @@ namespace proslam {
       //ds solve alignment problem until convergence is reached
       void converge();
 
-    //ds additional accessors
+    //ds getters/setters
     public:
 
-      //ds getters/setters
-      const TransformMatrix3D currentToReference() const {return _current_to_reference;}
+      const TransformMatrix3D& currentToReference() const {return _current_to_reference;}
       void setMinimumNumberOfInliers(const Count& minimum_number_of_inliers_) {_minimum_number_of_inliers = minimum_number_of_inliers_;}
       void setMinimumInlierRatio(const real& minimum_inlier_ratio_) {_minimum_inlier_ratio = minimum_inlier_ratio_;}
 

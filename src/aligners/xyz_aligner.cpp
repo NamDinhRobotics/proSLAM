@@ -2,7 +2,7 @@
 
 namespace proslam {
 
-  //ds initialize aligner with minimal entity TODO purify this
+  //ds initialize aligner with minimal entity
   void XYZAligner::init(CorrespondenceCollection* context_, const TransformMatrix3D& current_to_reference_) {
     _context              = context_;
     _current_to_reference = current_to_reference_;
@@ -28,8 +28,8 @@ namespace proslam {
       _omega.setIdentity();
 
       //ds compute error based on items: local map merging
-      const PointCoordinates& measured_point_in_reference = correspondence->item_reference->robot_coordinates;
-      const PointCoordinates sampled_point_in_reference   = _current_to_reference*correspondence->item_query->robot_coordinates;
+      const PointCoordinates& measured_point_in_reference = correspondence->reference->robot_coordinates;
+      const PointCoordinates sampled_point_in_reference   = _current_to_reference*correspondence->query->robot_coordinates;
       const Vector3 error                                 = sampled_point_in_reference-measured_point_in_reference;
 
       //ds adjust omega to inverse depth value (the further away the point, the less weight)
@@ -113,12 +113,12 @@ namespace proslam {
         //ds if the solution is acceptable
         if (_number_of_inliers > _minimum_number_of_inliers && inlier_ratio > _minimum_inlier_ratio) {
           std::printf( "XYZAligner::converge|found   alignment for local maps [%06lu] > [%06lu] (correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu, kernel size: %5.3f)\n",
-          _context->id_query, _context->id_reference, _context->correspondences.size( ), iteration, inlier_ratio, _number_of_inliers, _maximum_error_kernel );
+          _context->identifier_query, _context->identifier_reference, _context->correspondences.size( ), iteration, inlier_ratio, _number_of_inliers, _maximum_error_kernel );
           _context->is_valid = true;
           break;
         } else {
           std::printf( "XYZAligner::converge|dropped alignment for local maps [%06lu] > [%06lu] (correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu, kernel size: %5.3f)\n",
-          _context->id_query, _context->id_reference, _context->correspondences.size( ), iteration, inlier_ratio, _number_of_inliers, _maximum_error_kernel );
+          _context->identifier_query, _context->identifier_reference, _context->correspondences.size( ), iteration, inlier_ratio, _number_of_inliers, _maximum_error_kernel );
           _context->is_valid = false;
           break;
         }

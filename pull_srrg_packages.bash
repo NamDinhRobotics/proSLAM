@@ -13,6 +13,7 @@ if [ -d "${DIR_CATKIN_SOURCE}/srrg_cmake_modules" ]; then
     cd "${DIR_CATKIN_SOURCE}/srrg_cmake_modules"
     git pull
 else
+    cd "${DIR_CATKIN_SOURCE}"
     echo "- installing srrg_cmake_modules:"
     git clone https://gitlab.com/srrg-software/srrg_cmake_modules
 fi
@@ -21,6 +22,7 @@ if [ -d "${DIR_CATKIN_SOURCE}/srrg_boss" ]; then
     cd "${DIR_CATKIN_SOURCE}/srrg_boss"
     git pull
 else
+    cd "${DIR_CATKIN_SOURCE}"
     echo "- installing srrg_boss:"
     git clone https://gitlab.com/srrg-software/srrg_boss
 fi
@@ -29,6 +31,7 @@ if [ -d "${DIR_CATKIN_SOURCE}/srrg_core" ]; then
     cd "${DIR_CATKIN_SOURCE}/srrg_core"
     git pull
 else
+    cd "${DIR_CATKIN_SOURCE}"
     echo "- installing srrg_core:"
     git clone https://gitlab.com/srrg-software/srrg_core
 fi
@@ -37,6 +40,7 @@ if [ -d "${DIR_CATKIN_SOURCE}/srrg_gl_helpers" ]; then
     cd "${DIR_CATKIN_SOURCE}/srrg_gl_helpers"
     git pull
 else
+    cd "${DIR_CATKIN_SOURCE}"
     echo "- installing srrg_gl_helpers:"
     git clone https://gitlab.com/srrg-software/srrg_gl_helpers
 fi
@@ -45,6 +49,7 @@ if [ -d "${DIR_CATKIN_SOURCE}/srrg_core_viewers" ]; then
     cd "${DIR_CATKIN_SOURCE}/srrg_core_viewers"
     git pull
 else
+    cd "${DIR_CATKIN_SOURCE}"
     echo "- installing srrg_core_viewers:"
     git clone https://gitlab.com/srrg-software/srrg_core_viewers
 fi
@@ -53,6 +58,7 @@ if [ -d "${DIR_CATKIN_SOURCE}/srrg_hbst" ]; then
     cd "${DIR_CATKIN_SOURCE}/srrg_hbst"
     git pull
 else
+    cd "${DIR_CATKIN_SOURCE}"
     echo "- installing srrg_hbst:"
     git clone https://gitlab.com/srrg-software/srrg_hbst
 fi

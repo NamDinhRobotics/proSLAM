@@ -258,7 +258,7 @@ int32_t main(int32_t argc, char ** argv) {
   tracker->setPixelDistanceTrackingMinimum(50);
   tracker->setPixelDistanceTrackingMaximum(50);
   tracker->aligner()->setMaximumErrorKernel(25);
-  tracker->preprocessor()->setTargetNumberOfPoints(500);
+  tracker->framepointGenerator()->setTargetNumberOfPoints(500);
   relocalizer->aligner()->setMaximumErrorKernel(0.5);
   relocalizer->aligner()->setMinimumNumberOfInliers(25);
   relocalizer->aligner()->setMinimumInlierRatio(0.5);
@@ -379,8 +379,8 @@ void process(WorldMap* world_map_,
                                        closure->transform_frame_query_to_frame_reference);
             if (use_gui) {
               for (const Correspondence* match: closure->correspondences) {
-                world_map_->landmarks().get(match->item_query->landmark->identifier())->setIsInLoopClosureQuery(true);
-                world_map_->landmarks().get(match->item_reference->landmark->identifier())->setIsInLoopClosureReference(true);
+                world_map_->landmarks().get(match->query->landmark->identifier())->setIsInLoopClosureQuery(true);
+                world_map_->landmarks().get(match->reference->landmark->identifier())->setIsInLoopClosureReference(true);
               }
             }
           }

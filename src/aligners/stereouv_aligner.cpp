@@ -56,7 +56,7 @@ namespace proslam {
         _omega *= _weight_framepoint;
       }
       const real& depth_meters = sampled_point_in_camera_left.z();
-      if (depth_meters <= 0 || depth_meters > _maximum_depth_far) {
+      if (depth_meters <= 0 || depth_meters > _maximum_depth_far_meters) {
         continue;
       }
 
@@ -128,7 +128,7 @@ namespace proslam {
       jacobian_transform.setZero();
 
       //ds if the point is near enough - we consider translation
-      if (depth_meters < _maximum_depth_close) {
+      if (depth_meters < _maximum_depth_near_meters) {
         jacobian_transform.block<3,3>(0,0).setIdentity();
       }
 
@@ -151,10 +151,10 @@ namespace proslam {
       //ds precompute transposed
       const Matrix6_4 jacobian_transposed(_jacobian.transpose());
 
-      if (depth_meters < _maximum_depth_close) {
-        _omega *= (_maximum_depth_close-depth_meters)/_maximum_depth_close;
+      if (depth_meters < _maximum_depth_near_meters) {
+        _omega *= (_maximum_depth_near_meters-depth_meters)/_maximum_depth_near_meters;
       } else {
-        _omega *= (_maximum_depth_far-depth_meters)/_maximum_depth_far;
+        _omega *= (_maximum_depth_far_meters-depth_meters)/_maximum_depth_far_meters;
       }
 
       //ds update H and b

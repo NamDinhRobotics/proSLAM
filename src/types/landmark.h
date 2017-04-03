@@ -22,7 +22,7 @@ namespace proslam {
       const State* landmark_state;
       const HBSTMatchable::BinaryDescriptor descriptor;
     };
-    typedef std::vector<const Appearance*> AppearancePtrVector;
+    typedef std::vector<const Appearance*> AppearancePointerVector;
 
     //ds container describing the landmark at the time of local map construction
     struct State {
@@ -37,7 +37,7 @@ namespace proslam {
       }
 
       Landmark* landmark;
-      AppearancePtrVector appearances;
+      AppearancePointerVector appearances;
       PointCoordinates robot_coordinates;
       const LocalMap* local_map = 0;
     };

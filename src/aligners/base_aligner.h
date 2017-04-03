@@ -3,6 +3,7 @@
 
 namespace proslam {
 
+  //ds base aligner class
   template<uint64_t states, uint64_t dimension>
   class BaseAligner {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW

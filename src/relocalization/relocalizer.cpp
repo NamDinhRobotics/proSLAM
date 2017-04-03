@@ -44,9 +44,12 @@ namespace proslam {
       delete _query;
     }
 
+    //ds free aligner
+    delete _aligner;
     std::cerr << "Relocalizer::Relocalizer|destroyed" << std::endl;
   }
 
+  //ds initialize relocalization module for a new local map
   void Relocalizer::init(const LocalMap* local_map_) {
     CHRONOMETER_START(overall)
     _query = new Query(local_map_);
@@ -75,6 +78,7 @@ namespace proslam {
     CHRONOMETER_STOP(overall)
   }
 
+  //ds flushes all frames in current queue
   void Relocalizer::flush() {
     CHRONOMETER_START(overall)
 
@@ -138,7 +142,7 @@ namespace proslam {
             } catch(const std::out_of_range& /*exception*/) {
 
               //ds initialize the first match for the given query point
-              descriptor_matches_pointwise.insert(std::make_pair(query_index, Correspondence::MatchPtrVector(1, new Correspondence::Match(appearance_query->landmark_state,
+              descriptor_matches_pointwise.insert(std::make_pair(query_index, Correspondence::MatchPointerVector(1, new Correspondence::Match(appearance_query->landmark_state,
                                                                                                 appearance_reference->landmark_state,
                                                                                                 match.distance))));
             }
@@ -147,8 +151,6 @@ namespace proslam {
           assert(0 < _query->appearances.size());
           assert(0 < descriptor_matches_pointwise.size());
           const real relative_number_of_descriptor_matches_query     = static_cast<real>(absolute_number_of_descriptor_matches)/_query->appearances.size();
-          //const gt_real relative_number_of_descriptor_matches_reference = static_cast<gt_real>(absolute_number_of_descriptor_matches)/reference->appearances.size();
-          //const gt_real relative_delta = std::fabs(relative_number_of_descriptor_matches_query-relative_number_of_descriptor_matches_reference)/relative_number_of_descriptor_matches_reference;
 
           //ds if the result quality is sufficient
           if (descriptor_matches_pointwise.size() > _minimum_absolute_number_of_matches_pointwise) {
@@ -173,16 +175,14 @@ namespace proslam {
                                             relative_number_of_descriptor_matches_query,
                                             descriptor_matches_pointwise,
                                             correspondences));
-          } /*else {
-            std::cerr << _query->keyframe->index() << " | " << reference->keyframe->index() << " not enough matches: " << descriptor_matches_pointwise.size() << std::endl;
-          }*/
+          }
         }
       }
     }
     CHRONOMETER_STOP(overall)
   }
 
-  //ds geometric verification
+  //ds geometric verification and determination of spatial relation between set closures
   void Relocalizer::compute() {
     CHRONOMETER_START(overall)
     for(CorrespondenceCollection* closure: _closures) {
@@ -192,7 +192,8 @@ namespace proslam {
     CHRONOMETER_STOP(overall)
   }
 
-  const Correspondence* Relocalizer::getCorrespondenceNN(const Correspondence::MatchPtrVector& matches_) {
+  //ds retrieve correspondences from matches
+  const Correspondence* Relocalizer::getCorrespondenceNN(const Correspondence::MatchPointerVector& matches_) {
     assert(0 < matches_.size());
 
     //ds point counts
@@ -206,9 +207,9 @@ namespace proslam {
     for(const Correspondence::Match* match: matches_){
 
       //ds update count - if not in the mask
-      if(0 == _mask_id_references_for_correspondences.count(match->item_reference->landmark->identifier())) {
-        counts.insert(match->item_reference->landmark->identifier());
-        const Count count_current = counts.count(match->item_reference->landmark->identifier());
+      if(0 == _mask_id_references_for_correspondences.count(match->reference->landmark->identifier())) {
+        counts.insert(match->reference->landmark->identifier());
+        const Count count_current = counts.count(match->reference->landmark->identifier());
 
         //ds if we get a better count
         if( count_best < count_current ){
@@ -221,11 +222,11 @@ namespace proslam {
     if(match_best != 0 && count_best > _minimum_matches_per_correspondence ) {
 
       //ds block matching against this point by adding it to the mask
-      _mask_id_references_for_correspondences.insert(match_best->item_reference->landmark->identifier());
+      _mask_id_references_for_correspondences.insert(match_best->reference->landmark->identifier());
 
       //ds return the found correspondence
-      return new Correspondence(match_best->item_query,
-                                match_best->item_reference,
+      return new Correspondence(match_best->query,
+                                match_best->reference,
                                 count_best, static_cast<real>(count_best)/matches_.size());
     }
 

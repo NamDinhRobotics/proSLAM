@@ -3,6 +3,7 @@
 namespace proslam {
   using namespace srrg_core;
 
+  //ds the tracker assumes a constant stereo camera configuration
   Tracker::Tracker(const Camera* camera_left_,
                    const Camera* camera_right_): _camera_left(camera_left_),
                                                  _camera_right(camera_right_),
@@ -13,28 +14,34 @@ namespace proslam {
                                                  _motion_previous_to_current(TransformMatrix3D::Identity()){
     std::cerr << "Tracker::Tracker|constructing" << std::endl;
 
-    //ds request initial tracking context for the tracker
-    _lost_points.clear();
-
     //ds allocate stereouv aligner for odometry computation
     assert(_pose_optimizer != 0);
 
     //ds configure aligner
-    _pose_optimizer->setMaximumDepthClose(_framepoint_generator->maximumDepthCloseMeters());
-    _pose_optimizer->setMaximumDepthFar(_framepoint_generator->maximumDepthFarMeters());
+    _pose_optimizer->setMaximumDepthNearMeters(_framepoint_generator->maximumDepthNearMeters());
+    _pose_optimizer->setMaximumDepthFarMeters(_framepoint_generator->maximumDepthFarMeters());
 
     //ds clear buffers
+    _lost_points.clear();
     _projected_image_coordinates_left.clear();
     std::cerr << "Tracker::Tracker|constructed" << std::endl;
   }
 
+  //ds dynamic cleanup
   Tracker::~Tracker() {
     std::cerr << "Tracker::Tracker|destroying" << std::endl;
-    //ds TODO clear tracker owned scopes
+
+    //ds clear buffers
+    _lost_points.clear();
+    _projected_image_coordinates_left.clear();
+
+    //ds free dynamics
     delete _framepoint_generator;
+    delete _pose_optimizer;
     std::cerr << "Tracker::Tracker|destroyed" << std::endl;
   }
 
+  //ds creates a new Frame for the given images, retrieves the correspondences relative to the previous Frame, optimizes the current frame pose and updates landmarks
   void Tracker::compute(WorldMap* context_, const cv::Mat& intensity_image_left_, const cv::Mat& intensity_image_right_) {
 
     //ds reset point configurations
@@ -54,7 +61,7 @@ namespace proslam {
     context_->setRobotToWorld(robot_to_world_current);
 
     //ds create new frame
-    Frame* current_frame = context_->createFrame(robot_to_world_current, _framepoint_generator->maximumDepthCloseMeters());
+    Frame* current_frame = context_->createFrame(robot_to_world_current, _framepoint_generator->maximumDepthNearMeters());
     current_frame->setCameraLeft(_camera_left);
     current_frame->setIntensityImageLeft(intensity_image_left_);
     current_frame->setCameraRight(_camera_right);
@@ -222,6 +229,7 @@ namespace proslam {
     _total_number_of_tracked_points += _number_of_tracked_points;
   }
 
+  //ds retrieves framepoint correspondences between previous and current frame
   void Tracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame_) {
     assert(previous_frame_ != 0);
     assert(current_frame_ != 0);
@@ -408,6 +416,7 @@ namespace proslam {
     _total_number_of_landmarks_far   += _number_of_tracked_landmarks_far;
   }
 
+  //ds adds new framepoints to the provided frame (picked from the pool of the _framepoint_generator)
   void Tracker::_addNewFramepoints(Frame* frame_) {
 
     //ds make space for all remaining points
@@ -438,25 +447,22 @@ namespace proslam {
 //    std::cerr << "Tracker::extractFeatures|new points: " << index_point_new-_number_of_tracked_points << std::endl;
   }
 
-  void Tracker::_getImageCoordinates(std::vector<ImageCoordinates>& projected_image_coordinates_left_,
-                                    Frame* previous_frame_,
-                                    const Frame* current_frame_) const {
+  //ds retrieves framepoint projections as image coordinates in a vector (at the same time removing points with invalid projections)
+  void Tracker::_getImageCoordinates(std::vector<ImageCoordinates>& projected_image_coordinates_left_, Frame* previous_frame_, const Frame* current_frame_) const {
     assert(previous_frame_ != 0);
     assert(current_frame_ != 0);
 
     //ds preallocation
     projected_image_coordinates_left_.resize(previous_frame_->points().size());
-    const TransformMatrix3D robot_previous_to_current = current_frame_->worldToRobot()*previous_frame_->robotToWorld();
-    const TransformMatrix3D robot_to_camera           = current_frame_->cameraLeft()->robotToCamera();
-    const TransformMatrix3D world_to_camera           = robot_to_camera*current_frame_->worldToRobot();
+    const TransformMatrix3D world_to_camera = current_frame_->cameraLeft()->robotToCamera()*current_frame_->worldToRobot();
 
     //ds compute predictions for all previous frame points
     Count number_of_visible_points = 0;
     for (FramePoint* previous_frame_point: previous_frame_->points()) {
       assert(previous_frame_point->imageCoordinatesLeft().x() >= 0);
-      assert(previous_frame_point->imageCoordinatesLeft().x() <= current_frame_->cameraLeft()->imageCols());
+      assert(previous_frame_point->imageCoordinatesLeft().x() <= _camera_cols);
       assert(previous_frame_point->imageCoordinatesLeft().y() >= 0);
-      assert(previous_frame_point->imageCoordinatesLeft().y() <= current_frame_->cameraLeft()->imageRows());
+      assert(previous_frame_point->imageCoordinatesLeft().y() <= _camera_rows);
 
       //ds get point into current camera - based on last track
       Vector4 point_in_camera_homogeneous(Vector4::Ones());
@@ -469,18 +475,18 @@ namespace proslam {
       } else {
 
         //ds reproject based on last track
-        point_in_camera_homogeneous.head<3>() = robot_to_camera*(robot_previous_to_current*previous_frame_point->robotCoordinates());
+        point_in_camera_homogeneous.head<3>() = world_to_camera*previous_frame_point->worldCoordinates();
       }
 
       //ds obtain point projection on camera image plane
-      PointCoordinates point_in_image_left  = current_frame_->cameraLeft()->projectionMatrix()*point_in_camera_homogeneous;
+      PointCoordinates point_in_image_left = current_frame_->cameraLeft()->projectionMatrix()*point_in_camera_homogeneous;
 
       //ds normalize point and update prediction based on landmark position: LEFT
-      point_in_image_left  /= point_in_image_left.z();
+      point_in_image_left /= point_in_image_left.z();
 
       //ds check for invalid projections
-      if (point_in_image_left.x() < 0 || point_in_image_left.x() > current_frame_->cameraLeft()->imageCols()       ||
-          point_in_image_left.y() < 0 || point_in_image_left.y() > current_frame_->cameraLeft()->imageRows()       ) {
+      if (point_in_image_left.x() < 0 || point_in_image_left.x() > _camera_cols||
+          point_in_image_left.y() < 0 || point_in_image_left.y() > _camera_rows) {
 
         //ds out of FOV
         continue;
@@ -495,6 +501,7 @@ namespace proslam {
     projected_image_coordinates_left_.resize(number_of_visible_points);
   }
 
+  //ds prunes invalid framespoints after pose optimization
   void Tracker::_pruneFramepoints(Frame* frame_) {
 
     //ds update current frame points
@@ -520,6 +527,7 @@ namespace proslam {
     frame_->points().resize(_number_of_tracked_points);
   }
 
+  //ds updates existing or creates new landmarks for framepoints of the provided frame
   void Tracker::_updateLandmarks(WorldMap* context_, Frame* frame_) {
 
     //ds buffer current pose
@@ -569,6 +577,7 @@ namespace proslam {
     }
   }
 
+  //ds attempts to recover framepoints in the current image using the more precise pose estimate, retrieved after pose optimization
   void Tracker::_recoverPoints(Frame* current_frame_) {
 
     //ds precompute transforms

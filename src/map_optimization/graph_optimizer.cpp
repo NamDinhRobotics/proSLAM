@@ -1,4 +1,4 @@
-#include "../map_optimization/graph_optimizer.h"
+#include "graph_optimizer.h"
 
 namespace proslam {
 

@@ -41,7 +41,7 @@ namespace proslam {
     virtual void setRobotToWorld(const TransformMatrix3D& robot_to_world_);
 
     //ds inner data
-    const Landmark::AppearancePtrVector& appearances() const {return _appearances;}
+    const Landmark::AppearancePointerVector& appearances() const {return _appearances;}
     const Landmark::StatePointerVector& landmarks() const {return _landmarks;}
 
     //ds adds a loop closure constraint between this local map and a reference map
@@ -60,7 +60,7 @@ namespace proslam {
     Landmark::StatePointerVector _landmarks;
 
     //ds one merged pool of all corresponding landmark appearances
-    Landmark::AppearancePtrVector _appearances;
+    Landmark::AppearancePointerVector _appearances;
 
     //ds loop closures for the local map
     ClosureVector _closures;
