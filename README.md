@@ -32,7 +32,7 @@ Currently Linux only:
  - Ubuntu 14.04 LTS + ROS Indigo /(OpenCV2 + Qt4)
  - Ubuntu 16.04 LTS + ROS Kinetic/(OpenCV3 + Qt5)<br/>
 
-The complete system **runs on a single thread** (synchronous visualization components)
+The complete system **runs on a single thread** (visualization components are synchronous)
 
 ---
 ### Code statistics | Revision 8bce6d75 ###
@@ -83,7 +83,7 @@ and build it (slow as it will perform a download using unladen swallows):
 
     git clone https://gitlab.com/srrg-software/srrg_proslam.git
     
-enter the project directory in your catkin workspacce (e.g. `../src/srrg_proslam`) and fetch the modular SRRG libraries by executing the script:
+enter the project directory in your catkin workspace (e.g. `../src/srrg_proslam`) and fetch the modular SRRG libraries by executing the script:
 
     ./pull_srrg_packages.bash
     
@@ -123,6 +123,11 @@ Three windows will pop up - "input: images", "output: map (bird view)" and "outp
 
 ---
 6) press `[Esc]` to terminate the system prematurely` (in an input or output window)
+
+---
+7) to see the raw system performance simply launch srrg_proslam without any parameters other than the input dataset:
+
+    rosrun srrg_proslam srrg_proslam_app 00.txt
 
 ---
 ### Pre-formatted datasets ###
