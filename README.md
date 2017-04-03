@@ -128,6 +128,11 @@ Three windows will pop up - "input: images", "output: map (bird view)" and "outp
 7) to see the raw system performance simply launch srrg_proslam without any parameters other than the input dataset:
 
     rosrun srrg_proslam srrg_proslam_app 00.txt
+    
+---
+8) after a complete run we can evaluate the KITTI error statistics by calling:
+
+    rosrun srrg_proslam kitti_evaluate_odometry trajectory.txt 00_gt.txt 00.txt
 
 ---
 ### Pre-formatted datasets ###
