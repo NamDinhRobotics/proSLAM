@@ -35,7 +35,7 @@ Currently Linux only:
 The complete system **runs on a single thread** (synchronous visualization components)
 
 ---
-### Code statistics | Revision 7faff124 ###
+### Code statistics | Revision 8bce6d75 ###
 
     cloc srrg_proslam/src/
 
@@ -45,10 +45,10 @@ The complete system **runs on a single thread** (synchronous visualization compo
 
 | Language     | files  | blank lines | comment lines | code lines |
 | :----------- | :----- | :---------- | :------------ | :--------- |
-| C++          | 18     | 684         | 540           | 2764       |
-| C/C++ Header | 22     | 425         | 210           | 1319       |
-| CMake        | 7      | 8           | 1             | 69         |
-| SUM:         | **47** | **1117**    | **751**       | **4152**   |
+| C++          | 18     | 739         | 637           | 2891       |
+| C/C++ Header | 18     | 409         | 289           | 1115       |
+| CMake        | 8      | 9           | 2             | 86         |
+| SUM:         | **44** | **1157**    | **928**       | **4092**   |
 
 ---
 ### How do I get set up? ###
