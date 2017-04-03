@@ -83,7 +83,7 @@ and build it (slow as it will perform a download using unladen swallows):
 
     git clone https://gitlab.com/srrg-software/srrg_proslam.git
     
-enter the project directory in your catkin workspacce (e.g. ../src/srrg_proslam) and fetch the modular SRRG libraries by executing the script:
+enter the project directory in your catkin workspacce (e.g. `../src/srrg_proslam`) and fetch the modular SRRG libraries by executing the script:
 
     ./pull_srrg_packages.bash
     
