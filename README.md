@@ -52,7 +52,7 @@ The complete system **runs on a single thread** (including visualization compone
 
 ---
 ### How do I get set up? ###
-1) install the Ubuntu packages
+1) install the Ubuntu packages (ninja-build is not required when using an existing g2o installation)
 
     sudo apt-get install build-essential libeigen3-dev libsuitesparse-dev freeglut3-dev libqglviewer-dev ninja-build
 
@@ -94,6 +94,7 @@ then build the project using:
 CMake variables that must be set when building without ROS or to select specific libraries:
 
     -D OpenCV_DIR=/your/path/to/the/opencv/build/folder
+    -D G2O_ROOT=/your/path/to/the/g2o/root/folder
 
 ---
 ### How do I check if it works? ###
@@ -110,7 +111,7 @@ The folder should now contain 4 files (.txt) and 1 folder (.txt.d) plus the tarb
 ---
 3) run the system directly in the folder:
 
-    rosrun srrg_proslam srrg_proslam_app 00.txt -use-gui
+    rosrun srrg_proslam srrg_proslam_app 00.txt -use-gui -show-top
 
 Three windows will pop up - "input: images", "output: map (bird view)" and "output: map (top view)"
 
@@ -139,7 +140,7 @@ Run procedure remains identical to the one above (only the dataset name has to b
 On-the-fly raw stereo image processing with custom stereo camera parameters will be supported shortly.<br/>
 Please use the provided datasets in SRRG format.<br/>
 
-The ROS node (srrg_proslam_node) is currently under development.
+The ROS node (`srrg_proslam_node`) is currently under development.
 
 ---
 ### It doesn't work? ###
