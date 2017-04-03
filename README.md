@@ -129,6 +129,10 @@ Three windows will pop up - "input: images", "output: map (bird view)" and "outp
 
     rosrun srrg_proslam srrg_proslam_app 00.txt
 
+After a complete run we can evaluate the KITTI error statistics by calling:
+
+    rosrun srrg_proslam kitti_evaluate_odometry trajectory.txt 00_gt.txt 00.txt
+
 ---
 ### Pre-formatted datasets ###
 
