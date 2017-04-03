@@ -2,7 +2,7 @@
 | :------: |
 | Dominik Schlegel, Mirco Colosi, Giorgio Grisetti |
 As this is a working repository, none of the code is assumed to be static.
-For related publications please refer to revision 7faff124
+For related publications please refer to revision 8bce6d75
 
 ### Demo videos ###
 [ProSLAM: Full run KITTI Sequence 00 updated (real-time, 1 thread@2.40GHz/i7-4700MQ)][kitti_00_updated]
@@ -65,16 +65,16 @@ or (OpenCV + Qt)
  - Qt5: https://wiki.qt.io/Install_Qt_5_on_Ubuntu (Version 5.7.0)              - used for visualization
 
 ---
-3) download and install the Colorful Catkin Command Line Tools: https://catkin-tools.readthedocs.io/en/latest/installing.html (alternatively one can also use ROS catkin):
+3) download and install the Colorful `Catkin Command Line Tools`: https://catkin-tools.readthedocs.io/en/latest/installing.html (alternatively one can also use `ROS catkin`):
 
     sudo apt-get install python-catkin-tools
 
 ---
-4) clone g2o for catkin (https://github.com/yorsh87/g2o_catkin) to your catkin workspace:
+4) set the environment variable `$G2O_ROOT` to use your own g2o installation or clone `g2o for catkin` (https://github.com/yorsh87/g2o_catkin) to your catkin workspace:
 
     git clone https://github.com/yorsh87/g2o_catkin.git
     
-and build it:
+and build it (slow as it will perform a download using unladen swallows):
     
     catkin build g2o_catkin
 
@@ -98,7 +98,7 @@ CMake variables that must be set when building without ROS or to select specific
 ---
 ### How do I check if it works? ###
 
-1) download the KITTI Sequence 00 into a folder on your computer: https://drive.google.com/open?id=0ByaBRAPfmgEqdXhJRmktQ2lsMEE (2.8GB)
+1) download the `KITTI Sequence 00` into a folder on your computer: https://drive.google.com/open?id=0ByaBRAPfmgEqdXhJRmktQ2lsMEE (2.8GB)
 
 ---
 2) launch a terminal in that folder and uncompress the tarball:
@@ -115,23 +115,23 @@ The folder should now contain 4 files (.txt) and 1 folder (.txt.d) plus the tarb
 Three windows will pop up - "input: images", "output: map (bird view)" and "output: map (top view)"
 
 ---
-4) press [Backspace] on the input window to toggle between automatic processing and stepwise (press [Space] for stepping) mode
+4) press `[Backspace]` on the input window to toggle between automatic processing and stepwise (press `[Space]` for stepping) mode
 
 ---
-5) press [H] to view the available commands for the output windows (Number keys 1-8)
+5) press `[H]` to view the available commands for the output windows (Number keys `1`-`8`)
 
 ---
-6) press [Esc] to terminate the system prematurely
+6) press `[Esc]` to terminate the system prematurely` (in an input or output window)
 
 ---
 ### Pre-formatted datasets ###
 
- - KITTI Sequence 00: https://drive.google.com/open?id=0ByaBRAPfmgEqdXhJRmktQ2lsMEE (2.8GB)
- - KITTI Sequence 01: https://drive.google.com/open?id=0ByaBRAPfmgEqN19hTUJjRG9XV3M (0.7GB)
- - KITTI Sequence 04: https://drive.google.com/open?id=0ByaBRAPfmgEqOEhEdEdLcUJUMlE (0.2GB)
- - EuRoC MH_01_easy: https://drive.google.com/open?id=0ByaBRAPfmgEqbUctejZwb0xRaFk (1.9GB)<br/>
+ - `KITTI Sequence 00`: https://drive.google.com/open?id=0ByaBRAPfmgEqdXhJRmktQ2lsMEE (2.8GB)
+ - `KITTI Sequence 01`: https://drive.google.com/open?id=0ByaBRAPfmgEqN19hTUJjRG9XV3M (0.7GB)
+ - `KITTI Sequence 04`: https://drive.google.com/open?id=0ByaBRAPfmgEqOEhEdEdLcUJUMlE (0.2GB)
+ - `EuRoC MH_01_easy`: https://drive.google.com/open?id=0ByaBRAPfmgEqbUctejZwb0xRaFk (1.9GB)<br/>
 
-Run procedure remains identical to the one above (only the dataset name has to be adjusted, e.g. 00.txt -> MH_01_easy.txt)
+Run procedure remains identical to the one above (only the dataset name has to be adjusted, e.g. `00.txt` becomes `MH_01_easy.txt`)
 
 ---
 ### Custom stereo camera sensor input / ROS node ###
