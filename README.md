@@ -2,7 +2,7 @@
 | :------: |
 | Dominik Schlegel, Mirco Colosi, Giorgio Grisetti |
 As this is a working repository, none of the code is assumed to be static.
-For related publications please refer to revision 8bce6d75
+For related publications please refer to revision 69671dfe
 
 ### Demo videos ###
 [ProSLAM: Full run KITTI Sequence 00 updated (real-time, 1 thread@2.40GHz/i7-4700MQ)][kitti_00_updated]
@@ -35,7 +35,7 @@ Currently Linux only:
 The complete system **runs on a single thread** (visualization components are synchronous)
 
 ---
-### Code statistics | Revision 8bce6d75 ###
+### Code statistics | Revision 69671dfe ###
 
     cloc srrg_proslam/src/
 
@@ -45,10 +45,10 @@ The complete system **runs on a single thread** (visualization components are sy
 
 | Language     | files  | blank lines | comment lines | code lines |
 | :----------- | :----- | :---------- | :------------ | :--------- |
-| C++          | 18     | 739         | 637           | 2891       |
-| C/C++ Header | 18     | 409         | 289           | 1115       |
-| CMake        | 8      | 9           | 2             | 86         |
-| SUM:         | **44** | **1157**    | **928**       | **4092**   |
+| C++          | 18     | 737         | 646           | 2874       |
+| C/C++ Header | 18     | 414         | 303           | 1086       |
+| CMake        | 8      | 8           | 1             | 75         |
+| SUM:         | **44** | **1159**    | **950**       | **4035**   |
 
 ---
 ### How do I get set up? ###
