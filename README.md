@@ -32,7 +32,7 @@ Currently Linux only:
  - Ubuntu 14.04 LTS + ROS Indigo /(OpenCV2 + Qt4)
  - Ubuntu 16.04 LTS + ROS Kinetic/(OpenCV3 + Qt5)<br/>
 
-The complete system **runs on a single thread** (including visualization components)
+The complete system **runs on a single thread** (synchronous visualization components)
 
 ---
 ### Code statistics | Revision 7faff124 ###
@@ -52,7 +52,7 @@ The complete system **runs on a single thread** (including visualization compone
 
 ---
 ### How do I get set up? ###
-1) install the Ubuntu packages (ninja-build is not required when using an existing g2o installation)
+1) install the Ubuntu packages (`ninja-build` is not required when using an existing g2o installation)
 
     sudo apt-get install build-essential libeigen3-dev libsuitesparse-dev freeglut3-dev libqglviewer-dev ninja-build
 
@@ -65,12 +65,12 @@ or (OpenCV + Qt)
  - Qt5: https://wiki.qt.io/Install_Qt_5_on_Ubuntu (Version 5.7.0)              - used for visualization
 
 ---
-3) download and install the Colorful `Catkin Command Line Tools`: https://catkin-tools.readthedocs.io/en/latest/installing.html (alternatively one can also use `ROS catkin`):
+3) download and install the colorful `Catkin Command Line Tools`: https://catkin-tools.readthedocs.io/en/latest/installing.html (alternatively one can also use `ROS catkin`):
 
     sudo apt-get install python-catkin-tools
 
 ---
-4) set the environment variable `$G2O_ROOT` to use your own g2o installation or clone `g2o for catkin` (https://github.com/yorsh87/g2o_catkin) to your catkin workspace:
+4) set the environment variable `$G2O_ROOT` to use your own g2o installation - or clone `g2o for catkin` (https://github.com/yorsh87/g2o_catkin) to your catkin workspace:
 
     git clone https://github.com/yorsh87/g2o_catkin.git
     
