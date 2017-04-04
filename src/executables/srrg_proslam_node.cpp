@@ -1,5 +1,3 @@
-#include "qapplication.h"
-
 #include <ros/ros.h>
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
@@ -7,67 +5,20 @@
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/CameraInfo.h>
 
-#include "map_optimization/graph_optimizer.h"
-#include "relocalization/relocalizer.h"
-#include "motion_estimation/tracker.h"
-#include "visualization/viewer_input_images.h"
-#include "visualization/viewer_output_map.h"
+#include "parameter_server.h"
+#include "slam_assembly.h"
 
-using namespace proslam;
-using namespace srrg_core;
-
-//ds TODO make sure this is up to date!
-const char* banner[] = {
-  "-------------------------------------------------------------------------",
-  "srrg_proslam_app: simple SLAM application",
-  "usage: srrg_proslam_app [options] <dataset>",
-  "",
-  "<dataset>: path to a SRRG txt_io dataset file",
-  "",
-  "[options]",
-  "-camera-left-topic <string>:  topic name in txt_io dataset file)",
-  "-camera-right-topic <string>: topic name in txt_io dataset file)",
-  "-use-gui:                     displays GUI elements",
-  "-open:                        disables relocalization",
-  "-show-top:                    enable top map viewer",
-  "-save-memory:                 enforce deallocation of unused memory at runtime",
-  "-equalize-histogram           equalize stereo image histogram before processing",
-  "-------------------------------------------------------------------------",
-  0
-};
-
-//ds playback modules - lazy globals
-static SystemUsageCounter system_usage;
-bool use_gui                                = false;
-bool use_relocalization                     = true;
-TransformMatrix3D world_previous_to_current = TransformMatrix3D::Identity();
-std::string topic_camera_image_left  = "/stereo/left/image_raw";
-std::string topic_camera_image_right = "/stereo/right/image_raw";
-std::string topic_camera_info_left   = "/stereo/left/camera_info";
-std::string topic_camera_info_right  = "/stereo/right/camera_info";
-Camera* camera_left  = 0;
-Camera* camera_right = 0;
+//ds lazy globals
+proslam::Camera* camera_left  = 0;
+proslam::Camera* camera_right = 0;
 
 //ds image handling globals
 cv::Mat undistort_rectify_maps_left[2];
 cv::Mat undistort_rectify_maps_right[2];
 std::pair<double, cv::Mat> image_left;
 std::pair<double, cv::Mat> image_right;
-bool is_set_image_left = false;
+bool is_set_image_left  = false;
 bool is_set_image_right = false;
-
-//ds user interface related
-QApplication* ui_server              = 0;
-ViewerInputImages* tracker_viewer    = 0;
-ViewerOutputMap* context_viewer_bird = 0;
-
-//ds process a pair of rectified and undistorted stereo images
-void process(WorldMap* world_map_,
-             Tracker* tracker_,
-             GraphOptimizer* mapper_,
-             Relocalizer* relocalizer_,
-             const cv::Mat& intensity_image_left_,
-             const cv::Mat& intensity_image_right_);
 
 //ds ros synchronization
 void callbackCameraInfoLeft(const sensor_msgs::CameraInfoConstPtr& message_) {
@@ -76,15 +27,15 @@ void callbackCameraInfoLeft(const sensor_msgs::CameraInfoConstPtr& message_) {
   if (camera_left == 0) {
 
     //ds obtain eigen formatted data
-    const Matrix3 camera_matrix_transposed(message_->K.elems);
-    const Matrix4_3 projection_matrix_transposed(message_->P.elems);
-    const Matrix3 rectification_matrix_transposed(message_->R.elems);
-    const Vector5 distortion_coefficients(message_->D.data());
+    const proslam::Matrix3 camera_matrix_transposed(message_->K.elems);
+    const proslam::Matrix4_3 projection_matrix_transposed(message_->P.elems);
+    const proslam::Matrix3 rectification_matrix_transposed(message_->R.elems);
+    const proslam::Vector5 distortion_coefficients(message_->D.data());
 
     //ds allocate a new camera
-    camera_left = new Camera(message_->height,
-                             message_->width,
-                             camera_matrix_transposed.transpose());
+    camera_left = new proslam::Camera(message_->height,
+                                      message_->width,
+                                      camera_matrix_transposed.transpose());
     camera_left->setProjectionMatrix(projection_matrix_transposed.transpose());
     camera_left->setDistortionCoefficients(distortion_coefficients);
     camera_left->setRectificationMatrix(rectification_matrix_transposed.transpose());
@@ -96,15 +47,15 @@ void callbackCameraInfoRight(const sensor_msgs::CameraInfoConstPtr& message_) {
   if (camera_right == 0) {
 
     //ds obtain eigen formatted data
-    const Matrix3 camera_matrix_transposed(message_->K.elems);
-    const Matrix4_3 projection_matrix_transposed(message_->P.elems);
-    const Matrix3 rectification_matrix_transposed(message_->R.elems);
-    const Vector5 distortion_coefficients(message_->D.data());
+    const proslam::Matrix3 camera_matrix_transposed(message_->K.elems);
+    const proslam::Matrix4_3 projection_matrix_transposed(message_->P.elems);
+    const proslam::Matrix3 rectification_matrix_transposed(message_->R.elems);
+    const proslam::Vector5 distortion_coefficients(message_->D.data());
 
     //ds allocate a new camera
-    camera_right = new Camera(message_->height,
-                              message_->width,
-                              camera_matrix_transposed.transpose());
+    camera_right = new proslam::Camera(message_->height,
+                                       message_->width,
+                                       camera_matrix_transposed.transpose());
     camera_right->setProjectionMatrix(projection_matrix_transposed.transpose());
     camera_right->setDistortionCoefficients(distortion_coefficients);
     camera_right->setRectificationMatrix(rectification_matrix_transposed.transpose());
@@ -153,6 +104,11 @@ void callbackImageRight(const sensor_msgs::ImageConstPtr& message_) {
   }
 }
 
+//ds ground truth sources
+void callbackGroundTruth() {
+
+}
+
 //ds don't allow any windoof compilation attempt!
 int32_t main(int32_t argc, char ** argv) {
 
@@ -163,41 +119,10 @@ int32_t main(int32_t argc, char ** argv) {
   cv::setUseOptimized(true);
 
   //ds obtain configuration
-  int32_t count_added_arguments = 1;
-  bool show_top_viewer          = false;
-  bool equalize_histogram       = false;
-  while(count_added_arguments < argc){
-    if (!std::strcmp(argv[count_added_arguments], "-camera-left-image-topic")){
-      count_added_arguments++;
-      topic_camera_image_left = argv[count_added_arguments];
-    } else if (!std::strcmp(argv[count_added_arguments], "-camera-right-image-topic")){
-      count_added_arguments++;
-      topic_camera_image_right = argv[count_added_arguments];
-    } else if (!std::strcmp(argv[count_added_arguments], "-h")) {
-      printBanner(banner);
-      return 0;
-    } else if (!std::strcmp(argv[count_added_arguments], "-use-gui")) {
-      use_gui = true;
-    } else if (!std::strcmp(argv[count_added_arguments], "-open")) {
-      use_relocalization = false;
-    } else if (!std::strcmp(argv[count_added_arguments], "-show-top")) {
-      show_top_viewer = true;
-    } else if (!std::strcmp(argv[count_added_arguments], "-equalize-histogram")) {
-      equalize_histogram = true;
-    }
-    count_added_arguments++;
-  }
+  proslam::ParameterServer::parseParametersFromCommandLine(argc, argv);
 
   //ds log configuration
-  std::cerr << "main|-------------------------------------------------------------------------" << std::endl;
-  std::cerr << "main|running with params: " << std::endl;
-  std::cerr << "main|-camera-left-topic  " << topic_camera_image_left << std::endl;
-  std::cerr << "main|-camera-right-topic " << topic_camera_image_right << std::endl;
-  std::cerr << "main|-use-gui            " << use_gui << std::endl;
-  std::cerr << "main|-open               " << !use_relocalization << std::endl;
-  std::cerr << "main|-show-top           " << show_top_viewer << std::endl;
-  std::cerr << "main|-equalize-histogram " << equalize_histogram << std::endl;
-  std::cerr << "main|-------------------------------------------------------------------------" << std::endl;
+  proslam::ParameterServer::printParameters();
 
   //ds initialize roscpp
   ros::init(argc, argv, "srrg_proslam_node");
@@ -206,8 +131,8 @@ int32_t main(int32_t argc, char ** argv) {
   ros::NodeHandle node;
 
   //ds subscribe to camera info topics
-  ros::Subscriber subscriber_camera_info_left  = node.subscribe(topic_camera_info_left, 1, callbackCameraInfoLeft);
-  ros::Subscriber subscriber_camera_info_right = node.subscribe(topic_camera_info_right, 1, callbackCameraInfoRight);
+  ros::Subscriber subscriber_camera_info_left  = node.subscribe(proslam::ParameterServer::topicCameraInfoLeft(), 1, callbackCameraInfoLeft);
+  ros::Subscriber subscriber_camera_info_right = node.subscribe(proslam::ParameterServer::topicCameraInfoRight(), 1, callbackCameraInfoRight);
 
   //ds buffer camera info
   std::cerr << "main|acquiring stereo camera configuration from ROS topics" << std::endl;
@@ -222,23 +147,31 @@ int32_t main(int32_t argc, char ** argv) {
       break;
     }
   }
+
+  //ds validate if cameras are set (rose node might be interrupted)
+  if (camera_left == 0 || camera_right == 0) {
+    std::cerr << std::endl;
+    std::cerr << "main|caught termination signal, aborting" << std::endl;
+    return 0;
+  }
+
   std::cerr << "main|loaded cameras" << std::endl;
   std::cerr << "main|camera left  - resolution: " << camera_left->imageCols() << " x " << camera_left->imageRows() << std::endl;
   std::cerr << "main|camera right - resolution: " << camera_right->imageCols() << " x " << camera_right->imageRows() << std::endl;
 
   //ds compute undistorted and rectified mappings
-  cv::initUndistortRectifyMap(toCv(camera_left->cameraMatrix()),
-                              toCv(camera_left->distortionCoefficients()),
-                              toCv(camera_left->rectificationMatrix()),
-                              toCv(camera_left->projectionMatrix()),
+  cv::initUndistortRectifyMap(srrg_core::toCv(camera_left->cameraMatrix()),
+                              srrg_core::toCv(camera_left->distortionCoefficients()),
+                              srrg_core::toCv(camera_left->rectificationMatrix()),
+                              srrg_core::toCv(camera_left->projectionMatrix()),
                               cv::Size(camera_left->imageCols(), camera_left->imageRows()),
                               CV_16SC2,
                               undistort_rectify_maps_left[0],
                               undistort_rectify_maps_left[1]);
-  cv::initUndistortRectifyMap(toCv(camera_right->cameraMatrix()),
-                              toCv(camera_right->distortionCoefficients()),
-                              toCv(camera_right->rectificationMatrix()),
-                              toCv(camera_right->projectionMatrix()),
+  cv::initUndistortRectifyMap(srrg_core::toCv(camera_right->cameraMatrix()),
+                              srrg_core::toCv(camera_right->distortionCoefficients()),
+                              srrg_core::toCv(camera_right->rectificationMatrix()),
+                              srrg_core::toCv(camera_right->projectionMatrix()),
                               cv::Size(camera_right->imageCols(), camera_right->imageRows()),
                               CV_16SC2,
                               undistort_rectify_maps_right[0],
@@ -249,41 +182,30 @@ int32_t main(int32_t argc, char ** argv) {
   subscriber_camera_info_right.shutdown();
 
   //ds allocate SLAM modules
-  WorldMap* world_map      = new WorldMap();
-  GraphOptimizer* mapper   = new GraphOptimizer();
-  Relocalizer* relocalizer = new Relocalizer();
-  Tracker* tracker         = new Tracker(camera_left, camera_right);
+  proslam::SLAMAssembly slam_system;
+
+  //ds set cameras
+  slam_system.loadCameras(camera_left, camera_right);
 
   //ds configure SLAM modules
-  tracker->setPixelDistanceTrackingMinimum(50);
-  tracker->setPixelDistanceTrackingMaximum(50);
-  tracker->aligner()->setMaximumErrorKernel(25);
-  tracker->framepointGenerator()->setTargetNumberOfPoints(500);
-  relocalizer->aligner()->setMaximumErrorKernel(0.5);
-  relocalizer->aligner()->setMinimumNumberOfInliers(25);
-  relocalizer->aligner()->setMinimumInlierRatio(0.5);
-  relocalizer->setMinimumAbsoluteNumberOfMatchesPointwise(25);
+  slam_system.tracker()->setPixelDistanceTrackingMinimum(50);
+  slam_system.tracker()->setPixelDistanceTrackingMaximum(50);
+  slam_system.tracker()->aligner()->setMaximumErrorKernel(25);
+  slam_system.tracker()->framepointGenerator()->setTargetNumberOfPoints(500);
+  slam_system.relocalizer()->aligner()->setMaximumErrorKernel(0.5);
+  slam_system.relocalizer()->aligner()->setMinimumNumberOfInliers(25);
+  slam_system.relocalizer()->aligner()->setMinimumInlierRatio(0.5);
+  slam_system.relocalizer()->setMinimumAbsoluteNumberOfMatchesPointwise(25);
+
+  //ds allocate a qt UI server in the main scope (required)
+  QApplication* ui_server = new QApplication(argc, argv);
 
   //ds initialize gui
-  if (use_gui) {
-    ui_server      = new QApplication(argc, argv);
-    tracker_viewer = new ViewerInputImages(world_map);
-    tracker_viewer->switchMode();
-    context_viewer_bird = new ViewerOutputMap(world_map, 0.1, "output: map (bird view)");
-    context_viewer_bird->show();
-
-    //ds orientation flip for proper camera following
-    TransformMatrix3D orientation_correction;
-    orientation_correction.matrix() << 0, -1, 0, 0,
-                                       -1, 0, 0, 0,
-                                       0, 0, -1, 0,
-                                       0, 0, 0, 1;
-    context_viewer_bird->setRotationRobotView(orientation_correction);
-  }
+  slam_system.initializeGUI(ui_server);
 
   //ds subscribe to camera image topics
-  ros::Subscriber subscriber_camera_image_left  = node.subscribe(topic_camera_image_left, 1, callbackImageLeft);
-  ros::Subscriber subscriber_camera_image_right = node.subscribe(topic_camera_image_right, 1, callbackImageRight);
+  ros::Subscriber subscriber_camera_image_left  = node.subscribe(proslam::ParameterServer::topicCameraImageLeft(), 1, callbackImageLeft);
+  ros::Subscriber subscriber_camera_image_right = node.subscribe(proslam::ParameterServer::topicCameraInfoRight(), 1, callbackImageRight);
 
   //ds start processing loop
   std::cerr << "main|starting processing loop" << std::endl;
@@ -297,7 +219,7 @@ int32_t main(int32_t argc, char ** argv) {
     if (is_set_image_left && is_set_image_right) {
 
       //ds preprocess the images if desired
-      if (equalize_histogram) {
+      if (proslam::ParameterServer::optionEqualizeHistogram()) {
         cv::equalizeHist(image_left.second, image_left.second);
         cv::equalizeHist(image_right.second, image_right.second);
       }
@@ -308,92 +230,26 @@ int32_t main(int32_t argc, char ** argv) {
       }
 
       //ds process images
-      process(world_map,
-              tracker,
-              mapper,
-              relocalizer,
-              image_left.second,
-              image_right.second);
+      slam_system.process(image_left.second, image_right.second);
+
+      //ds add ground truth if available
+      slam_system.addGroundTruthMeasurement(proslam::TransformMatrix3D::Identity());
 
       //ds update ui
-      if (use_gui) {
-        if (mapper->numberOfOptimizations() > 0) {
-          context_viewer_bird->setIsOpen(false);
-        }
-        tracker_viewer->initDrawing();
-        tracker_viewer->drawFeatureTracking();
-        tracker_viewer->drawFeatures();
-        is_running = context_viewer_bird->isVisible() && tracker_viewer->updateGUI();
-        context_viewer_bird->updateGL();
-        ui_server->processEvents();
-      }
+      slam_system.updateGUI();
 
       //ds reset images
-      is_set_image_left = false;
+      is_set_image_left  = false;
       is_set_image_right = false;
     }
   }
 
-  //ds stop node
-  return 0;
-}
+  //ds print full report
+  slam_system.printReport();
 
-//ds process a pair of rectified and undistorted stereo images
-void process(WorldMap* world_map_,
-             Tracker* tracker_,
-             GraphOptimizer* mapper_,
-             Relocalizer* relocalizer_,
-             const cv::Mat& intensity_image_left_,
-             const cv::Mat& intensity_image_right_) {
+  //ds save trajectory to disk
+  slam_system.worldMap()->writeTrajectory("trajectory.txt");
 
-  //ds call the tracker
-  tracker_->compute(world_map_, intensity_image_left_, intensity_image_right_);
-
-  //ds check if relocalization is desired
-  if (use_relocalization) {
-
-    //ds if we have a valid frame (not the case after the track is lost)
-    if (world_map_->currentFrame() != 0) {
-
-      //ds local map generation - regardless of tracker state
-      if (world_map_->createLocalMap()) {
-
-        //ds if we have a fresh track (start or lost)
-        if (world_map_->localMaps().size() == 1) {
-          relocalizer_->flush();
-        }
-
-        //ds trigger relocalization
-        relocalizer_->init(world_map_->currentLocalMap());
-        relocalizer_->detect();
-        relocalizer_->compute();
-
-        //ds check the closures
-        for(CorrespondenceCollection* closure: relocalizer_->closures()) {
-          if (closure->is_valid) {
-            assert(world_map_->currentLocalMap() == closure->local_map_query);
-
-            //ds add loop closure constraint
-            world_map_->addLoopClosure(world_map_->currentLocalMap(),
-                                       closure->local_map_reference,
-                                       closure->transform_frame_query_to_frame_reference);
-            if (use_gui) {
-              for (const Correspondence* match: closure->correspondences) {
-                world_map_->landmarks().get(match->query->landmark->identifier())->setIsInLoopClosureQuery(true);
-                world_map_->landmarks().get(match->reference->landmark->identifier())->setIsInLoopClosureReference(true);
-              }
-            }
-          }
-        }
-        relocalizer_->train();
-      }
-
-      //ds check if we closed a local map
-      if (world_map_->relocalized()) {
-
-        //ds optimize graph
-        mapper_->optimize(world_map_);
-      }
-    }
-  }
+  //ds exit in GUI
+  return slam_system.closeGUI();
 }
