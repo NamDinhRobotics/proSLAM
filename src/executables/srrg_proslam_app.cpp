@@ -1,48 +1,26 @@
-#include "qapplication.h"
-#include "srrg_txt_io/message_reader.h"
-#include "srrg_txt_io/message_timestamp_synchronizer.h"
-#include "srrg_txt_io/pinhole_image_message.h"
-
-#include "map_optimization/graph_optimizer.h"
-#include "relocalization/relocalizer.h"
-#include "motion_estimation/tracker.h"
-#include "visualization/viewer_input_images.h"
-#include "visualization/viewer_output_map.h"
+#include "parameter_server.h"
+#include "slam_assembly.h"
 
 using namespace proslam;
 using namespace srrg_core;
 
-//ds TODO make sure this is up to date!
-const char* banner[] = {
-  "-------------------------------------------------------------------------",
-  "srrg_proslam_app: simple SLAM application",
-  "usage: srrg_proslam_app [options] <dataset>",
-  "",
-  "<dataset>: path to a SRRG txt_io dataset file",
-  "",
-  "[options]",
-  "-camera-left-topic <string>:  set left camera topic name (as set in txt_io dataset file)",
-  "-camera-right-topic <string>: set left camera topic name (as set in txt_io dataset file)",
-  "-use-gui (-ug):               displays GUI elements",
-  "-open:                        disables relocalization (open loop mode)",
-  "-show-top (-st):              enable top map viewer",
-  "-drop-framepoints (-df):      deallocation of past framepoints at runtime (reduces memory demand)",
-  "-equalize-histogram (-eh):    equalize stereo image histogram before processing",
-  "-------------------------------------------------------------------------",
-  0
-};
-
 //ds playback modules - lazy globals
-static SystemUsageCounter system_usage;
 MessageTimestampSynchronizer synchronizer;
-bool use_gui            = false;
-bool use_relocalization = true;
 
 //ds user interface related
 QApplication* ui_server              = 0;
 ViewerInputImages* tracker_viewer    = 0;
 ViewerOutputMap* context_viewer_bird = 0;
 ViewerOutputMap* context_viewer_top  = 0;
+
+//ds initializes gui components
+void initializeGUI(int32_t argc_, char ** argv_, WorldMap* world_map_);
+
+//ds updated gui components
+const bool updateGUI(const GraphOptimizer* graph_optimizer_);
+
+//ds clean gui components
+int32_t closeGUI(const bool& running_, WorldMap* world_map_);
 
 //ds process a pair of rectified and undistorted stereo images
 void process(WorldMap* world_map_,
@@ -71,53 +49,16 @@ int32_t main(int32_t argc, char ** argv) {
   cv::setUseOptimized(true);
 
   //ds obtain configuration
-  std::string topic_image_stereo_left  = "/camera_left/image_raw";
-  std::string topic_image_stereo_right = "/camera_right/image_raw";
-  std::string filename_sensor_messages = "";
-  int32_t count_added_arguments        = 1;
-  bool show_top_viewer                 = false;
-  bool drop_framepoints                = false;
-  bool equalize_histogram              = false;
-  while(count_added_arguments < argc){
-    if (!std::strcmp(argv[count_added_arguments], "-camera-left-topic")){
-      count_added_arguments++;
-      topic_image_stereo_left = argv[count_added_arguments];
-    } else if (!std::strcmp(argv[count_added_arguments], "-camera-right-topic")){
-      count_added_arguments++;
-      topic_image_stereo_right = argv[count_added_arguments];
-    } else if (!std::strcmp(argv[count_added_arguments], "-h")) {
-      printBanner(banner);
-      return 0;
-    } else if (!std::strcmp(argv[count_added_arguments], "-use-gui") || !std::strcmp(argv[count_added_arguments], "-ug")) {
-      use_gui = true;
-    } else if (!std::strcmp(argv[count_added_arguments], "-open")) {
-      use_relocalization = false;
-    } else if (!std::strcmp(argv[count_added_arguments], "-show-top") || !std::strcmp(argv[count_added_arguments], "-st")) {
-      show_top_viewer = true;
-    } else if (!std::strcmp(argv[count_added_arguments], "-drop-framepoints") || !std::strcmp(argv[count_added_arguments], "-df")) {
-      drop_framepoints = true;
-    } else if (!std::strcmp(argv[count_added_arguments], "-equalize-histogram") || !std::strcmp(argv[count_added_arguments], "-eh")) {
-      equalize_histogram = true;
-    } else {
-      filename_sensor_messages = argv[count_added_arguments];
-    }
-    count_added_arguments++;
-  }
-
-  //ds configure sensor message source
-  if (filename_sensor_messages.length() == 0) {
-    printBanner(banner);
-    return 0;
-  }
+  ParameterServer::parseParametersFromCommandLine(argc, argv);
 
   //ds configure sensor message source
   MessageReader sensor_message_reader;
-  sensor_message_reader.open(filename_sensor_messages);
+  sensor_message_reader.open(ParameterServer::filenameDataset());
 
   //ds configure message synchronizer
   std::vector<std::string> camera_topics_synchronized;
-  camera_topics_synchronized.push_back(topic_image_stereo_left);
-  camera_topics_synchronized.push_back(topic_image_stereo_right);
+  camera_topics_synchronized.push_back(ParameterServer::topicCameraImageLeft());
+  camera_topics_synchronized.push_back(ParameterServer::topicCameraImageRight());
   synchronizer.setTimeInterval(0.001);
   synchronizer.setTopics(camera_topics_synchronized);
   CameraMap cameras_by_topic;
@@ -131,7 +72,7 @@ int32_t main(int32_t argc, char ** argv) {
     sensor_msg->untaint();
 
     //ds check for the two set topics
-    if (sensor_msg->topic() == topic_image_stereo_left) {
+    if (sensor_msg->topic() == ParameterServer::topicCameraImageLeft()) {
       PinholeImageMessage* message_image_left  = dynamic_cast<PinholeImageMessage*>(sensor_msg);
 
       //ds allocate a new camera
@@ -140,7 +81,7 @@ int32_t main(int32_t argc, char ** argv) {
                                        message_image_left->cameraMatrix().cast<real>(),
                                        message_image_left->offset().cast<real>());
       cameras_by_topic.insert(std::make_pair(message_image_left->topic(), camera_left));
-    } else if (sensor_msg->topic() == topic_image_stereo_right) {
+    } else if (sensor_msg->topic() == ParameterServer::topicCameraImageRight()) {
       PinholeImageMessage* message_image_right  = dynamic_cast<PinholeImageMessage*>(sensor_msg);
 
       //ds allocate a new camera
@@ -160,26 +101,16 @@ int32_t main(int32_t argc, char ** argv) {
 
   //ds terminate on failure
   if (cameras_by_topic.size() != camera_topics_synchronized.size()) {
-    printBanner(banner);
+    ParameterServer::printBanner();
     return 0;
   }
 
-  //ds log configuration
-  std::cerr << "main|-------------------------------------------------------------------------" << std::endl;
-  std::cerr << "main|running with params: " << std::endl;
-  std::cerr << "main|-camera-left-topic  " << topic_image_stereo_left << std::endl;
-  std::cerr << "main|-camera-right-topic " << topic_image_stereo_right << std::endl;
-  std::cerr << "main|-use-gui            " << use_gui << std::endl;
-  std::cerr << "main|-open               " << !use_relocalization << std::endl;
-  std::cerr << "main|-show-top           " << show_top_viewer << std::endl;
-  std::cerr << "main|-drop-framepoints   " << drop_framepoints << std::endl;
-  std::cerr << "main|-equalize-histogram " << equalize_histogram << std::endl;
-  std::cerr << "main|-dataset            " << filename_sensor_messages << std::endl;
-  std::cerr << "main|-------------------------------------------------------------------------" << std::endl;
+  //ds info
+  ParameterServer::printParameters();
 
   //ds restart stream
   sensor_message_reader.close();
-  sensor_message_reader.open(filename_sensor_messages);
+  sensor_message_reader.open(ParameterServer::filenameDataset());
 
   std::cerr << "main|loaded cameras: " << cameras_by_topic.size() << std::endl;
   for (CameraMapElement camera: cameras_by_topic) {
@@ -191,44 +122,17 @@ int32_t main(int32_t argc, char ** argv) {
   WorldMap* world_map      = new WorldMap();
   GraphOptimizer* mapper   = new GraphOptimizer();
   Relocalizer* relocalizer = new Relocalizer();
-  Tracker* tracker         = new Tracker(cameras_by_topic.at(topic_image_stereo_left), cameras_by_topic.at(topic_image_stereo_right));
+  Tracker* tracker         = new Tracker(cameras_by_topic.at(ParameterServer::topicCameraImageLeft()), cameras_by_topic.at(ParameterServer::topicCameraImageRight()));
 
   //ds configure SLAM modules
-  world_map->setDropFramepoints(drop_framepoints);
+  world_map->setDropFramepoints(ParameterServer::optionDropFramepoints());
   relocalizer->aligner()->setMaximumErrorKernel(0.5);
   relocalizer->aligner()->setMinimumNumberOfInliers(25);
   relocalizer->aligner()->setMinimumInlierRatio(0.5);
   relocalizer->setMinimumAbsoluteNumberOfMatchesPointwise(25);
 
   //ds initialize gui
-  if (use_gui) {
-    ui_server      = new QApplication(argc, argv);
-    tracker_viewer = new ViewerInputImages(world_map);
-    context_viewer_bird = new ViewerOutputMap(world_map, 0.1, "output: map (bird view)");
-    context_viewer_bird->show();
-
-    //ds orientation flip for proper camera following
-    TransformMatrix3D orientation_correction;
-    orientation_correction.matrix() << 0, -1, 0, 0,
-                                       -1, 0, 0, 0,
-                                       0, 0, -1, 0,
-                                       0, 0, 0, 1;
-    context_viewer_bird->setRotationRobotView(orientation_correction);
-
-    //ds configure custom top viewer if requested
-    if (show_top_viewer) {
-      context_viewer_top = new ViewerOutputMap(world_map, 1, "output: map (top view)");
-      context_viewer_top->show();
-      TransformMatrix3D center_for_kitti_sequence_00;
-      center_for_kitti_sequence_00.matrix() << 1, 0, 0, 0,
-                                               0, 0, -1, 200,
-                                               0, 1, 0, 800,
-                                               0, 0, 0, 1;
-      context_viewer_top->setWorldToRobotOrigin(center_for_kitti_sequence_00);
-      context_viewer_top->setFollowRobot(false);
-      context_viewer_top->setWorldToRobotOrigin(orientation_correction*center_for_kitti_sequence_00);
-    }
-  }
+  initializeGUI(argc, argv, world_map);
 
   //ds error measurements
   std::vector<TransformMatrix3D> robot_to_world_ground_truth_poses(0);
@@ -250,9 +154,9 @@ int32_t main(int32_t argc, char ** argv) {
     sensor_msg->untaint();
 
     //ds add to synchronizer
-    if (sensor_msg->topic() == topic_image_stereo_left) {
+    if (sensor_msg->topic() == ParameterServer::topicCameraImageLeft()) {
       synchronizer.putMessage(sensor_msg);
-    } else if (sensor_msg->topic() == topic_image_stereo_right) {
+    } else if (sensor_msg->topic() == ParameterServer::topicCameraImageRight()) {
       synchronizer.putMessage(sensor_msg);
     } else {
       delete sensor_msg;
@@ -271,7 +175,7 @@ int32_t main(int32_t argc, char ** argv) {
       Camera* camera_left = cameras_by_topic.at(message_image_left->topic());
 
       //ds preprocess the images if desired
-      if (equalize_histogram) {
+      if (ParameterServer::optionEqualizeHistogram()) {
         cv::equalizeHist(intensity_image_left_rectified, intensity_image_left_rectified);
         cv::equalizeHist(intensity_image_right_rectified, intensity_image_right_rectified);
       }
@@ -279,7 +183,7 @@ int32_t main(int32_t argc, char ** argv) {
       //ds check if first frame and odometry is available
       if (world_map->frames().size() == 0 && message_image_left->hasOdom()) {
         world_map->setRobotToWorld(message_image_left->odometry().cast<real>()*camera_left->robotToCamera());
-        if (use_gui) {
+        if (ParameterServer::optionUseGUI()) {
           context_viewer_bird->setWorldToRobotOrigin((message_image_left->odometry().cast<real>()*camera_left->robotToCamera()).inverse());
         }
       }
@@ -302,7 +206,6 @@ int32_t main(int32_t argc, char ** argv) {
       //ds runtime info
       ++number_of_processed_frames_total;
       ++number_of_processed_frames_current;
-      system_usage.update();
       if (number_of_processed_frames_current%100 == 0) {
 
         //ds compute durations
@@ -327,19 +230,7 @@ int32_t main(int32_t argc, char ** argv) {
       synchronizer.reset();
 
       //ds update ui
-      if (use_gui) {
-        if (mapper->numberOfOptimizations() > 0) {
-          context_viewer_bird->setIsOpen(false);
-          if (context_viewer_top) context_viewer_top->setIsOpen(false);
-        }
-        tracker_viewer->initDrawing();
-        tracker_viewer->drawFeatureTracking();
-        tracker_viewer->drawFeatures();
-        running = context_viewer_bird->isVisible() && tracker_viewer->updateGUI();
-        context_viewer_bird->updateGL();
-        if (context_viewer_top) context_viewer_top->updateGL();
-        ui_server->processEvents();
-      }
+      running = updateGUI(mapper);
     }
   }
   const double duration_total_seconds = getTime()-time_start_seconds_first;
@@ -368,28 +259,86 @@ int32_t main(int32_t argc, char ** argv) {
     delete camera_element.second;
   }
 
-  if (use_gui) {
+  //ds exit
+  return closeGUI(running, world_map);
+}
+
+
+//ds initializes gui components
+void initializeGUI(int32_t argc_, char ** argv_, WorldMap* world_map_) {
+  if (ParameterServer::optionUseGUI()) {
+    ui_server      = new QApplication(argc_, argv_);
+    tracker_viewer = new ViewerInputImages(world_map_);
+    context_viewer_bird = new ViewerOutputMap(world_map_, 0.1, "output: map (bird view)");
+    context_viewer_bird->show();
+
+    //ds orientation flip for proper camera following
+    TransformMatrix3D orientation_correction;
+    orientation_correction.matrix() << 0, -1, 0, 0,
+                                       -1, 0, 0, 0,
+                                       0, 0, -1, 0,
+                                       0, 0, 0, 1;
+    context_viewer_bird->setRotationRobotView(orientation_correction);
+
+    //ds configure custom top viewer if requested
+    if (ParameterServer::optionShowTopViewer()) {
+      context_viewer_top = new ViewerOutputMap(world_map_, 1, "output: map (top view)");
+      context_viewer_top->show();
+      TransformMatrix3D center_for_kitti_sequence_00;
+      center_for_kitti_sequence_00.matrix() << 1, 0, 0, 0,
+                                               0, 0, -1, 200,
+                                               0, 1, 0, 800,
+                                               0, 0, 0, 1;
+      context_viewer_top->setWorldToRobotOrigin(center_for_kitti_sequence_00);
+      context_viewer_top->setFollowRobot(false);
+      context_viewer_top->setWorldToRobotOrigin(orientation_correction*center_for_kitti_sequence_00);
+    }
+  }
+}
+
+//ds updated gui components
+const bool updateGUI(const GraphOptimizer* graph_optimizer_) {
+  bool running = true;
+  if (ParameterServer::optionUseGUI()) {
+    if (graph_optimizer_->numberOfOptimizations() > 0) {
+      context_viewer_bird->setIsOpen(false);
+      if (context_viewer_top) context_viewer_top->setIsOpen(false);
+    }
+    tracker_viewer->initDrawing();
+    tracker_viewer->drawFeatureTracking();
+    tracker_viewer->drawFeatures();
+    running = context_viewer_bird->isVisible() && tracker_viewer->updateGUI();
+    context_viewer_bird->updateGL();
+    if (context_viewer_top) context_viewer_top->updateGL();
+    ui_server->processEvents();
+  }
+  return running;
+}
+
+//ds clean gui components
+int32_t closeGUI(const bool& running_, WorldMap* world_map_) {
+  if (ParameterServer::optionUseGUI()) {
     delete tracker_viewer;
   }
 
   //ds if no manual termination was requested
-  if (running) {
+  if (running_) {
 
     //ds exit in viewer if available
-    if (use_gui && context_viewer_bird->isVisible()) {
+    if (ParameterServer::optionUseGUI() && context_viewer_bird->isVisible()) {
       return ui_server->exec();
     } else {
-      if (use_gui) {
+      if (ParameterServer::optionUseGUI()) {
         delete ui_server;
       }
-      delete world_map;
+      delete world_map_;
       return 0;
     }
   } else {
 
     //ds destroy world context
-    delete world_map;
-    if (use_gui) {
+    delete world_map_;
+    if (ParameterServer::optionUseGUI()) {
       delete context_viewer_bird;
       if (context_viewer_top) delete context_viewer_top;
       delete ui_server;
@@ -410,7 +359,7 @@ void process(WorldMap* world_map_,
   tracker_->compute(world_map_, intensity_image_left_, intensity_image_right_);
 
   //ds check if relocalization is desired
-  if (use_relocalization) {
+  if (ParameterServer::optionUseRelocalization()) {
 
     //ds if we have a valid frame (not the case after the track is lost)
     if (world_map_->currentFrame() != 0) {
@@ -437,7 +386,7 @@ void process(WorldMap* world_map_,
             world_map_->addLoopClosure(world_map_->currentLocalMap(),
                                        closure->local_map_reference,
                                        closure->transform_frame_query_to_frame_reference);
-            if (use_gui) {
+            if (ParameterServer::optionUseGUI()) {
               for (const Correspondence* match: closure->correspondences) {
                 world_map_->landmarks().get(match->query->landmark->identifier())->setIsInLoopClosureQuery(true);
                 world_map_->landmarks().get(match->reference->landmark->identifier())->setIsInLoopClosureReference(true);
