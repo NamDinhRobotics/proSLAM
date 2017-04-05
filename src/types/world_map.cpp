@@ -163,8 +163,9 @@ namespace proslam {
   //ds adds a loop closure constraint between 2 local maps
   void WorldMap::addLoopClosure(LocalMap* query_,
                                 const LocalMap* reference_,
-                                const TransformMatrix3D& transform_query_to_reference_) {
-    query_->add(reference_, transform_query_to_reference_);
+                                const TransformMatrix3D& transform_query_to_reference_,
+                                const real& omega_) {
+    query_->add(reference_, transform_query_to_reference_, omega_);
     _relocalized = true;
 
     //ds informative only

@@ -52,38 +52,38 @@ namespace proslam {
     //ds initialize relocalization module for a new local map
     void init(const LocalMap* local_map_);
 
-    //ds integrate frame into loop closing pool
-    void train();
-
-    //ds flushes all frames in current queue (narrow closing)
-    void flush();
-
     //ds retrieve loop closure candidates for the given cloud
-    void detect(const bool& force_matching_ = false);
+    void detect();
 
     //ds geometric verification and determination of spatial relation between set closures
     void compute();
 
-    //ds retrieve correspondences from matches
-    inline const Correspondence* getCorrespondenceNN(const Correspondence::MatchPointerVector& matches_);
+    //ds integrate frame into loop closing pool
+    void train();
 
   //ds getters/setters
   public:
 
-    inline const CorrespondenceCollectionPointerVector& closures() const {return _closures;}
-    void setClosures(CorrespondenceCollectionPointerVector& closures_) {_closures = closures_;}
+    inline const ClosurePointerVector& closures() const {return _closures;}
+    void setClosures(ClosurePointerVector& closures_) {_closures = closures_;}
     void clear();
 
     void setPreliminaryMinimumInterspaceQueries(const Count& preliminary_minimum_interspace_queries_) {_preliminary_minimum_interspace_queries = preliminary_minimum_interspace_queries_;}
     void setPreliminaryMinimumMatchingRatio(const real& preliminary_minimum_matching_ratio_) {_preliminary_minimum_matching_ratio = preliminary_minimum_matching_ratio_;}
-    void setMinimumAbsoluteNumberOfMatchesPointwise(const Count& minimum_absolute_number_of_matches_pointwise_) {_minimum_absolute_number_of_matches_pointwise = minimum_absolute_number_of_matches_pointwise_;}
+    void setMinimumNumberOfMatchesPerLandmark(const Count& minimum_number_of_matches_per_landmark_) {_minimum_number_of_matches_per_landmark = minimum_number_of_matches_per_landmark_;}
 
     XYZAligner* aligner() {return _aligner;}
+
+  //ds helpers
+  protected:
+
+    //ds retrieve correspondences from matches
+    inline const Correspondence* _getCorrespondenceNN(const Correspondence::MatchPointerVector& matches_);
 
   protected:
 
     //ds currently found closures
-    CorrespondenceCollectionPointerVector _closures;
+    ClosurePointerVector _closures;
 
     //ds active query for closure search
     Query* _query;
@@ -101,7 +101,7 @@ namespace proslam {
     real _preliminary_minimum_matching_ratio = 0.1;
 
     //ds minimum absolute number of matches
-    Count _minimum_absolute_number_of_matches_pointwise = 100;
+    Count _minimum_number_of_matches_per_landmark = 100;
 
     //ds correspondence retrieval
     std::set<Identifier> _mask_id_references_for_correspondences;

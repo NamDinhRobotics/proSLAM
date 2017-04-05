@@ -318,25 +318,21 @@ namespace proslam {
         //ds local map generation - regardless of tracker state
         if (_world_map->createLocalMap()) {
 
-          //ds if we have a fresh track (start or lost)
-          if (_world_map->localMaps().size() == 1) {
-            _relocalizer->flush();
-          }
-
           //ds trigger relocalization
           _relocalizer->init(_world_map->currentLocalMap());
           _relocalizer->detect();
           _relocalizer->compute();
 
           //ds check the closures
-          for(CorrespondenceCollection* closure: _relocalizer->closures()) {
+          for(Closure* closure: _relocalizer->closures()) {
             if (closure->is_valid) {
               assert(_world_map->currentLocalMap() == closure->local_map_query);
 
               //ds add loop closure constraint
               _world_map->addLoopClosure(_world_map->currentLocalMap(),
                                          closure->local_map_reference,
-                                         closure->transform_frame_query_to_frame_reference);
+                                         closure->transform_frame_query_to_frame_reference,
+                                         closure->icp_inlier_ratio);
               if (ParameterServer::optionUseGUI()) {
                 for (const Correspondence* match: closure->correspondences) {
                   _world_map->landmarks().get(match->query->landmark->identifier())->setIsInLoopClosureQuery(true);

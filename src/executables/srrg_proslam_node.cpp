@@ -188,14 +188,14 @@ int32_t main(int32_t argc, char ** argv) {
   slam_system.loadCameras(camera_left, camera_right);
 
   //ds configure SLAM modules
-  slam_system.tracker()->setPixelDistanceTrackingMinimum(50);
+  slam_system.tracker()->setPixelDistanceTrackingMinimum(25);
   slam_system.tracker()->setPixelDistanceTrackingMaximum(50);
   slam_system.tracker()->aligner()->setMaximumErrorKernel(25);
   slam_system.tracker()->framepointGenerator()->setTargetNumberOfPoints(500);
   slam_system.relocalizer()->aligner()->setMaximumErrorKernel(0.5);
   slam_system.relocalizer()->aligner()->setMinimumNumberOfInliers(25);
   slam_system.relocalizer()->aligner()->setMinimumInlierRatio(0.5);
-  slam_system.relocalizer()->setMinimumAbsoluteNumberOfMatchesPointwise(25);
+  slam_system.relocalizer()->setMinimumNumberOfMatchesPerLandmark(25);
 
   //ds allocate a qt UI server in the main scope (required)
   QApplication* ui_server = new QApplication(argc, argv);
@@ -205,7 +205,7 @@ int32_t main(int32_t argc, char ** argv) {
 
   //ds subscribe to camera image topics
   ros::Subscriber subscriber_camera_image_left  = node.subscribe(proslam::ParameterServer::topicCameraImageLeft(), 1, callbackImageLeft);
-  ros::Subscriber subscriber_camera_image_right = node.subscribe(proslam::ParameterServer::topicCameraInfoRight(), 1, callbackImageRight);
+  ros::Subscriber subscriber_camera_image_right = node.subscribe(proslam::ParameterServer::topicCameraImageRight(), 1, callbackImageRight);
 
   //ds start processing loop
   std::cerr << "main|starting processing loop" << std::endl;

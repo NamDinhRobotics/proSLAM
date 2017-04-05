@@ -142,7 +142,7 @@ namespace proslam {
       case Frame::Tracking: {
 
         //ds compute far to close landmark ratio TODO simplify or get better logic: currently the idea is to give more weight to framepoints in case we have almost only far landmarks
-        const real weight_framepoint = 1-(_number_of_tracked_landmarks_far+10*_number_of_tracked_landmarks_close)/static_cast<real>(_number_of_tracked_points);
+        const real weight_framepoint = 1-(_number_of_tracked_landmarks_far+7*_number_of_tracked_landmarks_close)/static_cast<real>(_number_of_tracked_points);
         assert(weight_framepoint <= 1);
 
         //ds call pose solver
@@ -606,8 +606,8 @@ namespace proslam {
         point_in_camera_homogeneous.head<3>() = world_to_camera_left*point_previous->landmark()->coordinates();
       } else {
 
-        //ds currently only landmark recovery supported
-        continue;
+        //ds get point in camera frame based on point coordinates
+        point_in_camera_homogeneous.head<3>() = world_to_camera_left*point_previous->worldCoordinates();
       }
 
       //ds obtain point projection on camera image plane

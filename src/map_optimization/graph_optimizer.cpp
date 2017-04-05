@@ -94,7 +94,8 @@ namespace proslam {
         g2o::EdgeSE3* edge_closure = getClosureEdge(_optimizer,
                                                     local_map_query->identifier(),
                                                     local_map_reference->identifier(),
-                                                    transform_query_to_reference);
+                                                    transform_query_to_reference,
+                                                    closure.omega*10*Eigen::Matrix<double, 6, 6>::Identity());
         _optimizer->addEdge(edge_closure);
       }
     }

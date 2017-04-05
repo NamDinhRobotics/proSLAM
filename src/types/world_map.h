@@ -32,7 +32,7 @@ namespace proslam {
     void resetWindowForLocalMapCreation();
 
     //ds adds a loop closure constraint between 2 local maps
-    void addLoopClosure(LocalMap* query_, const LocalMap* reference_, const TransformMatrix3D& transform_query_to_reference_);
+    void addLoopClosure(LocalMap* query_, const LocalMap* reference_, const TransformMatrix3D& transform_query_to_reference_, const real& omega_ = 1);
 
     //ds dump trajectory to file (in KITTI benchmark format: 4x4 isometries per line)
     void writeTrajectory(const std::string& filename_ = "") const;

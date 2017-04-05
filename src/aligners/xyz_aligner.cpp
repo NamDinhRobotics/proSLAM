@@ -3,7 +3,7 @@
 namespace proslam {
 
   //ds initialize aligner with minimal entity
-  void XYZAligner::init(CorrespondenceCollection* context_, const TransformMatrix3D& current_to_reference_) {
+  void XYZAligner::init(Closure* context_, const TransformMatrix3D& current_to_reference_) {
     _context              = context_;
     _current_to_reference = current_to_reference_;
 

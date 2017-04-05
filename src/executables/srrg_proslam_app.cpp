@@ -28,8 +28,8 @@ int32_t main(int32_t argc, char ** argv) {
   slam_system.worldMap()->setDropFramepoints(proslam::ParameterServer::optionDropFramepoints());
   slam_system.relocalizer()->aligner()->setMaximumErrorKernel(0.5);
   slam_system.relocalizer()->aligner()->setMinimumNumberOfInliers(25);
-  slam_system.relocalizer()->aligner()->setMinimumInlierRatio(0.5);
-  slam_system.relocalizer()->setMinimumAbsoluteNumberOfMatchesPointwise(25);
+  slam_system.relocalizer()->aligner()->setMinimumInlierRatio(0.25);
+  slam_system.relocalizer()->setMinimumNumberOfMatchesPerLandmark(25);
 
   //ds allocate a qt UI server in the main scope (required)
   QApplication* ui_server = new QApplication(argc, argv);

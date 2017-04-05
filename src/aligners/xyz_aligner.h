@@ -1,5 +1,5 @@
 #pragma once
-#include "relocalization/correspondence_collection.h"
+#include "../relocalization/closure.h"
 #include "base_aligner.h"
 
 namespace proslam {
@@ -17,7 +17,7 @@ namespace proslam {
     public:
 
       //ds initialize aligner with minimal entity
-      void init(CorrespondenceCollection* context_, const TransformMatrix3D& current_to_reference_ = TransformMatrix3D::Identity());
+      void init(Closure* context_, const TransformMatrix3D& current_to_reference_ = TransformMatrix3D::Identity());
 
       //ds linearize the system: to be called inside oneRound
       void linearize(const bool& ignore_outliers_);
@@ -39,7 +39,7 @@ namespace proslam {
     protected:
 
       //ds context
-      CorrespondenceCollection* _context = 0;
+      Closure* _context = 0;
 
       //ds objective
       TransformMatrix3D _current_to_reference = TransformMatrix3D::Identity();

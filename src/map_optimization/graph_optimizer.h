@@ -77,6 +77,7 @@ namespace proslam {
       edge_closure->setVertex(1, vertex_keyframe_from);
       edge_closure->setVertex(0, vertex_keyframe_to);
       edge_closure->setMeasurement(transform_query_to_reference_.cast<double>());
+      information_.block<3,3>(0,0) *= 1e-4;
       edge_closure->setInformation(information_);
       return edge_closure;
     }

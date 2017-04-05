@@ -42,7 +42,7 @@ namespace proslam {
     const real relative_delta = (_coordinates-coordinates_in_world_).norm()/depth_meters_;
 
     //ds check if inlier measurement
-    if (relative_delta < _maximum_acceptable_relative_displacement || _number_of_updates < 2) {
+    if (relative_delta < 0.5 || _number_of_updates < 2) {
 
       //ds current weight
       const real weight_new_measurement = 1/depth_meters_;

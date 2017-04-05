@@ -4,22 +4,22 @@
 namespace proslam {
 
   //ds this class is a container for all correspondence objects between 2 local maps (produced by the relocalization module)
-  class CorrespondenceCollection {
+  class Closure {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds object handling
   public:
 
     //ds ctor
-    CorrespondenceCollection(const LocalMap* local_map_query_,
-                             const LocalMap* local_map_reference_,
-                             const Count& absolute_number_of_matches_,
-                             const real& relative_number_of_matches_,
-                             const Correspondence::MatchMap& matches_,
-                             const CorrespondencePointerVector& correspondences_);
+    Closure(const LocalMap* local_map_query_,
+            const LocalMap* local_map_reference_,
+            const Count& absolute_number_of_matches_,
+            const real& relative_number_of_matches_,
+            const Correspondence::MatchMap& matches_,
+            const CorrespondencePointerVector& correspondences_);
 
     //ds dtor
-    ~CorrespondenceCollection();
+    ~Closure();
 
   //ds attributes
   public:
@@ -39,7 +39,5 @@ namespace proslam {
     bool is_valid                  = false;
   };
 
-  typedef std::vector<CorrespondenceCollection*> CorrespondenceCollectionPointerVector;
-  typedef std::map<const Identifier, CorrespondenceCollection*> CorrespondenceMap;
-  typedef std::pair<const Identifier, CorrespondenceCollection*> CorrespondenceMapElement;
+  typedef std::vector<Closure*> ClosurePointerVector;
 }

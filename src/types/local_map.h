@@ -14,11 +14,14 @@ namespace proslam {
       struct Closure {
       EIGEN_MAKE_ALIGNED_OPERATOR_NEW
         Closure(const LocalMap* local_map_,
-                const TransformMatrix3D& relation_): local_map(local_map_),
-                                                     relation(relation_) {}
+                const TransformMatrix3D& relation_,
+                const real& omega_ = 1): local_map(local_map_),
+                                         relation(relation_),
+                                         omega(omega_){}
 
         const LocalMap* local_map;
         const TransformMatrix3D relation;
+        const real omega;
       };
       typedef std::vector<Closure> ClosureVector;
 
@@ -45,7 +48,7 @@ namespace proslam {
     const Landmark::StatePointerVector& landmarks() const {return _landmarks;}
 
     //ds adds a loop closure constraint between this local map and a reference map
-    void add(const LocalMap* local_map_reference_, const TransformMatrix3D& transform_query_to_reference_) {_closures.push_back(Closure(local_map_reference_, transform_query_to_reference_));}
+    void add(const LocalMap* local_map_reference_, const TransformMatrix3D& transform_query_to_reference_, const real& omega_ = 1) {_closures.push_back(Closure(local_map_reference_, transform_query_to_reference_, omega_));}
 
     //ds returns all active loop closures for this local map
     const ClosureVector& closures() const {return _closures;}
