@@ -1,4 +1,5 @@
 //ds THIS CODE WAS CREATED BASED ON: http://kitti.is.tue.mpg.de/kitti/devkit_odometry.zip
+//ds minimally modified to avoid C++11 warnings and provided a brief result dump to stdout
 
 #include <limits>
 #include <fstream>
@@ -52,7 +53,7 @@ vector<proslam::Matrix4> loadPoses(string file_name) {
 vector<float> trajectoryDistances (vector<proslam::Matrix4> &poses) {
   vector<float> dist;
   dist.push_back(0);
-  for (int32_t i=1; i<poses.size(); i++) {
+  for (std::size_t i=1; i<poses.size(); i++) {
     proslam::Matrix4 P1 = poses[i-1];
     proslam::Matrix4 P2 = poses[i];
     float dx = P1(0,3)-P2(0,3);
@@ -64,7 +65,7 @@ vector<float> trajectoryDistances (vector<proslam::Matrix4> &poses) {
 }
 
 int32_t lastFrameFromSegmentLength(vector<float> &dist,int32_t first_frame,float len) {
-  for (int32_t i=first_frame; i<dist.size(); i++)
+  for (std::size_t i=first_frame; i<dist.size(); i++)
     if (dist[i]>dist[first_frame]+len)
       return i;
   return -1;
@@ -97,7 +98,7 @@ vector<errors> calcSequenceErrors (vector<proslam::Matrix4> &poses_gt,vector<pro
   vector<float> dist = trajectoryDistances(poses_gt);
 
   // for all start positions do
-  for (int32_t first_frame=0; first_frame<poses_gt.size(); first_frame+=step_size) {
+  for (std::size_t first_frame=0; first_frame<poses_gt.size(); first_frame+=step_size) {
 
     // for all segment lengths do
     for (int32_t i=0; i<num_lengths; i++) {
@@ -155,7 +156,7 @@ void savePathPlot (vector<proslam::Matrix4> &poses_gt,vector<proslam::Matrix4> &
   FILE *fp = fopen(file_name.c_str(),"w");
 
   // save x/z coordinates of all frames to file
-  for (int32_t i=0; i<poses_gt.size(); i+=step_size)
+  for (std::size_t i=0; i<poses_gt.size(); i+=step_size)
     fprintf(fp,"%f %f %f %f\n",poses_gt[i](0,3),poses_gt[i](2,3),
                                poses_result[i](0,3),poses_result[i](2,3));
 
@@ -198,13 +199,16 @@ vector<int32_t> computeRoi (vector<proslam::Matrix4> &poses_gt,vector<proslam::M
   return roi;
 }
 
-void plotPathPlot (string dir,vector<int32_t> &roi,int32_t idx) {
+int32_t plotPathPlot (string dir,vector<int32_t> &roi,int32_t idx) {
 
   // gnuplot file name
   char command[1024];
   char file_name[256];
   sprintf(file_name,"%02d.gp",idx);
   string full_name = dir + "/" + file_name;
+
+  //ds system calls
+  int32_t result = 0;
 
   // create png + eps
   for (int32_t i=0; i<2; i++) {
@@ -235,16 +239,17 @@ void plotPathPlot (string dir,vector<int32_t> &roi,int32_t idx) {
 
     // run gnuplot => create png + eps
     sprintf(command,"cd %s; gnuplot %s",dir.c_str(),file_name);
-    system(command);
+    result = system(command);
   }
 
   // create pdf and crop
   sprintf(command,"cd %s; ps2pdf %02d.eps %02d_large.pdf",dir.c_str(),idx,idx);
-  system(command);
+  result = system(command);
   sprintf(command,"cd %s; pdfcrop %02d_large.pdf %02d.pdf",dir.c_str(),idx,idx);
-  system(command);
+  result = system(command);
   sprintf(command,"cd %s; rm %02d_large.pdf",dir.c_str(),idx);
-  system(command);
+  result = system(command);
+  return result;
 }
 
 void saveErrorPlots(vector<errors> &seq_err,string plot_error_dir,const char* prefix) {
@@ -290,11 +295,11 @@ void saveErrorPlots(vector<errors> &seq_err,string plot_error_dir,const char* pr
       ++number_of_lengths;
 
       //ds info
-      std::printf("length: %f error rotation (deg/100m): %9.6f error translation (%): %9.6f\n", lengths[i], r_err/num*(180/M_PI)*100, t_err/num*100);
+      std::printf("length: %f error rotation (deg/100m): %9.6f error translation (%%): %9.6f\n", lengths[i], r_err/num*(180/M_PI)*100, t_err/num*100);
     }
   }
   std::cerr << "---------------------------- ---------------- ----------------------------" << std::endl;
-  std::printf("average error rotation (deg/100m): %9.6f error translation (%): %9.6f\n", total_error_rotation/number_of_lengths, total_error_translation/number_of_lengths);
+  std::printf("average error rotation (deg/100m): %9.6f error translation (%%): %9.6f\n", total_error_rotation/number_of_lengths, total_error_translation/number_of_lengths);
   std::cerr << "---------------------------- ---------------- ----------------------------" << std::endl;
 
   // for each driving speed do (in m/s)
@@ -327,9 +332,12 @@ void saveErrorPlots(vector<errors> &seq_err,string plot_error_dir,const char* pr
   fclose(fp_rs);
 }
 
-void plotErrorPlots (string dir,const char* prefix) {
+int32_t plotErrorPlots (string dir,const char* prefix) {
 
   char command[1024];
+
+  //ds system calls
+  int32_t result = 0;
 
   // for all four error plots do
   for (int32_t i=0; i<4; i++) {
@@ -390,17 +398,19 @@ void plotErrorPlots (string dir,const char* prefix) {
 
       // run gnuplot => create png + eps
       sprintf(command,"cd %s; gnuplot %s",dir.c_str(),file_name);
-      system(command);
+      result = system(command);
     }
 
     // create pdf and crop
     sprintf(command,"cd %s; ps2pdf %s_%s.eps %s_%s_large.pdf",dir.c_str(),prefix,suffix,prefix,suffix);
-    system(command);
+    result = system(command);
     sprintf(command,"cd %s; pdfcrop %s_%s_large.pdf %s_%s.pdf",dir.c_str(),prefix,suffix,prefix,suffix);
-    system(command);
+    result = system(command);
     sprintf(command,"cd %s; rm %s_%s_large.pdf",dir.c_str(),prefix,suffix);
-    system(command);
+    result = system(command);
   }
+
+  return result;
 }
 
 void saveStats (vector<errors> err,string dir) {
@@ -433,11 +443,15 @@ bool eval (const std::string& file_trajectory_test_, const std::string& file_tra
   string plot_path_dir  = result_dir + "/plot_path";
   string plot_error_dir = result_dir + "/plot_error";
 
+  int32_t result = 0;
+
   // create output directories
-  system(("mkdir " + result_dir).c_str());
-  system(("mkdir " + error_dir).c_str());
-  system(("mkdir " + plot_path_dir).c_str());
-  system(("mkdir " + plot_error_dir).c_str());
+  result = system(("mkdir " + result_dir).c_str());
+  result = system(("mkdir " + error_dir).c_str());
+  result = system(("mkdir " + plot_path_dir).c_str());
+  result = system(("mkdir " + plot_error_dir).c_str());
+
+  std::cerr << result << std::endl;
 
   // read ground truth and result poses
   vector<proslam::Matrix4> poses_gt     = loadPoses(file_trajectory_ground_truth_);
@@ -447,7 +461,7 @@ bool eval (const std::string& file_trajectory_test_, const std::string& file_tra
   const uint32_t sequence_number = std::stoi(file_sequence_.substr(0, 2));
 
   // plot status
-  printf("Processing: %s (sequence: %u), poses: %d/%d\n",file_sequence_.c_str(),sequence_number,poses_result.size(),poses_gt.size());
+  printf("Processing: %s (sequence: %i), poses: %lu/%lu\n",file_sequence_.c_str(),sequence_number,poses_result.size(),poses_gt.size());
 
   // check for errors
   if (poses_gt.size()==0 || poses_result.size()!=poses_gt.size()) {

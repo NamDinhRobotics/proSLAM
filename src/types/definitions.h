@@ -50,6 +50,7 @@ namespace proslam{
   typedef Eigen::Matrix<real, 3, 4> ProjectionMatrix;
   typedef Eigen::Transform<real, 3, Eigen::Isometry> TransformMatrix3D;
   typedef Eigen::Matrix<real, 6, 1> TransformVector3D;
+  typedef Eigen::Quaternion<real> Quaternion;
   typedef uint64_t Identifier;
   typedef uint64_t Index;
   typedef uint64_t Count;

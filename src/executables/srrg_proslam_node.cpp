@@ -4,6 +4,7 @@
 #include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/CameraInfo.h>
+#include <nav_msgs/Odometry.h>
 
 #include "parameter_server.h"
 #include "slam_assembly.h"
@@ -13,12 +14,11 @@ proslam::Camera* camera_left  = 0;
 proslam::Camera* camera_right = 0;
 
 //ds image handling globals
-cv::Mat undistort_rectify_maps_left[2];
-cv::Mat undistort_rectify_maps_right[2];
 std::pair<double, cv::Mat> image_left;
 std::pair<double, cv::Mat> image_right;
 bool is_set_image_left  = false;
 bool is_set_image_right = false;
+proslam::TransformMatrix3D ground_truth(proslam::TransformMatrix3D::Identity());
 
 //ds ros synchronization
 void callbackCameraInfoLeft(const sensor_msgs::CameraInfoConstPtr& message_) {
@@ -69,13 +69,11 @@ void callbackImageLeft(const sensor_msgs::ImageConstPtr& message_) {
     //ds obtain cv image pointer
     cv_bridge::CvImagePtr image_pointer = cv_bridge::toCvCopy(message_, sensor_msgs::image_encodings::MONO8);
 
-    //ds rectify image
-    cv::remap(image_pointer->image, image_left.second, undistort_rectify_maps_left[0], undistort_rectify_maps_left[1], cv::INTER_LINEAR);
-
-    //ds set timestmap
+    //ds set timestamp
     image_left.first = image_pointer->header.stamp.toSec();
 
     //ds set image
+    image_left.second = image_pointer->image;
     is_set_image_left = true;
   }
   catch (cv_bridge::Exception& exception_) {
@@ -89,13 +87,11 @@ void callbackImageRight(const sensor_msgs::ImageConstPtr& message_) {
     //ds obtain cv image pointer
     cv_bridge::CvImagePtr image_pointer = cv_bridge::toCvCopy(message_, sensor_msgs::image_encodings::MONO8);
 
-    //ds rectify image
-    cv::remap(image_pointer->image, image_right.second, undistort_rectify_maps_right[0], undistort_rectify_maps_right[1], cv::INTER_LINEAR);
-
-    //ds set timestmap
+    //ds set timestamp
     image_right.first = image_pointer->header.stamp.toSec();
 
     //ds set image
+    image_right.second = image_pointer->image;
     is_set_image_right = true;
   }
   catch (cv_bridge::Exception& exception_) {
@@ -105,8 +101,18 @@ void callbackImageRight(const sensor_msgs::ImageConstPtr& message_) {
 }
 
 //ds ground truth sources
-void callbackGroundTruth() {
+void callbackGroundTruth(const nav_msgs::OdometryConstPtr& message_) {
 
+  //ds update ground truth: translation
+  ground_truth.translation().x() = message_->pose.pose.position.x;
+  ground_truth.translation().y() = message_->pose.pose.position.y;
+  ground_truth.translation().z() = message_->pose.pose.position.z;
+
+  //ds update ground truth: orientation
+  ground_truth.linear() = proslam::Quaternion(message_->pose.pose.orientation.w,
+                                              message_->pose.pose.orientation.x,
+                                              message_->pose.pose.orientation.y,
+                                              message_->pose.pose.orientation.z).toRotationMatrix();
 }
 
 //ds don't allow any windoof compilation attempt!
@@ -120,6 +126,16 @@ int32_t main(int32_t argc, char ** argv) {
 
   //ds obtain configuration
   proslam::ParameterServer::parseParametersFromCommandLine(argc, argv);
+
+  //ds check camera info topics - required for the node
+  if (proslam::ParameterServer::topicCameraInfoLeft().length() == 0) {
+    std::cerr << "ERROR: empty value entered for parameter: -topic-camera-info-left (-cl) (enter -h for help)" << std::endl;
+    exit(0);
+  }
+  if (proslam::ParameterServer::topicCameraInfoRight().length() == 0) {
+    std::cerr << "ERROR: empty value entered for parameter: -topic-camera-info-right (-cr) (enter -h for help)" << std::endl;
+    exit(0);
+  }
 
   //ds log configuration
   proslam::ParameterServer::printParameters();
@@ -158,6 +174,10 @@ int32_t main(int32_t argc, char ** argv) {
   std::cerr << "main|loaded cameras" << std::endl;
   std::cerr << "main|camera left  - resolution: " << camera_left->imageCols() << " x " << camera_left->imageRows() << std::endl;
   std::cerr << "main|camera right - resolution: " << camera_right->imageCols() << " x " << camera_right->imageRows() << std::endl;
+
+  //ds undistortion/rectification maps
+  cv::Mat undistort_rectify_maps_left[2];
+  cv::Mat undistort_rectify_maps_right[2];
 
   //ds compute undistorted and rectified mappings
   cv::initUndistortRectifyMap(srrg_core::toCv(camera_left->cameraMatrix()),
@@ -202,15 +222,25 @@ int32_t main(int32_t argc, char ** argv) {
 
   //ds initialize gui
   slam_system.initializeGUI(ui_server);
+  slam_system.viewerInputImages()->switchMode();
 
   //ds subscribe to camera image topics
-  ros::Subscriber subscriber_camera_image_left  = node.subscribe(proslam::ParameterServer::topicCameraImageLeft(), 1, callbackImageLeft);
-  ros::Subscriber subscriber_camera_image_right = node.subscribe(proslam::ParameterServer::topicCameraImageRight(), 1, callbackImageRight);
+  ros::Subscriber subscriber_camera_image_left  = node.subscribe(proslam::ParameterServer::topicImageLeft(), 1, callbackImageLeft);
+  ros::Subscriber subscriber_camera_image_right = node.subscribe(proslam::ParameterServer::topicImageRight(), 1, callbackImageRight);
+
+  //ds subscrube to ground truth topic if available
+  ros::Subscriber subscriber_ground_truth = node.subscribe("/odom", 1, callbackGroundTruth);
+
+  //ds ground truth transform to robot (current is for the QUT dataset)
+  proslam::TransformMatrix3D orientation_correction(proslam::TransformMatrix3D::Identity());
+  orientation_correction.matrix() << 0, -1, 0, 0,
+                                     0, 0, -1, 0,
+                                     1, 0, 0, 0,
+                                     0, 0, 0, 1;
 
   //ds start processing loop
   std::cerr << "main|starting processing loop" << std::endl;
-  bool is_running = true;
-  while (ros::ok() && is_running) {
+  while (ros::ok() && slam_system.isGUIRunning()) {
 
     //ds trigger callbacks
     ros::spinOnce();
@@ -218,7 +248,13 @@ int32_t main(int32_t argc, char ** argv) {
     //ds if we got a valid stereo image pair - brutal without buffers
     if (is_set_image_left && is_set_image_right) {
 
-      //ds preprocess the images if desired
+      //ds preprocess the images if desired: rectification
+      if (proslam::ParameterServer::optionRectifyAndUndistort()) {
+        cv::remap(image_left.second, image_left.second, undistort_rectify_maps_left[0], undistort_rectify_maps_left[1], cv::INTER_LINEAR);
+        cv::remap(image_right.second, image_right.second, undistort_rectify_maps_right[0], undistort_rectify_maps_right[1], cv::INTER_LINEAR);
+      }
+
+      //ds preprocess the images if desired: histogram equalization
       if (proslam::ParameterServer::optionEqualizeHistogram()) {
         cv::equalizeHist(image_left.second, image_left.second);
         cv::equalizeHist(image_right.second, image_right.second);
@@ -233,7 +269,7 @@ int32_t main(int32_t argc, char ** argv) {
       slam_system.process(image_left.second, image_right.second);
 
       //ds add ground truth if available
-      slam_system.addGroundTruthMeasurement(proslam::TransformMatrix3D::Identity());
+      slam_system.addGroundTruthMeasurement(orientation_correction*ground_truth);
 
       //ds update ui
       slam_system.updateGUI();
@@ -251,5 +287,5 @@ int32_t main(int32_t argc, char ** argv) {
   slam_system.worldMap()->writeTrajectory("trajectory.txt");
 
   //ds exit in GUI
-  return slam_system.closeGUI();
+  return slam_system.closeGUI(ros::ok());
 }

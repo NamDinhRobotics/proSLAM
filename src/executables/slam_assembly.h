@@ -41,7 +41,7 @@ namespace proslam {
     void updateGUI();
 
     //ds clean gui components
-    int32_t closeGUI();
+    int32_t closeGUI(const bool& let_user_close_ = true);
 
     //ds playback txt_io message file
     void playbackMessageFile();
@@ -62,6 +62,8 @@ namespace proslam {
     GraphOptimizer* optimizer() {return _optimizer;}
     Relocalizer* relocalizer() {return _relocalizer;}
     Tracker* tracker() {return _tracker;}
+    ViewerInputImages* viewerInputImages() {return _viewer_input_images;}
+    const bool& isGUIRunning() const {return _is_gui_running;}
 
   //ds SLAM modules
   protected:
@@ -85,7 +87,7 @@ namespace proslam {
     QApplication* _ui_server = 0;
 
     //ds raw image input processing viewer
-    ViewerInputImages* _tracker_viewer = 0;
+    ViewerInputImages* _viewer_input_images = 0;
 
     //ds 3D output viewers
     ViewerOutputMap* _context_viewer_bird = 0;
@@ -104,7 +106,7 @@ namespace proslam {
     CameraMap _cameras_by_topic;
 
     //ds false if termination was requested
-    bool _running = true;
+    bool _is_gui_running = true;
 
   //ds informative only
   protected:

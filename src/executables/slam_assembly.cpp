@@ -11,7 +11,7 @@ namespace proslam {
                                 _relocalizer(new Relocalizer()),
                                 _tracker(0),
                                 _ui_server(0),
-                                _tracker_viewer(0),
+                                _viewer_input_images(0),
                                 _context_viewer_bird(0),
                                 _context_viewer_top(0) {
     _synchronizer.reset();
@@ -31,7 +31,7 @@ namespace proslam {
     }
 
     //ds free viewers if set
-    if (_tracker_viewer) delete _tracker_viewer;
+    if (_viewer_input_images) delete _viewer_input_images;
     if (_context_viewer_bird) delete _context_viewer_bird;
     if (_context_viewer_top) delete _context_viewer_top;
     if (_ui_server) delete _ui_server;
@@ -61,8 +61,8 @@ namespace proslam {
 
     //ds configure message synchronizer
     std::vector<std::string> camera_topics_synchronized(0);
-    camera_topics_synchronized.push_back(ParameterServer::topicCameraImageLeft());
-    camera_topics_synchronized.push_back(ParameterServer::topicCameraImageRight());
+    camera_topics_synchronized.push_back(ParameterServer::topicImageLeft());
+    camera_topics_synchronized.push_back(ParameterServer::topicImageRight());
     _synchronizer.setTimeInterval(0.001);
     _synchronizer.setTopics(camera_topics_synchronized);
     _cameras_by_topic.clear();
@@ -75,7 +75,7 @@ namespace proslam {
       sensor_msg->untaint();
 
       //ds check for the two set topics
-      if (sensor_msg->topic() == ParameterServer::topicCameraImageLeft()) {
+      if (sensor_msg->topic() == ParameterServer::topicImageLeft()) {
         srrg_core::PinholeImageMessage* message_image_left  = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_msg);
 
         //ds allocate a new camera
@@ -84,7 +84,7 @@ namespace proslam {
                                          message_image_left->cameraMatrix().cast<real>(),
                                          message_image_left->offset().cast<real>());
         _cameras_by_topic.insert(std::make_pair(message_image_left->topic(), camera_left));
-      } else if (sensor_msg->topic() == ParameterServer::topicCameraImageRight()) {
+      } else if (sensor_msg->topic() == ParameterServer::topicImageRight()) {
         srrg_core::PinholeImageMessage* message_image_right  = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_msg);
 
         //ds allocate a new camera
@@ -113,7 +113,7 @@ namespace proslam {
     if (!_tracker) {
 
       //ds allocate the tracker module with the given cameras
-      _tracker = new Tracker(_cameras_by_topic.at(ParameterServer::topicCameraImageLeft()), _cameras_by_topic.at(ParameterServer::topicCameraImageRight()));
+      _tracker = new Tracker(_cameras_by_topic.at(ParameterServer::topicImageLeft()), _cameras_by_topic.at(ParameterServer::topicImageRight()));
     }
 
     std::cerr << "loaded cameras: " << _cameras_by_topic.size() << std::endl;
@@ -137,13 +137,13 @@ namespace proslam {
   //ds initializes gui components
   void SLAMAssembly::initializeGUI(QApplication* ui_server_) {
     if (ParameterServer::optionUseGUI() && _world_map) {
-      _ui_server      = ui_server_;
-      _tracker_viewer = new ViewerInputImages(_world_map);
+      _ui_server = ui_server_;
+      _viewer_input_images = new ViewerInputImages(_world_map);
       _context_viewer_bird = new ViewerOutputMap(_world_map, 0.1, "output: map (bird view)");
       _context_viewer_bird->show();
 
       //ds orientation flip for proper camera following
-      TransformMatrix3D orientation_correction;
+      TransformMatrix3D orientation_correction(TransformMatrix3D::Identity());
       orientation_correction.matrix() << 0, -1, 0, 0,
                                          -1, 0, 0, 0,
                                          0, 0, -1, 0,
@@ -173,10 +173,10 @@ namespace proslam {
         _context_viewer_bird->setIsOpen(false);
         if (_context_viewer_top) _context_viewer_top->setIsOpen(false);
       }
-      _tracker_viewer->initDrawing();
-      _tracker_viewer->drawFeatureTracking();
-      _tracker_viewer->drawFeatures();
-      _running = _context_viewer_bird->isVisible() && _tracker_viewer->updateGUI();
+      _viewer_input_images->initDrawing();
+      _viewer_input_images->drawFeatureTracking();
+      _viewer_input_images->drawFeatures();
+      _is_gui_running = _context_viewer_bird->isVisible() && _viewer_input_images->updateGUI();
       _context_viewer_bird->updateGL();
       if (_context_viewer_top) _context_viewer_top->updateGL();
       _ui_server->processEvents();
@@ -184,10 +184,10 @@ namespace proslam {
   }
 
   //ds clean gui components
-  int32_t SLAMAssembly::closeGUI() {
+  int32_t SLAMAssembly::closeGUI(const bool& let_user_close_) {
 
     //ds if no manual termination was requested
-    if (_running) {
+    if (_is_gui_running && let_user_close_) {
 
       //ds exit in viewer if available
       if (ParameterServer::optionUseGUI() && _context_viewer_bird->isVisible()) {
@@ -217,15 +217,15 @@ namespace proslam {
 
     //ds start playback
     srrg_core::BaseMessage* base_message = 0;
-    while ((base_message = _sensor_message_reader.readMessage()) && _running) {
+    while ((base_message = _sensor_message_reader.readMessage()) && _is_gui_running) {
       srrg_core::BaseSensorMessage* sensor_msg = dynamic_cast<srrg_core::BaseSensorMessage*>(base_message);
       assert(sensor_msg != 0);
       sensor_msg->untaint();
 
       //ds add to synchronizer
-      if (sensor_msg->topic() == ParameterServer::topicCameraImageLeft()) {
+      if (sensor_msg->topic() == ParameterServer::topicImageLeft()) {
         _synchronizer.putMessage(sensor_msg);
-      } else if (sensor_msg->topic() == ParameterServer::topicCameraImageRight()) {
+      } else if (sensor_msg->topic() == ParameterServer::topicImageRight()) {
         _synchronizer.putMessage(sensor_msg);
       } else {
         delete sensor_msg;
@@ -273,17 +273,26 @@ namespace proslam {
           //ds compute durations
           const double total_duration_seconds_current = srrg_core::getTime()-time_start_seconds;
 
-          //ds runtime info
-          std::printf("processed frames: %5lu|landmarks: %6lu|local maps: %4lu (%3.2f)|closures: %3lu (%3.2f)|current fps: %5.2f (%3lu/%3.2fs)\n",
-                      number_of_processed_frames_total,
-                      _world_map->landmarks().size(),
-                      _world_map->localMaps().size(),
-                      _world_map->localMaps().size()/static_cast<real>(number_of_processed_frames_total),
-                      _world_map->numberOfClosures(),
-                      _world_map->numberOfClosures()/static_cast<real>(_world_map->localMaps().size()),
-                      number_of_processed_frames_current/total_duration_seconds_current,
-                      number_of_processed_frames_current,
-                      total_duration_seconds_current);
+          //ds runtime info - depending on set modes
+          if (ParameterServer::optionUseRelocalization()) {
+            std::printf("processed frames: %5lu|landmarks: %6lu|local maps: %4lu (%3.2f)|closures: %3lu (%3.2f)|current fps: %5.2f (%3lu/%3.2fs)\n",
+                        number_of_processed_frames_total,
+                        _world_map->landmarks().size(),
+                        _world_map->localMaps().size(),
+                        _world_map->localMaps().size()/static_cast<real>(number_of_processed_frames_total),
+                        _world_map->numberOfClosures(),
+                        _world_map->numberOfClosures()/static_cast<real>(_world_map->localMaps().size()),
+                        number_of_processed_frames_current/total_duration_seconds_current,
+                        number_of_processed_frames_current,
+                        total_duration_seconds_current);
+          } else {
+            std::printf("processed frames: %5lu|landmarks: %6lu|current fps: %5.2f (%3lu/%3.2fs)\n",
+                        number_of_processed_frames_total,
+                        _world_map->landmarks().size(),
+                        number_of_processed_frames_current/total_duration_seconds_current,
+                        number_of_processed_frames_current,
+                        total_duration_seconds_current);
+          }
 
           //ds reset stats
           time_start_seconds = srrg_core::getTime();
