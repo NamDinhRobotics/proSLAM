@@ -108,14 +108,15 @@ namespace proslam {
 
               //ds update tracker
               current_frame->setRobotToWorld(_pose_optimizer->robotToWorld());
-              std::cerr << "Tracker::addImage|WARNING: using posit on frame points (experimental) inliers: " << _pose_optimizer->numberOfInliers()
-                        << " outliers: " << _pose_optimizer->numberOfOutliers() << " average error: " << _pose_optimizer->totalError()/_pose_optimizer->numberOfInliers() <<  std::endl;
             } else {
 
               //ds keep previous solution
               current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
               _motion_previous_to_current = TransformMatrix3D::Identity();
             }
+
+            std::cerr << "Tracker::addImage|WARNING: using posit on frame points (experimental) inliers: " << _pose_optimizer->numberOfInliers()
+                      << " outliers: " << _pose_optimizer->numberOfOutliers() << " average error: " << _pose_optimizer->totalError()/_pose_optimizer->numberOfInliers() <<  std::endl;
 
             //ds update previous
             context_->setRobotToWorld(current_frame->robotToWorld());

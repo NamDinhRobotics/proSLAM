@@ -19,6 +19,7 @@ namespace proslam {
                                          "-show-top (-st):                         enable top map viewer\n"
                                          "-drop-framepoints (-df):                 deallocation of past framepoints at runtime (reduces memory demand)\n"
                                          "-equalize-histogram (-eh):               equalize stereo image histogram before processing\n"
+                                         "-rectify-and-undistort (-ru):            rectifies and undistorts input images based on camera info\n"
                                          "-------------------------------------------------------------------------\n";
 
   //ds files/topics

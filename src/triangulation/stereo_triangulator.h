@@ -93,6 +93,8 @@ namespace proslam {
       void setDetectorThresholdMaximum(const int32_t& detector_threshold_maximum_) {_detector_threshold_maximum = detector_threshold_maximum_;}
       void setDetectorThresholdMinimum(const int32_t& detector_threshold_minimum_) {_detector_threshold_minimum = detector_threshold_minimum_;}
       const int32_t matchingDistanceTrackingThreshold() const {return _matching_distance_tracking_threshold;}
+      void setMatchingDistanceTrackingThresholdMaximum(const real& matching_distance_tracking_threshold_maximum_) {_matching_distance_tracking_threshold_maximum = matching_distance_tracking_threshold_maximum_;}
+      void setMatchingDistanceTrackingThresholdMinimum(const real& matching_distance_tracking_threshold_minimum_) {_matching_distance_tracking_threshold_minimum = matching_distance_tracking_threshold_minimum_;}
       void setMaximumMatchingDistanceTriangulation(const int32_t& maximum_matching_distance_triangulation_) {_maximum_matching_distance_triangulation = maximum_matching_distance_triangulation_;}
       const Count numberOfAvailablePoints() const {return _number_of_available_points;}
 
@@ -113,9 +115,9 @@ namespace proslam {
       int32_t _detector_threshold_maximum = 50;
 
       //ds dynamic thresholds for descriptor matching
-      int32_t _matching_distance_tracking_threshold               = 50;
-      const int32_t _matching_distance_tracking_threshold_maximum = 50;
-      const int32_t _matching_distance_tracking_threshold_minimum = 25;
+      int32_t _matching_distance_tracking_threshold         = 50;
+      int32_t _matching_distance_tracking_threshold_maximum = 50;
+      int32_t _matching_distance_tracking_threshold_minimum = 25;
 
       //ds feature density regularization
       const Count _bin_size = 4;

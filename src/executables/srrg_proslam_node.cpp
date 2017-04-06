@@ -13,12 +13,12 @@
 proslam::Camera* camera_left  = 0;
 proslam::Camera* camera_right = 0;
 
-//ds image handling globals
-std::pair<double, cv::Mat> image_left;
-std::pair<double, cv::Mat> image_right;
-bool is_set_image_left  = false;
-bool is_set_image_right = false;
+//ds ground truth handle (set if available)
 proslam::TransformMatrix3D ground_truth(proslam::TransformMatrix3D::Identity());
+
+//ds image buffer handles
+std::vector<std::pair<double, cv::Mat>> image_queue_left;
+std::vector<std::pair<double, cv::Mat>> image_queue_right;
 
 //ds ros synchronization
 void callbackCameraInfoLeft(const sensor_msgs::CameraInfoConstPtr& message_) {
@@ -68,13 +68,7 @@ void callbackImageLeft(const sensor_msgs::ImageConstPtr& message_) {
 
     //ds obtain cv image pointer
     cv_bridge::CvImagePtr image_pointer = cv_bridge::toCvCopy(message_, sensor_msgs::image_encodings::MONO8);
-
-    //ds set timestamp
-    image_left.first = image_pointer->header.stamp.toSec();
-
-    //ds set image
-    image_left.second = image_pointer->image;
-    is_set_image_left = true;
+    image_queue_left.push_back(std::make_pair(image_pointer->header.stamp.toSec(), image_pointer->image));
   }
   catch (cv_bridge::Exception& exception_) {
     std::cerr << "callbackImageLeft|exception: " << exception_.what() << std::endl;
@@ -86,13 +80,7 @@ void callbackImageRight(const sensor_msgs::ImageConstPtr& message_) {
 
     //ds obtain cv image pointer
     cv_bridge::CvImagePtr image_pointer = cv_bridge::toCvCopy(message_, sensor_msgs::image_encodings::MONO8);
-
-    //ds set timestamp
-    image_right.first = image_pointer->header.stamp.toSec();
-
-    //ds set image
-    image_right.second = image_pointer->image;
-    is_set_image_right = true;
+    image_queue_right.push_back(std::make_pair(image_pointer->header.stamp.toSec(), image_pointer->image));
   }
   catch (cv_bridge::Exception& exception_) {
     std::cerr << "callbackImageRight|exception: " << exception_.what() << std::endl;
@@ -212,6 +200,9 @@ int32_t main(int32_t argc, char ** argv) {
   slam_system.tracker()->setPixelDistanceTrackingMaximum(50);
   slam_system.tracker()->aligner()->setMaximumErrorKernel(25);
   slam_system.tracker()->framepointGenerator()->setTargetNumberOfPoints(500);
+  slam_system.tracker()->framepointGenerator()->setMaximumMatchingDistanceTriangulation(50);
+  slam_system.tracker()->framepointGenerator()->setMatchingDistanceTrackingThresholdMaximum(50);
+  slam_system.tracker()->framepointGenerator()->setMatchingDistanceTrackingThresholdMinimum(50);
   slam_system.relocalizer()->aligner()->setMaximumErrorKernel(0.5);
   slam_system.relocalizer()->aligner()->setMinimumNumberOfInliers(25);
   slam_system.relocalizer()->aligner()->setMinimumInlierRatio(0.5);
@@ -222,11 +213,11 @@ int32_t main(int32_t argc, char ** argv) {
 
   //ds initialize gui
   slam_system.initializeGUI(ui_server);
-  slam_system.viewerInputImages()->switchMode();
+  if (slam_system.viewerInputImages()) slam_system.viewerInputImages()->switchMode();
 
   //ds subscribe to camera image topics
-  ros::Subscriber subscriber_camera_image_left  = node.subscribe(proslam::ParameterServer::topicImageLeft(), 1, callbackImageLeft);
-  ros::Subscriber subscriber_camera_image_right = node.subscribe(proslam::ParameterServer::topicImageRight(), 1, callbackImageRight);
+  ros::Subscriber subscriber_camera_image_left  = node.subscribe(proslam::ParameterServer::topicImageLeft(), 2, callbackImageLeft);
+  ros::Subscriber subscriber_camera_image_right = node.subscribe(proslam::ParameterServer::topicImageRight(), 2, callbackImageRight);
 
   //ds subscrube to ground truth topic if available
   ros::Subscriber subscriber_ground_truth = node.subscribe("/odom", 1, callbackGroundTruth);
@@ -238,6 +229,17 @@ int32_t main(int32_t argc, char ** argv) {
                                      1, 0, 0, 0,
                                      0, 0, 0, 1;
 
+  //ds loop control
+  proslam::Count number_of_frames_current_window        = 0;
+  double start_time_current_window_seconds              = srrg_core::getTime();
+  const double measurement_interval_seconds             = 5;
+  const proslam::real timestamp_delta_tolerance_seconds = 0;
+
+  //ds image synchronization
+  bool found_image_pair = false;
+  cv::Mat image_left;
+  cv::Mat image_right;
+
   //ds start processing loop
   std::cerr << "main|starting processing loop" << std::endl;
   while (ros::ok() && slam_system.isGUIRunning()) {
@@ -245,39 +247,66 @@ int32_t main(int32_t argc, char ** argv) {
     //ds trigger callbacks
     ros::spinOnce();
 
+    //ds reset search
+    found_image_pair = false;
+
+    //ds check for common, closest timestamp
+    for (std::pair<double, cv::Mat>& image_left_handle: image_queue_left) {
+      for (std::pair<double, cv::Mat>& image_right_handle: image_queue_right) {
+
+        //ds two timestamps match
+        if (std::fabs(image_left_handle.first-image_right_handle.first) <= timestamp_delta_tolerance_seconds) {
+
+          //ds set search result
+          found_image_pair = true;
+          image_left  = image_left_handle.second;
+          image_right = image_right_handle.second;
+          break;
+        }
+      }
+
+      //ds check if we can terminate
+      if (found_image_pair) {
+
+        //ds clear buffers and escape
+        image_queue_left.clear();
+        image_queue_right.clear();
+        break;
+      }
+    }
+
     //ds if we got a valid stereo image pair - brutal without buffers
-    if (is_set_image_left && is_set_image_right) {
+    if (found_image_pair) {
 
       //ds preprocess the images if desired: rectification
       if (proslam::ParameterServer::optionRectifyAndUndistort()) {
-        cv::remap(image_left.second, image_left.second, undistort_rectify_maps_left[0], undistort_rectify_maps_left[1], cv::INTER_LINEAR);
-        cv::remap(image_right.second, image_right.second, undistort_rectify_maps_right[0], undistort_rectify_maps_right[1], cv::INTER_LINEAR);
+        cv::remap(image_left, image_left, undistort_rectify_maps_left[0], undistort_rectify_maps_left[1], cv::INTER_LINEAR);
+        cv::remap(image_right, image_right, undistort_rectify_maps_right[0], undistort_rectify_maps_right[1], cv::INTER_LINEAR);
       }
 
       //ds preprocess the images if desired: histogram equalization
       if (proslam::ParameterServer::optionEqualizeHistogram()) {
-        cv::equalizeHist(image_left.second, image_left.second);
-        cv::equalizeHist(image_right.second, image_right.second);
-      }
-
-      //ds check large time delta (more than 100ms -> 10Hz)
-      if (std::fabs(image_left.first-image_right.first) > 0.1) {
-        std::cerr << "main|WARNING: received large timestamp delta between stereo images" << std::endl;
+        cv::equalizeHist(image_left, image_left);
+        cv::equalizeHist(image_right, image_right);
       }
 
       //ds process images
-      slam_system.process(image_left.second, image_right.second);
+      slam_system.process(image_left, image_right);
 
       //ds add ground truth if available
       slam_system.addGroundTruthMeasurement(orientation_correction*ground_truth);
-
-      //ds update ui
-      slam_system.updateGUI();
-
-      //ds reset images
-      is_set_image_left  = false;
-      is_set_image_right = false;
+      ++number_of_frames_current_window;
     }
+
+    //ds display stats after each interval
+    if (srrg_core::getTime()-start_time_current_window_seconds > measurement_interval_seconds) {
+      std::cerr << "processing speed (Hz): " << number_of_frames_current_window/measurement_interval_seconds << std::endl;
+      number_of_frames_current_window   = 0;
+      start_time_current_window_seconds = srrg_core::getTime();
+    }
+
+    //ds update ui
+    slam_system.updateGUI();
   }
 
   //ds print full report
