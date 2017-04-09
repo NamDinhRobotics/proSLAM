@@ -5,6 +5,9 @@
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <nav_msgs/Odometry.h>
+#include <message_filters/synchronizer.h>
+#include <message_filters/sync_policies/approximate_time.h>
+#include <message_filters/subscriber.h>
 
 #include "parameter_server.h"
 #include "slam_assembly.h"
@@ -16,9 +19,10 @@ proslam::Camera* camera_right = 0;
 //ds ground truth handle (set if available)
 proslam::TransformMatrix3D ground_truth(proslam::TransformMatrix3D::Identity());
 
-//ds image buffer handles
-std::vector<std::pair<double, cv::Mat>> image_queue_left;
-std::vector<std::pair<double, cv::Mat>> image_queue_right;
+//ds active image buffer handles
+cv::Mat image_left;
+cv::Mat image_right;
+bool found_image_pair = false;
 
 //ds ros synchronization
 void callbackCameraInfoLeft(const sensor_msgs::CameraInfoConstPtr& message_) {
@@ -62,30 +66,34 @@ void callbackCameraInfoRight(const sensor_msgs::CameraInfoConstPtr& message_) {
   }
 }
 
-//ds image handling
-void callbackImageLeft(const sensor_msgs::ImageConstPtr& message_) {
+//ds image retrieval
+void callbackStereoImage(const sensor_msgs::ImageConstPtr& image_left_, const sensor_msgs::ImageConstPtr& image_right_){
+  found_image_pair = false;
+
+  try {
+
+    //ds obtain cv image pointer for the left image and set it
+    cv_bridge::CvImagePtr image_pointer = cv_bridge::toCvCopy(image_left_, sensor_msgs::image_encodings::MONO8);
+    image_left = image_pointer->image;
+  }
+  catch (const cv_bridge::Exception& exception_) {
+    std::cerr << "callbackStereoImage|exception: " << exception_.what() << " (image left)" << std::endl;
+    return;
+  }
+
   try {
 
     //ds obtain cv image pointer
-    cv_bridge::CvImagePtr image_pointer = cv_bridge::toCvCopy(message_, sensor_msgs::image_encodings::MONO8);
-    image_queue_left.push_back(std::make_pair(image_pointer->header.stamp.toSec(), image_pointer->image));
+    cv_bridge::CvImagePtr image_pointer = cv_bridge::toCvCopy(image_right_, sensor_msgs::image_encodings::MONO8);
+    image_right = image_pointer->image;
   }
-  catch (cv_bridge::Exception& exception_) {
-    std::cerr << "callbackImageLeft|exception: " << exception_.what() << std::endl;
+  catch (const cv_bridge::Exception& exception_) {
+    std::cerr << "callbackStereoImage|exception: " << exception_.what() << " (image right)" << std::endl;
     return;
   }
-}
-void callbackImageRight(const sensor_msgs::ImageConstPtr& message_) {
-  try {
 
-    //ds obtain cv image pointer
-    cv_bridge::CvImagePtr image_pointer = cv_bridge::toCvCopy(message_, sensor_msgs::image_encodings::MONO8);
-    image_queue_right.push_back(std::make_pair(image_pointer->header.stamp.toSec(), image_pointer->image));
-  }
-  catch (cv_bridge::Exception& exception_) {
-    std::cerr << "callbackImageRight|exception: " << exception_.what() << std::endl;
-    return;
-  }
+  //ds enable access
+  found_image_pair = true;
 }
 
 //ds ground truth sources
@@ -203,10 +211,10 @@ int32_t main(int32_t argc, char ** argv) {
   slam_system.tracker()->framepointGenerator()->setMaximumMatchingDistanceTriangulation(50);
   slam_system.tracker()->framepointGenerator()->setMatchingDistanceTrackingThresholdMaximum(50);
   slam_system.tracker()->framepointGenerator()->setMatchingDistanceTrackingThresholdMinimum(50);
-  slam_system.relocalizer()->aligner()->setMaximumErrorKernel(0.5);
-  slam_system.relocalizer()->aligner()->setMinimumNumberOfInliers(25);
+  slam_system.relocalizer()->aligner()->setMaximumErrorKernel(0.05);
+  slam_system.relocalizer()->aligner()->setMinimumNumberOfInliers(50);
   slam_system.relocalizer()->aligner()->setMinimumInlierRatio(0.5);
-  slam_system.relocalizer()->setMinimumNumberOfMatchesPerLandmark(25);
+  slam_system.relocalizer()->setMinimumNumberOfMatchesPerLandmark(50);
 
   //ds allocate a qt UI server in the main scope (required)
   QApplication* ui_server = new QApplication(argc, argv);
@@ -215,12 +223,17 @@ int32_t main(int32_t argc, char ** argv) {
   slam_system.initializeGUI(ui_server);
   if (slam_system.viewerInputImages()) slam_system.viewerInputImages()->switchMode();
 
-  //ds subscribe to camera image topics
-  ros::Subscriber subscriber_camera_image_left  = node.subscribe(proslam::ParameterServer::topicImageLeft(), 2, callbackImageLeft);
-  ros::Subscriber subscriber_camera_image_right = node.subscribe(proslam::ParameterServer::topicImageRight(), 2, callbackImageRight);
+  //ds set up subscribers
+  message_filters::Subscriber<sensor_msgs::Image> subscriber_image_left(node, proslam::ParameterServer::topicImageLeft(), 5);
+  message_filters::Subscriber<sensor_msgs::Image> subscriber_image_right(node, proslam::ParameterServer::topicImageRight(), 5);
 
-  //ds subscrube to ground truth topic if available
-  ros::Subscriber subscriber_ground_truth = node.subscribe("/odom", 1, callbackGroundTruth);
+  //ds define policy and initialize synchronizer
+  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> StereoImagePolicy;
+  message_filters::Synchronizer<StereoImagePolicy> stereo_image_synchronizer(StereoImagePolicy(5), subscriber_image_left, subscriber_image_right);
+  stereo_image_synchronizer.registerCallback(boost::bind(&callbackStereoImage, _1, _2));
+
+//  //ds subscribe to ground truth topic if available
+//  ros::Subscriber subscriber_ground_truth = node.subscribe("/odom", 1, callbackGroundTruth);
 
   //ds ground truth transform to robot (current is for the QUT dataset)
   proslam::TransformMatrix3D orientation_correction(proslam::TransformMatrix3D::Identity());
@@ -230,15 +243,9 @@ int32_t main(int32_t argc, char ** argv) {
                                      0, 0, 0, 1;
 
   //ds loop control
-  proslam::Count number_of_frames_current_window        = 0;
-  double start_time_current_window_seconds              = srrg_core::getTime();
-  const double measurement_interval_seconds             = 5;
-  const proslam::real timestamp_delta_tolerance_seconds = 0;
-
-  //ds image synchronization
-  bool found_image_pair = false;
-  cv::Mat image_left;
-  cv::Mat image_right;
+  proslam::Count number_of_frames_current_window = 0;
+  double start_time_current_window_seconds       = srrg_core::getTime();
+  const double measurement_interval_seconds      = 5;
 
   //ds start processing loop
   std::cerr << "main|starting processing loop" << std::endl;
@@ -247,35 +254,7 @@ int32_t main(int32_t argc, char ** argv) {
     //ds trigger callbacks
     ros::spinOnce();
 
-    //ds reset search
-    found_image_pair = false;
-
-    //ds check for common, closest timestamp
-    for (std::pair<double, cv::Mat>& image_left_handle: image_queue_left) {
-      for (std::pair<double, cv::Mat>& image_right_handle: image_queue_right) {
-
-        //ds two timestamps match
-        if (std::fabs(image_left_handle.first-image_right_handle.first) <= timestamp_delta_tolerance_seconds) {
-
-          //ds set search result
-          found_image_pair = true;
-          image_left  = image_left_handle.second;
-          image_right = image_right_handle.second;
-          break;
-        }
-      }
-
-      //ds check if we can terminate
-      if (found_image_pair) {
-
-        //ds clear buffers and escape
-        image_queue_left.clear();
-        image_queue_right.clear();
-        break;
-      }
-    }
-
-    //ds if we got a valid stereo image pair - brutal without buffers
+    //ds if we got a valid stereo image pair (enabled only in callback)
     if (found_image_pair) {
 
       //ds preprocess the images if desired: rectification
@@ -296,11 +275,34 @@ int32_t main(int32_t argc, char ** argv) {
       //ds add ground truth if available
       slam_system.addGroundTruthMeasurement(orientation_correction*ground_truth);
       ++number_of_frames_current_window;
+      found_image_pair = false;
     }
 
     //ds display stats after each interval
-    if (srrg_core::getTime()-start_time_current_window_seconds > measurement_interval_seconds) {
-      std::cerr << "processing speed (Hz): " << number_of_frames_current_window/measurement_interval_seconds << std::endl;
+    const double total_duration_seconds_current = srrg_core::getTime()-start_time_current_window_seconds;
+    if (total_duration_seconds_current > measurement_interval_seconds) {
+
+      //ds runtime info - depending on set modes
+      if (proslam::ParameterServer::optionUseRelocalization()) {
+        std::printf("processed frames: %5lu|landmarks: %6lu|local maps: %4lu (%3.2f)|closures: %3lu (%3.2f)|current fps: %5.2f (%3lu/%3.2fs)\n",
+                    slam_system.worldMap()->frames().size(),
+                    slam_system.worldMap()->landmarks().size(),
+                    slam_system.worldMap()->localMaps().size(),
+                    slam_system.worldMap()->localMaps().size()/static_cast<proslam::real>(slam_system.worldMap()->frames().size()),
+                    slam_system.worldMap()->numberOfClosures(),
+                    slam_system.worldMap()->numberOfClosures()/static_cast<proslam::real>(slam_system.worldMap()->localMaps().size()),
+                    number_of_frames_current_window/total_duration_seconds_current,
+                    number_of_frames_current_window,
+                    total_duration_seconds_current);
+      } else {
+        std::printf("processed frames: %5lu|landmarks: %6lu|current fps: %5.2f (%3lu/%3.2fs)\n",
+                    slam_system.worldMap()->frames().size(),
+                    slam_system.worldMap()->landmarks().size(),
+                    number_of_frames_current_window/total_duration_seconds_current,
+                    number_of_frames_current_window,
+                    total_duration_seconds_current);
+      }
+
       number_of_frames_current_window   = 0;
       start_time_current_window_seconds = srrg_core::getTime();
     }

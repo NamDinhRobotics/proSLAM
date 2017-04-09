@@ -32,6 +32,7 @@ if("$ENV{ROS_DISTRO}" STREQUAL "kinetic" OR "$ENV{ROS_DISTRO}" STREQUAL "indigo"
     sensor_msgs
     cv_bridge
     nav_msgs
+    message_filters
   )
 else()
   find_package(catkin REQUIRED COMPONENTS
