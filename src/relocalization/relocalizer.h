@@ -9,21 +9,6 @@ namespace proslam {
   class Relocalizer {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  //ds wrappers
-  public:
-
-    //ds retrieves HBST matchables from a vector of appearances
-    static const HBSTNode::BinaryMatchableVector getMatchables(const Landmark::AppearancePointerVector& appearances_) {
-      assert(appearances_.size() > 0);
-      HBSTNode::BinaryMatchableVector matchables(appearances_.size());
-
-      //ds copy raw data
-      for (Index index_appearance = 0; index_appearance < appearances_.size(); ++index_appearance) {
-        matchables[index_appearance] = new HBSTMatchable(index_appearance, appearances_[index_appearance]->descriptor);
-      }
-      return matchables;
-    }
-
   //ds exported types
   public:
 
@@ -31,11 +16,9 @@ namespace proslam {
     struct Query {
       EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
       Query(const LocalMap* local_map_): local_map(local_map_),
-                                         appearances(local_map_->appearances()),
-                                         matchables(getMatchables(appearances)),
+                                         matchables(local_map_->appearances()),
                                          hbst_tree(new HBSTTree(local_map_->identifier(), matchables)) {}
       const LocalMap* local_map;
-      const Landmark::AppearancePointerVector appearances;
       const HBSTNode::BinaryMatchableVector matchables;
       const HBSTTree* hbst_tree;
     };

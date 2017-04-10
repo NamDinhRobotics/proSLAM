@@ -10,34 +10,17 @@ namespace proslam {
   //ds exported types
   public:
 
-    //ds inner forward declarations
-    struct State;
-
-    //ds container encapsulating the visual information of the appearance of a landmark in an image
-    struct Appearance {
-      Appearance(const State* landmark_state_,
-                 const cv::Mat& descriptor_cv_): landmark_state(landmark_state_),
-                                                 descriptor(getDescriptor(descriptor_cv_)) {}
-
-      const State* landmark_state;
-      const HBSTMatchable::BinaryDescriptor descriptor;
-    };
-    typedef std::vector<const Appearance*> AppearancePointerVector;
-
     //ds container describing the landmark at the time of local map construction
     struct State {
       State(Landmark* landmark_): landmark(landmark_) {
         appearances.clear();
       }
       ~State() {
-        for (const Appearance* appearance: appearances) {
-          delete appearance;
-        }
         appearances.clear();
       }
 
       Landmark* landmark;
-      AppearancePointerVector appearances;
+      HBSTNode::BinaryMatchableVector appearances;
       PointCoordinates robot_coordinates;
       const LocalMap* local_map = 0;
     };

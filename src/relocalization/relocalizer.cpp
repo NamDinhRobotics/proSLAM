@@ -96,28 +96,24 @@ namespace proslam {
       //ds loop over all matches
       for (const HBSTTree::Match match: matches_unfiltered) {
 
-        const Landmark::Appearance* appearance_query     = _query->appearances[match.identifier_query];
-        const Landmark::Appearance* appearance_reference = reference->appearances[match.identifier_reference];
-        const Identifier& query_landmark_identifier      = appearance_query->landmark_state->landmark->identifier();
+        //ds buffer landmark identifier
+        const Landmark::State* landmark_query       = reinterpret_cast<const Landmark::State*>(match.pointer_query);
+        const Landmark::State* landmark_reference   = reinterpret_cast<const Landmark::State*>(match.pointer_reference);
+        const Identifier& query_landmark_identifier = landmark_query->landmark->identifier();
 
         try{
 
           //ds add a new match to the given query point
-          matches_per_landmark.at(query_landmark_identifier).push_back(new Correspondence::Match(appearance_query->landmark_state,
-                                                                                                         appearance_reference->landmark_state,
-                                                                                                         match.distance));
+          matches_per_landmark.at(query_landmark_identifier).push_back(new Correspondence::Match(landmark_query, landmark_reference, match.distance));
         } catch(const std::out_of_range& /*exception*/) {
 
           //ds initialize the first match for the given query point
-          matches_per_landmark.insert(std::make_pair(query_landmark_identifier, Correspondence::MatchPointerVector(1, new Correspondence::Match(appearance_query->landmark_state,
-                                                                                                                                                        appearance_reference->landmark_state,
-                                                                                                                                                        match.distance))));
+          matches_per_landmark.insert(std::make_pair(query_landmark_identifier, Correspondence::MatchPointerVector(1, new Correspondence::Match(landmark_query, landmark_reference, match.distance))));
         }
       }
       assert(0 < absolute_number_of_matches);
-      assert(0 < _query->appearances.size());
       assert(0 < matches_per_landmark.size());
-      const real relative_number_of_matches = static_cast<real>(absolute_number_of_matches)/_query->appearances.size();
+      const real relative_number_of_matches = static_cast<real>(absolute_number_of_matches)/_query->matchables.size();
 
       //ds if the result quality is sufficient
       if (matches_per_landmark.size() > _minimum_number_of_matches_per_landmark) {
@@ -162,7 +158,7 @@ namespace proslam {
     CHRONOMETER_START(overall)
 
     //ds if query is valid
-    if (0 != _query && 0 < _query->appearances.size()) {
+    if (0 != _query && 0 < _query->matchables.size()) {
 
       //ds add the active query to our database structure
       _query_history_queue.push(_query);

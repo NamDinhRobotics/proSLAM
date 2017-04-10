@@ -3,7 +3,7 @@
 
 namespace proslam {
 
-  //ds this class
+  //ds this class serves as a singleton parameter base for the ProSLAM pipeline
   class ParameterServer {
 
     //ds functionality
