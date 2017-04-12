@@ -20,7 +20,7 @@ namespace proslam {
                                          "-drop-framepoints (-df):                 deallocation of past framepoints at runtime (reduces memory demand)\n"
                                          "-equalize-histogram (-eh):               equalize stereo image histogram before processing\n"
                                          "-rectify-and-undistort (-ru):            rectifies and undistorts input images based on camera info\n"
-                                         "-------------------------------------------------------------------------\n";
+                                         "-------------------------------------------------------------------------";
 
   //ds files/topics
   std::string ParameterServer::_topic_image_left         = "/camera_left/image_raw";

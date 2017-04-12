@@ -20,7 +20,7 @@ namespace proslam {
     void clear();
 
     //ds creates a new frame living in this instance at the provided pose
-    Frame* createFrame(const TransformMatrix3D& robot_to_world_, const real& maximum_depth_close_);
+    Frame* createFrame(const TransformMatrix3D& robot_to_world_, const real& maximum_depth_near_);
 
     //ds creates a new landmark living in this instance, using the provided framepoint as origin
     Landmark* createLandmark(const FramePoint* origin_);

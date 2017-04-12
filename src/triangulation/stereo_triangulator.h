@@ -55,9 +55,7 @@ namespace proslam {
                       const cv::Mat& descriptors_right_);
 
       //ds computes all potential stereo keypoints (exhaustive in matching distance) and stores them as framepoints (called within compute)
-      void findStereoKeypoints(std::vector<KeypointWithDescriptor>& keypoints_left_,
-                               std::vector<KeypointWithDescriptor>& keypoints_right_,
-                               Frame* frame_);
+      void findStereoKeypoints(Frame* frame_);
 
       //ds adjusts the detector and matching thresholds to maintain constant detection (called within compute)
       void calibrateDetectionThresholds();
@@ -67,6 +65,15 @@ namespace proslam {
 
     //ds getters/setters
     public:
+
+      //ds enable external access to keypoint detection
+#if CV_MAJOR_VERSION == 2
+      cv::FeatureDetector* keypointDetector() const {return _keypoint_detector;}
+#elif CV_MAJOR_VERSION == 3
+      cv::Ptr<cv::FastFeatureDetector> keypointDetector() const {return _keypoint_detector;}
+#else
+      #error OpenCV version not supported
+#endif
 
       //ds enable external access to descriptor computation
 #if CV_MAJOR_VERSION == 2
@@ -89,7 +96,7 @@ namespace proslam {
       const real maximumDepthNearMeters() const {return _maximum_depth_near_meters;}
       const real maximumDepthFarMeters() const {return _maximum_depth_far_meters;}
       void setTargetNumberOfPoints(const Count& target_number_of_points_) {_target_number_of_points = target_number_of_points_;}
-      void setDetectorThreshold(const int32_t& detector_threshold_) {_detector_threshold = detector_threshold_;}
+      void setDetectorThreshold(const int32_t& detector_threshold_);
       void setDetectorThresholdMaximum(const int32_t& detector_threshold_maximum_) {_detector_threshold_maximum = detector_threshold_maximum_;}
       void setDetectorThresholdMinimum(const int32_t& detector_threshold_minimum_) {_detector_threshold_minimum = detector_threshold_minimum_;}
       const int32_t matchingDistanceTrackingThreshold() const {return _matching_distance_tracking_threshold;}
@@ -142,9 +149,9 @@ namespace proslam {
 
       //ds feature detection
 #if CV_MAJOR_VERSION == 2
-      cv::FeatureDetector* _feature_detector;
+      cv::FeatureDetector* _keypoint_detector;
 #elif CV_MAJOR_VERSION == 3
-      cv::Ptr<cv::FastFeatureDetector> _feature_detector;
+      cv::Ptr<cv::FastFeatureDetector> _keypoint_detector;
 #else
       #error OpenCV version not supported
 #endif
@@ -158,7 +165,7 @@ namespace proslam {
       #error OpenCV version not supported
 #endif
 
-      //ds memory buffers (operated on in compute)
+      //ds inner memory buffers (operated on in compute)
       std::vector<cv::KeyPoint> _keypoints_left;
       std::vector<cv::KeyPoint> _keypoints_right;
       cv::Mat _descriptors_left;

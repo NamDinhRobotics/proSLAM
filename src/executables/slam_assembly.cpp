@@ -288,7 +288,7 @@ namespace proslam {
           } else {
             std::printf("processed frames: %5lu|landmarks: %6lu|current fps: %5.2f (%3lu/%3.2fs)\n",
                         number_of_processed_frames_total,
-                        _world_map->landmarks().size(),
+                        _world_map->landmarksInWindowForLocalMap().size(),
                         number_of_processed_frames_current/total_duration_seconds_current,
                         number_of_processed_frames_current,
                         total_duration_seconds_current);

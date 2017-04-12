@@ -10,10 +10,10 @@ namespace proslam {
                Frame* previous_,
                Frame* next_,
                const TransformMatrix3D& robot_to_world_,
-               const real& maximum_depth_close_): _identifier(_instances),
+               const real& maximum_depth_near_): _identifier(_instances),
                                                   _previous(previous_),
                                                   _next(next_),
-                                                  _maximum_depth_near(maximum_depth_close_) {
+                                                  _maximum_depth_near(maximum_depth_near_) {
     ++_instances;
     setRobotToWorld(robot_to_world_);
     _points.clear();
@@ -87,6 +87,7 @@ namespace proslam {
                             const cv::Mat& descriptor_right_,
                             const PointCoordinates& camera_coordinates_left_,
                             FramePoint* previous_point_) {
+    assert(_camera_left != 0);
 
     //ds allocate a new point connected to the previous one
     FramePoint* frame_point = new FramePoint(keypoint_left_,
@@ -95,7 +96,7 @@ namespace proslam {
                                              descriptor_right_,
                                              this);
     frame_point->setCameraCoordinatesLeft(camera_coordinates_left_);
-    frame_point->setRobotCoordinates(cameraLeft()->cameraToRobot()*camera_coordinates_left_);
+    frame_point->setRobotCoordinates(_camera_left->cameraToRobot()*camera_coordinates_left_);
     frame_point->setWorldCoordinates(this->robotToWorld()*frame_point->robotCoordinates());
 
     //ds if the point is not linked (no track)

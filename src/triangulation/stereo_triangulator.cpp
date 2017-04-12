@@ -15,13 +15,13 @@ namespace proslam {
                                                                                                    _maximum_depth_near_meters(_baseline_factor*_baseline_meters),
                                                                                                    _maximum_depth_far_meters(-_baseline_pixelsmeters/_minimum_disparity_pixels),
 #if CV_MAJOR_VERSION == 2
-                                                                                                   _feature_detector(new cv::FastFeatureDetector(_detector_threshold)),
+                                                                                                   _keypoint_detector(new cv::FastFeatureDetector(_detector_threshold)),
                                                                                                    _descriptor_extractor(new cv::BriefDescriptorExtractor(DESCRIPTOR_SIZE_BYTES)) {
 #elif CV_MAJOR_VERSION == 3
-                                                                                                   _feature_detector(cv::FastFeatureDetector::create(_detector_threshold)),
+                                                                                                   _keypoint_detector(cv::FastFeatureDetector::create(_detector_threshold)),
                                                                                                    _descriptor_extractor(cv::xfeatures2d::BriefDescriptorExtractor::create(DESCRIPTOR_SIZE_BYTES)) {
 #else
-  #error OpenCV version not supported
+#error OpenCV version not supported
 #endif
     std::cerr << "StereoTriangulator::StereoTriangulator|constructing" << std::endl;
     assert(camera_left_->imageCols() == camera_right_->imageCols());
@@ -85,7 +85,7 @@ namespace proslam {
 
     //ds cleanup opencv
 #if CV_MAJOR_VERSION == 2
-    delete _feature_detector;
+    delete _keypoint_detector;
     delete _descriptor_extractor;
 #endif
 
@@ -115,7 +115,7 @@ namespace proslam {
     //ds prepare and execute stereo keypoint search
     CHRONOMETER_START(point_triangulation)
     initialize(_keypoints_left, _keypoints_right, _descriptors_left, _descriptors_right);
-    findStereoKeypoints(_keypoints_with_descriptors_left, _keypoints_with_descriptors_right, frame_);
+    findStereoKeypoints(frame_);
     CHRONOMETER_STOP(point_triangulation)
 
     //ds calibrate feature detector threshold to maintain the target number of tracked points
@@ -124,7 +124,7 @@ namespace proslam {
 
   //ds detects keypoints and stores them in a vector (called within compute)
   void StereoTriangulator::detectKeypoints(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_) const {
-    _feature_detector->detect(intensity_image_, keypoints_);
+    _keypoint_detector->detect(intensity_image_, keypoints_);
   }
 
   //ds regularizes the detected keypoints using binning (called within compute)
@@ -230,47 +230,45 @@ namespace proslam {
   }
 
   //ds computes all potential stereo keypoints (exhaustive in matching distance) and stores them as framepoints (called within compute)
-  void StereoTriangulator::findStereoKeypoints(std::vector<KeypointWithDescriptor>& keypoints_left_,
-                                               std::vector<KeypointWithDescriptor>& keypoints_right_,
-                                               Frame* frame_) {
+  void StereoTriangulator::findStereoKeypoints(Frame* frame_) {
 
     //ds sort all input vectors by ascending row positions
-    std::sort(keypoints_left_.begin(), keypoints_left_.end(), [](const KeypointWithDescriptor& a_, const KeypointWithDescriptor& b_){return ((a_.row < b_.row) || (a_.row == b_.row && a_.col < b_.col));});
-    std::sort(keypoints_right_.begin(), keypoints_right_.end(), [](const KeypointWithDescriptor& a_, const KeypointWithDescriptor& b_){return ((a_.row < b_.row) || (a_.row == b_.row && a_.col < b_.col));});
+    std::sort(_keypoints_with_descriptors_left.begin(), _keypoints_with_descriptors_left.end(), [](const KeypointWithDescriptor& a_, const KeypointWithDescriptor& b_){return ((a_.row < b_.row) || (a_.row == b_.row && a_.col < b_.col));});
+    std::sort(_keypoints_with_descriptors_right.begin(), _keypoints_with_descriptors_right.end(), [](const KeypointWithDescriptor& a_, const KeypointWithDescriptor& b_){return ((a_.row < b_.row) || (a_.row == b_.row && a_.col < b_.col));});
 
     //ds running variable
     Index idx_R = 0;
 
     //ds loop over all left keypoints
     _number_of_available_points = 0;
-    for (Index idx_L = 0; idx_L < keypoints_left_.size(); idx_L++) {
+    for (Index idx_L = 0; idx_L < _keypoints_with_descriptors_left.size(); idx_L++) {
       //stop condition
-      if (idx_R == keypoints_right_.size()) {break;}
+      if (idx_R == _keypoints_with_descriptors_right.size()) {break;}
       //the right keypoints are on an lower row - skip left
-      while (keypoints_left_[idx_L].row < keypoints_right_[idx_R].row) {
-        idx_L++; if (idx_L == keypoints_left_.size()) {break;}
+      while (_keypoints_with_descriptors_left[idx_L].row < _keypoints_with_descriptors_right[idx_R].row) {
+        idx_L++; if (idx_L == _keypoints_with_descriptors_left.size()) {break;}
       }
-      if (idx_L == keypoints_left_.size()) {break;}
+      if (idx_L == _keypoints_with_descriptors_left.size()) {break;}
       //the right keypoints are on an upper row - skip right
-      while (keypoints_left_[idx_L].row > keypoints_right_[idx_R].row) {
-        idx_R++; if (idx_R == keypoints_right_.size()) {break;}
+      while (_keypoints_with_descriptors_left[idx_L].row > _keypoints_with_descriptors_right[idx_R].row) {
+        idx_R++; if (idx_R == _keypoints_with_descriptors_right.size()) {break;}
       }
-      if (idx_R == keypoints_right_.size()) {break;}
+      if (idx_R == _keypoints_with_descriptors_right.size()) {break;}
       //search bookkeeping
       Index idx_RS = idx_R;
       real dist_best = _maximum_matching_distance_triangulation;
       Index idx_best_R = 0;
       //scan epipolar line for current keypoint at idx_L
-      while (keypoints_left_[idx_L].row == keypoints_right_[idx_RS].row) {
+      while (_keypoints_with_descriptors_left[idx_L].row == _keypoints_with_descriptors_right[idx_RS].row) {
         //zero disparity stop condition
-        if (keypoints_right_[idx_RS].col >= keypoints_left_[idx_L].col) {break;}
+        if (_keypoints_with_descriptors_right[idx_RS].col >= _keypoints_with_descriptors_left[idx_L].col) {break;}
         //compute descriptor distance
-        const real dist = cv::norm(keypoints_left_[idx_L].descriptor, keypoints_right_[idx_RS].descriptor, DESCRIPTOR_NORM);
+        const real dist = cv::norm(_keypoints_with_descriptors_left[idx_L].descriptor, _keypoints_with_descriptors_right[idx_RS].descriptor, DESCRIPTOR_NORM);
         if(dist < dist_best) {
           dist_best = dist;
           idx_best_R = idx_RS;
         }
-        idx_RS++; if (idx_RS == keypoints_right_.size()) {break;}
+        idx_RS++; if (idx_RS == _keypoints_with_descriptors_right.size()) {break;}
       }
       //check if something was found
       if (dist_best < _maximum_matching_distance_triangulation) {
@@ -278,19 +276,19 @@ namespace proslam {
         //ds add triangulation map entry
         try {
 
-          const Index& row       = keypoints_left_[idx_L].row;
-          const Index& col_left  = keypoints_left_[idx_L].col;
+          const Index& row       = _keypoints_with_descriptors_left[idx_L].row;
+          const Index& col_left  = _keypoints_with_descriptors_left[idx_L].col;
           assert(_framepoints_in_image[row][col_left] == 0);
 
           //ds attempt the triangulation - might throw on failure
-          const PointCoordinates camera_coordinates(getCoordinatesInCameraLeft(keypoints_left_[idx_L].keypoint.pt, keypoints_right_[idx_best_R].keypoint.pt));
+          const PointCoordinates camera_coordinates(getCoordinatesInCameraLeft(_keypoints_with_descriptors_left[idx_L].keypoint.pt, _keypoints_with_descriptors_right[idx_best_R].keypoint.pt));
 
           //ds add to framepoint map
-          _framepoints_in_image[row][col_left] = frame_->create(keypoints_left_[idx_L].keypoint,
-                                                                        keypoints_left_[idx_L].descriptor,
-                                                                        keypoints_right_[idx_best_R].keypoint,
-                                                                        keypoints_right_[idx_best_R].descriptor,
-                                                                        camera_coordinates);
+          _framepoints_in_image[row][col_left] = frame_->create(_keypoints_with_descriptors_left[idx_L].keypoint,
+                                                                _keypoints_with_descriptors_left[idx_L].descriptor,
+                                                                _keypoints_with_descriptors_right[idx_best_R].keypoint,
+                                                                _keypoints_with_descriptors_right[idx_best_R].descriptor,
+                                                                camera_coordinates);
           ++_number_of_available_points;
 
           //ds reduce search space
@@ -311,11 +309,11 @@ namespace proslam {
         _detector_threshold -= 5;
 
 #if CV_MAJOR_VERSION == 2
-        _feature_detector->setInt("threshold", _detector_threshold);
+        _keypoint_detector->setInt("threshold", _detector_threshold);
 #elif CV_MAJOR_VERSION == 3
-        _feature_detector->setThreshold(_detector_threshold);
+        _keypoint_detector->setThreshold(_detector_threshold);
 #else
-  #error OpenCV version not supported
+#error OpenCV version not supported
 #endif
       }
 
@@ -332,11 +330,11 @@ namespace proslam {
       if (_detector_threshold < _detector_threshold_maximum) {
         _detector_threshold += 5;
 #if CV_MAJOR_VERSION == 2
-        _feature_detector->setInt("threshold", _detector_threshold);
+        _keypoint_detector->setInt("threshold", _detector_threshold);
 #elif CV_MAJOR_VERSION == 3
-        _feature_detector->setThreshold(_detector_threshold);
+        _keypoint_detector->setThreshold(_detector_threshold);
 #else
-  #error OpenCV version not supported
+#error OpenCV version not supported
 #endif
       }
 
@@ -379,5 +377,17 @@ namespace proslam {
         _framepoints_in_image[row][col] = 0;
       }
     }
+  }
+
+  void StereoTriangulator::setDetectorThreshold(const int32_t& detector_threshold_) {
+    _detector_threshold = detector_threshold_;
+
+#if CV_MAJOR_VERSION == 2
+    _keypoint_detector->setInt("threshold", _detector_threshold);
+#elif CV_MAJOR_VERSION == 3
+    _keypoint_detector->setThreshold(_detector_threshold);
+#else
+#error OpenCV version not supported
+#endif
   }
 }

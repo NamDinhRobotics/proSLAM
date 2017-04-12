@@ -45,12 +45,12 @@ namespace proslam {
   }
 
   //ds creates a new frame living in this instance at the provided pose
-  Frame* WorldMap::createFrame(const TransformMatrix3D& robot_to_world_, const real& maximum_depth_close_){
+  Frame* WorldMap::createFrame(const TransformMatrix3D& robot_to_world_, const real& maximum_depth_near_){
     if (_previous_frame) {
       _previous_frame->releaseImages();
     }
     _previous_frame = _current_frame;
-    _current_frame  = new Frame(this, _previous_frame, 0, robot_to_world_, maximum_depth_close_);
+    _current_frame  = new Frame(this, _previous_frame, 0, robot_to_world_, maximum_depth_near_);
     if (_root_frame == 0) {
       _root_frame = _current_frame;
     }

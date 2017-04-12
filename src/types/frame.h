@@ -26,7 +26,7 @@ namespace proslam {
           Frame* previous_,
           Frame* next_,
           const TransformMatrix3D& robot_to_world_,
-          const real& maximum_depth_close_);
+          const real& maximum_depth_near_);
 
     //ds deep clone constructor - without incrementing the identifier!
     Frame(Frame* frame_);
