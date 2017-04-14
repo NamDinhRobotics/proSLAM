@@ -1,5 +1,6 @@
 #pragma once
 #include "aligners/stereouv_aligner.h"
+#include "aligners/uvd_aligner.h"
 #include "types/world_map.h"
 #include "triangulation/stereo_triangulator.h"
 
@@ -30,7 +31,8 @@ namespace proslam {
   //ds getters/setters
   public:
 
-    BaseAligner6_4* aligner() {return _pose_optimizer;}
+    BaseFrameAligner* aligner() {return _pose_optimizer;}
+    
     void setMotionPreviousToCurrent(const TransformMatrix3D& motion_previous_to_current_) {_motion_previous_to_current = motion_previous_to_current_;}
     StereoTriangulator* framepointGenerator() {return _framepoint_generator;}
     const Count totalNumberOfTrackedPoints() const {return _total_number_of_tracked_points;}
@@ -88,7 +90,7 @@ namespace proslam {
     const int32_t _maximum_flow_pixels_squared = 150*150;     //ds maximum allowed pixel distance between image coordinates prediction and actual detection
 
     //ds pose solving
-    StereoUVAligner* _pose_optimizer;
+    BaseFrameAligner* _pose_optimizer;
     TransformMatrix3D _motion_previous_to_current;
 
     //ds framepoint track recovery

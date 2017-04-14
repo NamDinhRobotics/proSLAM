@@ -11,6 +11,8 @@ namespace proslam {
                                                  _camera_cols(camera_left_->imageCols()),
                                                  _framepoint_generator(new StereoTriangulator(_camera_left, _camera_right)),
                                                  _pose_optimizer(new StereoUVAligner()),
+/* MESSAGTE FOR DUDE, uncomment the line below and comment the line above */
+                                                 //_pose_optimizer(new UVDAligner()),
                                                  _motion_previous_to_current(TransformMatrix3D::Identity()){
     std::cerr << "Tracker::Tracker|constructing" << std::endl;
 

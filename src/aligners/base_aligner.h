@@ -4,17 +4,8 @@
 namespace proslam {
 
   //ds base aligner class
-  template<uint64_t states, uint64_t dimension>
   class BaseAligner {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
-    //ds readability
-    public:
-
-      typedef Eigen::Matrix<real, states, states> StateMatrix;
-      typedef Eigen::Matrix<real, states, 1> StateVector;
-      typedef Eigen::Matrix<real, dimension, dimension> DimensionMatrix;
-      typedef Eigen::Matrix<real, dimension, states> JacobianMatrix;
 
     //ds object handling
     public:
@@ -51,20 +42,19 @@ namespace proslam {
       virtual void converge() = 0;
 
       //ds getters/setters
-      const std::vector<real>& errors() const {return _errors;}
-      const std::vector<bool>& inliers() const {return _inliers;}
-      const uint64_t numberOfInliers() const {return _number_of_inliers;}
-      const uint64_t numberOfOutliers() const {return _number_of_outliers;}
-      const uint64_t numberOfCorrespondences() const {return _number_of_inliers+_number_of_outliers;}
-      const real errorDeltaForConvergence() const {return _error_delta_for_convergence;}
-      const Count maximumNumberOfIterations() const {return _maximum_number_of_iterations;}
-      void setDamping(const real& damping_) {_damping = damping_;}
-      const real damping() const {return _damping;}
-      const real totalError() const {return _total_error;}
-      const bool hasSystemConverged() const {return _has_system_converged;}
-      void setMaximumErrorKernel(const real& maximum_error_kernel_) {_maximum_error_kernel = maximum_error_kernel_;}
-      const real maximumErrorKernel() const {return _maximum_error_kernel;}
-      const Matrix6& informationMatrix() const {return _information_matrix;}
+      inline const std::vector<real>& errors() const {return _errors;}
+      inline const std::vector<bool>& inliers() const {return _inliers;}
+      inline const uint64_t numberOfInliers() const {return _number_of_inliers;}
+      inline const uint64_t numberOfOutliers() const {return _number_of_outliers;}
+      inline const uint64_t numberOfCorrespondences() const {return _number_of_inliers+_number_of_outliers;}
+      inline const real errorDeltaForConvergence() const {return _error_delta_for_convergence;}
+      inline const Count maximumNumberOfIterations() const {return _maximum_number_of_iterations;}
+      inline void setDamping(const real& damping_) {_damping = damping_;}
+      inline const real damping() const {return _damping;}
+      inline const real totalError() const {return _total_error;}
+      inline const bool hasSystemConverged() const {return _has_system_converged;}
+      inline void setMaximumErrorKernel(const real& maximum_error_kernel_) {_maximum_error_kernel = maximum_error_kernel_;}
+      inline const real maximumErrorKernel() const {return _maximum_error_kernel;}
 
     //ds aligner specific
     protected:
@@ -84,14 +74,32 @@ namespace proslam {
 
       //ds general LS parameters
       real _total_error               = 0;
-      StateMatrix _H                  = StateMatrix::Zero();
-      StateVector _b                  = StateVector::Zero();
-      DimensionMatrix _omega          = DimensionMatrix::Identity();
-      JacobianMatrix _jacobian        = JacobianMatrix::Zero();
-      StateMatrix _information_matrix = StateMatrix::Identity();
   };
 
-  //ds readability
-  typedef BaseAligner<6, 3> BaseAligner6_3;
-  typedef BaseAligner<6, 4> BaseAligner6_4;
+
+  // class that holds only the templated variables in the aligner
+  template<uint64_t states, uint64_t dimension>
+  class AlignerWorkspace {
+  public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    //ds readability
+    public:
+
+    typedef Eigen::Matrix<real, states, states> StateMatrix;
+    typedef Eigen::Matrix<real, states, 1> StateVector;
+    typedef Eigen::Matrix<real, dimension, dimension> DimensionMatrix;
+    typedef Eigen::Matrix<real, dimension, states> JacobianMatrix;
+
+  protected:
+    
+    //ds general LS parameters
+    StateMatrix _H                  = StateMatrix::Zero();
+    StateVector _b                  = StateVector::Zero();
+    DimensionMatrix _omega          = DimensionMatrix::Identity();
+    JacobianMatrix _jacobian        = JacobianMatrix::Zero();
+    StateMatrix _information_matrix = StateMatrix::Identity();
+
+  };
+    
+
 }
