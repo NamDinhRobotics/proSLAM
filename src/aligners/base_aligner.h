@@ -66,40 +66,45 @@ namespace proslam {
       uint64_t _number_of_outliers = 0;
 
       //ds convergence criteria
-      real _error_delta_for_convergence = 1e-5;
-      real _maximum_error_kernel        = 1;
-      real _damping                     = 1;
+      real _error_delta_for_convergence   = 1e-5;
+      real _maximum_error_kernel          = 1;
+      real _damping                       = 1;
       Count _maximum_number_of_iterations = 100;
       bool _has_system_converged          = false;
 
       //ds general LS parameters
-      real _total_error               = 0;
+      real _total_error = 0;
   };
 
-
-  // class that holds only the templated variables in the aligner
+  //ds class that holds all generic (running) variables used in an aligner
   template<uint64_t states, uint64_t dimension>
   class AlignerWorkspace {
-  public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    //ds readability
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+    //ds object handling
     public:
 
-    typedef Eigen::Matrix<real, states, states> StateMatrix;
-    typedef Eigen::Matrix<real, states, 1> StateVector;
-    typedef Eigen::Matrix<real, dimension, dimension> DimensionMatrix;
-    typedef Eigen::Matrix<real, dimension, states> JacobianMatrix;
+      //ds default workspace setup
+      AlignerWorkspace() {}
 
-  protected:
+      //ds default workspace tear-down
+      ~AlignerWorkspace() {}
+
+    //ds exported types
+    public:
+
+      typedef Eigen::Matrix<real, states, states> StateMatrix;
+      typedef Eigen::Matrix<real, states, 1> StateVector;
+      typedef Eigen::Matrix<real, dimension, dimension> DimensionMatrix;
+      typedef Eigen::Matrix<real, dimension, states> JacobianMatrix;
+
+    //ds workspace variables
+    protected:
     
-    //ds general LS parameters
-    StateMatrix _H                  = StateMatrix::Zero();
-    StateVector _b                  = StateVector::Zero();
-    DimensionMatrix _omega          = DimensionMatrix::Identity();
-    JacobianMatrix _jacobian        = JacobianMatrix::Zero();
-    StateMatrix _information_matrix = StateMatrix::Identity();
-
+      StateMatrix _H                  = StateMatrix::Zero();
+      StateVector _b                  = StateVector::Zero();
+      DimensionMatrix _omega          = DimensionMatrix::Identity();
+      JacobianMatrix _jacobian        = JacobianMatrix::Zero();
+      StateMatrix _information_matrix = StateMatrix::Identity();
   };
-    
-
 }
