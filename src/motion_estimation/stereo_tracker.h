@@ -1,6 +1,6 @@
 #pragma once
 #include "base_tracker.h"
-#include "triangulation/stereo_triangulator.h"
+#include "frame_generation/stereo_triangulator.h"
 
 namespace proslam {
 

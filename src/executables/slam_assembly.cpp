@@ -58,7 +58,7 @@ namespace proslam {
     }
   }
 
-  StereoTracker* SLAMAssembly::_makeStereoTracker(const Camera* camera_left,
+  BaseTracker* SLAMAssembly::_makeStereoTracker(const Camera* camera_left,
 						  const Camera* camera_right){
 
       StereoUVAligner* pose_optimizer=new StereoUVAligner;
@@ -454,8 +454,12 @@ namespace proslam {
                                                 << " (" << _tracker->getTimeConsumptionSeconds_keypoint_pruning() << "s)" << std::endl;
       std::cerr << "   descriptor extraction: " << _tracker->getTimeConsumptionSeconds_descriptor_extraction()/_duration_total_seconds
                                                << " (" << _tracker->getTimeConsumptionSeconds_descriptor_extraction() << "s)" << std::endl;
-      std::cerr << "  stereo keypoint search: " << _tracker->getTimeConsumptionSeconds_point_triangulation()/_duration_total_seconds
-                                               << " (" << _tracker->getTimeConsumptionSeconds_point_triangulation() << "s)" << std::endl;
+      StereoTracker* stereo_tracker=dynamic_cast<StereoTracker*>(_tracker);
+      if (stereo_tracker){
+	std::cerr << "  stereo keypoint search: " << stereo_tracker->getTimeConsumptionSeconds_point_triangulation()/_duration_total_seconds
+		  << " (" << stereo_tracker->getTimeConsumptionSeconds_point_triangulation() << "s)" << std::endl;
+      }
+      
       std::cerr << "                tracking: " << _tracker->getTimeConsumptionSeconds_tracking()/_duration_total_seconds
                                                << " (" << _tracker->getTimeConsumptionSeconds_tracking() << "s)" << std::endl;
       std::cerr << "       pose optimization: " << _tracker->getTimeConsumptionSeconds_pose_optimization()/_duration_total_seconds

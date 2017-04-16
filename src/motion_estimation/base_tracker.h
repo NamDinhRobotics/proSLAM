@@ -1,7 +1,7 @@
 #pragma once
 #include "aligners/base_frame_aligner.h"
 #include "types/world_map.h"
-#include "triangulation/base_framepoint_generator.h"
+#include "frame_generation/base_framepoint_generator.h"
 
 namespace proslam {
 
