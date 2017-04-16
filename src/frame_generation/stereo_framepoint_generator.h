@@ -5,7 +5,7 @@
 namespace proslam {
 
   //ds this class computes potential framepoints in a stereo image pair by triangulation
-  class StereoTriangulator : public BaseFramePointGenerator {
+  class StereoFramePointGenerator : public BaseFramePointGenerator {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds exported types
@@ -15,14 +15,14 @@ namespace proslam {
     public:
 
     //ds the stereo camera setup must be provided
-    StereoTriangulator();
+    StereoFramePointGenerator();
 
     inline void setCameraRight(const Camera* camera_right_) {_camera_right=camera_right_;}
     
     virtual void setup();
     
     //ds cleanup of dynamic structures
-    virtual ~StereoTriangulator();
+    virtual ~StereoFramePointGenerator();
 
     //ds functionality
     public:

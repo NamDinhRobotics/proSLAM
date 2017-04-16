@@ -70,7 +70,10 @@ namespace proslam {
 
     BaseTracker* _makeStereoTracker(const Camera* camera_left,
 				      const Camera* camera_right);
-    
+
+    BaseTracker* _makeDepthTracker(const Camera* camera_left,
+				   const Camera* camera_right);
+
     //ds the SLAM map, containing landmarks and trajectory
     WorldMap* _world_map;
 

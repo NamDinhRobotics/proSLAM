@@ -93,7 +93,7 @@ namespace proslam {
     FramePoint* _origin   = 0; //ds FramePoint in the image where it was first detected (track start)
     Frame* _frame         = 0; //ds Frame to which the point belongs
 
-    //ds triangulation information (set by StereoTriangulator)
+    //ds triangulation information (set by StereoFramePointGenerator)
     const cv::KeyPoint _keypoint_left;
     const cv::KeyPoint _keypoint_right;
     const cv::Mat _descriptor_left;

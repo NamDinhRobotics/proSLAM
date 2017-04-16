@@ -8,7 +8,7 @@
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/subscriber.h>
-#include "frame_generation/stereo_triangulator.h"
+#include "frame_generation/stereo_framepoint_generator.h"
 #include "parameter_server.h"
 #include "slam_assembly.h"
 
@@ -294,7 +294,7 @@ int32_t main(int32_t argc, char ** argv) {
 
       // HACK
       {
-	proslam::StereoTriangulator* triangulator=dynamic_cast<proslam::StereoTriangulator*>(slam_system.tracker()->framepointGenerator());
+	proslam::StereoFramePointGenerator* triangulator=dynamic_cast<proslam::StereoFramePointGenerator*>(slam_system.tracker()->framepointGenerator());
 	assert(triangulator);
 	
 	triangulator->extractDescriptors(image_left, keypoints_left, descriptors_left);

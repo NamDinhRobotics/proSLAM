@@ -36,4 +36,5 @@ namespace proslam {
   bool ParameterServer::_option_drop_framepoints      = false;
   bool ParameterServer::_option_equalize_histogram    = false;
   bool ParameterServer::_option_rectify_and_undistort = false;
+  ParameterServer::TrackerMode ParameterServer::_tracker_mode=ParameterServer::Stereo;
 }

@@ -5,9 +5,10 @@ namespace proslam {
 
   //ds this class serves as a singleton parameter base for the ProSLAM pipeline
   class ParameterServer {
-
+    
     //ds functionality
     public:
+    enum TrackerMode {Stereo=0x1, Depth=0x2};
 
       static void parseParametersFromCommandLine(int32_t argc, char ** argv) {
         int32_t number_of_added_parameters = 1;
@@ -39,6 +40,8 @@ namespace proslam {
             _option_equalize_histogram = true;
           } else if (!std::strcmp(argv[number_of_added_parameters], "-rectify-and-undistort") || !std::strcmp(argv[number_of_added_parameters], "-ru")) {
             _option_rectify_and_undistort = true;
+          } else if (!std::strcmp(argv[number_of_added_parameters], "-depth-mode") || !std::strcmp(argv[number_of_added_parameters], "-dm")) {
+            _tracker_mode = Depth;
           } else {
             _filename_dataset = argv[number_of_added_parameters];
           }
@@ -94,7 +97,8 @@ namespace proslam {
       static const bool& optionDropFramepoints() {return _option_drop_framepoints;}
       static const bool& optionEqualizeHistogram() {return _option_equalize_histogram;}
       static const bool& optionRectifyAndUndistort() {return _option_rectify_and_undistort;}
-
+      static const TrackerMode trackerMode() {return _tracker_mode;}
+      
     //ds attributes
     protected:
 
@@ -115,5 +119,6 @@ namespace proslam {
       static bool _option_drop_framepoints;
       static bool _option_equalize_histogram;
       static bool _option_rectify_and_undistort;
+      static TrackerMode _tracker_mode;
   };
 }

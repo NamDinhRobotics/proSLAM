@@ -69,14 +69,22 @@ namespace proslam {
     //ds evaluate all past queries
     for (const Query* reference: _query_history) {
 
+      TransformMatrix3D delta=reference->local_map->worldToRobot()*_query->local_map->robotToWorld();
       //ds compute absolute distance
-      const real distance_meters_squared = (reference->local_map->robotToWorld().translation()-_query->local_map->robotToWorld().translation()).squaredNorm();
+      const real distance_meters_squared = delta.translation().squaredNorm();
 
       //ds skip the candidate if too far from the odometry
       if (distance_meters_squared > 25*25) {
         continue;
       }
 
+      //gg drop if angular distance is too big
+      Eigen::AngleAxisd aa(delta.linear());
+      if(fabs(aa.angle())>1.0)
+	continue;
+      
+      
+      
       //ds skip the candidate if the minimum number of matches is not guaranteed
       if (reference->hbst_tree->getMatchingRatioFlat(_query->matchables) < _preliminary_minimum_matching_ratio) {
         continue;
@@ -131,13 +139,13 @@ namespace proslam {
         }
         assert(0 < correspondences.size());
 
-          //ds update closures
+	//ds update closures
         _closures.push_back(new Closure(_query->local_map,
-                                                         reference->local_map,
-                                                         absolute_number_of_matches,
-                                                         relative_number_of_matches,
-                                                         matches_per_landmark,
-                                                         correspondences));
+					reference->local_map,
+					absolute_number_of_matches,
+					relative_number_of_matches,
+					matches_per_landmark,
+					correspondences));
       }
     }
     CHRONOMETER_STOP(overall)

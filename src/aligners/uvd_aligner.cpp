@@ -36,7 +36,8 @@ namespace proslam {
       _errors[index_point]  = -1;
       _inliers[index_point] = false;
       _omega.setIdentity();
-
+      _omega(2,2)*=10;
+      
       //ds buffer framepoint
       FramePoint* frame_point = _context->points()[index_point];
       assert(_context->cameraLeft()->isInFieldOfView(frame_point->imageCoordinatesLeft()));

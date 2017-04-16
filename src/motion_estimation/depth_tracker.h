@@ -1,25 +1,25 @@
 #pragma once
 #include "base_tracker.h"
-#include "frame_generation/stereo_framepoint_generator.h"
+#include "frame_generation/depth_framepoint_generator.h"
 
 namespace proslam {
 
   //ds this class processes two subsequent Frames and establishes Framepoint correspondences (tracks) based on the corresponding images
-  class StereoTracker: public BaseTracker {
+  class DepthTracker: public BaseTracker {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 	  //ds object handling
   public:
 
     //ds the tracker assumes a constant stereo camera configuration
-    StereoTracker();
+    DepthTracker();
 
     //ds dynamic cleanup
-    ~StereoTracker();
+    ~DepthTracker();
 
     void setCameraRight(const Camera* camera_right_) { _camera_right=camera_right_;}
 
-    void setIntensityImageRight(const cv::Mat* intensity_image_right_) {_intensity_image_right=intensity_image_right_;}
+    void setDepthImageRight(const cv::Mat* depth_image_right_) {_depth_image_right=depth_image_right_;}
     virtual void setup();
 
     virtual void compute();
@@ -40,13 +40,13 @@ namespace proslam {
 
     // the one below is a typed copy of the framepoint generator
     // accepts only stereo objects;
-    StereoFramePointGenerator* _stereo_framepoint_generator;
+    DepthFramePointGenerator* _depth_framepoint_generator;
 
 
     // processing
-    const cv::Mat* _intensity_image_right;
+    const cv::Mat* _depth_image_right;
 
   public:
-    const double getTimeConsumptionSeconds_point_triangulation() const {return _stereo_framepoint_generator->getTimeConsumptionSeconds_point_triangulation();}
+    const double getTimeConsumptionSeconds_depth_map_generation() const {return _depth_framepoint_generator->getTimeConsumptionSeconds_depth_map_generation();}
   };
 }

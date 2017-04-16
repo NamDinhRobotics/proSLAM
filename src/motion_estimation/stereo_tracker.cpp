@@ -14,7 +14,7 @@ namespace proslam {
   void StereoTracker::setup() {
     BaseTracker::setup();
     assert(_camera_right);
-    _stereo_framepoint_generator=dynamic_cast<StereoTriangulator*>(_framepoint_generator);
+    _stereo_framepoint_generator=dynamic_cast<StereoFramePointGenerator*>(_framepoint_generator);
     assert(_stereo_framepoint_generator);
   }
 

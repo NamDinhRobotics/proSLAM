@@ -3,7 +3,9 @@
 #include "parameter_server.h"
 #include "srrg_txt_io/pinhole_image_message.h"
 #include "aligners/stereouv_aligner.h"
+#include "aligners/uvd_aligner.h"
 #include "motion_estimation/stereo_tracker.h"
+#include "motion_estimation/depth_tracker.h"
 
 namespace proslam {
 
@@ -64,12 +66,31 @@ namespace proslam {
       StereoUVAligner* pose_optimizer=new StereoUVAligner;
 
       //ds allocate the tracker module with the given cameras
-      StereoTriangulator* framepoint_generator=new StereoTriangulator();
+      StereoFramePointGenerator* framepoint_generator=new StereoFramePointGenerator();
       framepoint_generator->setCameraLeft(camera_left);
       framepoint_generator->setCameraRight(camera_right);
       framepoint_generator->setup();
       
       StereoTracker* tracker=new StereoTracker();
+      tracker->setCameraLeft(camera_left);
+      tracker->setCameraRight(camera_right);
+      tracker->setFramePointGenerator(framepoint_generator);
+      tracker->setAligner(pose_optimizer);
+      tracker->setup();
+      return tracker;
+  }
+
+  BaseTracker* SLAMAssembly::_makeDepthTracker(const Camera* camera_left,
+					       const Camera* camera_right){
+
+      UVDAligner* pose_optimizer=new UVDAligner;
+      //ds allocate the tracker module with the given cameras
+      DepthFramePointGenerator* framepoint_generator=new DepthFramePointGenerator();
+      framepoint_generator->setCameraLeft(camera_left);
+      framepoint_generator->setCameraRight(camera_right);
+      framepoint_generator->setup();
+      
+      DepthTracker* tracker=new DepthTracker();
       tracker->setCameraLeft(camera_left);
       tracker->setCameraRight(camera_right);
       tracker->setFramePointGenerator(framepoint_generator);
@@ -135,7 +156,16 @@ namespace proslam {
     if (!_tracker) {
       const Camera* camera_left=_cameras_by_topic.at(ParameterServer::topicImageLeft());
       const Camera* camera_right=_cameras_by_topic.at(ParameterServer::topicImageRight());
-      _tracker=_makeStereoTracker(camera_left, camera_right);
+      switch (ParameterServer::trackerMode()){
+        case ParameterServer::Stereo:
+	  _tracker=_makeStereoTracker(camera_left, camera_right);
+	  break;
+      case ParameterServer::Depth:
+	  _tracker=_makeDepthTracker(camera_left, camera_right);
+	  break;
+      default:
+	throw std::runtime_error("unknown tracker");
+      }
     }
 
     std::cerr << "loaded cameras: " << _cameras_by_topic.size() << std::endl;
@@ -151,7 +181,16 @@ namespace proslam {
     //ds if no tracker is set
     if (!_tracker) {
       //ds allocate the tracker module with the given cameras
-      _tracker = _makeStereoTracker(camera_left_, camera_right_);
+      switch (ParameterServer::trackerMode()){
+        case ParameterServer::Stereo:
+	  _tracker=_makeStereoTracker(camera_left_, camera_right_);
+	  break;
+      case ParameterServer::Depth:
+	  _tracker=_makeDepthTracker(camera_left_, camera_right_);
+	  break;
+      default:
+	throw std::runtime_error("unknown tracker");
+      }
     }
   }
 
@@ -260,14 +299,27 @@ namespace proslam {
         srrg_core::PinholeImageMessage* message_image_right = dynamic_cast<srrg_core::PinholeImageMessage*>(_synchronizer.messages()[1].get());
 
         //ds buffer images and cameras
-        cv::Mat intensity_image_left_rectified  = message_image_left->image();
-        cv::Mat intensity_image_right_rectified = message_image_right->image();
-        Camera* camera_left = _cameras_by_topic.at(message_image_left->topic());
+        cv::Mat intensity_image_left_rectified;
+	if(message_image_left->image().type()==CV_8UC3){
+	  cvtColor(message_image_left->image(), intensity_image_left_rectified, CV_BGR2GRAY);
+	} else {
+	  intensity_image_left_rectified = message_image_left->image();
+	}
+
+	cv::Mat intensity_image_right_rectified;
+	if(message_image_right->image().type()==CV_8UC3){
+	  cvtColor(message_image_right->image(), intensity_image_right_rectified, CV_BGR2GRAY);
+	} else {
+	  intensity_image_right_rectified = message_image_right->image();
+	}
+	
+	Camera* camera_left = _cameras_by_topic.at(message_image_left->topic());
 
         //ds preprocess the images if desired
         if (ParameterServer::optionEqualizeHistogram()) {
           cv::equalizeHist(intensity_image_left_rectified, intensity_image_left_rectified);
-          cv::equalizeHist(intensity_image_right_rectified, intensity_image_right_rectified);
+	  if (ParameterServer::trackerMode()!=ParameterServer::Depth)
+	    cv::equalizeHist(intensity_image_right_rectified, intensity_image_right_rectified);
         }
 
         //ds check if first frame and odometry is available
@@ -342,6 +394,11 @@ namespace proslam {
     StereoTracker* stereo_tracker=dynamic_cast<StereoTracker*>(_tracker);
     if (stereo_tracker)
       stereo_tracker->setIntensityImageRight(&intensity_image_right_);
+
+    DepthTracker* depth_tracker=dynamic_cast<DepthTracker*>(_tracker);
+    if (depth_tracker)
+      depth_tracker->setDepthImageRight(&intensity_image_right_);
+
     _tracker->compute();
     
     //_tracker->compute(_world_map, intensity_image_left_, intensity_image_right_);

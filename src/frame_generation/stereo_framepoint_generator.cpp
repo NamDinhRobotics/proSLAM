@@ -1,13 +1,13 @@
-#include "stereo_triangulator.h"
+#include "stereo_framepoint_generator.h"
 
 namespace proslam {
 
-  StereoTriangulator::StereoTriangulator() {
+  StereoFramePointGenerator::StereoFramePointGenerator() {
     _camera_right=0;
   }
   
   //ds the stereo camera setup must be provided
-  void StereoTriangulator::setup(){
+  void StereoFramePointGenerator::setup(){
 
     assert(_camera_right);
 
@@ -22,22 +22,22 @@ namespace proslam {
     _keypoints_with_descriptors_right.clear();
 
     //ds info
-    std::cerr << "StereoTriangulator::StereoTriangulator|baseline (m): " << _baseline_meters << std::endl;
-    std::cerr << "StereoTriangulator::StereoTriangulator|maximum depth tracking close (m): " << _maximum_depth_near_meters << std::endl;
-    std::cerr << "StereoTriangulator::StereoTriangulator|maximum depth tracking far (m): " << _maximum_depth_far_meters << std::endl;
-    std::cerr << "StereoTriangulator::StereoTriangulator|bin size (pixel): " << _bin_size << std::endl;
-    std::cerr << "StereoTriangulator::StereoTriangulator|number of bins u: " << _number_of_bins_u << std::endl;
-    std::cerr << "StereoTriangulator::StereoTriangulator|number of bins v: " << _number_of_bins_v << std::endl;
-    std::cerr << "StereoTriangulator::StereoTriangulator|total number of bins: " << _number_of_bins_u*_number_of_bins_v << std::endl;
-    std::cerr << "StereoTriangulator::StereoTriangulator|constructed" << std::endl;
+    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|baseline (m): " << _baseline_meters << std::endl;
+    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|maximum depth tracking close (m): " << _maximum_depth_near_meters << std::endl;
+    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|maximum depth tracking far (m): " << _maximum_depth_far_meters << std::endl;
+    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|bin size (pixel): " << _bin_size << std::endl;
+    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|number of bins u: " << _number_of_bins_u << std::endl;
+    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|number of bins v: " << _number_of_bins_v << std::endl;
+    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|total number of bins: " << _number_of_bins_u*_number_of_bins_v << std::endl;
+    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|constructed" << std::endl;
   }
 
   //ds cleanup of dynamic structures
-  StereoTriangulator::~StereoTriangulator() {
+  StereoFramePointGenerator::~StereoFramePointGenerator() {
   }
 
   //ds computes framepoints stored in a image-like matrix (_framepoints_in_image) for provided stereo images
-  void StereoTriangulator::compute(Frame* frame_) {
+  void StereoFramePointGenerator::compute(Frame* frame_) {
     //ds detect new features
     CHRONOMETER_START(feature_detection)
     detectKeypoints(frame_->intensityImageLeft(), _keypoints_left);
@@ -67,7 +67,7 @@ namespace proslam {
 
 
   //ds initializes structures for the epipolar stereo keypoint search (called within compute)
-  void StereoTriangulator::initialize(const std::vector<cv::KeyPoint>& keypoints_left_,
+  void StereoFramePointGenerator::initialize(const std::vector<cv::KeyPoint>& keypoints_left_,
                                       const std::vector<cv::KeyPoint>& keypoints_right_,
                                       const cv::Mat& descriptors_left_,
                                       const cv::Mat& descriptors_right_) {
@@ -113,7 +113,7 @@ namespace proslam {
   }
 
   //ds computes all potential stereo keypoints (exhaustive in matching distance) and stores them as framepoints (called within compute)
-  void StereoTriangulator::findStereoKeypoints(Frame* frame_) {
+  void StereoFramePointGenerator::findStereoKeypoints(Frame* frame_) {
 
     //ds sort all input vectors by ascending row positions
     std::sort(_keypoints_with_descriptors_left.begin(), _keypoints_with_descriptors_left.end(), [](const KeypointWithDescriptor& a_, const KeypointWithDescriptor& b_){return ((a_.row < b_.row) || (a_.row == b_.row && a_.col < b_.col));});
@@ -183,7 +183,7 @@ namespace proslam {
 
 
   //ds computes 3D position of a stereo keypoint pair in the keft camera frame (called within findStereoKeypoints)
-  const PointCoordinates StereoTriangulator::getCoordinatesInCameraLeft(const cv::Point2f& image_coordinates_left_, const cv::Point2f& image_coordinates_right_) const {
+  const PointCoordinates StereoFramePointGenerator::getCoordinatesInCameraLeft(const cv::Point2f& image_coordinates_left_, const cv::Point2f& image_coordinates_right_) const {
 
     //ds check for minimal disparity
     if (image_coordinates_left_.x-image_coordinates_right_.x < _minimum_disparity_pixels) {
