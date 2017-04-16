@@ -1,40 +1,46 @@
 #pragma once
-#include "aligners/stereouv_aligner.h"
-#include "aligners/uvd_aligner.h"
+#include "aligners/base_frame_aligner.h"
 #include "types/world_map.h"
-#include "triangulation/stereo_triangulator.h"
+#include "triangulation/base_framepoint_generator.h"
 
 namespace proslam {
 
   //ds this class processes two subsequent Frames and establishes Framepoint correspondences (tracks) based on the corresponding images
-  class Tracker {
+  class BaseTracker {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 	  //ds object handling
   public:
 
     //ds the tracker assumes a constant stereo camera configuration
-    Tracker(const Camera* camera_left_, const Camera* camera_right_);
+    BaseTracker();
 
+    inline void setCameraLeft(const Camera* camera_left_) {_camera_left=camera_left_;}
+    inline void setAligner(BaseFrameAligner* pose_optimizer_) {_pose_optimizer=pose_optimizer_;}
+      
+    void setFramePointGenerator(BaseFramePointGenerator * framepoint_generator_) {
+      _framepoint_generator = framepoint_generator_;
+    }
+
+    virtual void setup(); // to be called once all construction parameters are set
+    
     //ds dynamic cleanup
-    ~Tracker();
-
-    //ds prohibit default construction
-    Tracker() = delete;
+    virtual ~BaseTracker();
 
     //ds functionality
   public:
 
-    //ds creates a new Frame for the given images, retrieves the correspondences relative to the previous Frame, optimizes the current frame pose and updates landmarks
-    void compute(WorldMap* context_, const cv::Mat& intensity_image_left_, const cv::Mat& intensity_image_right_);
-
+    void setWorldMap(WorldMap* context_) {_context=context_;}
+    void setIntensityImageLeft(const cv::Mat& intensity_image_left_) {_intensity_image_left=&intensity_image_left_;}
+    virtual void compute();
+ 
     //ds getters/setters
   public:
 
     BaseFrameAligner* aligner() {return _pose_optimizer;}
     
     void setMotionPreviousToCurrent(const TransformMatrix3D& motion_previous_to_current_) {_motion_previous_to_current = motion_previous_to_current_;}
-    StereoTriangulator* framepointGenerator() {return _framepoint_generator;}
+    BaseFramePointGenerator* framepointGenerator() {return _framepoint_generator;}
     const Count totalNumberOfTrackedPoints() const {return _total_number_of_tracked_points;}
     const Count totalNumberOfLandmarksClose() const {return _total_number_of_landmarks_close;}
     const Count totalNumberOfLandmarksFar() const {return _total_number_of_landmarks_far;}
@@ -60,8 +66,13 @@ namespace proslam {
     void _updateLandmarks(WorldMap* context_, Frame* frame_);
 
     //ds attempts to recover framepoints in the current image using the more precise pose estimate, retrieved after pose optimization
-    void _recoverPoints(Frame* current_frame_);
+    virtual void _recoverPoints(Frame* current_frame_) = 0;
 
+    // creates a frame, calling the framepoint generator,
+    // after having set it up with the proper arguments
+    // to be overidden in the specialized classes
+    virtual Frame* _makeFrame() = 0;
+    
   protected:
 
     //ds tracker status
@@ -75,12 +86,17 @@ namespace proslam {
     Count _number_of_potential_points           = 0;
     Count _number_of_tracked_points             = 0;
     const Camera* _camera_left;
-    const Camera* _camera_right;
-    const int32_t _camera_rows;
-    const int32_t _camera_cols;
+    int32_t _camera_rows;
+    int32_t _camera_cols;
 
-    //ds framepoint retrieval
-    StereoTriangulator* _framepoint_generator;
+
+    // working elements
+    const cv::Mat* _intensity_image_left;
+    WorldMap* _context;
+    
+    // processing objects
+    BaseFrameAligner* _pose_optimizer;
+    BaseFramePointGenerator* _framepoint_generator;
 
     //ds framepoint tracking configuration
     int32_t _pixel_distance_tracking_threshold         = 0;   //ds current pixel distance threshold for framepoint tracking - lower means higher precision
@@ -90,7 +106,6 @@ namespace proslam {
     const int32_t _maximum_flow_pixels_squared = 150*150;     //ds maximum allowed pixel distance between image coordinates prediction and actual detection
 
     //ds pose solving
-    BaseFrameAligner* _pose_optimizer;
     TransformMatrix3D _motion_previous_to_current;
 
     //ds framepoint track recovery
@@ -115,6 +130,9 @@ namespace proslam {
     const double getTimeConsumptionSeconds_feature_detection() const {return _framepoint_generator->getTimeConsumptionSeconds_feature_detection();}
     const double getTimeConsumptionSeconds_keypoint_pruning() const {return _framepoint_generator->getTimeConsumptionSeconds_keypoint_pruning();}
     const double getTimeConsumptionSeconds_descriptor_extraction() const {return _framepoint_generator->getTimeConsumptionSeconds_descriptor_extraction();}
-    const double getTimeConsumptionSeconds_point_triangulation() const {return _framepoint_generator->getTimeConsumptionSeconds_point_triangulation();}
+
   };
+
 }
+
+    

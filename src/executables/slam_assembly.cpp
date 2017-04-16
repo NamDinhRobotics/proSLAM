@@ -2,6 +2,8 @@
 
 #include "parameter_server.h"
 #include "srrg_txt_io/pinhole_image_message.h"
+#include "aligners/stereouv_aligner.h"
+#include "motion_estimation/stereo_tracker.h"
 
 namespace proslam {
 
@@ -54,6 +56,26 @@ namespace proslam {
       ParameterServer::printBanner();
       exit(0);
     }
+  }
+
+  StereoTracker* SLAMAssembly::_makeStereoTracker(const Camera* camera_left,
+						  const Camera* camera_right){
+
+      StereoUVAligner* pose_optimizer=new StereoUVAligner;
+
+      //ds allocate the tracker module with the given cameras
+      StereoTriangulator* framepoint_generator=new StereoTriangulator();
+      framepoint_generator->setCameraLeft(camera_left);
+      framepoint_generator->setCameraRight(camera_right);
+      framepoint_generator->setup();
+      
+      StereoTracker* tracker=new StereoTracker();
+      tracker->setCameraLeft(camera_left);
+      tracker->setCameraRight(camera_right);
+      tracker->setFramePointGenerator(framepoint_generator);
+      tracker->setAligner(pose_optimizer);
+      tracker->setup();
+      return tracker;
   }
 
   //ds attempts to load the camera configuration based on the current input setting
@@ -111,9 +133,9 @@ namespace proslam {
 
     //ds if no tracker is set
     if (!_tracker) {
-
-      //ds allocate the tracker module with the given cameras
-      _tracker = new Tracker(_cameras_by_topic.at(ParameterServer::topicImageLeft()), _cameras_by_topic.at(ParameterServer::topicImageRight()));
+      const Camera* camera_left=_cameras_by_topic.at(ParameterServer::topicImageLeft());
+      const Camera* camera_right=_cameras_by_topic.at(ParameterServer::topicImageRight());
+      _tracker=_makeStereoTracker(camera_left, camera_right);
     }
 
     std::cerr << "loaded cameras: " << _cameras_by_topic.size() << std::endl;
@@ -128,9 +150,8 @@ namespace proslam {
 
     //ds if no tracker is set
     if (!_tracker) {
-
       //ds allocate the tracker module with the given cameras
-      _tracker = new Tracker(camera_left_, camera_right_);
+      _tracker = _makeStereoTracker(camera_left_, camera_right_);
     }
   }
 
@@ -316,7 +337,14 @@ namespace proslam {
   void SLAMAssembly::process(const cv::Mat& intensity_image_left_, const cv::Mat& intensity_image_right_) {
 
     //ds call the tracker
-    _tracker->compute(_world_map, intensity_image_left_, intensity_image_right_);
+    _tracker->setWorldMap(_world_map);
+    _tracker->setIntensityImageLeft(intensity_image_left_);
+    StereoTracker* stereo_tracker=dynamic_cast<StereoTracker*>(_tracker);
+    if (stereo_tracker)
+      stereo_tracker->setIntensityImageRight(&intensity_image_right_);
+    _tracker->compute();
+    
+    //_tracker->compute(_world_map, intensity_image_left_, intensity_image_right_);
 
     //ds check if relocalization is desired
     if (ParameterServer::optionUseRelocalization()) {

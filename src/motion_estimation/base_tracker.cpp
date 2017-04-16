@@ -1,42 +1,37 @@
-#include "tracker.h"
+#include "base_tracker.h"
 
 namespace proslam {
   using namespace srrg_core;
 
-  //ds the tracker assumes a constant stereo camera configuration
-  Tracker::Tracker(const Camera* camera_left_,
-                   const Camera* camera_right_): _camera_left(camera_left_),
-                                                 _camera_right(camera_right_),
-                                                 _camera_rows(camera_left_->imageRows()),
-                                                 _camera_cols(camera_left_->imageCols()),
-                                                 _pose_optimizer(new StereoUVAligner()),
-						 /* MESSAGTE FOR DUDE, uncomment the line below and comment the line above */
-                                                 //_pose_optimizer(new UVDAligner()),
-                                                 _motion_previous_to_current(TransformMatrix3D::Identity()){
-    std::cerr << "Tracker::Tracker|constructing" << std::endl;
+  BaseTracker::BaseTracker(){
+    _camera_left=0;
+    _pose_optimizer=0;
+    _framepoint_generator=0;
+    _intensity_image_left=0;
+  }
 
-    
-    _framepoint_generator = new StereoTriangulator();
-    _framepoint_generator->setCameraLeft(camera_left_);
-    _framepoint_generator->setCameraRight(camera_right_);
-    _framepoint_generator->setup();
-    //ds allocate stereouv aligner for odometry computation
-    assert(_pose_optimizer != 0);
-
-    //ds configure aligner
+  void BaseTracker::setup() {
+    assert(_camera_left);
+    assert(_pose_optimizer);
+    _camera_rows = _camera_left->imageRows();
+    _camera_cols = _camera_left->imageCols();
+    _motion_previous_to_current = TransformMatrix3D::Identity();
     _pose_optimizer->setMaximumDepthNearMeters(_framepoint_generator->maximumDepthNearMeters());
     _pose_optimizer->setMaximumDepthFarMeters(_framepoint_generator->maximumDepthFarMeters());
 
     //ds clear buffers
     _lost_points.clear();
     _projected_image_coordinates_left.clear();
-    std::cerr << "Tracker::Tracker|constructed" << std::endl;
+    std::cerr << "BaseTracker::BaseTracker|setup" << std::endl;
   }
+  
 
   //ds dynamic cleanup
-  Tracker::~Tracker() {
-    std::cerr << "Tracker::Tracker|destroying" << std::endl;
+  BaseTracker::~BaseTracker() {
+    std::cerr << "BaseTracker::BaseTracker|destroying" << std::endl;
 
+    assert(*_intensity_image_left);
+    
     //ds clear buffers
     _lost_points.clear();
     _projected_image_coordinates_left.clear();
@@ -44,34 +39,41 @@ namespace proslam {
     //ds free dynamics
     delete _framepoint_generator;
     delete _pose_optimizer;
-    std::cerr << "Tracker::Tracker|destroyed" << std::endl;
+    std::cerr << "BaseTracker::BaseTracker|destroyed" << std::endl;
   }
 
   //ds creates a new Frame for the given images, retrieves the correspondences relative to the previous Frame, optimizes the current frame pose and updates landmarks
-  void Tracker::compute(WorldMap* context_, const cv::Mat& intensity_image_left_, const cv::Mat& intensity_image_right_) {
+  void BaseTracker::compute() {
 
+    assert(_camera_left);
+    assert(_context);
+    assert(_intensity_image_left);
+    
+    const cv::Mat& intensity_image_left=*_intensity_image_left;
     //ds reset point configurations
     _number_of_tracked_points        = 0;
     _number_of_lost_points           = 0;
     _number_of_lost_points_recovered = 0;
-    for (Landmark* landmark: context_->currentlyTrackedLandmarks()) {
+    for (Landmark* landmark: _context->currentlyTrackedLandmarks()) {
       landmark->setIsCurrentlyTracked(false);
     }
-    context_->currentlyTrackedLandmarks().clear();
+    _context->currentlyTrackedLandmarks().clear();
 
     //ds retrieve estimate by applying the constant velocity motion model
-    TransformMatrix3D robot_to_world_current = context_->robotToWorld();
-    if (context_->currentFrame()) {
+    TransformMatrix3D robot_to_world_current = _context->robotToWorld();
+    if (_context->currentFrame()) {
       robot_to_world_current = _motion_previous_to_current*robot_to_world_current;
     }
-    context_->setRobotToWorld(robot_to_world_current);
+    _context->setRobotToWorld(robot_to_world_current);
 
     //ds create new frame
-    Frame* current_frame = context_->createFrame(robot_to_world_current, _framepoint_generator->maximumDepthNearMeters());
-    current_frame->setCameraLeft(_camera_left);
-    current_frame->setIntensityImageLeft(intensity_image_left_);
-    current_frame->setCameraRight(_camera_right);
-    current_frame->setIntensityImageRight(intensity_image_right_);
+    Frame* current_frame = _makeFrame();
+ 
+    // _context->createFrame(robot_to_world_current, _framepoint_generator->maximumDepthNearMeters());
+    // current_frame->setCameraLeft(_camera_left);
+    // current_frame->setIntensityImageLeft(intensity_image_left);
+    // current_frame->setCameraRight(_camera_right);
+    // current_frame->setIntensityImageRight(intensity_image_right_);
 
     //ds compute full sensory prior for the current frame
     _framepoint_generator->compute(current_frame);
@@ -89,7 +91,7 @@ namespace proslam {
 
       //ds track lost - localizing
     case Frame::Localizing: {
-      std::cerr << "Tracker::addImage|STATE: LOCALIZING" << std::endl;
+      std::cerr << "BaseTracker::addImage|STATE: LOCALIZING" << std::endl;
 
       //ds if we have a previous frame
       if (current_frame->previous()) {
@@ -121,11 +123,11 @@ namespace proslam {
               _motion_previous_to_current = TransformMatrix3D::Identity();
             }
 
-            std::cerr << "Tracker::addImage|WARNING: using posit on frame points (experimental) inliers: " << _pose_optimizer->numberOfInliers()
+            std::cerr << "BaseTracker::addImage|WARNING: using posit on frame points (experimental) inliers: " << _pose_optimizer->numberOfInliers()
                       << " outliers: " << _pose_optimizer->numberOfOutliers() << " average error: " << _pose_optimizer->totalError()/_pose_optimizer->numberOfInliers() <<  std::endl;
 
             //ds update previous
-            context_->setRobotToWorld(current_frame->robotToWorld());
+            _context->setRobotToWorld(current_frame->robotToWorld());
           }
       }
 
@@ -134,7 +136,7 @@ namespace proslam {
       if (number_of_good_points > _minimum_number_of_landmarks_to_track) {
 
 	//ds trigger landmark creation and framepoint update
-	_updateLandmarks(context_, current_frame);
+	_updateLandmarks(_context, current_frame);
 	_status_previous = _status;
 	_status = Frame::Tracking;
       } else {
@@ -175,12 +177,12 @@ namespace proslam {
 	current_frame->setStatus(_status);
 	current_frame->releasePoints();
 	_framepoint_generator->clearFramepointsInImage();
-	context_->currentlyTrackedLandmarks().clear();
+	_context->currentlyTrackedLandmarks().clear();
 
 	//ds keep previous solution
 	current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
 	_motion_previous_to_current = TransformMatrix3D::Identity();
-	context_->setRobotToWorld(current_frame->robotToWorld());
+	_context->setRobotToWorld(current_frame->robotToWorld());
 	return;
       }
 
@@ -197,11 +199,11 @@ namespace proslam {
       }
 
       //ds visualization only (we need to clear and push_back in order to not crash the gui since its decoupled - otherwise we could use resize)
-      context_->currentlyTrackedLandmarks().reserve(_number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
+      _context->currentlyTrackedLandmarks().reserve(_number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
 
       //ds prune current frame points
       _pruneFramepoints(current_frame);
-      assert(context_->currentlyTrackedLandmarks().size() <= _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
+      assert(_context->currentlyTrackedLandmarks().size() <= _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
       assert(_number_of_tracked_points >= number_of_inliers);
 
       //ds recover lost points based on updated pose
@@ -210,9 +212,9 @@ namespace proslam {
       CHRONOMETER_STOP(point_recovery)
 
         //ds update tracks
-        context_->setRobotToWorld(current_frame->robotToWorld());
+        _context->setRobotToWorld(current_frame->robotToWorld());
       CHRONOMETER_START(landmark_optimization)
-        _updateLandmarks(context_, current_frame);
+        _updateLandmarks(_context, current_frame);
       CHRONOMETER_STOP(landmark_optimization)
         _status_previous = _status;
       _status          = Frame::Tracking;
@@ -237,7 +239,7 @@ namespace proslam {
   }
 
   //ds retrieves framepoint correspondences between previous and current frame
-  void Tracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame_) {
+  void BaseTracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame_) {
     assert(previous_frame_ != 0);
     assert(current_frame_ != 0);
 
@@ -415,7 +417,7 @@ namespace proslam {
     _lost_points.resize(_number_of_lost_points);
 
     //    //ds info
-    //    std::cerr << "Tracker::trackFeatures|tracks: " << _number_of_tracked_points << "/" << previous_frame_->points().size()
+    //    std::cerr << "BaseTracker::trackFeatures|tracks: " << _number_of_tracked_points << "/" << previous_frame_->points().size()
     //              << " landmarks close: " << _number_of_tracked_landmarks_close
     //              << " landmarks far: " << _number_of_tracked_landmarks_far
     //              << std::endl;
@@ -424,7 +426,7 @@ namespace proslam {
   }
 
   //ds adds new framepoints to the provided frame (picked from the pool of the _framepoint_generator)
-  void Tracker::_addNewFramepoints(Frame* frame_) {
+  void BaseTracker::_addNewFramepoints(Frame* frame_) {
 
     //ds make space for all remaining points
     frame_->points().resize(_number_of_potential_points+_number_of_lost_points_recovered);
@@ -451,11 +453,11 @@ namespace proslam {
       }
     }
     frame_->points().resize(index_point_new);
-    //    std::cerr << "Tracker::extractFeatures|new points: " << index_point_new-_number_of_tracked_points << std::endl;
+    //    std::cerr << "BaseTracker::extractFeatures|new points: " << index_point_new-_number_of_tracked_points << std::endl;
   }
 
   //ds retrieves framepoint projections as image coordinates in a vector (at the same time removing points with invalid projections)
-  void Tracker::_getImageCoordinates(std::vector<ImageCoordinates>& projected_image_coordinates_left_, Frame* previous_frame_, const Frame* current_frame_) const {
+  void BaseTracker::_getImageCoordinates(std::vector<ImageCoordinates>& projected_image_coordinates_left_, Frame* previous_frame_, const Frame* current_frame_) const {
     assert(previous_frame_ != 0);
     assert(current_frame_ != 0);
 
@@ -509,7 +511,7 @@ namespace proslam {
   }
 
   //ds prunes invalid framespoints after pose optimization
-  void Tracker::_pruneFramepoints(Frame* frame_) {
+  void BaseTracker::_pruneFramepoints(Frame* frame_) {
 
     //ds update current frame points
     _number_of_tracked_points = 0;
@@ -535,7 +537,7 @@ namespace proslam {
   }
 
   //ds updates existing or creates new landmarks for framepoints of the provided frame
-  void Tracker::_updateLandmarks(WorldMap* context_, Frame* frame_) {
+  void BaseTracker::_updateLandmarks(WorldMap* context_, Frame* frame_) {
 
     //ds buffer current pose
     const TransformMatrix3D& frame_to_world = frame_->robotToWorld();
@@ -582,130 +584,5 @@ namespace proslam {
       landmark->setIsCurrentlyTracked(true);
       context_->currentlyTrackedLandmarks().push_back(landmark);
     }
-  }
-
-  //ds attempts to recover framepoints in the current image using the more precise pose estimate, retrieved after pose optimization
-  void Tracker::_recoverPoints(Frame* current_frame_) {
-
-    //ds precompute transforms
-    const TransformMatrix3D world_to_camera_left    = _camera_left->robotToCamera()*current_frame_->worldToRobot();
-    const ProjectionMatrix& projection_matrix_left  = _camera_left->projectionMatrix();
-    const ProjectionMatrix& projection_matrix_right = _camera_right->projectionMatrix();
-
-    //ds buffers
-    const cv::Mat& intensity_image_left  = current_frame_->intensityImageLeft();
-    const cv::Mat& intensity_image_right = current_frame_->intensityImageRight();
-    std::vector<cv::KeyPoint> keypoint_buffer_left(1);
-    std::vector<cv::KeyPoint> keypoint_buffer_right(1);
-
-    //ds recover lost landmarks
-    Index index_lost_point_recovered = _number_of_tracked_points;
-    current_frame_->points().resize(_number_of_tracked_points+_number_of_lost_points);
-    for (FramePoint* point_previous: _lost_points) {
-
-      //ds get point into current camera - based on last track
-      Vector4 point_in_camera_homogeneous(Vector4::Ones());
-
-      //ds if we have a landmark at hand
-      if (point_previous->landmark()) {
-
-        //ds get point in camera frame based on landmark coordinates
-        point_in_camera_homogeneous.head<3>() = world_to_camera_left*point_previous->landmark()->coordinates();
-      } else {
-
-        //ds get point in camera frame based on point coordinates
-        point_in_camera_homogeneous.head<3>() = world_to_camera_left*point_previous->worldCoordinates();
-      }
-
-      //ds obtain point projection on camera image plane
-      PointCoordinates point_in_image_left  = projection_matrix_left*point_in_camera_homogeneous;
-      PointCoordinates point_in_image_right = projection_matrix_right*point_in_camera_homogeneous;
-
-      //ds normalize point and update prediction based on landmark position: LEFT
-      point_in_image_left  /= point_in_image_left.z();
-      point_in_image_right /= point_in_image_right.z();
-
-      //ds check for invalid projections
-      if (point_in_image_left.x() < 0 || point_in_image_left.x() > _camera_cols  ||
-          point_in_image_right.x() < 0 || point_in_image_right.x() > _camera_cols||
-          point_in_image_left.y() < 0 || point_in_image_left.y() > _camera_rows  ) {
-
-        //ds out of FOV
-        continue;
-      }
-      assert(point_in_image_left.y() == point_in_image_right.y());
-
-      //ds set projections
-      const cv::Point2f projection_left(point_in_image_left.x(), point_in_image_left.y());
-      const cv::Point2f projection_right(point_in_image_right.x(), point_in_image_right.y());
-
-      //ds this can be moved outside of the loop if keypoint sizes are constant
-      const float regional_border_center = 4*point_previous->keypointLeft().size;
-      const cv::Point2f offset_keypoint_half(regional_border_center, regional_border_center);
-      const float regional_full_height = regional_border_center+regional_border_center+1;
-
-      //ds if available search range is insufficient
-      if (projection_left.x <= regional_border_center+1              ||
-          projection_left.x >= _camera_cols-regional_border_center-1 ||
-          projection_left.y <= regional_border_center+1              ||
-          projection_left.y >= _camera_rows-regional_border_center-1 ||
-          projection_right.x <= regional_border_center+1             ||
-          projection_right.x >= _camera_cols-regional_border_center-1) {
-
-        //ds skip complete tracking
-        continue;
-      }
-
-      //ds extraction regions
-      const cv::Point2f corner_left(projection_left-offset_keypoint_half);
-      const cv::Rect_<float> region_of_interest_left(corner_left.x, corner_left.y, regional_full_height, regional_full_height);
-      const cv::Point2f corner_right(projection_right-offset_keypoint_half);
-      const cv::Rect_<float> region_of_interest_right(corner_right.x, corner_right.y, regional_full_height, regional_full_height);
-
-      //ds extract descriptors at this position: LEFT
-      keypoint_buffer_left[0]    = point_previous->keypointLeft();
-      keypoint_buffer_left[0].pt = offset_keypoint_half;
-      cv::Mat descriptor_left;
-      _framepoint_generator->descriptorExtractor()->compute(intensity_image_left(region_of_interest_left), keypoint_buffer_left, descriptor_left);
-      if (descriptor_left.rows == 0) {
-        continue;
-      }
-      keypoint_buffer_left[0].pt += corner_left;
-
-      //ds extract descriptors at this position: RIGHT
-      keypoint_buffer_right[0] = point_previous->keypointRight();
-      keypoint_buffer_right[0].pt = offset_keypoint_half;
-      cv::Mat descriptor_right;
-      _framepoint_generator->descriptorExtractor()->compute(intensity_image_right(region_of_interest_right), keypoint_buffer_right, descriptor_right);
-      if (descriptor_right.rows == 0) {
-        continue;
-      }
-      keypoint_buffer_right[0].pt += corner_right;
-
-      if (cv::norm(point_previous->descriptorLeft(), descriptor_left, DESCRIPTOR_NORM) < _framepoint_generator->matchingDistanceTrackingThreshold()  &&
-          cv::norm(point_previous->descriptorRight(), descriptor_right, DESCRIPTOR_NORM) < _framepoint_generator->matchingDistanceTrackingThreshold()) {
-        try {
-
-          //ds triangulate point
-          const PointCoordinates camera_coordinates(_framepoint_generator->getCoordinatesInCameraLeft(keypoint_buffer_left[0].pt, keypoint_buffer_right[0].pt));
-
-          //ds allocate a new point connected to the previous one
-          FramePoint* current_point = current_frame_->create(keypoint_buffer_left[0],
-                                                             descriptor_left,
-                                                             keypoint_buffer_right[0],
-                                                             descriptor_right,
-                                                             camera_coordinates,
-                                                             point_previous);
-
-          //ds set the point to the control structure
-          current_frame_->points()[index_lost_point_recovered] = current_point;
-          ++index_lost_point_recovered;
-        } catch (const ExceptionTriangulation& /*exception_*/) {}
-      }
-    }
-    _number_of_lost_points_recovered = index_lost_point_recovered-_number_of_tracked_points;
-    _number_of_tracked_points = index_lost_point_recovered;
-    current_frame_->points().resize(_number_of_tracked_points);
-    //    std::cerr << "Tracker::recoverPoints|recovered points: " << _number_of_lost_points_recovered << "/" << _number_of_lost_points << std::endl;
   }
 }

@@ -1,4 +1,5 @@
 add_library(srrg_proslam_triangulation_library
+  base_framepoint_generator.cpp
   stereo_triangulator.cpp
 )
 

@@ -4,9 +4,10 @@
 
 #include "map_optimization/graph_optimizer.h"
 #include "relocalization/relocalizer.h"
-#include "motion_estimation/tracker.h"
+#include "motion_estimation/stereo_tracker.h"
 #include "visualization/viewer_input_images.h"
 #include "visualization/viewer_output_map.h"
+#include "triangulation/stereo_triangulator.h"
 
 namespace proslam {
 
@@ -61,13 +62,16 @@ namespace proslam {
     WorldMap* worldMap() {return _world_map;}
     GraphOptimizer* optimizer() {return _optimizer;}
     Relocalizer* relocalizer() {return _relocalizer;}
-    Tracker* tracker() {return _tracker;}
+    StereoTracker* tracker() {return _tracker;}
     ViewerInputImages* viewerInputImages() {return _viewer_input_images;}
     const bool& isGUIRunning() const {return _is_gui_running;}
 
   //ds SLAM modules
   protected:
 
+    StereoTracker* _makeStereoTracker(const Camera* camera_left,
+				      const Camera* camera_right);
+    
     //ds the SLAM map, containing landmarks and trajectory
     WorldMap* _world_map;
 
@@ -78,7 +82,7 @@ namespace proslam {
     Relocalizer* _relocalizer;
 
     //ds tracking component, deriving the robots odometry
-    Tracker* _tracker;
+    StereoTracker* _tracker;
 
   //ds visualization only
   protected:

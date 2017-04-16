@@ -8,7 +8,7 @@
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/subscriber.h>
-
+#include "triangulation/stereo_triangulator.h"
 #include "parameter_server.h"
 #include "slam_assembly.h"
 
@@ -291,15 +291,18 @@ int32_t main(int32_t argc, char ** argv) {
       //ds compute descriptors
       cv::Mat descriptors_left;
       cv::Mat descriptors_right;
-      slam_system.tracker()->framepointGenerator()->extractDescriptors(image_left, keypoints_left, descriptors_left);
-      slam_system.tracker()->framepointGenerator()->extractDescriptors(image_right, keypoints_right, descriptors_right);
 
-      //ds initialize triangulation
-      slam_system.tracker()->framepointGenerator()->initialize(keypoints_left, keypoints_right, descriptors_left, descriptors_right);
-
+      // HACK
+      {
+	proslam::StereoTriangulator* triangulator=dynamic_cast<proslam::StereoTriangulator*>(slam_system.tracker()->framepointGenerator());
+	assert(triangulator);
+	
+	triangulator->extractDescriptors(image_left, keypoints_left, descriptors_left);
+	triangulator->extractDescriptors(image_right, keypoints_right, descriptors_right);
+	triangulator->initialize(keypoints_left, keypoints_right, descriptors_left, descriptors_right);
       //ds triangulate points and fill the frame
-      slam_system.tracker()->framepointGenerator()->findStereoKeypoints(frame);
-
+	triangulator->findStereoKeypoints(frame);
+      }
       //ds show the images
       cv::Mat image_display;
       cv::hconcat(image_left, image_right, image_display);

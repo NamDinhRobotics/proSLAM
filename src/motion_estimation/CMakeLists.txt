@@ -1,4 +1,6 @@
 add_library(srrg_proslam_motion_estimation_library
+  base_tracker.cpp
+  stereo_tracker.cpp
   tracker.cpp
 )
 
