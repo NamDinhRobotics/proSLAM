@@ -10,11 +10,11 @@ namespace proslam {
   void DepthFramePointGenerator::setup(){
     assert(_camera_right);
 
-    _bin_size=2;
-    _detector_threshold_maximum = 30;
-    _target_number_of_points=200;
+    _bin_size=4;
+    _detector_threshold_maximum = 40;
+    _target_number_of_points=700;
    BaseFramePointGenerator::setup();
-   _maximum_depth_near_meters = 4;
+   _maximum_depth_near_meters = 6;
    _maximum_depth_far_meters = 30;
    
     //ds info
