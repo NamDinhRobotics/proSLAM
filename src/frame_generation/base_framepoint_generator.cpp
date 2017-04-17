@@ -13,9 +13,9 @@ namespace proslam {
     _number_of_cols_image = _camera_left->imageCols();
     _number_of_bins_u = std::floor(static_cast<real>(_number_of_cols_image)/_bin_size);
     _number_of_bins_v = std::floor(static_cast<real>(_number_of_rows_image)/_bin_size);
-    _focal_length_pixels = _camera_left->projectionMatrix()(0,0);
-    _principal_point_offset_u_pixels = _camera_left->projectionMatrix()(0,2);
-    _principal_point_offset_v_pixels = _camera_left->projectionMatrix()(1,2);
+    _focal_length_pixels = _camera_left->cameraMatrix()(0,0);
+    _principal_point_offset_u_pixels = _camera_left->cameraMatrix()(0,2);
+    _principal_point_offset_v_pixels = _camera_left->cameraMatrix()(1,2);
     _maximum_depth_near_meters = 6;
     _maximum_depth_far_meters = 0.6;
     

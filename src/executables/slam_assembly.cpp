@@ -64,7 +64,7 @@ namespace proslam {
 						  const Camera* camera_right){
 
       StereoUVAligner* pose_optimizer=new StereoUVAligner;
-
+      
       //ds allocate the tracker module with the given cameras
       StereoFramePointGenerator* framepoint_generator=new StereoFramePointGenerator();
       framepoint_generator->setCameraLeft(camera_left);
@@ -99,6 +99,7 @@ namespace proslam {
       return tracker;
   }
 
+  
   //ds attempts to load the camera configuration based on the current input setting
   void SLAMAssembly::loadCameras() {
 
@@ -125,7 +126,8 @@ namespace proslam {
         Camera* camera_left = new Camera(message_image_left->image().rows,
                                          message_image_left->image().cols,
                                          message_image_left->cameraMatrix().cast<real>(),
-                                         message_image_left->offset().cast<real>());
+					 message_image_left->offset().cast<real>()
+					 );
         _cameras_by_topic.insert(std::make_pair(message_image_left->topic(), camera_left));
       } else if (sensor_msg->topic() == ParameterServer::topicImageRight()) {
         srrg_core::PinholeImageMessage* message_image_right  = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_msg);
@@ -134,7 +136,8 @@ namespace proslam {
         Camera* camera_right = new Camera(message_image_right->image().rows,
                                           message_image_right->image().cols,
                                           message_image_right->cameraMatrix().cast<real>(),
-                                          message_image_right->offset().cast<real>());
+                                          message_image_right->offset().cast<real>()
+					  );
         _cameras_by_topic.insert(std::make_pair(message_image_right->topic(), camera_right));
       }
       delete sensor_msg;
@@ -414,6 +417,10 @@ namespace proslam {
 
           //ds trigger relocalization
           _relocalizer->init(_world_map->currentLocalMap());
+	  if (ParameterServer::trackerMode()==ParameterServer::Depth) {
+	    // adjust threshold for depth mode/indoor loop closing
+	    _relocalizer->aligner()->setMaximumErrorKernel(0.025);
+	  }
           _relocalizer->detect();
           _relocalizer->compute();
 
@@ -451,6 +458,9 @@ namespace proslam {
   //ds prints extensive run summary
   void SLAMAssembly::printReport() {
 
+    std::cerr << "printing report" << std::endl;
+
+    std::cerr << "computing squared errors" << std::endl;
     //ds compute squared errors
     std::vector<real> errors_translation_relative(0);
     std::vector<real> squared_errors_translation_absolute(0);
@@ -470,6 +480,8 @@ namespace proslam {
       index_frame++;
     }
 
+    std::cerr << "computing RMSEs" << std::endl;
+    
     //ds compute RMSEs
     real root_mean_squared_error_translation_absolute = 0;
     for (const real squared_error: squared_errors_translation_absolute) {
@@ -483,6 +495,8 @@ namespace proslam {
     }
     mean_error_translation_relative /= errors_translation_relative.size();
 
+    std::cerr << "printing shit" << std::endl;
+    
     //ds report
     const Count number_of_processed_frames_total = _world_map->frames().size();
     std::cerr << "-------------------------------------------------------------------------" << std::endl;

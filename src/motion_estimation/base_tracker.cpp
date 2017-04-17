@@ -113,7 +113,6 @@ namespace proslam {
 
             //ds if the posit result is significant enough
             if (delta_angular > 0.001 || delta_translational > 0.01) {
-
               //ds update tracker
               current_frame->setRobotToWorld(_pose_optimizer->robotToWorld());
             } else {
@@ -128,7 +127,7 @@ namespace proslam {
 
             //ds update previous
             _context->setRobotToWorld(current_frame->robotToWorld());
-          }
+          } 
       }
 
       //ds check if we can switch the state
@@ -474,21 +473,21 @@ namespace proslam {
       assert(previous_frame_point->imageCoordinatesLeft().y() <= _camera_rows);
 
       //ds get point into current camera - based on last track
-      Vector4 point_in_camera_homogeneous(Vector4::Ones());
+      Vector3 point_in_camera;
 
       //ds if we have a valid landmark at hand
       if (previous_frame_point->landmark() && previous_frame_point->landmark()->areCoordinatesValidated()) {
 
         //ds get point in camera frame based on landmark coordinates
-        point_in_camera_homogeneous.head<3>() = world_to_camera*previous_frame_point->landmark()->coordinates();
+        point_in_camera = world_to_camera*previous_frame_point->landmark()->coordinates();
       } else {
 
         //ds reproject based on last track
-        point_in_camera_homogeneous.head<3>() = world_to_camera*previous_frame_point->worldCoordinates();
+        point_in_camera = world_to_camera*previous_frame_point->worldCoordinates();
       }
 
       //ds obtain point projection on camera image plane
-      PointCoordinates point_in_image_left = current_frame_->cameraLeft()->projectionMatrix()*point_in_camera_homogeneous;
+      PointCoordinates point_in_image_left = current_frame_->cameraLeft()->cameraMatrix()*point_in_camera;
 
       //ds normalize point and update prediction based on landmark position: LEFT
       point_in_image_left /= point_in_image_left.z();

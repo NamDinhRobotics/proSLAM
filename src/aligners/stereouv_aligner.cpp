@@ -181,11 +181,6 @@ namespace proslam {
     Matrix3 rotation_squared             = rotation.transpose() * rotation;
     rotation_squared.diagonal().array() -= 1;
     _world_to_camera_left.linear()      -= 0.5*rotation*rotation_squared;
-    _camera_left_to_world = _world_to_camera_left.inverse();
-
-    //ds update wrapped structures
-    _robot_to_world = _camera_left_to_world*_context->cameraLeft()->robotToCamera();
-    _world_to_robot = _robot_to_world.inverse();
   }
 
   //ds solve alignment problem until convergence is reached
@@ -224,5 +219,9 @@ namespace proslam {
                   << " inliers: " << _number_of_inliers << " outliers: " << _number_of_outliers << std::endl;
       }
     }
+    //ds update wrapped structures
+    _camera_left_to_world = _world_to_camera_left.inverse();
+     _robot_to_world = _camera_left_to_world*_context->cameraLeft()->robotToCamera();
+    _world_to_robot = _robot_to_world.inverse();
   }
 }

@@ -157,6 +157,5 @@ namespace proslam {
 							     camera_coordinates);
       ++_number_of_available_points;
     }
-    std::cerr << "triangulated keypoints: " << _number_of_available_points << std::endl;
   }
 }

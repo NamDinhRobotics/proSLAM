@@ -30,7 +30,7 @@ Count Camera::_instances = 0;
     _inverse_camera_matrix = _camera_matrix.inverse();
 
     //ds update the projection matrix (adjusted whenever the camera matrix and/or the offset is changed)
-    _projection_matrix.block<3,3>(0,0) = camera_matrix_;
+    _projection_matrix.block<3,3>(0,0) = camera_matrix_*_robot_to_camera.linear();
     _projection_matrix.block<3,1>(0,3) = camera_matrix_*_robot_to_camera.translation();
   }
 
@@ -39,7 +39,7 @@ Count Camera::_instances = 0;
     _robot_to_camera = _camera_to_robot.inverse();
 
     //ds update the projection matrix (adjusted whenever the camera matrix and/or the offset is changed)
-    _projection_matrix.block<3,3>(0,0) = _camera_matrix;
+    _projection_matrix.block<3,3>(0,0) = _camera_matrix*_robot_to_camera.linear();
     _projection_matrix.block<3,1>(0,3) = _camera_matrix*_robot_to_camera.translation();
   }
 }
