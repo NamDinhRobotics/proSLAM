@@ -42,6 +42,8 @@ namespace proslam {
             _option_rectify_and_undistort = true;
           } else if (!std::strcmp(argv[number_of_added_parameters], "-depth-mode") || !std::strcmp(argv[number_of_added_parameters], "-dm")) {
             _tracker_mode = Depth;
+          } else if (!std::strcmp(argv[number_of_added_parameters], "-use-odometry") || !std::strcmp(argv[number_of_added_parameters], "-uo")) {
+            _option_use_odometry = true;
           } else {
             _filename_dataset = argv[number_of_added_parameters];
           }
@@ -75,6 +77,8 @@ namespace proslam {
         std::cerr << "-use-gui                 " << _option_use_gui << std::endl;
         std::cerr << "-open                    " << !_option_use_relocalization << std::endl;
         std::cerr << "-show-top                " << _option_show_top_viewer << std::endl;
+        std::cerr << "-use-odometry            " << _option_use_odometry << std::endl;
+        std::cerr << "-depth-mode              " << (_tracker_mode==TrackerMode::Depth) << std::endl;
         std::cerr << "-drop-framepoints        " << _option_drop_framepoints << std::endl;
         std::cerr << "-equalize-histogram      " << _option_equalize_histogram << std::endl;
         std::cerr << "-rectify-and-undistort   " << _option_rectify_and_undistort << std::endl;
@@ -97,6 +101,7 @@ namespace proslam {
       static const bool& optionDropFramepoints() {return _option_drop_framepoints;}
       static const bool& optionEqualizeHistogram() {return _option_equalize_histogram;}
       static const bool& optionRectifyAndUndistort() {return _option_rectify_and_undistort;}
+      static const bool& optionUseOdometry() {return _option_use_odometry;}
       static const TrackerMode trackerMode() {return _tracker_mode;}
       
     //ds attributes
@@ -119,6 +124,7 @@ namespace proslam {
       static bool _option_drop_framepoints;
       static bool _option_equalize_histogram;
       static bool _option_rectify_and_undistort;
+      static bool _option_use_odometry;
       static TrackerMode _tracker_mode;
   };
 }

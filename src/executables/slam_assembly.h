@@ -50,8 +50,12 @@ namespace proslam {
     void addGroundTruthMeasurement(const TransformMatrix3D& robot_to_world_ground_truth_);
 
     //ds process a pair of rectified and undistorted stereo images
-    void process(const cv::Mat& intensity_image_left_, const cv::Mat& intensity_image_right_);
+    void process(const cv::Mat& intensity_image_left_,
+		 const cv::Mat& intensity_image_right_,
+		 bool use_odometry=false,
+		 const TransformMatrix3D& odometry=TransformMatrix3D::Identity());
 
+    
     //ds prints extensive run summary
     void printReport();
 

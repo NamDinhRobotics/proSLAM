@@ -15,6 +15,8 @@ namespace proslam {
                                          "-topic-camera-info-left (-cl)  <string>: sets left camera info topic (ROS)\n"
                                          "-topic-camera-info-right (-cr) <string>: sets right camera info topic (ROS)\n"
                                          "-use-gui (-ug):                          displays GUI elements\n"
+                                         "-use-odometry (-uo):                     uses odometry instead of motion model for prediction\n"
+                                         "-depth-mode (-dm):                       depth tracking (left topic: rg, right topic depth)\n"
                                          "-open:                                   disables relocalization (open loop mode)\n"
                                          "-show-top (-st):                         enable top map viewer\n"
                                          "-drop-framepoints (-df):                 deallocation of past framepoints at runtime (reduces memory demand)\n"
@@ -31,6 +33,7 @@ namespace proslam {
 
   //ds flags
   bool ParameterServer::_option_use_gui               = false;
+  bool ParameterServer::_option_use_odometry          = false;
   bool ParameterServer::_option_use_relocalization    = true;
   bool ParameterServer::_option_show_top_viewer       = false;
   bool ParameterServer::_option_drop_framepoints      = false;

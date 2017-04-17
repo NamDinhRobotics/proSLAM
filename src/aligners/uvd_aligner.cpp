@@ -205,8 +205,6 @@ namespace proslam {
       }
     }
 
-    std::cerr << " average error: " << _total_error/(_number_of_inliers+_number_of_outliers)
-	      << " inliers: " << _number_of_inliers << " outliers: " << _number_of_outliers << std::endl;
     //ds update wrapped structures
     _camera_to_world = _world_to_camera.inverse();    
     _robot_to_world = _camera_to_world*_context->cameraLeft()->robotToCamera();

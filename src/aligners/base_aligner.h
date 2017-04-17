@@ -48,6 +48,7 @@ namespace proslam {
       inline const uint64_t numberOfOutliers() const {return _number_of_outliers;}
       inline const uint64_t numberOfCorrespondences() const {return _number_of_inliers+_number_of_outliers;}
       inline const real errorDeltaForConvergence() const {return _error_delta_for_convergence;}
+      inline void setErrorDeltaForConvergence(const real edfc)  {_error_delta_for_convergence=edfc;}
       inline const Count maximumNumberOfIterations() const {return _maximum_number_of_iterations;}
       inline void setDamping(const real& damping_) {_damping = damping_;}
       inline const real damping() const {return _damping;}

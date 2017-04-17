@@ -96,6 +96,7 @@ namespace proslam {
       tracker->setFramePointGenerator(framepoint_generator);
       tracker->setAligner(pose_optimizer);
       tracker->setup();
+      tracker->setMinimumNumberOfLandmarksToTrack(50);
       return tracker;
   }
 
@@ -333,8 +334,11 @@ namespace proslam {
           }
         }
 
-        //ds progress SLAM with the new images
-        process(intensity_image_left_rectified, intensity_image_right_rectified);
+	//ds progress SLAM with the new images
+        process(intensity_image_left_rectified,
+		intensity_image_right_rectified,
+		message_image_left->hasOdom() && ParameterServer::optionUseOdometry(),
+		message_image_left->odometry().cast<real>());
 
         //ds record ground truth history for error computation
         if (message_image_left->hasOdom()) {
@@ -389,12 +393,16 @@ namespace proslam {
   }
 
   //ds process a pair of rectified and undistorted stereo images
-  void SLAMAssembly::process(const cv::Mat& intensity_image_left_, const cv::Mat& intensity_image_right_) {
+  void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
+			     const cv::Mat& intensity_image_right_,
+			     bool use_odometry,
+			     const TransformMatrix3D& odometry) {
 
     //ds call the tracker
     _tracker->setWorldMap(_world_map);
     _tracker->setIntensityImageLeft(intensity_image_left_);
     StereoTracker* stereo_tracker=dynamic_cast<StereoTracker*>(_tracker);
+      
     if (stereo_tracker)
       stereo_tracker->setIntensityImageRight(&intensity_image_right_);
 
@@ -402,9 +410,10 @@ namespace proslam {
     if (depth_tracker)
       depth_tracker->setDepthImageRight(&intensity_image_right_);
 
-    _tracker->compute();
+    if (use_odometry)
+      _tracker->setOdometry(odometry);
     
-    //_tracker->compute(_world_map, intensity_image_left_, intensity_image_right_);
+    _tracker->compute();
 
     //ds check if relocalization is desired
     if (ParameterServer::optionUseRelocalization()) {
@@ -419,7 +428,7 @@ namespace proslam {
           _relocalizer->init(_world_map->currentLocalMap());
 	  if (ParameterServer::trackerMode()==ParameterServer::Depth) {
 	    // adjust threshold for depth mode/indoor loop closing
-	    _relocalizer->aligner()->setMaximumErrorKernel(0.025);
+	    _relocalizer->aligner()->setMaximumErrorKernel(0.1);
 	  }
           _relocalizer->detect();
           _relocalizer->compute();

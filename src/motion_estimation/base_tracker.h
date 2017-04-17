@@ -15,7 +15,8 @@ namespace proslam {
     //ds the tracker assumes a constant stereo camera configuration
     BaseTracker();
 
-    inline void setCameraLeft(const Camera* camera_left_) {_camera_left=camera_left_;}
+    inline void setCameraLeft(const Camera* camera_left_) {_camera_left=camera_left_; _has_odometry=false;}
+    inline void setOdometry(const TransformMatrix3D& odometry_) {_odometry=odometry_; _has_odometry=true;}
     inline void setAligner(BaseFrameAligner* pose_optimizer_) {_pose_optimizer=pose_optimizer_;}
       
     void setFramePointGenerator(BaseFramePointGenerator * framepoint_generator_) {
@@ -46,7 +47,7 @@ namespace proslam {
     const Count totalNumberOfLandmarksFar() const {return _total_number_of_landmarks_far;}
     void setPixelDistanceTrackingMaximum(const int32_t& pixel_distance_tracking_) {_pixel_distance_tracking_threshold_maximum = pixel_distance_tracking_;}
     void setPixelDistanceTrackingMinimum(const int32_t& pixel_distance_tracking_) {_pixel_distance_tracking_threshold_minimum = pixel_distance_tracking_;}
-
+    void setMinimumNumberOfLandmarksToTrack(Count minimum_number_of_landmarks_to_track_) {_minimum_number_of_landmarks_to_track=minimum_number_of_landmarks_to_track_;}
     //ds helpers
   protected:
 
@@ -125,12 +126,15 @@ namespace proslam {
     Count _total_number_of_tracked_points  = 0;
     Count _total_number_of_landmarks_close = 0;
     Count _total_number_of_landmarks_far   = 0;
-
+    bool _has_odometry;
+    TransformMatrix3D _odometry;
+    TransformMatrix3D _previous_odometry;
+    
+ 
   public:
     const double getTimeConsumptionSeconds_feature_detection() const {return _framepoint_generator->getTimeConsumptionSeconds_feature_detection();}
     const double getTimeConsumptionSeconds_keypoint_pruning() const {return _framepoint_generator->getTimeConsumptionSeconds_keypoint_pruning();}
     const double getTimeConsumptionSeconds_descriptor_extraction() const {return _framepoint_generator->getTimeConsumptionSeconds_descriptor_extraction();}
-
   };
 
 }
