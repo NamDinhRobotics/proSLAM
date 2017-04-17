@@ -112,7 +112,6 @@ namespace proslam {
 	_pose_optimizer->converge();
 	CHRONOMETER_STOP(pose_optimization);
 
-	std::cerr << "ltt:" << _minimum_number_of_landmarks_to_track << std::endl;
 	//ds if the pose computation is acceptable
 	if (_pose_optimizer->numberOfInliers() > 2*_minimum_number_of_landmarks_to_track) {
 
@@ -124,7 +123,9 @@ namespace proslam {
 	  const real delta_angular       = WorldMap::toOrientationRodrigues(_motion_previous_to_current.linear()).norm();
 	  const real delta_translational = _motion_previous_to_current.translation().norm();
 
-	  //ds if the posit result is significant enough
+	  current_frame->setRobotToWorld(_pose_optimizer->robotToWorld());
+
+	    //ds if the posit result is significant enough
 	  if (delta_angular > 0.001 || delta_translational > 0.01) {
 	    //ds update tracker
 	    current_frame->setRobotToWorld(_pose_optimizer->robotToWorld());
@@ -151,10 +152,12 @@ namespace proslam {
 	_updateLandmarks(_context, current_frame);
 	_status_previous = _status;
 	_status = Frame::Tracking;
+	std::cerr << "Recovered" << std::endl;
       } else {
 
 	//ds just trigger framepoint updates
 	current_frame->updatePoints();
+	std::cerr << "Definitely lost" << std::endl;
       }
       break;
     }

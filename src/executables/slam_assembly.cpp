@@ -428,7 +428,8 @@ namespace proslam {
           _relocalizer->init(_world_map->currentLocalMap());
 	  if (ParameterServer::trackerMode()==ParameterServer::Depth) {
 	    // adjust threshold for depth mode/indoor loop closing
-	    _relocalizer->aligner()->setMaximumErrorKernel(0.1);
+	    _relocalizer->aligner()->setMaximumErrorKernel(0.01);
+	    _relocalizer->setMinimumNumberOfMatchesPerLandmark(100);
 	  }
           _relocalizer->detect();
           _relocalizer->compute();
