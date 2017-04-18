@@ -7,7 +7,7 @@ namespace proslam {
   class BaseFramePointGenerator {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-	  //ds exported types
+  //ds exported types
   public:
 
     //ds container holding spatial and appearance information (used in findStereoKeypoints)
@@ -21,20 +21,19 @@ namespace proslam {
     //ds readability: a 2d array of pointers to framepoints
     typedef FramePoint*** FramePointMatrix;
 
-    //ds object handling
+  //ds object handling
   public:
 
     //ds the stereo camera setup must be provided
     BaseFramePointGenerator();
 
-    void setCameraLeft(const Camera* camera_left_) {_camera_left=camera_left_;}
+    //gg to be called after constructor and parameters are set
+    virtual void setup();
 
-    virtual void setup(); // to be called after constructor and parameters are set
-    
     //ds cleanup of dynamic structures
     virtual ~BaseFramePointGenerator();
  
-    //ds functionality
+  //ds functionality
   public:
 
     //ds computes framepoints stored in a image-like matrix (_framepoints_in_image) for provided stereo images
@@ -80,6 +79,7 @@ namespace proslam {
     void clearFramepointsInImage();
 
     //ds other properties
+    void setCameraLeft(const Camera* camera_left_) {_camera_left=camera_left_;}
     const Count numberOfRowsImage() const {return _number_of_rows_image;}
     const Count numberOfColsImage() const {return _number_of_cols_image;}
     const real maximumDepthNearMeters() const {return _maximum_depth_near_meters;}
@@ -96,6 +96,7 @@ namespace proslam {
 
     //ds settings
   protected:
+
     const Camera* _camera_left;
     
     //ds input properties

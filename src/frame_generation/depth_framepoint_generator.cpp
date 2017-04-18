@@ -32,7 +32,6 @@ namespace proslam {
   }
 
   void DepthFramePointGenerator::_computeDepthMap(const cv::Mat& right_depth_image) {
-    using namespace std;
     if (right_depth_image.type()!=CV_16UC1){
       throw std::runtime_error("depth tracker requires a 16bit mono image to encode depth");
     }
@@ -62,7 +61,7 @@ namespace proslam {
 	// map the point to the left camera
 	Vector3 point_in_left_camera_meters=right_to_left_transform*point_in_right_camera_meters;
 	// if beyond camera, discard
-	const float depth_left_meters=point_in_left_camera_meters.z();
+	const real depth_left_meters=point_in_left_camera_meters.z();
 	if (depth_left_meters<=0)
 	  continue;
 	// project to image coordinates
@@ -70,8 +69,8 @@ namespace proslam {
 	point_in_left_camera_pixels *= 1./point_in_left_camera_pixels.z();
 
 	// round to int
-	int dest_r=round(point_in_left_camera_pixels.y());
-	int dest_c=round(point_in_left_camera_pixels.x());
+	const Count dest_r=round(point_in_left_camera_pixels.y());
+	const Count dest_c=round(point_in_left_camera_pixels.x());
 	
 	// if outside skip
 	if (dest_r<0 ||
@@ -96,7 +95,7 @@ namespace proslam {
 
   //ds computes framepoints stored in a image-like matrix (_framepoints_in_image) for provided stereo images
   void DepthFramePointGenerator::compute(Frame* frame_) {
-    assert(_frame->intensityImageRight().type==CV_16UC1);
+    assert(frame_->intensityImageRight().type() == CV_16UC1);
 
     //ds detect new features
     CHRONOMETER_START(feature_detection)

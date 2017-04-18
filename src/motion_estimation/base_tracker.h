@@ -9,7 +9,7 @@ namespace proslam {
   class BaseTracker {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-	  //ds object handling
+  //ds object handling
   public:
 
     //ds the tracker assumes a constant stereo camera configuration
@@ -17,7 +17,7 @@ namespace proslam {
 
     inline void setCameraLeft(const Camera* camera_left_) {_camera_left=camera_left_; _has_odometry=false;}
     inline void setOdometry(const TransformMatrix3D& odometry_) {_odometry=odometry_; _has_odometry=true;}
-    inline void setAligner(BaseFrameAligner* pose_optimizer_) {_pose_optimizer=pose_optimizer_;}
+    inline void setAligner(BaseFrameAligner* pose_optimizer_) {_pose_optimizer = pose_optimizer_;}
       
     void setFramePointGenerator(BaseFramePointGenerator * framepoint_generator_) {
       _framepoint_generator = framepoint_generator_;
@@ -28,14 +28,14 @@ namespace proslam {
     //ds dynamic cleanup
     virtual ~BaseTracker();
 
-    //ds functionality
+  //ds functionality
   public:
 
     void setWorldMap(WorldMap* context_) {_context=context_;}
     void setIntensityImageLeft(const cv::Mat& intensity_image_left_) {_intensity_image_left=&intensity_image_left_;}
     virtual void compute();
  
-    //ds getters/setters
+  //ds getters/setters
   public:
 
     BaseFrameAligner* aligner() {return _pose_optimizer;}
@@ -48,7 +48,8 @@ namespace proslam {
     void setPixelDistanceTrackingMaximum(const int32_t& pixel_distance_tracking_) {_pixel_distance_tracking_threshold_maximum = pixel_distance_tracking_;}
     void setPixelDistanceTrackingMinimum(const int32_t& pixel_distance_tracking_) {_pixel_distance_tracking_threshold_minimum = pixel_distance_tracking_;}
     void setMinimumNumberOfLandmarksToTrack(Count minimum_number_of_landmarks_to_track_) {_minimum_number_of_landmarks_to_track=minimum_number_of_landmarks_to_track_;}
-    //ds helpers
+
+  //ds helpers
   protected:
 
     //ds retrieves framepoint correspondences between previous and current frame
@@ -74,6 +75,7 @@ namespace proslam {
     // to be overidden in the specialized classes
     virtual Frame* _makeFrame() = 0;
     
+  //ds attributes
   protected:
 
     //ds tracker status
@@ -129,14 +131,5 @@ namespace proslam {
     bool _has_odometry;
     TransformMatrix3D _odometry;
     TransformMatrix3D _previous_odometry;
-    
- 
-  public:
-    const double getTimeConsumptionSeconds_feature_detection() const {return _framepoint_generator->getTimeConsumptionSeconds_feature_detection();}
-    const double getTimeConsumptionSeconds_keypoint_pruning() const {return _framepoint_generator->getTimeConsumptionSeconds_keypoint_pruning();}
-    const double getTimeConsumptionSeconds_descriptor_extraction() const {return _framepoint_generator->getTimeConsumptionSeconds_descriptor_extraction();}
   };
-
 }
-
-    

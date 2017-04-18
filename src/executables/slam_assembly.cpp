@@ -60,10 +60,8 @@ namespace proslam {
     }
   }
 
-  BaseTracker* SLAMAssembly::_makeStereoTracker(const Camera* camera_left,
-						  const Camera* camera_right){
-
-      StereoUVAligner* pose_optimizer=new StereoUVAligner;
+  BaseTracker* SLAMAssembly::_makeStereoTracker(const Camera* camera_left, const Camera* camera_right){
+      StereoUVAligner* pose_optimizer = new StereoUVAligner;
       
       //ds allocate the tracker module with the given cameras
       StereoFramePointGenerator* framepoint_generator=new StereoFramePointGenerator();
@@ -80,10 +78,9 @@ namespace proslam {
       return tracker;
   }
 
-  BaseTracker* SLAMAssembly::_makeDepthTracker(const Camera* camera_left,
-					       const Camera* camera_right){
+  BaseTracker* SLAMAssembly::_makeDepthTracker(const Camera* camera_left, const Camera* camera_right){
+      UVDAligner* pose_optimizer = new UVDAligner;
 
-      UVDAligner* pose_optimizer=new UVDAligner;
       //ds allocate the tracker module with the given cameras
       DepthFramePointGenerator* framepoint_generator=new DepthFramePointGenerator();
       framepoint_generator->setCameraLeft(camera_left);
@@ -100,7 +97,6 @@ namespace proslam {
       return tracker;
   }
 
-  
   //ds attempts to load the camera configuration based on the current input setting
   void SLAMAssembly::loadCameras() {
 
@@ -127,8 +123,7 @@ namespace proslam {
         Camera* camera_left = new Camera(message_image_left->image().rows,
                                          message_image_left->image().cols,
                                          message_image_left->cameraMatrix().cast<real>(),
-					 message_image_left->offset().cast<real>()
-					 );
+                                         message_image_left->offset().cast<real>());
         _cameras_by_topic.insert(std::make_pair(message_image_left->topic(), camera_left));
       } else if (sensor_msg->topic() == ParameterServer::topicImageRight()) {
         srrg_core::PinholeImageMessage* message_image_right  = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_msg);
@@ -137,8 +132,7 @@ namespace proslam {
         Camera* camera_right = new Camera(message_image_right->image().rows,
                                           message_image_right->image().cols,
                                           message_image_right->cameraMatrix().cast<real>(),
-                                          message_image_right->offset().cast<real>()
-					  );
+                                          message_image_right->offset().cast<real>());
         _cameras_by_topic.insert(std::make_pair(message_image_right->topic(), camera_right));
       }
       delete sensor_msg;
@@ -158,17 +152,20 @@ namespace proslam {
 
     //ds if no tracker is set
     if (!_tracker) {
-      const Camera* camera_left=_cameras_by_topic.at(ParameterServer::topicImageLeft());
-      const Camera* camera_right=_cameras_by_topic.at(ParameterServer::topicImageRight());
+      const Camera* camera_left  = _cameras_by_topic.at(ParameterServer::topicImageLeft());
+      const Camera* camera_right = _cameras_by_topic.at(ParameterServer::topicImageRight());
       switch (ParameterServer::trackerMode()){
-        case ParameterServer::Stereo:
-	  _tracker=_makeStereoTracker(camera_left, camera_right);
-	  break;
-      case ParameterServer::Depth:
-	  _tracker=_makeDepthTracker(camera_left, camera_right);
-	  break;
-      default:
-	throw std::runtime_error("unknown tracker");
+        case ParameterServer::Stereo: {
+          _tracker = _makeStereoTracker(camera_left, camera_right);
+          break;
+        }
+        case ParameterServer::Depth: {
+          _tracker = _makeDepthTracker(camera_left, camera_right);
+          break;
+        }
+        default: {
+          throw std::runtime_error("unknown tracker");
+        }
       }
     }
 
@@ -186,14 +183,17 @@ namespace proslam {
     if (!_tracker) {
       //ds allocate the tracker module with the given cameras
       switch (ParameterServer::trackerMode()){
-        case ParameterServer::Stereo:
-	  _tracker=_makeStereoTracker(camera_left_, camera_right_);
-	  break;
-      case ParameterServer::Depth:
-	  _tracker=_makeDepthTracker(camera_left_, camera_right_);
-	  break;
-      default:
-	throw std::runtime_error("unknown tracker");
+        case ParameterServer::Stereo: {
+          _tracker = _makeStereoTracker(camera_left_, camera_right_);
+          break;
+        }
+        case ParameterServer::Depth: {
+          _tracker = _makeDepthTracker(camera_left_, camera_right_);
+          break;
+        }
+        default: {
+          throw std::runtime_error("unknown tracker");
+        }
       }
     }
   }
@@ -235,14 +235,18 @@ namespace proslam {
     if (ParameterServer::optionUseGUI()) {
       if (_optimizer->numberOfOptimizations() > 0) {
         _context_viewer_bird->setIsOpen(false);
-        if (_context_viewer_top) _context_viewer_top->setIsOpen(false);
+        if (_context_viewer_top) {
+          _context_viewer_top->setIsOpen(false);
+        }
       }
       _viewer_input_images->initDrawing();
       _viewer_input_images->drawFeatureTracking();
       _viewer_input_images->drawFeatures();
       _is_gui_running = _context_viewer_bird->isVisible() && _viewer_input_images->updateGUI();
       _context_viewer_bird->updateGL();
-      if (_context_viewer_top) _context_viewer_top->updateGL();
+      if (_context_viewer_top) {
+        _context_viewer_top->updateGL();
+      }
       _ui_server->processEvents();
     }
   }
@@ -304,26 +308,27 @@ namespace proslam {
 
         //ds buffer images and cameras
         cv::Mat intensity_image_left_rectified;
-	if(message_image_left->image().type()==CV_8UC3){
-	  cvtColor(message_image_left->image(), intensity_image_left_rectified, CV_BGR2GRAY);
-	} else {
-	  intensity_image_left_rectified = message_image_left->image();
-	}
+        if(message_image_left->image().type()==CV_8UC3){
+          cvtColor(message_image_left->image(), intensity_image_left_rectified, CV_BGR2GRAY);
+        } else {
+          intensity_image_left_rectified = message_image_left->image();
+        }
 
-	cv::Mat intensity_image_right_rectified;
-	if(message_image_right->image().type()==CV_8UC3){
-	  cvtColor(message_image_right->image(), intensity_image_right_rectified, CV_BGR2GRAY);
-	} else {
-	  intensity_image_right_rectified = message_image_right->image();
-	}
-	
-	Camera* camera_left = _cameras_by_topic.at(message_image_left->topic());
+        cv::Mat intensity_image_right_rectified;
+        if(message_image_right->image().type()==CV_8UC3){
+          cvtColor(message_image_right->image(), intensity_image_right_rectified, CV_BGR2GRAY);
+        } else {
+          intensity_image_right_rectified = message_image_right->image();
+        }
+
+        Camera* camera_left = _cameras_by_topic.at(message_image_left->topic());
 
         //ds preprocess the images if desired
         if (ParameterServer::optionEqualizeHistogram()) {
           cv::equalizeHist(intensity_image_left_rectified, intensity_image_left_rectified);
-	  if (ParameterServer::trackerMode()!=ParameterServer::Depth)
-	    cv::equalizeHist(intensity_image_right_rectified, intensity_image_right_rectified);
+          if (ParameterServer::trackerMode() != ParameterServer::Depth) {
+            cv::equalizeHist(intensity_image_right_rectified, intensity_image_right_rectified);
+          }
         }
 
         //ds check if first frame and odometry is available
@@ -334,11 +339,11 @@ namespace proslam {
           }
         }
 
-	//ds progress SLAM with the new images
+        //ds progress SLAM with the new images
         process(intensity_image_left_rectified,
-		intensity_image_right_rectified,
-		message_image_left->hasOdom() && ParameterServer::optionUseOdometry(),
-		message_image_left->odometry().cast<real>());
+                intensity_image_right_rectified,
+                message_image_left->hasOdom() && ParameterServer::optionUseOdometry(),
+                message_image_left->odometry().cast<real>());
 
         //ds record ground truth history for error computation
         if (message_image_left->hasOdom()) {
@@ -394,24 +399,27 @@ namespace proslam {
 
   //ds process a pair of rectified and undistorted stereo images
   void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
-			     const cv::Mat& intensity_image_right_,
-			     bool use_odometry,
-			     const TransformMatrix3D& odometry) {
+                             const cv::Mat& intensity_image_right_,
+                             bool use_odometry,
+                             const TransformMatrix3D& odometry) {
 
     //ds call the tracker
     _tracker->setWorldMap(_world_map);
     _tracker->setIntensityImageLeft(intensity_image_left_);
     StereoTracker* stereo_tracker=dynamic_cast<StereoTracker*>(_tracker);
       
-    if (stereo_tracker)
+    if (stereo_tracker) {
       stereo_tracker->setIntensityImageRight(&intensity_image_right_);
+    }
 
     DepthTracker* depth_tracker=dynamic_cast<DepthTracker*>(_tracker);
-    if (depth_tracker)
+    if (depth_tracker) {
       depth_tracker->setDepthImageRight(&intensity_image_right_);
+    }
 
-    if (use_odometry)
+    if (use_odometry) {
       _tracker->setOdometry(odometry);
+    }
     
     _tracker->compute();
 
@@ -426,11 +434,11 @@ namespace proslam {
 
           //ds trigger relocalization
           _relocalizer->init(_world_map->currentLocalMap());
-	  if (ParameterServer::trackerMode()==ParameterServer::Depth) {
-	    // adjust threshold for depth mode/indoor loop closing
-	    _relocalizer->aligner()->setMaximumErrorKernel(0.01);
-	    _relocalizer->setMinimumNumberOfMatchesPerLandmark(100);
-	  }
+          if (ParameterServer::trackerMode()==ParameterServer::Depth) {
+            // adjust threshold for depth mode/indoor loop closing
+            _relocalizer->aligner()->setMaximumErrorKernel(0.01);
+            _relocalizer->setMinimumNumberOfMatchesPerLandmark(100);
+          }
           _relocalizer->detect();
           _relocalizer->compute();
 
@@ -468,9 +476,6 @@ namespace proslam {
   //ds prints extensive run summary
   void SLAMAssembly::printReport() {
 
-    std::cerr << "printing report" << std::endl;
-
-    std::cerr << "computing squared errors" << std::endl;
     //ds compute squared errors
     std::vector<real> errors_translation_relative(0);
     std::vector<real> squared_errors_translation_absolute(0);
@@ -489,8 +494,6 @@ namespace proslam {
       previous_frame = frame.second;
       index_frame++;
     }
-
-    std::cerr << "computing RMSEs" << std::endl;
     
     //ds compute RMSEs
     real root_mean_squared_error_translation_absolute = 0;
@@ -504,8 +507,6 @@ namespace proslam {
       mean_error_translation_relative += error;
     }
     mean_error_translation_relative /= errors_translation_relative.size();
-
-    std::cerr << "printing shit" << std::endl;
     
     //ds report
     const Count number_of_processed_frames_total = _world_map->frames().size();
@@ -529,16 +530,18 @@ namespace proslam {
       std::cerr << "-------------------------------------------------------------------------" << std::endl;
       std::cerr << "runtime" << std::endl;
       std::cerr << "-------------------------------------------------------------------------" << std::endl;
-      std::cerr << "       feature detection: " << _tracker->getTimeConsumptionSeconds_feature_detection()/_duration_total_seconds
-                                               << " (" << _tracker->getTimeConsumptionSeconds_feature_detection() << "s)" << std::endl;
-      std::cerr << " keypoint regularization: " << _tracker->getTimeConsumptionSeconds_keypoint_pruning()/_duration_total_seconds
-                                                << " (" << _tracker->getTimeConsumptionSeconds_keypoint_pruning() << "s)" << std::endl;
-      std::cerr << "   descriptor extraction: " << _tracker->getTimeConsumptionSeconds_descriptor_extraction()/_duration_total_seconds
-                                               << " (" << _tracker->getTimeConsumptionSeconds_descriptor_extraction() << "s)" << std::endl;
-      StereoTracker* stereo_tracker=dynamic_cast<StereoTracker*>(_tracker);
+      std::cerr << "       feature detection: " << _tracker->framepointGenerator()->getTimeConsumptionSeconds_feature_detection()/_duration_total_seconds
+                                               << " (" << _tracker->framepointGenerator()->getTimeConsumptionSeconds_feature_detection() << "s)" << std::endl;
+      std::cerr << " keypoint regularization: " << _tracker->framepointGenerator()->getTimeConsumptionSeconds_keypoint_pruning()/_duration_total_seconds
+                                                << " (" << _tracker->framepointGenerator()->getTimeConsumptionSeconds_keypoint_pruning() << "s)" << std::endl;
+      std::cerr << "   descriptor extraction: " << _tracker->framepointGenerator()->getTimeConsumptionSeconds_descriptor_extraction()/_duration_total_seconds
+                                               << " (" << _tracker->framepointGenerator()->getTimeConsumptionSeconds_descriptor_extraction() << "s)" << std::endl;
+
+      //ds check if we got a stereo tracker to display further information
+      StereoTracker* stereo_tracker = dynamic_cast<StereoTracker*>(_tracker);
       if (stereo_tracker){
-	std::cerr << "  stereo keypoint search: " << stereo_tracker->getTimeConsumptionSeconds_point_triangulation()/_duration_total_seconds
-		  << " (" << stereo_tracker->getTimeConsumptionSeconds_point_triangulation() << "s)" << std::endl;
+        std::cerr << "  stereo keypoint search: " << stereo_tracker->getTimeConsumptionSeconds_point_triangulation()/_duration_total_seconds
+                  << " (" << stereo_tracker->getTimeConsumptionSeconds_point_triangulation() << "s)" << std::endl;
       }
       
       std::cerr << "                tracking: " << _tracker->getTimeConsumptionSeconds_tracking()/_duration_total_seconds

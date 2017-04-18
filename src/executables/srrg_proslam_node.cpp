@@ -111,6 +111,12 @@ void callbackGroundTruth(const nav_msgs::OdometryConstPtr& message_) {
                                               message_->pose.pose.orientation.z).toRotationMatrix();
 }
 
+//ds image preprocessing
+void translate(cv::Mat &image_, const int32_t& offsetx_, const int32_t& offsety_){
+  cv::Mat trans_mat = (cv::Mat_<double>(2,3) << 1, 0, offsetx_, 0, 1, offsety_);
+  warpAffine(image_, image_, trans_mat,image_.size());
+}
+
 //ds don't allow any windoof compilation attempt!
 int32_t main(int32_t argc, char ** argv) {
 

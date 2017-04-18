@@ -14,8 +14,8 @@ namespace proslam {
   void DepthTracker::setup() {
     BaseTracker::setup();
     assert(_camera_right);
-    _depth_framepoint_generator=dynamic_cast<DepthFramePointGenerator*>(_framepoint_generator);
-    assert(_stereo_framepoint_generator);
+    _depth_framepoint_generator = dynamic_cast<DepthFramePointGenerator*>(_framepoint_generator);
+    assert(_depth_framepoint_generator);
   }
 
   //ds dynamic cleanup

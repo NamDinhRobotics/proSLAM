@@ -3,9 +3,18 @@
 namespace proslam {
 
   //ds the stereo camera setup must be provided
-  BaseFramePointGenerator::BaseFramePointGenerator(){
-    _camera_left=0;
-  }
+  BaseFramePointGenerator::BaseFramePointGenerator(): _camera_left(0),
+                                                      _number_of_rows_image(0),
+                                                      _number_of_cols_image(0),
+                                                      _number_of_bins_u(0),
+                                                      _number_of_bins_v(0),
+                                                      _bin_map_left(0),
+                                                      _focal_length_pixels(0),
+                                                      _principal_point_offset_u_pixels(0),
+                                                      _principal_point_offset_v_pixels(0),
+                                                      _maximum_depth_near_meters(0),
+                                                      _maximum_depth_far_meters(0),
+                                                      _framepoints_in_image(0) {}
 
   void  BaseFramePointGenerator::setup(){
     assert(_camera_left);
@@ -28,7 +37,7 @@ namespace proslam {
 #else
 #error OpenCV version not supported
 #endif
-			     
+
     std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|constructing" << std::endl;
 
     //ds allocate and initialize framepoint map
@@ -52,18 +61,9 @@ namespace proslam {
     //ds clear buffers
     _keypoints_left.clear();
     _keypoints_with_descriptors_left.clear();
-
-    //ds info
-    std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|maximum depth tracking close (m): " << _maximum_depth_near_meters << std::endl;
-    std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|maximum depth tracking far (m): " << _maximum_depth_far_meters << std::endl;
-    std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|bin size (pixel): " << _bin_size << std::endl;
-    std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|number of bins u: " << _number_of_bins_u << std::endl;
-    std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|number of bins v: " << _number_of_bins_v << std::endl;
-    std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|total number of bins: " << _number_of_bins_u*_number_of_bins_v << std::endl;
     std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|constructed" << std::endl;
   }
 
-												   
   //ds cleanup of dynamic structures
   BaseFramePointGenerator::~BaseFramePointGenerator() {
     std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|destroying" << std::endl;

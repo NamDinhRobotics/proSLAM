@@ -3,7 +3,7 @@
 namespace proslam {
   using namespace srrg_core;
 
-  BaseTracker::BaseTracker(){
+  BaseTracker::BaseTracker(): _camera_rows(0), _camera_cols(0), _context(0), _has_odometry(false) {
     _camera_left=0;
     _pose_optimizer=0;
     _framepoint_generator=0;
@@ -30,8 +30,6 @@ namespace proslam {
   //ds dynamic cleanup
   BaseTracker::~BaseTracker() {
     std::cerr << "BaseTracker::BaseTracker|destroying" << std::endl;
-
-    assert(*_intensity_image_left);
     
     //ds clear buffers
     _lost_points.clear();
@@ -50,7 +48,6 @@ namespace proslam {
     assert(_context);
     assert(_intensity_image_left);
     
-    const cv::Mat& intensity_image_left=*_intensity_image_left;
     //ds reset point configurations
     _number_of_tracked_points        = 0;
     _number_of_lost_points           = 0;
