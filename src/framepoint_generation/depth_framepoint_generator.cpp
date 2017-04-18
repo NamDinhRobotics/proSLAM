@@ -98,23 +98,17 @@ namespace proslam {
     assert(frame_->intensityImageRight().type() == CV_16UC1);
 
     //ds detect new features
-    CHRONOMETER_START(feature_detection)
     detectKeypoints(frame_->intensityImageLeft(), _keypoints_left);
-    CHRONOMETER_STOP(feature_detection)
 
     CHRONOMETER_START(depth_map_generation)
     _computeDepthMap(frame_->intensityImageRight());
     CHRONOMETER_STOP(depth_map_generation)
     
     //ds keypoint pruning - prune only left side
-    CHRONOMETER_START(keypoint_pruning)
     binKeypoints(_keypoints_left, _bin_map_left);
-    CHRONOMETER_STOP(keypoint_pruning)
 
     //ds extract descriptors for detected features
-    CHRONOMETER_START(descriptor_extraction)
     extractDescriptors(frame_->intensityImageLeft(), _keypoints_left, _descriptors_left);
-    CHRONOMETER_STOP(descriptor_extraction)
 
     //ds prepare and execute stereo keypoint search
     CHRONOMETER_START(depth_assignment)
@@ -125,8 +119,6 @@ namespace proslam {
     calibrateDetectionThresholds();
   }
 
-
- 
   //ds computes all potential stereo keypoints (exhaustive in matching distance) and stores them as framepoints (called within compute)
   void DepthFramePointGenerator::computeCoordinatesFromDepth(Frame* frame_) {
     _number_of_available_points = 0;

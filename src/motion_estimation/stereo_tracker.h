@@ -1,6 +1,6 @@
 #pragma once
 #include "base_tracker.h"
-#include "frame_generation/stereo_framepoint_generator.h"
+#include "framepoint_generation/stereo_framepoint_generator.h"
 
 namespace proslam {
 
@@ -19,7 +19,7 @@ namespace proslam {
 
     void setCameraRight(const Camera* camera_right_) { _camera_right=camera_right_;}
 
-    void setIntensityImageRight(const cv::Mat* intensity_image_right_) {_intensity_image_right=intensity_image_right_;}
+    void setIntensityImageRight(const cv::Mat* intensity_image_right_) {_intensity_image_right = intensity_image_right_;}
     virtual void setup();
 
     virtual void compute();

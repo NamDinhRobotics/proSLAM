@@ -2,10 +2,10 @@
 
 namespace proslam {
 
-  StereoFramePointGenerator::StereoFramePointGenerator() {
-    _camera_right=0;
-  }
-  
+  StereoFramePointGenerator::StereoFramePointGenerator(): _camera_right(0),
+                                                          _baseline_pixelsmeters(0),
+                                                          _baseline_meters(0) {}
+
   //ds the stereo camera setup must be provided
   void StereoFramePointGenerator::setup(){
 
@@ -38,22 +38,17 @@ namespace proslam {
 
   //ds computes framepoints stored in a image-like matrix (_framepoints_in_image) for provided stereo images
   void StereoFramePointGenerator::compute(Frame* frame_) {
-    //ds detect new features
-    CHRONOMETER_START(feature_detection)
+
+    //ds detect new features to generate frame points from
     detectKeypoints(frame_->intensityImageLeft(), _keypoints_left);
     detectKeypoints(frame_->intensityImageRight(), _keypoints_right);
-    CHRONOMETER_STOP(feature_detection)
 
     //ds keypoint pruning - prune only left side
-    CHRONOMETER_START(keypoint_pruning)
     binKeypoints(_keypoints_left, _bin_map_left);
-    CHRONOMETER_STOP(keypoint_pruning)
 
     //ds extract descriptors for detected features
-    CHRONOMETER_START(descriptor_extraction)
     extractDescriptors(frame_->intensityImageLeft(), _keypoints_left, _descriptors_left);
     extractDescriptors(frame_->intensityImageRight(), _keypoints_right, _descriptors_right);
-    CHRONOMETER_STOP(descriptor_extraction)
 
     //ds prepare and execute stereo keypoint search
     CHRONOMETER_START(point_triangulation)
@@ -179,8 +174,14 @@ namespace proslam {
         } catch (const ExceptionTriangulation& exception) {}
       }
     }
-  }
 
+    //ds sanity check
+    const real triangulation_succcess_ratio = static_cast<real>(_number_of_available_points)/_keypoints_with_descriptors_left.size();
+    if (triangulation_succcess_ratio < 0.25) {
+      std::cerr << "StereoFramePointGenerator::findStereoKeypoints|WARNING: low triangulation success ratio: " << triangulation_succcess_ratio
+                << " (" << _number_of_available_points << "/" << _keypoints_with_descriptors_left.size() << ")" << std::endl;
+    }
+  }
 
   //ds computes 3D position of a stereo keypoint pair in the keft camera frame (called within findStereoKeypoints)
   const PointCoordinates StereoFramePointGenerator::getCoordinatesInCameraLeft(const cv::Point2f& image_coordinates_left_, const cv::Point2f& image_coordinates_right_) const {
@@ -207,5 +208,4 @@ namespace proslam {
     //ds return triangulated point
     return coordinates_in_camera;
   }
-
 }

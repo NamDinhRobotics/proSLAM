@@ -82,7 +82,7 @@ namespace proslam {
         std::cerr << "-drop-framepoints        " << _option_drop_framepoints << std::endl;
         std::cerr << "-equalize-histogram      " << _option_equalize_histogram << std::endl;
         std::cerr << "-rectify-and-undistort   " << _option_rectify_and_undistort << std::endl;
-        std::cerr << "-dataset                 " << _filename_dataset << std::endl;
+        if (_filename_dataset.length() > 0) std::cerr << "-dataset                 " << _filename_dataset << std::endl;
         std::cerr << "-------------------------------------------------------------------------" << std::endl;
       }
 
@@ -117,7 +117,7 @@ namespace proslam {
       static std::string _topic_camera_info_right;
       static std::string _filename_dataset;
 
-      //ds flags
+      //ds options
       static bool _option_use_gui;
       static bool _option_use_relocalization;
       static bool _option_show_top_viewer;

@@ -6,5 +6,5 @@ add_library(srrg_proslam_motion_estimation_library
 
 target_link_libraries(srrg_proslam_motion_estimation_library
   srrg_proslam_aligners_library
-  srrg_proslam_frame_generation_library
+  srrg_proslam_framepoint_generation_library
 )

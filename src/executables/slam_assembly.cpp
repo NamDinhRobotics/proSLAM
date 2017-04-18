@@ -18,6 +18,7 @@ namespace proslam {
                                 _viewer_input_images(0),
                                 _context_viewer_bird(0),
                                 _context_viewer_top(0) {
+    _world_map->setDropFramepoints(proslam::ParameterServer::optionDropFramepoints());
     _synchronizer.reset();
     _robot_to_world_ground_truth_poses.clear();
   }
@@ -64,12 +65,12 @@ namespace proslam {
       StereoUVAligner* pose_optimizer = new StereoUVAligner;
       
       //ds allocate the tracker module with the given cameras
-      StereoFramePointGenerator* framepoint_generator=new StereoFramePointGenerator();
+      StereoFramePointGenerator* framepoint_generator = new StereoFramePointGenerator();
       framepoint_generator->setCameraLeft(camera_left);
       framepoint_generator->setCameraRight(camera_right);
       framepoint_generator->setup();
       
-      StereoTracker* tracker=new StereoTracker();
+      StereoTracker* tracker = new StereoTracker();
       tracker->setCameraLeft(camera_left);
       tracker->setCameraRight(camera_right);
       tracker->setFramePointGenerator(framepoint_generator);
@@ -82,12 +83,12 @@ namespace proslam {
       UVDAligner* pose_optimizer = new UVDAligner;
 
       //ds allocate the tracker module with the given cameras
-      DepthFramePointGenerator* framepoint_generator=new DepthFramePointGenerator();
+      DepthFramePointGenerator* framepoint_generator = new DepthFramePointGenerator();
       framepoint_generator->setCameraLeft(camera_left);
       framepoint_generator->setCameraRight(camera_right);
       framepoint_generator->setup();
       
-      DepthTracker* tracker=new DepthTracker();
+      DepthTracker* tracker = new DepthTracker();
       tracker->setCameraLeft(camera_left);
       tracker->setCameraRight(camera_right);
       tracker->setFramePointGenerator(framepoint_generator);
@@ -155,11 +156,11 @@ namespace proslam {
       const Camera* camera_left  = _cameras_by_topic.at(ParameterServer::topicImageLeft());
       const Camera* camera_right = _cameras_by_topic.at(ParameterServer::topicImageRight());
       switch (ParameterServer::trackerMode()){
-        case ParameterServer::Stereo: {
+        case ParameterServer::TrackerMode::Stereo: {
           _tracker = _makeStereoTracker(camera_left, camera_right);
           break;
         }
-        case ParameterServer::Depth: {
+        case ParameterServer::TrackerMode::Depth: {
           _tracker = _makeDepthTracker(camera_left, camera_right);
           break;
         }
@@ -179,15 +180,16 @@ namespace proslam {
   //ds attempts to load the camera configuration based on the current input setting
   void SLAMAssembly::loadCameras(const Camera* camera_left_, const Camera* camera_right_) {
 
-    //ds if no tracker is set
+    //ds if tracker is set
     if (!_tracker) {
+
       //ds allocate the tracker module with the given cameras
       switch (ParameterServer::trackerMode()){
-        case ParameterServer::Stereo: {
+        case ParameterServer::TrackerMode::Stereo: {
           _tracker = _makeStereoTracker(camera_left_, camera_right_);
           break;
         }
-        case ParameterServer::Depth: {
+        case ParameterServer::TrackerMode::Depth: {
           _tracker = _makeDepthTracker(camera_left_, camera_right_);
           break;
         }
@@ -315,10 +317,12 @@ namespace proslam {
         }
 
         cv::Mat intensity_image_right_rectified;
-        if(message_image_right->image().type()==CV_8UC3){
-          cvtColor(message_image_right->image(), intensity_image_right_rectified, CV_BGR2GRAY);
-        } else {
-          intensity_image_right_rectified = message_image_right->image();
+        if (ParameterServer::trackerMode() == ParameterServer::TrackerMode::Stereo) {
+          if(message_image_right->image().type()==CV_8UC3){
+            cvtColor(message_image_right->image(), intensity_image_right_rectified, CV_BGR2GRAY);
+          } else {
+            intensity_image_right_rectified = message_image_right->image();
+          }
         }
 
         Camera* camera_left = _cameras_by_topic.at(message_image_left->topic());
@@ -326,7 +330,7 @@ namespace proslam {
         //ds preprocess the images if desired
         if (ParameterServer::optionEqualizeHistogram()) {
           cv::equalizeHist(intensity_image_left_rectified, intensity_image_left_rectified);
-          if (ParameterServer::trackerMode() != ParameterServer::Depth) {
+          if (ParameterServer::trackerMode() == ParameterServer::TrackerMode::Stereo) {
             cv::equalizeHist(intensity_image_right_rectified, intensity_image_right_rectified);
           }
         }
@@ -405,22 +409,31 @@ namespace proslam {
 
     //ds call the tracker
     _tracker->setWorldMap(_world_map);
-    _tracker->setIntensityImageLeft(intensity_image_left_);
-    StereoTracker* stereo_tracker=dynamic_cast<StereoTracker*>(_tracker);
-      
-    if (stereo_tracker) {
-      stereo_tracker->setIntensityImageRight(&intensity_image_right_);
-    }
+    _tracker->setIntensityImageLeft(&intensity_image_left_);
 
-    DepthTracker* depth_tracker=dynamic_cast<DepthTracker*>(_tracker);
-    if (depth_tracker) {
-      depth_tracker->setDepthImageRight(&intensity_image_right_);
+    //ds depending on tracking mode
+    switch (ParameterServer::trackerMode()){
+      case ParameterServer::TrackerMode::Stereo: {
+        StereoTracker* stereo_tracker = dynamic_cast<StereoTracker*>(_tracker);
+        assert(stereo_tracker);
+        stereo_tracker->setIntensityImageRight(&intensity_image_right_);
+        break;
+      }
+      case ParameterServer::TrackerMode::Depth: {
+        DepthTracker* depth_tracker = dynamic_cast<DepthTracker*>(_tracker);
+        assert(depth_tracker);
+        depth_tracker->setDepthImageRight(&intensity_image_right_);
+        break;
+      }
+      default: {
+        throw std::runtime_error("unknown tracker");
+      }
     }
-
     if (use_odometry) {
       _tracker->setOdometry(odometry);
     }
     
+    //ds track framepoints and derive new robot pose
     _tracker->compute();
 
     //ds check if relocalization is desired
@@ -434,7 +447,7 @@ namespace proslam {
 
           //ds trigger relocalization
           _relocalizer->init(_world_map->currentLocalMap());
-          if (ParameterServer::trackerMode()==ParameterServer::Depth) {
+          if (ParameterServer::trackerMode()==ParameterServer::TrackerMode::Depth) {
             // adjust threshold for depth mode/indoor loop closing
             _relocalizer->aligner()->setMaximumErrorKernel(0.01);
             _relocalizer->setMinimumNumberOfMatchesPerLandmark(100);
@@ -476,87 +489,105 @@ namespace proslam {
   //ds prints extensive run summary
   void SLAMAssembly::printReport() {
 
-    //ds compute squared errors
-    std::vector<real> errors_translation_relative(0);
-    std::vector<real> squared_errors_translation_absolute(0);
-    TransformMatrix3D odometry_robot_to_world_previous_ground_truth = TransformMatrix3D::Identity();
-    Index index_frame     = 0;
-    Frame* previous_frame = 0;
-    for (FramePointerMapElement frame: _world_map->frames()) {
-
-      //ds compute squared errors between frames
-      if (index_frame > 0) {
-        const TransformMatrix3D world_previous_to_current_ground_truth = _robot_to_world_ground_truth_poses[index_frame]*odometry_robot_to_world_previous_ground_truth.inverse();
-        errors_translation_relative.push_back(((frame.second->robotToWorld()*previous_frame->robotToWorld().inverse()).translation()-world_previous_to_current_ground_truth.translation()).norm());
-      }
-      squared_errors_translation_absolute.push_back((frame.second->robotToWorld().translation()-_robot_to_world_ground_truth_poses[index_frame].translation()).squaredNorm());
-      odometry_robot_to_world_previous_ground_truth = _robot_to_world_ground_truth_poses[index_frame];
-      previous_frame = frame.second;
-      index_frame++;
-    }
-    
-    //ds compute RMSEs
-    real root_mean_squared_error_translation_absolute = 0;
-    for (const real squared_error: squared_errors_translation_absolute) {
-      root_mean_squared_error_translation_absolute += squared_error;
-    }
-    root_mean_squared_error_translation_absolute /= squared_errors_translation_absolute.size();
-    root_mean_squared_error_translation_absolute = std::sqrt(root_mean_squared_error_translation_absolute);
-    real mean_error_translation_relative = 0;
-    for (const real error: errors_translation_relative) {
-      mean_error_translation_relative += error;
-    }
-    mean_error_translation_relative /= errors_translation_relative.size();
-    
-    //ds report
+    //ds header
     const Count number_of_processed_frames_total = _world_map->frames().size();
     std::cerr << "-------------------------------------------------------------------------" << std::endl;
     std::cerr << "dataset completed" << std::endl;
     std::cerr << "-------------------------------------------------------------------------" << std::endl;
+
+    //ds if nothing was processed - exit right away
     if (number_of_processed_frames_total == 0) {
       std::cerr << "no frames processed" << std::endl;
-    } else {
+      std::cerr << "-------------------------------------------------------------------------" << std::endl;
+      return;
+    }
+
+    //ds if we got consistent ground truth data
+    if (_robot_to_world_ground_truth_poses.size() == number_of_processed_frames_total) {
+
+      //ds compute squared errors
+      std::vector<real> errors_translation_relative(0);
+      std::vector<real> squared_errors_translation_absolute(0);
+      TransformMatrix3D odometry_robot_to_world_previous_ground_truth = TransformMatrix3D::Identity();
+      Index index_frame     = 0;
+      Frame* previous_frame = 0;
+      for (FramePointerMapElement frame: _world_map->frames()) {
+
+        //ds compute squared errors between frames
+        if (index_frame > 0) {
+          const TransformMatrix3D world_previous_to_current_ground_truth = _robot_to_world_ground_truth_poses[index_frame]*odometry_robot_to_world_previous_ground_truth.inverse();
+          errors_translation_relative.push_back(((frame.second->robotToWorld()*previous_frame->robotToWorld().inverse()).translation()-world_previous_to_current_ground_truth.translation()).norm());
+        }
+        squared_errors_translation_absolute.push_back((frame.second->robotToWorld().translation()-_robot_to_world_ground_truth_poses[index_frame].translation()).squaredNorm());
+        odometry_robot_to_world_previous_ground_truth = _robot_to_world_ground_truth_poses[index_frame];
+        previous_frame = frame.second;
+        index_frame++;
+      }
+
+      //ds compute RMSEs
+      real root_mean_squared_error_translation_absolute = 0;
+      for (const real squared_error: squared_errors_translation_absolute) {
+        root_mean_squared_error_translation_absolute += squared_error;
+      }
+      root_mean_squared_error_translation_absolute /= squared_errors_translation_absolute.size();
+      root_mean_squared_error_translation_absolute = std::sqrt(root_mean_squared_error_translation_absolute);
+      real mean_error_translation_relative = 0;
+      for (const real error: errors_translation_relative) {
+        mean_error_translation_relative += error;
+      }
+      mean_error_translation_relative /= errors_translation_relative.size();
+
       std::cerr << "    absolute translation RMSE (m): " << root_mean_squared_error_translation_absolute << std::endl;
       std::cerr << "    relative translation   ME (m): " << mean_error_translation_relative << std::endl;
       std::cerr << "    final translational error (m): " << (_world_map->currentFrame()->robotToWorld().translation()-odometry_robot_to_world_previous_ground_truth.translation()).norm() << std::endl;
-      std::cerr << "              total stereo frames: " << number_of_processed_frames_total << std::endl;
-      std::cerr << "               total duration (s): " << _duration_total_seconds << std::endl;
-      std::cerr << "                      average fps: " << number_of_processed_frames_total/_duration_total_seconds << std::endl;
-      std::cerr << "average processing time (s/frame): " << _duration_total_seconds/number_of_processed_frames_total << std::endl;
-      std::cerr << "average landmarks close per frame: " << _tracker->totalNumberOfLandmarksClose()/number_of_processed_frames_total << std::endl;
-      std::cerr << "  average landmarks far per frame: " << _tracker->totalNumberOfLandmarksFar()/number_of_processed_frames_total << std::endl;
-      std::cerr << "         average tracks per frame: " << _tracker->totalNumberOfTrackedPoints()/number_of_processed_frames_total << std::endl;
-      std::cerr << "        average tracks per second: " << _tracker->totalNumberOfTrackedPoints()/_duration_total_seconds << std::endl;
-      std::cerr << "-------------------------------------------------------------------------" << std::endl;
-      std::cerr << "runtime" << std::endl;
-      std::cerr << "-------------------------------------------------------------------------" << std::endl;
-      std::cerr << "       feature detection: " << _tracker->framepointGenerator()->getTimeConsumptionSeconds_feature_detection()/_duration_total_seconds
-                                               << " (" << _tracker->framepointGenerator()->getTimeConsumptionSeconds_feature_detection() << "s)" << std::endl;
-      std::cerr << " keypoint regularization: " << _tracker->framepointGenerator()->getTimeConsumptionSeconds_keypoint_pruning()/_duration_total_seconds
-                                                << " (" << _tracker->framepointGenerator()->getTimeConsumptionSeconds_keypoint_pruning() << "s)" << std::endl;
-      std::cerr << "   descriptor extraction: " << _tracker->framepointGenerator()->getTimeConsumptionSeconds_descriptor_extraction()/_duration_total_seconds
-                                               << " (" << _tracker->framepointGenerator()->getTimeConsumptionSeconds_descriptor_extraction() << "s)" << std::endl;
+    }
+    
+    std::cerr << "                     total frames: " << number_of_processed_frames_total << std::endl;
+    std::cerr << "               total duration (s): " << _duration_total_seconds << std::endl;
+    std::cerr << "                      average fps: " << number_of_processed_frames_total/_duration_total_seconds << std::endl;
+    std::cerr << "average processing time (s/frame): " << _duration_total_seconds/number_of_processed_frames_total << std::endl;
+    std::cerr << "average landmarks close per frame: " << _tracker->totalNumberOfLandmarksClose()/number_of_processed_frames_total << std::endl;
+    std::cerr << "  average landmarks far per frame: " << _tracker->totalNumberOfLandmarksFar()/number_of_processed_frames_total << std::endl;
+    std::cerr << "         average tracks per frame: " << _tracker->totalNumberOfTrackedPoints()/number_of_processed_frames_total << std::endl;
+    std::cerr << "        average tracks per second: " << _tracker->totalNumberOfTrackedPoints()/_duration_total_seconds << std::endl;
+    std::cerr << "-------------------------------------------------------------------------" << std::endl;
+    std::cerr << "runtime" << std::endl;
+    std::cerr << "-------------------------------------------------------------------------" << std::endl;
+    std::cerr << "       feature detection: " << _tracker->framepointGenerator()->getTimeConsumptionSeconds_feature_detection()/_duration_total_seconds
+                                             << " (" << _tracker->framepointGenerator()->getTimeConsumptionSeconds_feature_detection() << "s)" << std::endl;
+    std::cerr << " keypoint regularization: " << _tracker->framepointGenerator()->getTimeConsumptionSeconds_keypoint_pruning()/_duration_total_seconds
+                                              << " (" << _tracker->framepointGenerator()->getTimeConsumptionSeconds_keypoint_pruning() << "s)" << std::endl;
+    std::cerr << "   descriptor extraction: " << _tracker->framepointGenerator()->getTimeConsumptionSeconds_descriptor_extraction()/_duration_total_seconds
+                                             << " (" << _tracker->framepointGenerator()->getTimeConsumptionSeconds_descriptor_extraction() << "s)" << std::endl;
 
-      //ds check if we got a stereo tracker to display further information
-      StereoTracker* stereo_tracker = dynamic_cast<StereoTracker*>(_tracker);
-      if (stereo_tracker){
+    //ds display further information depending on tracking mode
+    switch (ParameterServer::trackerMode()){
+      case ParameterServer::TrackerMode::Stereo: {
+        StereoTracker* stereo_tracker = dynamic_cast<StereoTracker*>(_tracker);
         std::cerr << "  stereo keypoint search: " << stereo_tracker->getTimeConsumptionSeconds_point_triangulation()/_duration_total_seconds
                   << " (" << stereo_tracker->getTimeConsumptionSeconds_point_triangulation() << "s)" << std::endl;
+        break;
       }
-      
-      std::cerr << "                tracking: " << _tracker->getTimeConsumptionSeconds_tracking()/_duration_total_seconds
-                                               << " (" << _tracker->getTimeConsumptionSeconds_tracking() << "s)" << std::endl;
-      std::cerr << "       pose optimization: " << _tracker->getTimeConsumptionSeconds_pose_optimization()/_duration_total_seconds
-                                               << " (" << _tracker->getTimeConsumptionSeconds_pose_optimization() << "s)" << std::endl;
-      std::cerr << "   landmark optimization: " << _tracker->getTimeConsumptionSeconds_landmark_optimization()/_duration_total_seconds
-                                               << " (" << _tracker->getTimeConsumptionSeconds_landmark_optimization() << "s)" << std::endl;
-      std::cerr << " correspondence recovery: " << _tracker->getTimeConsumptionSeconds_point_recovery()/_duration_total_seconds
-                                               << " (" << _tracker->getTimeConsumptionSeconds_point_recovery() << "s)" << std::endl;
-      std::cerr << "similarity search (HBST): " << _relocalizer->getTimeConsumptionSeconds_overall()/_duration_total_seconds
-                                               << " (" << _relocalizer->getTimeConsumptionSeconds_overall() << "s)" << std::endl;
-      std::cerr << "              map update: " << _optimizer->getTimeConsumptionSeconds_overall()/_duration_total_seconds
-                                               << " (" << _optimizer->getTimeConsumptionSeconds_overall() << "s)" << std::endl;
+      case ParameterServer::TrackerMode::Depth: {
+        break;
+      }
+      default: {
+        break;
+      }
     }
+
+    std::cerr << "                tracking: " << _tracker->getTimeConsumptionSeconds_tracking()/_duration_total_seconds
+                                             << " (" << _tracker->getTimeConsumptionSeconds_tracking() << "s)" << std::endl;
+    std::cerr << "       pose optimization: " << _tracker->getTimeConsumptionSeconds_pose_optimization()/_duration_total_seconds
+                                             << " (" << _tracker->getTimeConsumptionSeconds_pose_optimization() << "s)" << std::endl;
+    std::cerr << "   landmark optimization: " << _tracker->getTimeConsumptionSeconds_landmark_optimization()/_duration_total_seconds
+                                             << " (" << _tracker->getTimeConsumptionSeconds_landmark_optimization() << "s)" << std::endl;
+    std::cerr << " correspondence recovery: " << _tracker->getTimeConsumptionSeconds_point_recovery()/_duration_total_seconds
+                                             << " (" << _tracker->getTimeConsumptionSeconds_point_recovery() << "s)" << std::endl;
+    std::cerr << "similarity search (HBST): " << _relocalizer->getTimeConsumptionSeconds_overall()/_duration_total_seconds
+                                             << " (" << _relocalizer->getTimeConsumptionSeconds_overall() << "s)" << std::endl;
+    std::cerr << "              map update: " << _optimizer->getTimeConsumptionSeconds_overall()/_duration_total_seconds
+                                             << " (" << _optimizer->getTimeConsumptionSeconds_overall() << "s)" << std::endl;
     std::cerr << "-------------------------------------------------------------------------" << std::endl;
   }
 }

@@ -15,17 +15,14 @@ namespace proslam {
     assert(_pose_optimizer);
     _camera_rows = _camera_left->imageRows();
     _camera_cols = _camera_left->imageCols();
-    _motion_previous_to_current = TransformMatrix3D::Identity();
+    _motion_previous_to_current_robot.setIdentity();
     _pose_optimizer->setMaximumDepthNearMeters(_framepoint_generator->maximumDepthNearMeters());
     _pose_optimizer->setMaximumDepthFarMeters(_framepoint_generator->maximumDepthFarMeters());
 
     //ds clear buffers
     _lost_points.clear();
     _projected_image_coordinates_left.clear();
-    std::cerr << "BaseTracker::BaseTracker|setup" << std::endl;
-
   }
-  
 
   //ds dynamic cleanup
   BaseTracker::~BaseTracker() {
@@ -43,7 +40,6 @@ namespace proslam {
 
   //ds creates a new Frame for the given images, retrieves the correspondences relative to the previous Frame, optimizes the current frame pose and updates landmarks
   void BaseTracker::compute() {
-
     assert(_camera_left);
     assert(_context);
     assert(_intensity_image_left);
@@ -63,16 +59,16 @@ namespace proslam {
     //gg if we have an odometry we use it as initial guess
     if (_has_odometry) {
       if (! _context->currentFrame()){
-	_previous_odometry=_odometry;
+        _previous_odometry = _odometry;
       }
-      TransformMatrix3D odom_delta=_previous_odometry.inverse()*_odometry;
-      _motion_previous_to_current=odom_delta;
-      _previous_odometry=_odometry;
+      TransformMatrix3D odom_delta = _previous_odometry.inverse()*_odometry;
+      _motion_previous_to_current_robot = odom_delta;
+      _previous_odometry = _odometry;
     }
 
     if (_context->currentFrame()) {
       //robot_to_world_current = _motion_previous_to_current*robot_to_world_current;
-      robot_to_world_current = robot_to_world_current * _motion_previous_to_current;
+      robot_to_world_current = robot_to_world_current*_motion_previous_to_current_robot;
     }
     
 
@@ -96,158 +92,158 @@ namespace proslam {
     switch(_status) {
 
       //ds track lost - localizing
-    case Frame::Localizing: {
-      std::cerr << "BaseTracker::addImage|STATE: LOCALIZING" << std::endl;
+      case Frame::Localizing: {
+        std::cerr << "BaseTracker::addImage|STATE: LOCALIZING" << std::endl;
 
-      //ds if we have a previous frame
-      if (current_frame->previous()) {
+        //ds if we have a previous frame
+        if (current_frame->previous()) {
 
-	//ds solve pose on frame points only
-	CHRONOMETER_START(pose_optimization);
-	_pose_optimizer->init(current_frame, current_frame->robotToWorld());
-	_pose_optimizer->setWeightFramepoint(1);
-	_pose_optimizer->converge();
-	CHRONOMETER_STOP(pose_optimization);
+          //ds solve pose on frame points only
+          CHRONOMETER_START(pose_optimization);
+          _pose_optimizer->init(current_frame, current_frame->robotToWorld());
+          _pose_optimizer->setWeightFramepoint(1);
+          _pose_optimizer->converge();
+          CHRONOMETER_STOP(pose_optimization);
 
-	//ds if the pose computation is acceptable
-	if (_pose_optimizer->numberOfInliers() > 2*_minimum_number_of_landmarks_to_track) {
+          //ds if the pose computation is acceptable
+          if (_pose_optimizer->numberOfInliers() > 2*_minimum_number_of_landmarks_to_track) {
 
-	  //ds solver deltas
-	  // _motion_previous_to_current    = _pose_optimizer->robotToWorld()*current_frame->previous()->robotToWorld().inverse();
+            //ds solver deltas
+            // _motion_previous_to_current    = _pose_optimizer->robotToWorld()*current_frame->previous()->robotToWorld().inverse();
 
-	  _motion_previous_to_current    = current_frame->previous()->robotToWorld().inverse()*_pose_optimizer->robotToWorld();
+            _motion_previous_to_current_robot    = current_frame->previous()->worldToRobot()*_pose_optimizer->robotToWorld();
 
-	  const real delta_angular       = WorldMap::toOrientationRodrigues(_motion_previous_to_current.linear()).norm();
-	  const real delta_translational = _motion_previous_to_current.translation().norm();
+            const real delta_angular       = WorldMap::toOrientationRodrigues(_motion_previous_to_current_robot.linear()).norm();
+            const real delta_translational = _motion_previous_to_current_robot.translation().norm();
 
-	  current_frame->setRobotToWorld(_pose_optimizer->robotToWorld());
+            current_frame->setRobotToWorld(_pose_optimizer->robotToWorld());
 
-	    //ds if the posit result is significant enough
-	  if (delta_angular > 0.001 || delta_translational > 0.01) {
-	    //ds update tracker
-	    current_frame->setRobotToWorld(_pose_optimizer->robotToWorld());
-	  } else {
+              //ds if the posit result is significant enough
+            if (delta_angular > 0.001 || delta_translational > 0.01) {
+              //ds update tracker
+              current_frame->setRobotToWorld(_pose_optimizer->robotToWorld());
+            } else {
 
-	    //ds keep previous solution
-	    current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
-	    _motion_previous_to_current = TransformMatrix3D::Identity();
-	  }
+              //ds keep previous solution
+              current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
+              _motion_previous_to_current_robot = TransformMatrix3D::Identity();
+            }
 
-	  std::cerr << "BaseTracker::addImage|WARNING: using posit on frame points (experimental) inliers: " << _pose_optimizer->numberOfInliers()
-		    << " outliers: " << _pose_optimizer->numberOfOutliers() << " average error: " << _pose_optimizer->totalError()/_pose_optimizer->numberOfInliers() <<  std::endl;
+            std::cerr << "BaseTracker::addImage|WARNING: using posit on frame points (experimental) inliers: " << _pose_optimizer->numberOfInliers()
+                << " outliers: " << _pose_optimizer->numberOfOutliers() << " average error: " << _pose_optimizer->totalError()/_pose_optimizer->numberOfInliers() <<  std::endl;
 
-	  //ds update previous
-	  _context->setRobotToWorld(current_frame->robotToWorld());
-	} 
- 
-      } 
-      //ds check if we can switch the state
-      const Count number_of_good_points = current_frame->countPoints(current_frame->minimumTrackLengthForLandmarkCreation());
-      if (number_of_good_points > _minimum_number_of_landmarks_to_track) {
+            //ds update previous
+            _context->setRobotToWorld(current_frame->robotToWorld());
+          }
+        }
 
-	//ds trigger landmark creation and framepoint update
-	_updateLandmarks(_context, current_frame);
-	_status_previous = _status;
-	_status = Frame::Tracking;
-	std::cerr << "Recovered" << std::endl;
-      } else {
+        //ds check if we can switch the state
+        const Count number_of_good_points = current_frame->countPoints(current_frame->minimumTrackLengthForLandmarkCreation());
+        if (number_of_good_points > _minimum_number_of_landmarks_to_track) {
 
-	//ds just trigger framepoint updates
-	current_frame->updatePoints();
-	std::cerr << "Definitely lost" << std::endl;
+          //ds trigger landmark creation and framepoint update
+          _updateLandmarks(_context, current_frame);
+          _status_previous = _status;
+          _status = Frame::Tracking;
+          std::cerr << "Recovered" << std::endl;
+        } else {
+
+          //ds just trigger framepoint updates
+          current_frame->updatePoints();
+          std::cerr << "Definitely lost" << std::endl;
+        }
+        break;
       }
-      break;
-    }
 
       //ds on the track
-    case Frame::Tracking: {
+      case Frame::Tracking: {
 
-      //ds compute far to close landmark ratio TODO simplify or get better logic: currently the idea is to give more weight to framepoints in case we have almost only far landmarks
-      const real weight_framepoint = 1-(_number_of_tracked_landmarks_far+7*_number_of_tracked_landmarks_close)/static_cast<real>(_number_of_tracked_points);
-      assert(weight_framepoint <= 1);
+        //ds compute far to close landmark ratio TODO simplify or get better logic: currently the idea is to give more weight to framepoints in case we have almost only far landmarks
+        const real weight_framepoint = 1-(_number_of_tracked_landmarks_far+7*_number_of_tracked_landmarks_close)/static_cast<real>(_number_of_tracked_points);
+        assert(weight_framepoint <= 1);
 
-      //ds call pose solver
-      CHRONOMETER_START(pose_optimization)
+        //ds call pose solver
+        CHRONOMETER_START(pose_optimization)
         _pose_optimizer->init(current_frame, current_frame->robotToWorld());
-      _pose_optimizer->setWeightFramepoint(std::max(weight_framepoint, static_cast<real>(0.1)));
-      _pose_optimizer->converge();
-      CHRONOMETER_STOP(pose_optimization)
+        _pose_optimizer->setWeightFramepoint(std::max(weight_framepoint, static_cast<real>(0.1)));
+        _pose_optimizer->converge();
+        CHRONOMETER_STOP(pose_optimization)
 
         //ds solver deltas
         const Count& number_of_inliers  = _pose_optimizer->numberOfInliers();
-      // _motion_previous_to_current     = _pose_optimizer->robotToWorld()*current_frame->previous()->robotToWorld().inverse();
+        // _motion_previous_to_current     = _pose_optimizer->robotToWorld()*current_frame->previous()->robotToWorld().inverse();
 
-      _motion_previous_to_current    = current_frame->previous()->robotToWorld().inverse()*_pose_optimizer->robotToWorld();
+        _motion_previous_to_current_robot    = current_frame->previous()->worldToRobot()*_pose_optimizer->robotToWorld();
 
-      const real delta_angular        = WorldMap::toOrientationRodrigues(_motion_previous_to_current.linear()).norm();
-      const real& delta_translational = _motion_previous_to_current.translation().norm();
+        const real delta_angular        = WorldMap::toOrientationRodrigues(_motion_previous_to_current_robot.linear()).norm();
+        const real& delta_translational = _motion_previous_to_current_robot.translation().norm();
 
-      //ds if we don't have enough inliers - trigger fallback posit on last position
-      if (number_of_inliers < _minimum_number_of_landmarks_to_track) {
+        //ds if we don't have enough inliers - trigger fallback posit on last position
+        if (number_of_inliers < _minimum_number_of_landmarks_to_track) {
 
-	//ds reset state - also purging points to fully reinitialize the tracking
-	std::cerr << "LOST TRACK due to invalid position optimization" << std::endl;
-	_status_previous = Frame::Localizing;
-	_status          = Frame::Localizing;
-	current_frame->setStatus(_status);
-	current_frame->releasePoints();
-	_framepoint_generator->clearFramepointsInImage();
-	_context->currentlyTrackedLandmarks().clear();
+          //ds reset state - also purging points to fully reinitialize the tracking
+          std::cerr << "LOST TRACK due to invalid position optimization" << std::endl;
+          _status_previous = Frame::Localizing;
+          _status          = Frame::Localizing;
+          current_frame->setStatus(_status);
+          current_frame->releasePoints();
+          _framepoint_generator->clearFramepointsInImage();
+          _context->currentlyTrackedLandmarks().clear();
 
-	//ds keep previous solution
-	current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
-	_motion_previous_to_current = TransformMatrix3D::Identity();
-	_context->setRobotToWorld(current_frame->robotToWorld());
-	return;
-      }
+          //ds keep previous solution
+          current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
+          _motion_previous_to_current_robot = TransformMatrix3D::Identity();
+          _context->setRobotToWorld(current_frame->robotToWorld());
+          return;
+        }
 
-      //ds if the posit result is significant enough
-      if (delta_angular > 0.001 || delta_translational > 0.01) {
+        //ds if the posit result is significant enough
+        if (delta_angular > 0.001 || delta_translational > 0.01) {
 
-	//ds update robot pose with posit result
-	current_frame->setRobotToWorld(_pose_optimizer->robotToWorld());
-      } else {
+          //ds update robot pose with posit result
+          current_frame->setRobotToWorld(_pose_optimizer->robotToWorld());
+        } else {
 
-	//ds keep previous solution
-	current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
-	_motion_previous_to_current = TransformMatrix3D::Identity();
-      }
+          //ds keep previous solution
+          current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
+          _motion_previous_to_current_robot = TransformMatrix3D::Identity();
+        }
 
-      //ds visualization only (we need to clear and push_back in order to not crash the gui since its decoupled - otherwise we could use resize)
-      _context->currentlyTrackedLandmarks().reserve(_number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
+        //ds visualization only (we need to clear and push_back in order to not crash the gui since its decoupled - otherwise we could use resize)
+        _context->currentlyTrackedLandmarks().reserve(_number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
 
-      //ds prune current frame points
-      _pruneFramepoints(current_frame);
-      assert(_context->currentlyTrackedLandmarks().size() <= _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
-      assert(_number_of_tracked_points >= number_of_inliers);
+        //ds prune current frame points
+        _pruneFramepoints(current_frame);
+        assert(_context->currentlyTrackedLandmarks().size() <= _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
+        assert(_number_of_tracked_points >= number_of_inliers);
 
-      //ds recover lost points based on updated pose
-      CHRONOMETER_START(point_recovery)
-	_recoverPoints(current_frame);
-      CHRONOMETER_STOP(point_recovery)
+        //ds recover lost points based on updated pose
+        CHRONOMETER_START(point_recovery)
+        _recoverPoints(current_frame);
+        CHRONOMETER_STOP(point_recovery)
 
         //ds update tracks
         _context->setRobotToWorld(current_frame->robotToWorld());
-      CHRONOMETER_START(landmark_optimization)
+        CHRONOMETER_START(landmark_optimization)
         _updateLandmarks(_context, current_frame);
-      CHRONOMETER_STOP(landmark_optimization)
+        CHRONOMETER_STOP(landmark_optimization)
         _status_previous = _status;
-      _status          = Frame::Tracking;
-      break;
-    }
+        _status          = Frame::Tracking;
+        break;
+      }
 
-    default: {
-      assert(false);
-      break;
-    }
+      default: {
+        assert(false);
+        break;
+      }
     }
 
     //ds add new framepoints
     assert(current_frame != 0);
     CHRONOMETER_START(track_creation)
-      _addNewFramepoints(current_frame);
+    _addNewFramepoints(current_frame);
     CHRONOMETER_STOP(track_creation)
-      current_frame->setStatus(_status);
+    current_frame->setStatus(_status);
 
     //ds done
     _total_number_of_tracked_points += _number_of_tracked_points;

@@ -96,12 +96,15 @@ namespace proslam {
 
 
   //ds detects keypoints and stores them in a vector (called within compute)
-  void BaseFramePointGenerator::detectKeypoints(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_) const {
+  void BaseFramePointGenerator::detectKeypoints(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_) {
+    CHRONOMETER_START(feature_detection)
     _keypoint_detector->detect(intensity_image_, keypoints_);
+    CHRONOMETER_STOP(feature_detection)
   }
 
   //ds regularizes the detected keypoints using binning (called within compute)
-  void BaseFramePointGenerator::binKeypoints(std::vector<cv::KeyPoint>& keypoints_, cv::KeyPoint** bin_map_) const {
+  void BaseFramePointGenerator::binKeypoints(std::vector<cv::KeyPoint>& keypoints_, cv::KeyPoint** bin_map_) {
+    CHRONOMETER_START(keypoint_pruning)
 
     //ds sort by position in u
     std::sort(keypoints_.begin(), keypoints_.end(), [](const cv::KeyPoint& a_, const cv::KeyPoint& b_) {return a_.pt.x < b_.pt.x;});
@@ -149,14 +152,15 @@ namespace proslam {
       }
     }
     keypoints_.resize(index_keypoint);
+    CHRONOMETER_STOP(keypoint_pruning)
   }
 
   //ds extracts the defined descriptors for the given keypoints (called within compute)
-  void BaseFramePointGenerator::extractDescriptors(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_, cv::Mat& descriptors_) const {
+  void BaseFramePointGenerator::extractDescriptors(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_, cv::Mat& descriptors_) {
+    CHRONOMETER_START(descriptor_extraction)
     _descriptor_extractor->compute(intensity_image_, keypoints_, descriptors_);
+    CHRONOMETER_STOP(descriptor_extraction)
   }
-
-
 
   //ds adjusts the detector and matching thresholds to maintain constant detection (called within compute)
   void BaseFramePointGenerator::calibrateDetectionThresholds() {

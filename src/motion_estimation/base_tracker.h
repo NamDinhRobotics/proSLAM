@@ -1,7 +1,7 @@
 #pragma once
+#include "framepoint_generation/base_framepoint_generator.h"
 #include "aligners/base_frame_aligner.h"
 #include "types/world_map.h"
-#include "frame_generation/base_framepoint_generator.h"
 
 namespace proslam {
 
@@ -32,7 +32,7 @@ namespace proslam {
   public:
 
     void setWorldMap(WorldMap* context_) {_context=context_;}
-    void setIntensityImageLeft(const cv::Mat& intensity_image_left_) {_intensity_image_left=&intensity_image_left_;}
+    void setIntensityImageLeft(const cv::Mat* intensity_image_left_) {_intensity_image_left = intensity_image_left_;}
     virtual void compute();
  
   //ds getters/setters
@@ -40,13 +40,13 @@ namespace proslam {
 
     BaseFrameAligner* aligner() {return _pose_optimizer;}
     
-    void setMotionPreviousToCurrent(const TransformMatrix3D& motion_previous_to_current_) {_motion_previous_to_current = motion_previous_to_current_;}
+    void setMotionPreviousToCurrent(const TransformMatrix3D& motion_previous_to_current_) {_motion_previous_to_current_robot = motion_previous_to_current_;}
     BaseFramePointGenerator* framepointGenerator() {return _framepoint_generator;}
     const Count totalNumberOfTrackedPoints() const {return _total_number_of_tracked_points;}
     const Count totalNumberOfLandmarksClose() const {return _total_number_of_landmarks_close;}
     const Count totalNumberOfLandmarksFar() const {return _total_number_of_landmarks_far;}
-    void setPixelDistanceTrackingMaximum(const int32_t& pixel_distance_tracking_) {_pixel_distance_tracking_threshold_maximum = pixel_distance_tracking_;}
-    void setPixelDistanceTrackingMinimum(const int32_t& pixel_distance_tracking_) {_pixel_distance_tracking_threshold_minimum = pixel_distance_tracking_;}
+    void setPixelDistanceTrackingMaximum(const int32_t& pixel_distance_tracking_maximum_) {_pixel_distance_tracking_threshold_maximum = pixel_distance_tracking_maximum_;}
+    void setPixelDistanceTrackingMinimum(const int32_t& pixel_distance_tracking_minimum_) {_pixel_distance_tracking_threshold_minimum = pixel_distance_tracking_minimum_;}
     void setMinimumNumberOfLandmarksToTrack(Count minimum_number_of_landmarks_to_track_) {_minimum_number_of_landmarks_to_track=minimum_number_of_landmarks_to_track_;}
 
   //ds helpers
@@ -109,7 +109,7 @@ namespace proslam {
     const int32_t _maximum_flow_pixels_squared = 150*150;     //ds maximum allowed pixel distance between image coordinates prediction and actual detection
 
     //ds pose solving
-    TransformMatrix3D _motion_previous_to_current;
+    TransformMatrix3D _motion_previous_to_current_robot;
 
     //ds framepoint track recovery
     Count _number_of_lost_points           = 0;

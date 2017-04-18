@@ -40,18 +40,18 @@ namespace proslam {
     virtual void compute(Frame* frame_) = 0;
 
     //ds detects keypoints and stores them in a vector (called within compute)
-    void detectKeypoints(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_) const;
+    void detectKeypoints(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_);
 
     //ds regularizes the detected keypoints using binning (called within compute)
-    void binKeypoints(std::vector<cv::KeyPoint>& keypoints_, cv::KeyPoint** bin_map_) const;
+    void binKeypoints(std::vector<cv::KeyPoint>& keypoints_, cv::KeyPoint** bin_map_);
 
     //ds extracts the defined descriptors for the given keypoints (called within compute)
-    void extractDescriptors(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_, cv::Mat& descriptors_) const;
+    void extractDescriptors(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_, cv::Mat& descriptors_);
 
     //ds adjusts the detector and matching thresholds to maintain constant detection (called within compute)
     void calibrateDetectionThresholds();
 
-    //ds getters/setters
+  //ds getters/setters
   public:
 
     //ds enable external access to keypoint detection
