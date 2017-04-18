@@ -36,8 +36,13 @@ namespace proslam {
       throw std::runtime_error("depth tracker requires a 16bit mono image to encode depth");
     }
 
+    //ds allocate new space map and initialize fields
     _space_map_left_meters.create(_number_of_rows_image,_number_of_cols_image, CV_32FC3);
-    _space_map_left_meters=cv::Vec3f(0,0,_maximum_depth_far_meters);
+    for (Index row = 0; row < _number_of_rows_image; ++row) {
+      for (Index col = 0; col < _number_of_cols_image; ++col) {
+        _space_map_left_meters.at<cv::Vec3f>(row, col) = cv::Vec3f(0,0,_maximum_depth_far_meters);
+      }
+    }
 
     _row_map.create(_number_of_rows_image,_number_of_cols_image, CV_16SC1);
     _row_map=-1;

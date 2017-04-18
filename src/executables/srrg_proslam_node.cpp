@@ -9,7 +9,6 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/subscriber.h>
 
-#include "../framepoint_generation/stereo_framepoint_generator.h"
 #include "parameter_server.h"
 #include "slam_assembly.h"
 
