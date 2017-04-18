@@ -92,7 +92,7 @@ namespace proslam {
 
       //ds matches within the current reference
       HBSTTree::MatchVector matches_unfiltered;
-      Correspondence::MatchMap matches_per_landmark;
+      LandmarkCorrespondence::MatchMap matches_per_landmark;
 
       //ds get matches
       assert(0 < _query->matchables.size());
@@ -112,11 +112,11 @@ namespace proslam {
         try{
 
           //ds add a new match to the given query point
-          matches_per_landmark.at(query_landmark_identifier).push_back(new Correspondence::Match(landmark_query, landmark_reference, match.distance));
+          matches_per_landmark.at(query_landmark_identifier).push_back(new LandmarkCorrespondence::Match(landmark_query, landmark_reference, match.distance));
         } catch(const std::out_of_range& /*exception*/) {
 
           //ds initialize the first match for the given query point
-          matches_per_landmark.insert(std::make_pair(query_landmark_identifier, Correspondence::MatchPointerVector(1, new Correspondence::Match(landmark_query, landmark_reference, match.distance))));
+          matches_per_landmark.insert(std::make_pair(query_landmark_identifier, LandmarkCorrespondence::MatchPointerVector(1, new LandmarkCorrespondence::Match(landmark_query, landmark_reference, match.distance))));
         }
       }
       assert(0 < absolute_number_of_matches);
@@ -131,8 +131,8 @@ namespace proslam {
         _mask_id_references_for_correspondences.clear();
 
         //ds compute point-to-point correspondences for all matches
-        for(const Correspondence::MatchMapElement matches_per_point: matches_per_landmark){
-          const Correspondence* correspondence = _getCorrespondenceNN(matches_per_point.second);
+        for(const LandmarkCorrespondence::MatchMapElement matches_per_point: matches_per_landmark){
+          const LandmarkCorrespondence* correspondence = _getCorrespondenceNN(matches_per_point.second);
           if (correspondence != 0) {
             correspondences.push_back(correspondence);
           }
@@ -140,7 +140,7 @@ namespace proslam {
         assert(0 < correspondences.size());
 
 	//ds update closures
-        _closures.push_back(new Closure(_query->local_map,
+        _closures.push_back(new LocalMapCorrespondence(_query->local_map,
 					reference->local_map,
 					absolute_number_of_matches,
 					relative_number_of_matches,
@@ -154,7 +154,7 @@ namespace proslam {
   //ds geometric verification and determination of spatial relation between set closures
   void Relocalizer::compute() {
     CHRONOMETER_START(overall)
-    for(Closure* closure: _closures) {
+    for(LocalMapCorrespondence* closure: _closures) {
       _aligner->init(closure);
       _aligner->converge();
     }
@@ -184,7 +184,7 @@ namespace proslam {
   }
 
   void Relocalizer::clear() {
-    for(const Closure* closure: _closures) {
+    for(const LocalMapCorrespondence* closure: _closures) {
       delete closure;
     }
     _closures.clear();
@@ -192,18 +192,18 @@ namespace proslam {
   }
 
   //ds retrieve correspondences from matches
-  const Correspondence* Relocalizer::_getCorrespondenceNN(const Correspondence::MatchPointerVector& matches_) {
+  const LandmarkCorrespondence* Relocalizer::_getCorrespondenceNN(const LandmarkCorrespondence::MatchPointerVector& matches_) {
     assert(0 < matches_.size());
 
     //ds point counts
     std::multiset<Count> counts;
 
     //ds best match and count so far
-    const Correspondence::Match* match_best = 0;
+    const LandmarkCorrespondence::Match* match_best = 0;
     Count count_best        = 0;
 
     //ds loop over the list and count entries
-    for(const Correspondence::Match* match: matches_){
+    for(const LandmarkCorrespondence::Match* match: matches_){
 
       //ds update count - if not in the mask
       if(0 == _mask_id_references_for_correspondences.count(match->reference->landmark->identifier())) {
@@ -224,7 +224,7 @@ namespace proslam {
       _mask_id_references_for_correspondences.insert(match_best->reference->landmark->identifier());
 
       //ds return the found correspondence
-      return new Correspondence(match_best->query,
+      return new LandmarkCorrespondence(match_best->query,
                                 match_best->reference,
                                 count_best, static_cast<real>(count_best)/matches_.size());
     }

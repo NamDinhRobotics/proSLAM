@@ -1,6 +1,5 @@
 #pragma once
-#include "types/frame.h"
-#include "../relocalization/closure.h"
+#include "relocalization/local_map_correspondence.h"
 #include "base_aligner.h"
 
 namespace proslam {
@@ -10,7 +9,7 @@ namespace proslam {
   
   class BaseCloudAligner : public BaseAligner{
   public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
     BaseCloudAligner() {};
 
     BaseCloudAligner(const real& error_delta_for_convergence_):
@@ -39,7 +38,7 @@ namespace proslam {
 		  maximum_number_of_iterations_) {};
 
     
-    virtual void init(Closure* context_, const TransformMatrix3D& current_to_reference_ = TransformMatrix3D::Identity()) = 0;
+    virtual void init(LocalMapCorrespondence* context_, const TransformMatrix3D& current_to_reference_ = TransformMatrix3D::Identity()) = 0;
 
     inline const TransformMatrix3D& currentToReference() const {return _current_to_reference;}
 
@@ -51,7 +50,7 @@ namespace proslam {
   protected:
 
     //ds context
-    Closure* _context = 0;
+    LocalMapCorrespondence* _context = 0;
 
     //ds objective
     TransformMatrix3D _current_to_reference = TransformMatrix3D::Identity();

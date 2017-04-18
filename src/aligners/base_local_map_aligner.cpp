@@ -1,5 +1,4 @@
-#include "types/frame.h"
-#include "base_cloud_aligner.h"
+#include "base_local_map_aligner.h"
 
 namespace proslam {
   BaseCloudAligner::~BaseCloudAligner(){}

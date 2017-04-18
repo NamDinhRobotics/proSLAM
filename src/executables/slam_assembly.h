@@ -51,9 +51,9 @@ namespace proslam {
 
     //ds process a pair of rectified and undistorted stereo images
     void process(const cv::Mat& intensity_image_left_,
-		 const cv::Mat& intensity_image_right_,
-		 bool use_odometry=false,
-		 const TransformMatrix3D& odometry=TransformMatrix3D::Identity());
+                 const cv::Mat& intensity_image_right_,
+                 const bool& use_odometry_ = false,
+                 const TransformMatrix3D& odometry_ = TransformMatrix3D::Identity());
 
     
     //ds prints extensive run summary
@@ -72,11 +72,9 @@ namespace proslam {
   //ds SLAM modules
   protected:
 
-    BaseTracker* _makeStereoTracker(const Camera* camera_left,
-				      const Camera* camera_right);
+    void _makeStereoTracker(const Camera* camera_left_, const Camera* camera_right_);
 
-    BaseTracker* _makeDepthTracker(const Camera* camera_left,
-				   const Camera* camera_right);
+    void _makeDepthTracker(const Camera* camera_left_, const Camera* camera_right_);
 
     //ds the SLAM map, containing landmarks and trajectory
     WorldMap* _world_map;

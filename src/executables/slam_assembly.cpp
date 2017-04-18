@@ -61,41 +61,41 @@ namespace proslam {
     }
   }
 
-  BaseTracker* SLAMAssembly::_makeStereoTracker(const Camera* camera_left, const Camera* camera_right){
-      StereoUVAligner* pose_optimizer = new StereoUVAligner;
-      
-      //ds allocate the tracker module with the given cameras
-      StereoFramePointGenerator* framepoint_generator = new StereoFramePointGenerator();
-      framepoint_generator->setCameraLeft(camera_left);
-      framepoint_generator->setCameraRight(camera_right);
-      framepoint_generator->setup();
-      
-      StereoTracker* tracker = new StereoTracker();
-      tracker->setCameraLeft(camera_left);
-      tracker->setCameraRight(camera_right);
-      tracker->setFramePointGenerator(framepoint_generator);
-      tracker->setAligner(pose_optimizer);
-      tracker->setup();
-      return tracker;
+  void SLAMAssembly::_makeStereoTracker(const Camera* camera_left_, const Camera* camera_right_){
+    StereoUVAligner* pose_optimizer = new StereoUVAligner;
+
+    //ds allocate the tracker module with the given cameras
+    StereoFramePointGenerator* framepoint_generator = new StereoFramePointGenerator();
+    framepoint_generator->setCameraLeft(camera_left_);
+    framepoint_generator->setCameraRight(camera_right_);
+    framepoint_generator->setup();
+
+    StereoTracker* tracker = new StereoTracker();
+    tracker->setCameraLeft(camera_left_);
+    tracker->setCameraRight(camera_right_);
+    tracker->setFramePointGenerator(framepoint_generator);
+    tracker->setAligner(pose_optimizer);
+    tracker->setup();
+    _tracker = tracker;
   }
 
-  BaseTracker* SLAMAssembly::_makeDepthTracker(const Camera* camera_left, const Camera* camera_right){
-      UVDAligner* pose_optimizer = new UVDAligner;
+  void SLAMAssembly::_makeDepthTracker(const Camera* camera_left_, const Camera* camera_right_){
+    UVDAligner* pose_optimizer = new UVDAligner;
 
-      //ds allocate the tracker module with the given cameras
-      DepthFramePointGenerator* framepoint_generator = new DepthFramePointGenerator();
-      framepoint_generator->setCameraLeft(camera_left);
-      framepoint_generator->setCameraRight(camera_right);
-      framepoint_generator->setup();
-      
-      DepthTracker* tracker = new DepthTracker();
-      tracker->setCameraLeft(camera_left);
-      tracker->setCameraRight(camera_right);
-      tracker->setFramePointGenerator(framepoint_generator);
-      tracker->setAligner(pose_optimizer);
-      tracker->setup();
-      tracker->setMinimumNumberOfLandmarksToTrack(50);
-      return tracker;
+    //ds allocate the tracker module with the given cameras
+    DepthFramePointGenerator* framepoint_generator = new DepthFramePointGenerator();
+    framepoint_generator->setCameraLeft(camera_left_);
+    framepoint_generator->setCameraRight(camera_right_);
+    framepoint_generator->setup();
+
+    DepthTracker* tracker = new DepthTracker();
+    tracker->setCameraLeft(camera_left_);
+    tracker->setCameraRight(camera_right_);
+    tracker->setFramePointGenerator(framepoint_generator);
+    tracker->setAligner(pose_optimizer);
+    tracker->setup();
+    tracker->setMinimumNumberOfLandmarksToTrack(50);
+    _tracker = tracker;
   }
 
   //ds attempts to load the camera configuration based on the current input setting
@@ -157,11 +157,11 @@ namespace proslam {
       const Camera* camera_right = _cameras_by_topic.at(ParameterServer::topicImageRight());
       switch (ParameterServer::trackerMode()){
         case ParameterServer::TrackerMode::Stereo: {
-          _tracker = _makeStereoTracker(camera_left, camera_right);
+          _makeStereoTracker(camera_left, camera_right);
           break;
         }
         case ParameterServer::TrackerMode::Depth: {
-          _tracker = _makeDepthTracker(camera_left, camera_right);
+          _makeDepthTracker(camera_left, camera_right);
           break;
         }
         default: {
@@ -175,6 +175,9 @@ namespace proslam {
       std::cerr << "-topic: " << camera.first << ", resolution: " << camera.second->imageCols() << " x " << camera.second->imageRows()
                                               << ", aspect ratio: " << static_cast<real>(camera.second->imageCols())/camera.second->imageRows() << std::endl;
     }
+
+    //ds one world map
+    _tracker->setWorldMap(_world_map);
   }
 
   //ds attempts to load the camera configuration based on the current input setting
@@ -186,11 +189,11 @@ namespace proslam {
       //ds allocate the tracker module with the given cameras
       switch (ParameterServer::trackerMode()){
         case ParameterServer::TrackerMode::Stereo: {
-          _tracker = _makeStereoTracker(camera_left_, camera_right_);
+          _makeStereoTracker(camera_left_, camera_right_);
           break;
         }
         case ParameterServer::TrackerMode::Depth: {
-          _tracker = _makeDepthTracker(camera_left_, camera_right_);
+          _makeDepthTracker(camera_left_, camera_right_);
           break;
         }
         default: {
@@ -198,6 +201,15 @@ namespace proslam {
         }
       }
     }
+
+    std::cerr << "loaded cameras: " << 2 << std::endl;
+    std::cerr << "LEFT resolution: " << camera_left_->imageCols() << " x " << camera_left_->imageRows()
+              << ", aspect ratio: " << static_cast<real>(camera_left_->imageCols())/camera_left_->imageRows() << std::endl;
+    std::cerr << "RIGHT resolution: " << camera_right_->imageCols() << " x " << camera_right_->imageRows()
+              << ", aspect ratio: " << static_cast<real>(camera_right_->imageCols())/camera_right_->imageRows() << std::endl;
+
+    //ds one world map
+    _tracker->setWorldMap(_world_map);
   }
 
   //ds initializes gui components
@@ -310,7 +322,7 @@ namespace proslam {
 
         //ds buffer images and cameras
         cv::Mat intensity_image_left_rectified;
-        if(message_image_left->image().type()==CV_8UC3){
+        if(message_image_left->image().type() == CV_8UC3){
           cvtColor(message_image_left->image(), intensity_image_left_rectified, CV_BGR2GRAY);
         } else {
           intensity_image_left_rectified = message_image_left->image();
@@ -318,7 +330,7 @@ namespace proslam {
 
         cv::Mat intensity_image_right_rectified;
         if (ParameterServer::trackerMode() == ParameterServer::TrackerMode::Stereo) {
-          if(message_image_right->image().type()==CV_8UC3){
+          if(message_image_right->image().type() == CV_8UC3){
             cvtColor(message_image_right->image(), intensity_image_right_rectified, CV_BGR2GRAY);
           } else {
             intensity_image_right_rectified = message_image_right->image();
@@ -404,11 +416,10 @@ namespace proslam {
   //ds process a pair of rectified and undistorted stereo images
   void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
                              const cv::Mat& intensity_image_right_,
-                             bool use_odometry,
-                             const TransformMatrix3D& odometry) {
+                             const bool& use_odometry_,
+                             const TransformMatrix3D& odometry_) {
 
     //ds call the tracker
-    _tracker->setWorldMap(_world_map);
     _tracker->setIntensityImageLeft(&intensity_image_left_);
 
     //ds depending on tracking mode
@@ -429,8 +440,8 @@ namespace proslam {
         throw std::runtime_error("unknown tracker");
       }
     }
-    if (use_odometry) {
-      _tracker->setOdometry(odometry);
+    if (use_odometry_) {
+      _tracker->setOdometry(odometry_);
     }
     
     //ds track framepoints and derive new robot pose
@@ -456,7 +467,7 @@ namespace proslam {
           _relocalizer->compute();
 
           //ds check the closures
-          for(Closure* closure: _relocalizer->closures()) {
+          for(LocalMapCorrespondence* closure: _relocalizer->closures()) {
             if (closure->is_valid) {
               assert(_world_map->currentLocalMap() == closure->local_map_query);
 
@@ -466,7 +477,7 @@ namespace proslam {
                                          closure->transform_frame_query_to_frame_reference,
                                          closure->icp_inlier_ratio);
               if (ParameterServer::optionUseGUI()) {
-                for (const Correspondence* match: closure->correspondences) {
+                for (const LandmarkCorrespondence* match: closure->correspondences) {
                   _world_map->landmarks().get(match->query->landmark->identifier())->setIsInLoopClosureQuery(true);
                   _world_map->landmarks().get(match->reference->landmark->identifier())->setIsInLoopClosureReference(true);
                 }

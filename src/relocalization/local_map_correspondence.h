@@ -1,25 +1,25 @@
 #pragma once
-#include "correspondence.h"
+#include "landmark_correspondence.h"
 
 namespace proslam {
 
   //ds this class is a container for all correspondence objects between 2 local maps (produced by the relocalization module)
-  class Closure {
+  class LocalMapCorrespondence {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds object handling
   public:
 
     //ds ctor
-    Closure(const LocalMap* local_map_query_,
-            const LocalMap* local_map_reference_,
-            const Count& absolute_number_of_matches_,
-            const real& relative_number_of_matches_,
-            const Correspondence::MatchMap& matches_,
-            const CorrespondencePointerVector& correspondences_);
+    LocalMapCorrespondence(const LocalMap* local_map_query_,
+                           const LocalMap* local_map_reference_,
+                           const Count& absolute_number_of_matches_,
+                           const real& relative_number_of_matches_,
+                           const LandmarkCorrespondence::MatchMap& matches_,
+                           const CorrespondencePointerVector& correspondences_);
 
     //ds dtor
-    ~Closure();
+    ~LocalMapCorrespondence();
 
   //ds attributes
   public:
@@ -30,7 +30,7 @@ namespace proslam {
     const Identifier identifier_reference;
     const Count absolute_number_of_matches;
     const real relative_number_of_matches;
-    const Correspondence::MatchMap matches_per_point;
+    const LandmarkCorrespondence::MatchMap matches_per_point;
     CorrespondencePointerVector correspondences;
     TransformMatrix3D transform_frame_query_to_frame_reference = TransformMatrix3D::Identity();
     real icp_inlier_ratio          = 0;
@@ -39,5 +39,5 @@ namespace proslam {
     bool is_valid                  = false;
   };
 
-  typedef std::vector<Closure*> ClosurePointerVector;
+  typedef std::vector<LocalMapCorrespondence*> ClosurePointerVector;
 }

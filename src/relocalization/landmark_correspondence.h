@@ -4,7 +4,7 @@
 namespace proslam {
 
   //ds container class for a single correspondence pair (produced by the relocalization module)
-  class Correspondence {
+  class LandmarkCorrespondence {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds exported types
@@ -31,16 +31,16 @@ namespace proslam {
   public:
 
     //ds ctor
-    Correspondence(const Landmark::State* landmark_query_,
-                   const Landmark::State* landmark_reference_,
-                   const Count& matching_count_,
-                   const real& matching_ratio_): query(landmark_query_),
-                                                 reference(landmark_reference_),
-                                                 matching_count(matching_count_),
-                                                 matching_ratio(matching_ratio_) {}
+    LandmarkCorrespondence(const Landmark::State* landmark_query_,
+                           const Landmark::State* landmark_reference_,
+                           const Count& matching_count_,
+                           const real& matching_ratio_): query(landmark_query_),
+                                                         reference(landmark_reference_),
+                                                         matching_count(matching_count_),
+                                                         matching_ratio(matching_ratio_) {}
 
     //ds prohibit default construction
-    Correspondence() = delete;
+    LandmarkCorrespondence() = delete;
 
   //ds attributes
   public:
@@ -51,5 +51,5 @@ namespace proslam {
     const real matching_ratio;
   };
 
-  typedef std::vector<const Correspondence*> CorrespondencePointerVector;
+  typedef std::vector<const LandmarkCorrespondence*> CorrespondencePointerVector;
 }

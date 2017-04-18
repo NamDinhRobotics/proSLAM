@@ -174,10 +174,6 @@ int32_t main(int32_t argc, char ** argv) {
     return 0;
   }
 
-  std::cerr << "main|loaded cameras" << std::endl;
-  std::cerr << "main|camera left  - resolution: " << camera_left->imageCols() << " x " << camera_left->imageRows() << std::endl;
-  std::cerr << "main|camera right - resolution: " << camera_right->imageCols() << " x " << camera_right->imageRows() << std::endl;
-
   //ds undistortion/rectification maps
   cv::Mat undistort_rectify_maps_left[2];
   cv::Mat undistort_rectify_maps_right[2];
@@ -214,8 +210,8 @@ int32_t main(int32_t argc, char ** argv) {
   slam_system.tracker()->setPixelDistanceTrackingMinimum(25);
   slam_system.tracker()->setPixelDistanceTrackingMaximum(50);
   slam_system.tracker()->aligner()->setMaximumErrorKernel(25);
-  slam_system.tracker()->framepointGenerator()->setDetectorThreshold(50);
-  slam_system.tracker()->framepointGenerator()->setDetectorThresholdMinimum(50);
+  slam_system.tracker()->framepointGenerator()->setDetectorThreshold(10);
+  slam_system.tracker()->framepointGenerator()->setDetectorThresholdMinimum(10);
   slam_system.tracker()->framepointGenerator()->setDetectorThresholdMaximum(100);
   slam_system.tracker()->framepointGenerator()->setTargetNumberOfPoints(1000);
   slam_system.tracker()->framepointGenerator()->setMaximumMatchingDistanceTriangulation(50);

@@ -61,7 +61,7 @@ namespace proslam {
   protected:
 
     //ds retrieve correspondences from matches
-    inline const Correspondence* _getCorrespondenceNN(const Correspondence::MatchPointerVector& matches_);
+    inline const LandmarkCorrespondence* _getCorrespondenceNN(const LandmarkCorrespondence::MatchPointerVector& matches_);
 
   protected:
 

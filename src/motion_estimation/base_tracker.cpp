@@ -53,9 +53,6 @@ namespace proslam {
     }
     _context->currentlyTrackedLandmarks().clear();
 
-    //ds retrieve estimate by applying the constant velocity motion model
-    TransformMatrix3D robot_to_world_current = _context->robotToWorld();
-
     //gg if we have an odometry we use it as initial guess
     if (_has_odometry) {
       if (! _context->currentFrame()){
@@ -66,13 +63,10 @@ namespace proslam {
       _previous_odometry = _odometry;
     }
 
+    //ds retrieve estimate by applying the constant velocity motion model
     if (_context->currentFrame()) {
-      //robot_to_world_current = _motion_previous_to_current*robot_to_world_current;
-      robot_to_world_current = robot_to_world_current*_motion_previous_to_current_robot;
+      _context->setRobotToWorld(_context->robotToWorld()*_motion_previous_to_current_robot);
     }
-    
-
-    _context->setRobotToWorld(robot_to_world_current);
 
     //ds create new frame
     Frame* current_frame = _makeFrame();
@@ -108,20 +102,18 @@ namespace proslam {
           //ds if the pose computation is acceptable
           if (_pose_optimizer->numberOfInliers() > 2*_minimum_number_of_landmarks_to_track) {
 
-            //ds solver deltas
-            // _motion_previous_to_current    = _pose_optimizer->robotToWorld()*current_frame->previous()->robotToWorld().inverse();
-
-            _motion_previous_to_current_robot    = current_frame->previous()->worldToRobot()*_pose_optimizer->robotToWorld();
-
-            const real delta_angular       = WorldMap::toOrientationRodrigues(_motion_previous_to_current_robot.linear()).norm();
-            const real delta_translational = _motion_previous_to_current_robot.translation().norm();
-
-            current_frame->setRobotToWorld(_pose_optimizer->robotToWorld());
+            //ds compute resulting motion
+            _motion_previous_to_current_robot = current_frame->previous()->worldToRobot()*_pose_optimizer->robotToWorld();
+            const real delta_angular          = WorldMap::toOrientationRodrigues(_motion_previous_to_current_robot.linear()).norm();
+            const real delta_translational    = _motion_previous_to_current_robot.translation().norm();
 
               //ds if the posit result is significant enough
             if (delta_angular > 0.001 || delta_translational > 0.01) {
+
               //ds update tracker
               current_frame->setRobotToWorld(_pose_optimizer->robotToWorld());
+              std::cerr << "BaseTracker::addImage|WARNING: using posit on frame points (experimental) inliers: " << _pose_optimizer->numberOfInliers()
+                        << " outliers: " << _pose_optimizer->numberOfOutliers() << " average error: " << _pose_optimizer->totalError()/_pose_optimizer->numberOfInliers() <<  std::endl;
             } else {
 
               //ds keep previous solution
@@ -129,10 +121,7 @@ namespace proslam {
               _motion_previous_to_current_robot = TransformMatrix3D::Identity();
             }
 
-            std::cerr << "BaseTracker::addImage|WARNING: using posit on frame points (experimental) inliers: " << _pose_optimizer->numberOfInliers()
-                << " outliers: " << _pose_optimizer->numberOfOutliers() << " average error: " << _pose_optimizer->totalError()/_pose_optimizer->numberOfInliers() <<  std::endl;
-
-            //ds update previous
+            //ds update context position
             _context->setRobotToWorld(current_frame->robotToWorld());
           }
         }
@@ -170,13 +159,12 @@ namespace proslam {
         CHRONOMETER_STOP(pose_optimization)
 
         //ds solver deltas
-        const Count& number_of_inliers  = _pose_optimizer->numberOfInliers();
+        const Count& number_of_inliers = _pose_optimizer->numberOfInliers();
         // _motion_previous_to_current     = _pose_optimizer->robotToWorld()*current_frame->previous()->robotToWorld().inverse();
 
-        _motion_previous_to_current_robot    = current_frame->previous()->worldToRobot()*_pose_optimizer->robotToWorld();
-
-        const real delta_angular        = WorldMap::toOrientationRodrigues(_motion_previous_to_current_robot.linear()).norm();
-        const real& delta_translational = _motion_previous_to_current_robot.translation().norm();
+        _motion_previous_to_current_robot = current_frame->previous()->worldToRobot()*_pose_optimizer->robotToWorld();
+        const real delta_angular          = WorldMap::toOrientationRodrigues(_motion_previous_to_current_robot.linear()).norm();
+        const real delta_translational    = _motion_previous_to_current_robot.translation().norm();
 
         //ds if we don't have enough inliers - trigger fallback posit on last position
         if (number_of_inliers < _minimum_number_of_landmarks_to_track) {
