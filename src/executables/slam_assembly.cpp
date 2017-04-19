@@ -70,10 +70,13 @@ namespace proslam {
     framepoint_generator->setCameraRight(camera_right_);
     framepoint_generator->setup();
 
+    pose_optimizer->setMaximumErrorKernel(16);
+    
     StereoTracker* tracker = new StereoTracker();
     tracker->setCameraLeft(camera_left_);
     tracker->setCameraRight(camera_right_);
     tracker->setFramePointGenerator(framepoint_generator);
+    tracker->setMinimumNumberOfLandmarksToTrack(5);
     tracker->setAligner(pose_optimizer);
     tracker->setup();
     _tracker = tracker;
@@ -329,13 +332,15 @@ namespace proslam {
         }
 
         cv::Mat intensity_image_right_rectified;
-        if (ParameterServer::trackerMode() == ParameterServer::TrackerMode::Stereo) {
-          if(message_image_right->image().type() == CV_8UC3){
-            cvtColor(message_image_right->image(), intensity_image_right_rectified, CV_BGR2GRAY);
-          } else {
-            intensity_image_right_rectified = message_image_right->image();
-          }
-        }
+        if (ParameterServer::trackerMode() == ParameterServer::TrackerMode::Stereo &&
+	    message_image_right->image().type() == CV_8UC3) {
+	  
+	    cvtColor(message_image_right->image(), intensity_image_right_rectified, CV_BGR2GRAY);
+	    
+	  } else {
+
+	  intensity_image_right_rectified = message_image_right->image();
+	}
 
         Camera* camera_left = _cameras_by_topic.at(message_image_left->topic());
 
