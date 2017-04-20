@@ -22,7 +22,7 @@ int32_t main(int32_t argc, char ** argv) {
   slam_system.initializeMessageFile();
 
   //ds load cameras
-  slam_system.loadCameras();
+  slam_system.loadCamerasFromMessageFile();
 
   //ds configure specific SLAM modules
   slam_system.relocalizer()->aligner()->setMaximumErrorKernel(0.5);

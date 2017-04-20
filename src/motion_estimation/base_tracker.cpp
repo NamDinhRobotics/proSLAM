@@ -134,12 +134,10 @@ namespace proslam {
           _updateLandmarks(_context, current_frame);
           _status_previous = _status;
           _status = Frame::Tracking;
-          std::cerr << "Recovered" << std::endl;
         } else {
 
           //ds just trigger framepoint updates
           current_frame->updatePoints();
-          std::cerr << "Definitely lost" << std::endl;
         }
         break;
       }

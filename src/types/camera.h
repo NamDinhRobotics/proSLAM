@@ -5,10 +5,9 @@ namespace proslam {
 
   //ds pinhole camera object
   class Camera {
-  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds object handling
-  public:
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds a camera can be constructed based on image dimensions and a camera matrix
     Camera(const Count& image_rows_,
@@ -40,9 +39,9 @@ namespace proslam {
   //ds attributes
   protected:
 
-    Identifier _identifier = 0;
-    Count _image_rows      = 0;
-    Count _image_cols      = 0;
+    Identifier _identifier;
+    Count _image_rows;
+    Count _image_cols;
     CameraMatrix  _camera_matrix        = CameraMatrix::Zero();
     CameraMatrix _inverse_camera_matrix = CameraMatrix::Zero();
     ProjectionMatrix _projection_matrix = ProjectionMatrix::Zero();

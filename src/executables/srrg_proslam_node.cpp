@@ -111,12 +111,6 @@ void callbackGroundTruth(const nav_msgs::OdometryConstPtr& message_) {
                                               message_->pose.pose.orientation.z).toRotationMatrix();
 }
 
-//ds image preprocessing
-void translate(cv::Mat &image_, const int32_t& offsetx_, const int32_t& offsety_){
-  cv::Mat trans_mat = (cv::Mat_<double>(2,3) << 1, 0, offsetx_, 0, 1, offsety_);
-  warpAffine(image_, image_, trans_mat,image_.size());
-}
-
 //ds don't allow any windoof compilation attempt!
 int32_t main(int32_t argc, char ** argv) {
 
@@ -177,7 +171,7 @@ int32_t main(int32_t argc, char ** argv) {
   cv::Mat undistort_rectify_maps_left[2];
   cv::Mat undistort_rectify_maps_right[2];
 
-  //ds compute undistorted and rectified mappings
+  //ds always compute undistorted and rectified mappings
   cv::initUndistortRectifyMap(srrg_core::toCv(camera_left->cameraMatrix()),
                               srrg_core::toCv(camera_left->distortionCoefficients()),
                               srrg_core::toCv(camera_left->rectificationMatrix()),
@@ -206,11 +200,11 @@ int32_t main(int32_t argc, char ** argv) {
   slam_system.loadCameras(camera_left, camera_right);
 
   //ds configure SLAM modules
-  slam_system.tracker()->setPixelDistanceTrackingMinimum(25);
-  slam_system.tracker()->setPixelDistanceTrackingMaximum(50);
-  slam_system.tracker()->aligner()->setMaximumErrorKernel(25);
-  slam_system.tracker()->framepointGenerator()->setDetectorThreshold(10);
-  slam_system.tracker()->framepointGenerator()->setDetectorThresholdMinimum(10);
+  slam_system.tracker()->setPixelDistanceTrackingMinimum(16);
+  slam_system.tracker()->setPixelDistanceTrackingMaximum(49);
+  slam_system.tracker()->aligner()->setMaximumErrorKernel(9);
+  slam_system.tracker()->framepointGenerator()->setDetectorThreshold(25);
+  slam_system.tracker()->framepointGenerator()->setDetectorThresholdMinimum(25);
   slam_system.tracker()->framepointGenerator()->setDetectorThresholdMaximum(100);
   slam_system.tracker()->framepointGenerator()->setTargetNumberOfPoints(1000);
   slam_system.tracker()->framepointGenerator()->setMaximumMatchingDistanceTriangulation(50);
@@ -275,9 +269,6 @@ int32_t main(int32_t argc, char ** argv) {
         cv::equalizeHist(image_left, image_left);
         cv::equalizeHist(image_right, image_right);
       }
-
-      //ds shift images, correcting invalid rectification
-      translate(image_left, 0, 0);
 
 //      //ds get a dummy frame
 //      proslam::Frame* frame = slam_system.worldMap()->createFrame(proslam::TransformMatrix3D::Identity(), slam_system.tracker()->framepointGenerator()->maximumDepthNearMeters());

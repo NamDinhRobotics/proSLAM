@@ -61,15 +61,32 @@ namespace proslam {
     }
   }
 
-  void SLAMAssembly::_makeStereoTracker(const Camera* camera_left_, const Camera* camera_right_){
-    StereoUVAligner* pose_optimizer = new StereoUVAligner();
+  void SLAMAssembly::_makeStereoTracker(Camera* camera_left_, Camera* camera_right_){
 
-    //ds allocate the tracker module with the given cameras
+    //ds if rectification is desired
+    if (ParameterServer::optionRectifyAndUndistort()) {
+
+      //ds sanity check
+      if ((camera_left_->projectionMatrix().block<3,3>(0,0)-camera_right_->projectionMatrix().block<3,3>(0,0)).squaredNorm() != 0) {
+        std::cerr << "SLAMAssembly::_makeStereoTracker|ERROR: provided mismatching projection matrices" << std::endl;
+        exit(0);
+      }
+
+      //ds replace camera matrices with identical one
+      camera_left_->setCameraMatrix(camera_left_->projectionMatrix().block<3,3>(0,0));
+      camera_right_->setCameraMatrix(camera_left_->cameraMatrix());
+    }
+
+    //ds allocate and configure the framepoint generator
     StereoFramePointGenerator* framepoint_generator = new StereoFramePointGenerator();
     framepoint_generator->setCameraLeft(camera_left_);
     framepoint_generator->setCameraRight(camera_right_);
     framepoint_generator->setup();
     
+    //ds allocate and configure the aligner for motion estimation
+    StereoUVAligner* pose_optimizer = new StereoUVAligner();
+
+    //ds allocate and configure the tracker
     StereoTracker* tracker = new StereoTracker();
     tracker->setCameraLeft(camera_left_);
     tracker->setCameraRight(camera_right_);
@@ -78,17 +95,21 @@ namespace proslam {
     tracker->setAligner(pose_optimizer);
     tracker->setup();
     _tracker = tracker;
+    _tracker->setWorldMap(_world_map);
   }
 
   void SLAMAssembly::_makeDepthTracker(const Camera* camera_left_, const Camera* camera_right_){
-    UVDAligner* pose_optimizer = new UVDAligner();
 
-    //ds allocate the tracker module with the given cameras
+    //ds allocate and configure the framepoint generator
     DepthFramePointGenerator* framepoint_generator = new DepthFramePointGenerator();
     framepoint_generator->setCameraLeft(camera_left_);
     framepoint_generator->setCameraRight(camera_right_);
     framepoint_generator->setup();
 
+    //ds allocate and configure the aligner for motion estimation
+    UVDAligner* pose_optimizer = new UVDAligner();
+
+    //ds allocate and configure the tracker
     DepthTracker* tracker = new DepthTracker();
     tracker->setCameraLeft(camera_left_);
     tracker->setCameraRight(camera_right_);
@@ -97,10 +118,11 @@ namespace proslam {
     tracker->setup();
     tracker->setMinimumNumberOfLandmarksToTrack(50);
     _tracker = tracker;
+    _tracker->setWorldMap(_world_map);
   }
 
   //ds attempts to load the camera configuration based on the current input setting
-  void SLAMAssembly::loadCameras() {
+  void SLAMAssembly::loadCamerasFromMessageFile() {
 
     //ds configure message synchronizer
     std::vector<std::string> camera_topics_synchronized(0);
@@ -154,10 +176,29 @@ namespace proslam {
 
     //ds if no tracker is set
     if (!_tracker) {
-      const Camera* camera_left  = _cameras_by_topic.at(ParameterServer::topicImageLeft());
-      const Camera* camera_right = _cameras_by_topic.at(ParameterServer::topicImageRight());
+      Camera* camera_left  = _cameras_by_topic.at(ParameterServer::topicImageLeft());
+      Camera* camera_right = _cameras_by_topic.at(ParameterServer::topicImageRight());
       switch (ParameterServer::trackerMode()){
         case ParameterServer::TrackerMode::Stereo: {
+
+          //ds reconstruct projection matrix from camera matrices (encoded in txt_io)
+          ProjectionMatrix projection_matrix(ProjectionMatrix::Identity());
+          projection_matrix.block<3,3>(0,0) = camera_left->cameraMatrix()*camera_left->robotToCamera().linear();
+
+          //ds set left
+          camera_left->setProjectionMatrix(projection_matrix);
+
+          //ds sanity check
+          if ((camera_left->cameraMatrix()-camera_right->cameraMatrix()).squaredNorm() != 0) {
+            std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: provided mismatching camera matrices" << std::endl;
+            exit(0);
+          }
+
+          //ds compute right camera with baseline offset
+          projection_matrix.block<3,1>(0,3) = camera_left->cameraMatrix()*camera_right->robotToCamera().translation();
+          camera_right->setProjectionMatrix(projection_matrix);
+
+          //ds create stereo tracker
           _makeStereoTracker(camera_left, camera_right);
           break;
         }
@@ -171,18 +212,15 @@ namespace proslam {
       }
     }
 
-    std::cerr << "loaded cameras: " << _cameras_by_topic.size() << std::endl;
+    std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|loaded cameras: " << _cameras_by_topic.size() << std::endl;
     for (CameraMapElement camera: _cameras_by_topic) {
-      std::cerr << "-topic: " << camera.first << ", resolution: " << camera.second->imageCols() << " x " << camera.second->imageRows()
+      std::cerr << "SLAMAssembly::loadCamerasFromMessageFile| -topic: " << camera.first << ", resolution: " << camera.second->imageCols() << " x " << camera.second->imageRows()
                                               << ", aspect ratio: " << static_cast<real>(camera.second->imageCols())/camera.second->imageRows() << std::endl;
     }
-
-    //ds one world map
-    _tracker->setWorldMap(_world_map);
   }
 
   //ds attempts to load the camera configuration based on the current input setting
-  void SLAMAssembly::loadCameras(const Camera* camera_left_, const Camera* camera_right_) {
+  void SLAMAssembly::loadCameras(Camera* camera_left_, Camera* camera_right_) {
 
     //ds if tracker is set
     if (!_tracker) {
@@ -203,14 +241,11 @@ namespace proslam {
       }
     }
 
-    std::cerr << "loaded cameras: " << 2 << std::endl;
-    std::cerr << "LEFT resolution: " << camera_left_->imageCols() << " x " << camera_left_->imageRows()
+    std::cerr << "SLAMAssembly::loadCameras|loaded cameras: " << 2 << std::endl;
+    std::cerr << "SLAMAssembly::loadCameras|LEFT resolution: " << camera_left_->imageCols() << " x " << camera_left_->imageRows()
               << ", aspect ratio: " << static_cast<real>(camera_left_->imageCols())/camera_left_->imageRows() << std::endl;
-    std::cerr << "RIGHT resolution: " << camera_right_->imageCols() << " x " << camera_right_->imageRows()
+    std::cerr << "SLAMAssembly::loadCameras|RIGHT resolution: " << camera_right_->imageCols() << " x " << camera_right_->imageRows()
               << ", aspect ratio: " << static_cast<real>(camera_right_->imageCols())/camera_right_->imageRows() << std::endl;
-
-    //ds one world map
-    _tracker->setWorldMap(_world_map);
   }
 
   //ds initializes gui components
@@ -350,9 +385,12 @@ namespace proslam {
         if (_world_map->frames().size() == 0 && message_image_left->hasOdom()) {
           _world_map->setRobotToWorld(message_image_left->odometry().cast<real>()*camera_left->robotToCamera());
           if (ParameterServer::optionUseGUI()) {
-            _context_viewer_bird->setWorldToRobotOrigin((message_image_left->odometry().cast<real>()*camera_left->robotToCamera()).inverse());
+            _context_viewer_bird->setWorldToRobotOrigin(_world_map->robotToWorld().inverse());
           }
         }
+
+//        //ds shift images, correcting invalid rectification
+//        translate(intensity_image_left_rectified, 0, -1);
 
         //ds progress SLAM with the new images
         process(intensity_image_left_rectified,
@@ -599,5 +637,11 @@ namespace proslam {
     std::cerr << "              map update: " << _optimizer->getTimeConsumptionSeconds_overall()/_duration_total_seconds
                                              << " (" << _optimizer->getTimeConsumptionSeconds_overall() << "s)" << std::endl;
     std::cerr << "-------------------------------------------------------------------------" << std::endl;
+  }
+
+  //ds image preprocessing
+  void SLAMAssembly::translate(cv::Mat &image_, const int32_t& offsetx_, const int32_t& offsety_){
+    cv::Mat trans_mat = (cv::Mat_<double>(2,3) << 1, 0, offsetx_, 0, 1, offsety_);
+    warpAffine(image_, image_, trans_mat,image_.size());
   }
 }

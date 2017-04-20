@@ -29,10 +29,10 @@ namespace proslam {
     void initializeMessageFile();
 
     //ds attempts to load the camera configuration based on the current input setting
-    void loadCameras();
+    void loadCamerasFromMessageFile();
 
     //ds attempts to load the camera configuration based on the current input setting
-    void loadCameras(const Camera* camera_left_, const Camera* camera_right_);
+    void loadCameras(Camera* camera_left_, Camera* camera_right_);
 
     //ds initializes gui components
     void initializeGUI(QApplication* ui_server_);
@@ -59,6 +59,9 @@ namespace proslam {
     //ds prints extensive run summary
     void printReport();
 
+    //ds image preprocessing
+    void translate(cv::Mat &image_, const int32_t& offsetx_, const int32_t& offsety_);
+
   //ds getters/setters
   public:
 
@@ -72,7 +75,7 @@ namespace proslam {
   //ds SLAM modules
   protected:
 
-    void _makeStereoTracker(const Camera* camera_left_, const Camera* camera_right_);
+    void _makeStereoTracker(Camera* camera_left_, Camera* camera_right_);
 
     void _makeDepthTracker(const Camera* camera_left_, const Camera* camera_right_);
 

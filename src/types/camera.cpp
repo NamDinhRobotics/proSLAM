@@ -9,12 +9,10 @@ Count Camera::_instances = 0;
   Camera::Camera(const Count& image_rows_,
                  const Count& image_cols_,
                  const CameraMatrix& camera_matrix_,
-                 const TransformMatrix3D& offset_) {
-    _identifier = _instances;
+                 const TransformMatrix3D& offset_): _identifier(_instances),
+                                                    _image_rows(image_rows_),
+                                                    _image_cols(image_cols_) {
     ++_instances;
-
-    setImageRows(image_rows_);
-    setImageCols(image_cols_);
     setCameraMatrix(camera_matrix_);
     setOffset(offset_);
   }
@@ -28,18 +26,10 @@ Count Camera::_instances = 0;
   void Camera::setCameraMatrix(const CameraMatrix& camera_matrix_) {
     _camera_matrix         = camera_matrix_;
     _inverse_camera_matrix = _camera_matrix.inverse();
-
-    //ds update the projection matrix (adjusted whenever the camera matrix and/or the offset is changed)
-    _projection_matrix.block<3,3>(0,0) = camera_matrix_*_robot_to_camera.linear();
-    _projection_matrix.block<3,1>(0,3) = camera_matrix_*_robot_to_camera.translation();
   }
 
   void Camera::setOffset(const TransformMatrix3D& camera_to_robot_) {
     _camera_to_robot = camera_to_robot_;
     _robot_to_camera = _camera_to_robot.inverse();
-
-    //ds update the projection matrix (adjusted whenever the camera matrix and/or the offset is changed)
-    _projection_matrix.block<3,3>(0,0) = _camera_matrix*_robot_to_camera.linear();
-    _projection_matrix.block<3,1>(0,3) = _camera_matrix*_robot_to_camera.translation();
   }
 }
