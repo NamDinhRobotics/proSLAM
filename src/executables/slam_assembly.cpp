@@ -62,15 +62,13 @@ namespace proslam {
   }
 
   void SLAMAssembly::_makeStereoTracker(const Camera* camera_left_, const Camera* camera_right_){
-    StereoUVAligner* pose_optimizer = new StereoUVAligner;
+    StereoUVAligner* pose_optimizer = new StereoUVAligner();
 
     //ds allocate the tracker module with the given cameras
     StereoFramePointGenerator* framepoint_generator = new StereoFramePointGenerator();
     framepoint_generator->setCameraLeft(camera_left_);
     framepoint_generator->setCameraRight(camera_right_);
     framepoint_generator->setup();
-
-    pose_optimizer->setMaximumErrorKernel(16);
     
     StereoTracker* tracker = new StereoTracker();
     tracker->setCameraLeft(camera_left_);
@@ -83,7 +81,7 @@ namespace proslam {
   }
 
   void SLAMAssembly::_makeDepthTracker(const Camera* camera_left_, const Camera* camera_right_){
-    UVDAligner* pose_optimizer = new UVDAligner;
+    UVDAligner* pose_optimizer = new UVDAligner();
 
     //ds allocate the tracker module with the given cameras
     DepthFramePointGenerator* framepoint_generator = new DepthFramePointGenerator();
@@ -323,25 +321,21 @@ namespace proslam {
         srrg_core::PinholeImageMessage* message_image_left  = dynamic_cast<srrg_core::PinholeImageMessage*>(_synchronizer.messages()[0].get());
         srrg_core::PinholeImageMessage* message_image_right = dynamic_cast<srrg_core::PinholeImageMessage*>(_synchronizer.messages()[1].get());
 
-        //ds buffer images and cameras
+        //ds buffer images
         cv::Mat intensity_image_left_rectified;
         if(message_image_left->image().type() == CV_8UC3){
           cvtColor(message_image_left->image(), intensity_image_left_rectified, CV_BGR2GRAY);
         } else {
           intensity_image_left_rectified = message_image_left->image();
         }
-
         cv::Mat intensity_image_right_rectified;
-        if (ParameterServer::trackerMode() == ParameterServer::TrackerMode::Stereo &&
-	    message_image_right->image().type() == CV_8UC3) {
-	  
-	    cvtColor(message_image_right->image(), intensity_image_right_rectified, CV_BGR2GRAY);
-	    
-	  } else {
+        if (ParameterServer::trackerMode() == ParameterServer::TrackerMode::Stereo && message_image_right->image().type() == CV_8UC3) {
+          cvtColor(message_image_right->image(), intensity_image_right_rectified, CV_BGR2GRAY);
+        } else {
+          intensity_image_right_rectified = message_image_right->image();
+        }
 
-	  intensity_image_right_rectified = message_image_right->image();
-	}
-
+        //ds load active camera
         Camera* camera_left = _cameras_by_topic.at(message_image_left->topic());
 
         //ds preprocess the images if desired
