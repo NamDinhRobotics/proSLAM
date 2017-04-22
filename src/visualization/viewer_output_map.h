@@ -6,7 +6,9 @@ namespace proslam {
 
   class ViewerOutputMap: public srrg_core_viewers::SimpleViewer{
   public:
-    ViewerOutputMap(WorldMap* context_ = 0, const real& object_scale_ = 0.1, const std::string& window_name_ = "output: map");
+    ViewerOutputMap(WorldMap* context_ = 0,
+                    const real& object_scale_ = 0.1,
+                    const std::string& window_name_ = "output: map");
 
     inline bool landmarksDrawn() const {return _landmarks_drawn;}
     inline void setLandmarksDrawn(const bool& landmarks_drawn_) {_landmarks_drawn = landmarks_drawn_;}
@@ -21,6 +23,8 @@ namespace proslam {
     void setRotationRobotView(const TransformMatrix3D& rotation_robot_view_) {_rotation_robot_view = rotation_robot_view_;}
     void setIsOpen(const bool& is_open_) {_is_open = is_open_;}
 
+    void setCameraLeftToRobot(const TransformMatrix3D& camera_left_to_robot_) {_camera_left_to_robot = camera_left_to_robot_;}
+
   protected:
     
     virtual void draw();
@@ -34,18 +38,18 @@ namespace proslam {
 
   protected:
 
-    WorldMap* _context   = 0;
+    WorldMap* _context;
+    TransformMatrix3D _camera_left_to_robot = TransformMatrix3D::Identity();
     bool _frames_drawn       = true;
     bool _local_maps_drawn   = true;
     bool _landmarks_drawn    = true;
     bool _follow_robot       = true;
     bool _ground_truth_drawn = false;
     bool _is_open            = true;
-    real _object_scale    = 0.1;
-    real _point_size      = 2;
+    real _object_scale = 0.1;
+    real _point_size   = 2;
     TransformMatrix3D _world_to_robot_origin = TransformMatrix3D::Identity();
     TransformMatrix3D _rotation_robot_view   = TransformMatrix3D::Identity();
     const std::string _window_name;
   };
-
 }

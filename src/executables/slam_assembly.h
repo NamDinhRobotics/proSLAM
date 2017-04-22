@@ -91,18 +91,22 @@ namespace proslam {
     //ds tracking component, deriving the robots odometry
     BaseTracker* _tracker;
 
+    //ds loaded sensors
+    Camera* _camera_left;
+    Camera* _camera_right;
+
   //ds visualization only
   protected:
 
     //ds Qt UI server
-    QApplication* _ui_server = 0;
+    QApplication* _ui_server;
 
     //ds raw image input processing viewer
-    ViewerInputImages* _viewer_input_images = 0;
+    ViewerInputImages* _viewer_input_images;
 
     //ds 3D output viewers
-    ViewerOutputMap* _context_viewer_bird = 0;
-    ViewerOutputMap* _context_viewer_top  = 0;
+    ViewerOutputMap* _context_viewer_bird;
+    ViewerOutputMap* _context_viewer_top;
 
   //ds txt_io playback components
   protected:
@@ -113,11 +117,8 @@ namespace proslam {
     //ds txt_io message synchronizer
     srrg_core::MessageTimestampSynchronizer _synchronizer;
 
-    //ds loaded cameras
-    CameraMap _cameras_by_topic;
-
     //ds false if termination was requested
-    bool _is_gui_running = true;
+    bool _is_gui_running;
 
   //ds informative only
   protected:

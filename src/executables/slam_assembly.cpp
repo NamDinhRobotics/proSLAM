@@ -14,10 +14,13 @@ namespace proslam {
                                 _optimizer(new GraphOptimizer()),
                                 _relocalizer(new Relocalizer()),
                                 _tracker(0),
+                                _camera_left(0),
+                                _camera_right(0),
                                 _ui_server(0),
                                 _viewer_input_images(0),
                                 _context_viewer_bird(0),
-                                _context_viewer_top(0) {
+                                _context_viewer_top(0),
+                                _is_gui_running(true) {
     _world_map->setDropFramepoints(proslam::ParameterServer::optionDropFramepoints());
     _synchronizer.reset();
     _robot_to_world_ground_truth_poses.clear();
@@ -30,16 +33,15 @@ namespace proslam {
     delete _relocalizer;
     delete _world_map;
 
-    //ds other structures
-    for (CameraMapElement camera_element: _cameras_by_topic) {
-      delete camera_element.second;
-    }
+    //ds free cameras
+    if (_camera_left) {delete _camera_left;}
+    if (_camera_right) {delete _camera_right;}
 
     //ds free viewers if set
-    if (_viewer_input_images) delete _viewer_input_images;
-    if (_context_viewer_bird) delete _context_viewer_bird;
-    if (_context_viewer_top) delete _context_viewer_top;
-    if (_ui_server) delete _ui_server;
+    if (_viewer_input_images) {delete _viewer_input_images;}
+    if (_context_viewer_bird) {delete _context_viewer_bird;}
+    if (_context_viewer_top) {delete _context_viewer_top;}
+    if (_ui_server) {delete _ui_server;}
   }
 
   //ds initializes txt_io playback modules
@@ -130,7 +132,6 @@ namespace proslam {
     camera_topics_synchronized.push_back(ParameterServer::topicImageRight());
     _synchronizer.setTimeInterval(0.001);
     _synchronizer.setTopics(camera_topics_synchronized);
-    _cameras_by_topic.clear();
 
     //ds quickly read the first messages to buffer camera info
     srrg_core::BaseMessage* base_message = 0;
@@ -144,79 +145,61 @@ namespace proslam {
         srrg_core::PinholeImageMessage* message_image_left  = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_msg);
 
         //ds allocate a new camera
-        Camera* camera_left = new Camera(message_image_left->image().rows,
+        _camera_left = new Camera(message_image_left->image().rows,
                                          message_image_left->image().cols,
                                          message_image_left->cameraMatrix().cast<real>(),
                                          message_image_left->offset().cast<real>());
-        _cameras_by_topic.insert(std::make_pair(message_image_left->topic(), camera_left));
       } else if (sensor_msg->topic() == ParameterServer::topicImageRight()) {
         srrg_core::PinholeImageMessage* message_image_right  = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_msg);
 
         //ds allocate a new camera
-        Camera* camera_right = new Camera(message_image_right->image().rows,
+        _camera_right = new Camera(message_image_right->image().rows,
                                           message_image_right->image().cols,
                                           message_image_right->cameraMatrix().cast<real>(),
                                           message_image_right->offset().cast<real>());
-        _cameras_by_topic.insert(std::make_pair(message_image_right->topic(), camera_right));
       }
       delete sensor_msg;
 
       //ds if we got all the information we need
-      if (_cameras_by_topic.size() == camera_topics_synchronized.size()) {
+      if (_camera_left != 0 && _camera_right != 0) {
         break;
       }
     }
     _sensor_message_reader.close();
 
     //ds terminate on failure
-    if (_cameras_by_topic.size() != camera_topics_synchronized.size()) {
-      ParameterServer::printBanner();
+    if (_camera_left == 0) {
+      std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: left camera not set" << std::endl;
+      exit(0);
+    }
+    if (_camera_right == 0) {
+      std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: right camera not set" << std::endl;
       exit(0);
     }
 
-    //ds if no tracker is set
-    if (!_tracker) {
-      Camera* camera_left  = _cameras_by_topic.at(ParameterServer::topicImageLeft());
-      Camera* camera_right = _cameras_by_topic.at(ParameterServer::topicImageRight());
-      switch (ParameterServer::trackerMode()){
-        case ParameterServer::TrackerMode::Stereo: {
+    //ds check if we have to modify the cameras - if stereo from txt_io
+    if (ParameterServer::trackerMode() == ParameterServer::TrackerMode::Stereo) {
 
-          //ds reconstruct projection matrix from camera matrices (encoded in txt_io)
-          ProjectionMatrix projection_matrix(ProjectionMatrix::Identity());
-          projection_matrix.block<3,3>(0,0) = camera_left->cameraMatrix()*camera_left->robotToCamera().linear();
+      //ds reconstruct projection matrix from camera matrices (encoded in txt_io)
+      ProjectionMatrix projection_matrix(ProjectionMatrix::Identity());
+      projection_matrix.block<3,3>(0,0) = _camera_left->cameraMatrix()*_camera_left->robotToCamera().linear();
 
-          //ds set left
-          camera_left->setProjectionMatrix(projection_matrix);
+      //ds set left
+      _camera_left->setProjectionMatrix(projection_matrix);
 
-          //ds sanity check
-          if ((camera_left->cameraMatrix()-camera_right->cameraMatrix()).squaredNorm() != 0) {
-            std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: provided mismatching camera matrices" << std::endl;
-            exit(0);
-          }
-
-          //ds compute right camera with baseline offset
-          projection_matrix.block<3,1>(0,3) = camera_left->cameraMatrix()*camera_right->robotToCamera().translation();
-          camera_right->setProjectionMatrix(projection_matrix);
-
-          //ds create stereo tracker
-          _makeStereoTracker(camera_left, camera_right);
-          break;
-        }
-        case ParameterServer::TrackerMode::Depth: {
-          _makeDepthTracker(camera_left, camera_right);
-          break;
-        }
-        default: {
-          throw std::runtime_error("unknown tracker");
-        }
+      //ds sanity check
+      if ((_camera_left->cameraMatrix()-_camera_right->cameraMatrix()).squaredNorm() != 0) {
+        std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: provided mismatching camera matrices" << std::endl;
+        exit(0);
       }
+
+      //ds compute right camera with baseline offset
+      projection_matrix.block<3,1>(0,3) = _camera_left->cameraMatrix()*_camera_right->robotToCamera().translation();
+      _camera_right->setProjectionMatrix(projection_matrix);
     }
 
-    std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|loaded cameras: " << _cameras_by_topic.size() << std::endl;
-    for (CameraMapElement camera: _cameras_by_topic) {
-      std::cerr << "SLAMAssembly::loadCamerasFromMessageFile| -topic: " << camera.first << ", resolution: " << camera.second->imageCols() << " x " << camera.second->imageRows()
-                                              << ", aspect ratio: " << static_cast<real>(camera.second->imageCols())/camera.second->imageRows() << std::endl;
-    }
+    //ds load cameras to assembly
+    loadCameras(_camera_left, _camera_right);
   }
 
   //ds attempts to load the camera configuration based on the current input setting
@@ -254,7 +237,7 @@ namespace proslam {
       _ui_server = ui_server_;
       _viewer_input_images = new ViewerInputImages(_world_map);
       _context_viewer_bird = new ViewerOutputMap(_world_map, 0.1, "output: map (bird view)");
-      _context_viewer_bird->show();
+      _context_viewer_bird->setCameraLeftToRobot(_camera_left->cameraToRobot());
 
       //ds orientation flip for proper camera following
       TransformMatrix3D orientation_correction(TransformMatrix3D::Identity());
@@ -263,11 +246,12 @@ namespace proslam {
                                          0, 0, -1, 0,
                                          0, 0, 0, 1;
       _context_viewer_bird->setRotationRobotView(orientation_correction);
+      _context_viewer_bird->show();
 
       //ds configure custom top viewer if requested
       if (ParameterServer::optionShowTopViewer()) {
         _context_viewer_top = new ViewerOutputMap(_world_map, 1, "output: map (top view)");
-        _context_viewer_top->show();
+        _context_viewer_top->setCameraLeftToRobot(_camera_left->cameraToRobot());
         TransformMatrix3D center_for_kitti_sequence_00;
         center_for_kitti_sequence_00.matrix() << 1, 0, 0, 0,
                                                  0, 0, -1, 200,
@@ -276,6 +260,7 @@ namespace proslam {
         _context_viewer_top->setWorldToRobotOrigin(center_for_kitti_sequence_00);
         _context_viewer_top->setFollowRobot(false);
         _context_viewer_top->setWorldToRobotOrigin(orientation_correction*center_for_kitti_sequence_00);
+        _context_viewer_top->show();
       }
     }
   }
@@ -333,6 +318,9 @@ namespace proslam {
     double time_start_seconds             = srrg_core::getTime();
     const double time_start_seconds_first = srrg_core::getTime();
 
+    //ds visualization/start point
+    const TransformMatrix3D robot_to_camera_left(_camera_left->robotToCamera());
+
     //ds start playback
     srrg_core::BaseMessage* base_message = 0;
     while ((base_message = _sensor_message_reader.readMessage()) && _is_gui_running) {
@@ -370,9 +358,6 @@ namespace proslam {
           intensity_image_right_rectified = message_image_right->image();
         }
 
-        //ds load active camera
-        Camera* camera_left = _cameras_by_topic.at(message_image_left->topic());
-
         //ds preprocess the images if desired
         if (ParameterServer::optionEqualizeHistogram()) {
           cv::equalizeHist(intensity_image_left_rectified, intensity_image_left_rectified);
@@ -383,7 +368,7 @@ namespace proslam {
 
         //ds check if first frame and odometry is available
         if (_world_map->frames().size() == 0 && message_image_left->hasOdom()) {
-          _world_map->setRobotToWorld(message_image_left->odometry().cast<real>()*camera_left->robotToCamera());
+          _world_map->setRobotToWorld(message_image_left->odometry().cast<real>()*robot_to_camera_left);
           if (ParameterServer::optionUseGUI()) {
             _context_viewer_bird->setWorldToRobotOrigin(_world_map->robotToWorld().inverse());
           }
@@ -400,7 +385,7 @@ namespace proslam {
 
         //ds record ground truth history for error computation
         if (message_image_left->hasOdom()) {
-          addGroundTruthMeasurement(message_image_left->odometry().cast<real>()*camera_left->robotToCamera());
+          addGroundTruthMeasurement(message_image_left->odometry().cast<real>()*robot_to_camera_left);
         }
 
         //ds runtime info
