@@ -8,16 +8,29 @@ namespace proslam {
 
   //ds the stereo camera setup must be provided
   void StereoFramePointGenerator::setup(){
-
+    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|constructing" << std::endl;
     assert(_camera_right);
 
-    BaseFramePointGenerator::setup();
-    _baseline_pixelsmeters = _camera_right->projectionMatrix()(0,3);
-    _baseline_meters = -_baseline_pixelsmeters/_focal_length_pixels;
-    _maximum_depth_near_meters = _baseline_factor*_baseline_meters;
-    _maximum_depth_far_meters = -_baseline_pixelsmeters/_minimum_disparity_pixels,
+    //ds configure base
+    _target_number_of_detected_keypoints = 1250;
+    _detector_threshold                  = 15;
+    _detector_threshold_minimum          = 5;
+    _detector_threshold_step_size        = 5;
 
-    //ds clear buffers
+    //ds disable dynamic matching distance adjustment
+    _matching_distance_tracking_threshold         = 50;
+    _matching_distance_tracking_threshold_maximum = 50;
+    _matching_distance_tracking_threshold_minimum = 50;
+    _matching_distance_tracking_step_size         = 0;
+
+    //ds integrate configuration
+    BaseFramePointGenerator::setup();
+
+    //ds configure current
+    _baseline_pixelsmeters     = _camera_right->projectionMatrix()(0,3);
+    _baseline_meters           = -_baseline_pixelsmeters/_focal_length_pixels;
+    _maximum_depth_near_meters = _baseline_factor*_baseline_meters;
+    _maximum_depth_far_meters  = -_baseline_pixelsmeters/_minimum_disparity_pixels,
     _keypoints_right.clear();
     _keypoints_with_descriptors_right.clear();
 
@@ -25,10 +38,6 @@ namespace proslam {
     std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|baseline (m): " << _baseline_meters << std::endl;
     std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|maximum depth tracking close (m): " << _maximum_depth_near_meters << std::endl;
     std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|maximum depth tracking far (m): " << _maximum_depth_far_meters << std::endl;
-    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|bin size (pixel): " << _bin_size << std::endl;
-    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|number of bins u: " << _number_of_bins_u << std::endl;
-    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|number of bins v: " << _number_of_bins_v << std::endl;
-    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|total number of bins: " << _number_of_bins_u*_number_of_bins_v << std::endl;
     std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|constructed" << std::endl;
   }
 
@@ -43,8 +52,8 @@ namespace proslam {
     detectKeypoints(frame_->intensityImageLeft(), _keypoints_left);
     detectKeypoints(frame_->intensityImageRight(), _keypoints_right);
 
-    //ds keypoint pruning - prune only left side
-    binKeypoints(_keypoints_left, _bin_map_left);
+//    //ds keypoint pruning - prune only left side
+//    binKeypoints(_keypoints_left, _bin_map_left);
 
     //ds extract descriptors for detected features
     extractDescriptors(frame_->intensityImageLeft(), _keypoints_left, _descriptors_left);
@@ -55,9 +64,6 @@ namespace proslam {
     initialize(_keypoints_left, _keypoints_right, _descriptors_left, _descriptors_right);
     findStereoKeypoints(frame_);
     CHRONOMETER_STOP(point_triangulation)
-
-    //ds calibrate feature detector threshold to maintain the target number of tracked points
-    calibrateDetectionThresholds();
   }
 
 

@@ -12,8 +12,13 @@ namespace proslam {
   }
 
   void StereoTracker::setup() {
-    BaseTracker::setup();
     assert(_camera_right);
+
+    //ds configure base
+    _bin_size_pixels = 20;
+    BaseTracker::setup();
+
+    //ds configure current
     _stereo_framepoint_generator=dynamic_cast<StereoFramePointGenerator*>(_framepoint_generator);
     assert(_stereo_framepoint_generator);
   }
@@ -63,6 +68,7 @@ namespace proslam {
 
       //ds if we have a landmark at hand
       if (point_previous->landmark()) {
+        point_previous->landmark()->incrementNumberOfRecoveries();
 
         //ds get point in camera frame based on landmark coordinates
         point_in_camera_homogeneous.head<3>() = world_to_camera_left*point_previous->landmark()->coordinates();
@@ -81,9 +87,9 @@ namespace proslam {
       point_in_image_right /= point_in_image_right.z();
 
       //ds check for invalid projections
-      if (point_in_image_left.x() < 0 || point_in_image_left.x() > _camera_cols  ||
-          point_in_image_right.x() < 0 || point_in_image_right.x() > _camera_cols||
-          point_in_image_left.y() < 0 || point_in_image_left.y() > _camera_rows  ) {
+      if (point_in_image_left.x() < 0 || point_in_image_left.x() > _number_of_cols_image  ||
+          point_in_image_right.x() < 0 || point_in_image_right.x() > _number_of_cols_image||
+          point_in_image_left.y() < 0 || point_in_image_left.y() > _number_of_rows_image  ) {
 
         //ds out of FOV
         continue;
@@ -101,11 +107,11 @@ namespace proslam {
 
       //ds if available search range is insufficient
       if (projection_left.x <= regional_border_center+1              ||
-          projection_left.x >= _camera_cols-regional_border_center-1 ||
+          projection_left.x >= _number_of_cols_image-regional_border_center-1 ||
           projection_left.y <= regional_border_center+1              ||
-          projection_left.y >= _camera_rows-regional_border_center-1 ||
+          projection_left.y >= _number_of_rows_image-regional_border_center-1 ||
           projection_right.x <= regional_border_center+1             ||
-          projection_right.x >= _camera_cols-regional_border_center-1) {
+          projection_right.x >= _number_of_cols_image-regional_border_center-1) {
 
         //ds skip complete tracking
         continue;

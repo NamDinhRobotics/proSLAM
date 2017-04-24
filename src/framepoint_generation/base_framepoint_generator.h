@@ -5,10 +5,9 @@ namespace proslam {
 
   //ds this class computes potential framepoints in a stereo image pair by triangulation
   class BaseFramePointGenerator {
-  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds exported types
-  public:
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds container holding spatial and appearance information (used in findStereoKeypoints)
     struct KeypointWithDescriptor {
@@ -18,7 +17,7 @@ namespace proslam {
       int32_t col; //ds keypoint u coordinate
     };
 
-    //ds readability: a 2d array of pointers to framepoints
+    //ds a 2d array of pointers to framepoints
     typedef FramePoint*** FramePointMatrix;
 
   //ds object handling
@@ -42,14 +41,8 @@ namespace proslam {
     //ds detects keypoints and stores them in a vector (called within compute)
     void detectKeypoints(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_);
 
-    //ds regularizes the detected keypoints using binning (called within compute)
-    void binKeypoints(std::vector<cv::KeyPoint>& keypoints_, cv::KeyPoint** bin_map_);
-
     //ds extracts the defined descriptors for the given keypoints (called within compute)
     void extractDescriptors(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_, cv::Mat& descriptors_);
-
-    //ds adjusts the detector and matching thresholds to maintain constant detection (called within compute)
-    void calibrateDetectionThresholds();
 
   //ds getters/setters
   public:
@@ -80,13 +73,13 @@ namespace proslam {
 
     //ds other properties
     void setCameraLeft(const Camera* camera_left_) {_camera_left=camera_left_;}
-    const Count numberOfRowsImage() const {return _number_of_rows_image;}
-    const Count numberOfColsImage() const {return _number_of_cols_image;}
+    const Count& numberOfRowsImage() const {return _number_of_rows_image;}
+    const Count& numberOfColsImage() const {return _number_of_cols_image;}
     const real maximumDepthNearMeters() const {return _maximum_depth_near_meters;}
     const real maximumDepthFarMeters() const {return _maximum_depth_far_meters;}
-    void setTargetNumberOfPoints(const Count& target_number_of_points_) {_target_number_of_points = target_number_of_points_;}
+    void setTargetNumberOfPoints(const Count& target_number_of_points_) {_target_number_of_detected_keypoints = target_number_of_points_;}
+
     void setDetectorThreshold(const int32_t& detector_threshold_);
-    void setDetectorThresholdMaximum(const int32_t& detector_threshold_maximum_) {_detector_threshold_maximum = detector_threshold_maximum_;}
     void setDetectorThresholdMinimum(const int32_t& detector_threshold_minimum_) {_detector_threshold_minimum = detector_threshold_minimum_;}
     const int32_t matchingDistanceTrackingThreshold() const {return _matching_distance_tracking_threshold;}
     void setMatchingDistanceTrackingThresholdMaximum(const real& matching_distance_tracking_threshold_maximum_) {_matching_distance_tracking_threshold_maximum = matching_distance_tracking_threshold_maximum_;}
@@ -104,27 +97,22 @@ namespace proslam {
     Count _number_of_cols_image;
 
     //ds point detection properties
-    Count _target_number_of_points    = 700;
-    Count _number_of_available_points = 0;
+    Count _target_number_of_detected_keypoints;
+    Count _number_of_available_points;
 
     //ds dynamic thresholds for feature detection
-    int32_t _detector_threshold         = 10;
-    int32_t _detector_threshold_minimum = 0;
-    int32_t _detector_threshold_maximum = 50;
+    int32_t _detector_threshold;
+    int32_t _detector_threshold_minimum;
+    int32_t _detector_threshold_step_size;
 
     //ds dynamic thresholds for descriptor matching
     int32_t _matching_distance_tracking_threshold         = 50;
     int32_t _matching_distance_tracking_threshold_maximum = 50;
     int32_t _matching_distance_tracking_threshold_minimum = 25;
-
-    //ds feature density regularization
-    Count _bin_size = 4;
-    Count _number_of_bins_u;
-    Count _number_of_bins_v;
-    cv::KeyPoint** _bin_map_left;
+    int32_t _matching_distance_tracking_step_size         = 1;
 
     //ds triangulation properties
-    int32_t _maximum_matching_distance_triangulation = 50;
+    int32_t _maximum_matching_distance_triangulation;
     real _focal_length_pixels;
     real _principal_point_offset_u_pixels;
     real _principal_point_offset_v_pixels;

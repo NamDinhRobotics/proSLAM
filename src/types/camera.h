@@ -13,7 +13,7 @@ namespace proslam {
     Camera(const Count& image_rows_,
            const Count& image_cols_,
            const CameraMatrix& camera_matrix_,
-           const TransformMatrix3D& offset_  = TransformMatrix3D::Identity());
+           const TransformMatrix3D& camera_to_robot_ = TransformMatrix3D::Identity());
 
   //ds getters/setters
   public:
@@ -30,7 +30,7 @@ namespace proslam {
     void setProjectionMatrix(const ProjectionMatrix& projection_matrix_) {_projection_matrix = projection_matrix_;}
     inline const TransformMatrix3D& cameraToRobot() const {return _camera_to_robot;}
     inline const TransformMatrix3D& robotToCamera() const {return _robot_to_camera;}
-    void setOffset(const TransformMatrix3D& camera_to_robot_);
+    void setCameraToRobot(const TransformMatrix3D& camera_to_robot_);
     inline const Matrix3 rectificationMatrix() const {return _rectification_matrix;}
     void setRectificationMatrix(const Matrix3& rectification_matrix_) {_rectification_matrix = rectification_matrix_;}
     inline const Vector5 distortionCoefficients() const {return _distortion_coefficients;}

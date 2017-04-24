@@ -3,7 +3,14 @@
 namespace proslam {
   using namespace srrg_core;
 
-  BaseTracker::BaseTracker(): _camera_rows(0), _camera_cols(0), _context(0), _has_odometry(false) {
+  BaseTracker::BaseTracker(): _number_of_rows_image(0),
+                              _number_of_cols_image(0),
+                              _context(0),
+                              _bin_size_pixels(0),
+                              _number_of_rows_bin(0),
+                              _number_of_cols_bin(0),
+                              _bin_map_left(0),
+                              _has_odometry(false) {
     _camera_left=0;
     _pose_optimizer=0;
     _framepoint_generator=0;
@@ -13,8 +20,8 @@ namespace proslam {
   void BaseTracker::setup() {
     assert(_camera_left);
     assert(_pose_optimizer);
-    _camera_rows = _camera_left->imageRows();
-    _camera_cols = _camera_left->imageCols();
+    _number_of_rows_image = _camera_left->imageRows();
+    _number_of_cols_image = _camera_left->imageCols();
     _motion_previous_to_current_robot.setIdentity();
     _pose_optimizer->setMaximumDepthNearMeters(_framepoint_generator->maximumDepthNearMeters());
     _pose_optimizer->setMaximumDepthFarMeters(_framepoint_generator->maximumDepthFarMeters());
@@ -22,6 +29,24 @@ namespace proslam {
     //ds clear buffers
     _lost_points.clear();
     _projected_image_coordinates_left.clear();
+
+    //ds binning configuration
+    _number_of_cols_bin = std::floor(static_cast<real>(_number_of_cols_image)/_bin_size_pixels)+1;
+    _number_of_rows_bin = std::floor(static_cast<real>(_number_of_rows_image)/_bin_size_pixels)+1;
+
+    //ds allocate and initialize bin grid
+    _bin_map_left = new FramePoint**[_number_of_rows_bin];
+    for (Index row = 0; row < _number_of_rows_bin; ++row) {
+      _bin_map_left[row] = new FramePoint*[_number_of_cols_bin];
+      for (Index col = 0; col < _number_of_cols_bin; ++col) {
+        _bin_map_left[row][col] = 0;
+      }
+    }
+
+    std::cerr << "BaseTracker::setup|bin size (pixels): " << _bin_size_pixels << std::endl;
+    std::cerr << "BaseTracker::setup|number of bins u: " << _number_of_cols_bin << std::endl;
+    std::cerr << "BaseTracker::setup|number of bins v: " << _number_of_rows_bin << std::endl;
+    std::cerr << "BaseTracker::setup|total number of bins: " << _number_of_cols_bin*_number_of_rows_bin << std::endl;
   }
 
   //ds dynamic cleanup
@@ -31,6 +56,12 @@ namespace proslam {
     //ds clear buffers
     _lost_points.clear();
     _projected_image_coordinates_left.clear();
+
+    //ds free bin map
+    for (Count row = 0; row < _number_of_rows_bin; ++row) {
+      delete[] _bin_map_left[row];
+    }
+    delete[] _bin_map_left;
 
     //ds free dynamics
     delete _framepoint_generator;
@@ -146,13 +177,13 @@ namespace proslam {
       case Frame::Tracking: {
 
         //ds compute far to close landmark ratio TODO simplify or get better logic: currently the idea is to give more weight to framepoints in case we have almost only far landmarks
-        const real weight_framepoint = 1-(_number_of_tracked_landmarks_far+7*_number_of_tracked_landmarks_close)/static_cast<real>(_number_of_tracked_points);
+        const real weight_framepoint = 1-(_number_of_tracked_landmarks_far+2*_number_of_tracked_landmarks_close)/static_cast<real>(_number_of_tracked_points);
         assert(weight_framepoint <= 1);
 
         //ds call pose solver
         CHRONOMETER_START(pose_optimization)
         _pose_optimizer->init(current_frame, current_frame->robotToWorld());
-        _pose_optimizer->setWeightFramepoint(std::max(weight_framepoint, static_cast<real>(0.1)));
+        _pose_optimizer->setWeightFramepoint(std::max(weight_framepoint, static_cast<real>(0.01)));
         _pose_optimizer->converge();
         CHRONOMETER_STOP(pose_optimization)
 
@@ -314,27 +345,7 @@ namespace proslam {
 
         //ds check if track is consistent
         if ((row_best-row_previous)*(row_best-row_previous)+(col_best-col_previous)*(col_best-col_previous) < _maximum_flow_pixels_squared) {
-
-          //ds allocate a new point connected to the previous one
-          FramePoint* current_point = _framepoint_generator->framepointsInImage()[row_best][col_best];
-          current_point->setPrevious(previous_point);
-
-          //ds set the point to the control structure
-          current_frame_->points()[_number_of_tracked_points] = current_point;
-          if (current_point->landmark()) {
-            if (current_point->isNear()) {
-              ++_number_of_tracked_landmarks_close;
-            } else {
-              ++_number_of_tracked_landmarks_far;
-            }
-          }
-
-          const cv::Point2f point_previous(previous_point->imageCoordinatesLeft().x(), previous_point->imageCoordinatesLeft().y());
-          const cv::Point2f point_current(current_point->imageCoordinatesLeft().x(), current_point->imageCoordinatesLeft().y());
-          ++_number_of_tracked_points;
-
-          //ds disable further matching and reduce search time
-          _framepoint_generator->framepointsInImage()[row_best][col_best] = 0;
+          _addTrack(previous_point, current_frame_, row_best, col_best);
           continue;
         }
       }
@@ -379,27 +390,7 @@ namespace proslam {
 
         //ds check if track is consistent
         if ((row_best-row_previous)*(row_best-row_previous)+(col_best-col_previous)*(col_best-col_previous) < _maximum_flow_pixels_squared) {
-
-          //ds allocate a new point connected to the previous one
-          FramePoint* current_point = _framepoint_generator->framepointsInImage()[row_best][col_best];
-          current_point->setPrevious(previous_point);
-
-          //ds set the point to the control structure
-          current_frame_->points()[_number_of_tracked_points] = current_point;
-          if (current_point->landmark()) {
-            if (current_point->isNear()) {
-              ++_number_of_tracked_landmarks_close;
-            } else {
-              ++_number_of_tracked_landmarks_far;
-            }
-          }
-
-          const cv::Point2f point_previous(previous_point->imageCoordinatesLeft().x(), previous_point->imageCoordinatesLeft().y());
-          const cv::Point2f point_current(current_point->imageCoordinatesLeft().x(), current_point->imageCoordinatesLeft().y());
-          ++_number_of_tracked_points;
-
-          //ds disable further matching and reduce search time
-          _framepoint_generator->framepointsInImage()[row_best][col_best] = 0;
+          _addTrack(previous_point, current_frame_, row_best, col_best);
           continue;
         }
       }
@@ -422,6 +413,27 @@ namespace proslam {
     _total_number_of_landmarks_far   += _number_of_tracked_landmarks_far;
   }
 
+  void BaseTracker::_addTrack(FramePoint* framepoint_previous_, Frame* current_frame_, const Count& row_, const Count& col_) {
+
+    //ds allocate a new point connected to the previous one
+    FramePoint* current_point = _framepoint_generator->framepointsInImage()[row_][col_];
+    current_point->setPrevious(framepoint_previous_);
+
+    //ds set the point to the control structure
+    current_frame_->points()[_number_of_tracked_points] = current_point;
+    if (current_point->landmark()) {
+      if (current_point->isNear()) {
+        ++_number_of_tracked_landmarks_close;
+      } else {
+        ++_number_of_tracked_landmarks_far;
+      }
+    }
+    ++_number_of_tracked_points;
+
+    //ds disable further matching and reduce search time
+    _framepoint_generator->framepointsInImage()[row_][col_] = 0;
+  }
+
   //ds adds new framepoints to the provided frame (picked from the pool of the _framepoint_generator)
   void BaseTracker::_addNewFramepoints(Frame* frame_) {
 
@@ -431,26 +443,65 @@ namespace proslam {
     //ds buffer current pose
     const TransformMatrix3D& frame_to_world = frame_->robotToWorld();
 
-    //ds check triangulation map for unmatched points
-    Index index_point_new = _number_of_tracked_points;
+    //ds check triangulation map for unmatched points and fill them into the bin map
     for (uint32_t row = 0; row < _framepoint_generator->numberOfRowsImage(); ++row) {
       for (uint32_t col = 0; col < _framepoint_generator->numberOfColsImage(); ++col) {
         if (_framepoint_generator->framepointsInImage()[row][col]) {
 
+          //ds determine bin index of the current point
+          const Count row_bin = std::floor(static_cast<real>(row)/_bin_size_pixels);
+          const Count col_bin = std::floor(static_cast<real>(col)/_bin_size_pixels);
+          assert(row_bin < _number_of_rows_bin);
+          assert(col_bin < _number_of_cols_bin);
+
+          //ds if the bin is empty
+          if (!_bin_map_left[row_bin][col_bin]) {
+
+            //ds set the current point
+            _bin_map_left[row_bin][col_bin] = _framepoint_generator->framepointsInImage()[row][col];
+          }
+
+          //ds or if we have a point with higher keypoint response
+          else if (_framepoint_generator->framepointsInImage()[row][col]->keypointLeft().response > _bin_map_left[row_bin][col_bin]->keypointLeft().response) {
+
+            //ds set the current point
+            _bin_map_left[row_bin][col_bin] = _framepoint_generator->framepointsInImage()[row][col];
+          } else {
+
+            //ds drop the framepoint
+            delete _framepoint_generator->framepointsInImage()[row][col];
+          }
+
+          //ds always free point from input grid
+          _framepoint_generator->framepointsInImage()[row][col] = 0;
+        }
+      }
+    }
+
+    //ds collect new framepoints from bin map
+    Index index_point_new = _number_of_tracked_points;
+    for (Index row = 0; row < _number_of_rows_bin; ++row) {
+      for (Index col = 0; col < _number_of_cols_bin; ++col) {
+        if (_bin_map_left[row][col]) {
+
           //ds assign the new point
-          frame_->points()[index_point_new] = _framepoint_generator->framepointsInImage()[row][col];
+          frame_->points()[index_point_new] = _bin_map_left[row][col];
 
           //ds update framepoint world position using the current pose estimate
           frame_->points()[index_point_new]->setWorldCoordinates(frame_to_world*frame_->points()[index_point_new]->robotCoordinates());
-
-          //ds free point from input grid
-          _framepoint_generator->framepointsInImage()[row][col] = 0;
           ++index_point_new;
         }
       }
     }
     frame_->points().resize(index_point_new);
-    //    std::cerr << "BaseTracker::extractFeatures|new points: " << index_point_new-_number_of_tracked_points << std::endl;
+//    std::cerr << "BaseTracker::extractFeatures|new points: " << index_point_new-_number_of_tracked_points << std::endl;
+
+    //ds clear the bin map
+    for (Index row = 0; row < _number_of_rows_bin; ++row) {
+      for (Index col = 0; col < _number_of_cols_bin; ++col) {
+        _bin_map_left[row][col] = 0;
+      }
+    }
   }
 
   //ds retrieves framepoint projections as image coordinates in a vector (at the same time removing points with invalid projections)
@@ -466,9 +517,9 @@ namespace proslam {
     Count number_of_visible_points = 0;
     for (FramePoint* previous_frame_point: previous_frame_->points()) {
       assert(previous_frame_point->imageCoordinatesLeft().x() >= 0);
-      assert(previous_frame_point->imageCoordinatesLeft().x() <= _camera_cols);
+      assert(previous_frame_point->imageCoordinatesLeft().x() <= _number_of_cols_image);
       assert(previous_frame_point->imageCoordinatesLeft().y() >= 0);
-      assert(previous_frame_point->imageCoordinatesLeft().y() <= _camera_rows);
+      assert(previous_frame_point->imageCoordinatesLeft().y() <= _number_of_rows_image);
 
       //ds get point into current camera - based on last track
       Vector3 point_in_camera;
@@ -491,8 +542,8 @@ namespace proslam {
       point_in_image_left /= point_in_image_left.z();
 
       //ds check for invalid projections
-      if (point_in_image_left.x() < 0 || point_in_image_left.x() > _camera_cols||
-          point_in_image_left.y() < 0 || point_in_image_left.y() > _camera_rows) {
+      if (point_in_image_left.x() < 0 || point_in_image_left.x() > _number_of_cols_image||
+          point_in_image_left.y() < 0 || point_in_image_left.y() > _number_of_rows_image) {
 
         //ds out of FOV
         continue;

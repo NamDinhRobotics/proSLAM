@@ -262,6 +262,8 @@ namespace proslam {
         _context_viewer_top->setWorldToRobotOrigin(orientation_correction*center_for_kitti_sequence_00);
         _context_viewer_top->show();
       }
+
+      _viewer_input_images->setTracker(_tracker);
     }
   }
 

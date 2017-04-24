@@ -1,5 +1,6 @@
 #pragma once
 #include "types/world_map.h"
+#include "motion_estimation/base_tracker.h"
 
 namespace proslam {
 
@@ -35,7 +36,8 @@ namespace proslam {
     } KeyStroke;
 
   public:
-    ViewerInputImages(WorldMap* world_, const std::string& window_name_ = "input: images");
+
+    ViewerInputImages(const WorldMap* world_, const std::string& window_name_ = "input: images");
     void initDrawing();
     void drawFeatures();
     void drawFeatureTracking();
@@ -43,8 +45,14 @@ namespace proslam {
     const bool updateGUI();
     void switchMode();
 
+  //ds setters/getters
+  public:
+
+    void setTracker(const BaseTracker* tracker_) {_tracker = tracker_;}
+
   protected:
-    WorldMap* _world;
+    const WorldMap* _world;
+    const BaseTracker* _tracker;
     cv::Mat _current_image;
     Count _cv_wait_key_timeout_milliseconds = 0;
     bool _display_depth_image               = true;

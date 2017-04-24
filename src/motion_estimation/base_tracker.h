@@ -31,29 +31,37 @@ namespace proslam {
   //ds functionality
   public:
 
-    void setWorldMap(WorldMap* context_) {_context=context_;}
-    void setIntensityImageLeft(const cv::Mat* intensity_image_left_) {_intensity_image_left = intensity_image_left_;}
     virtual void compute();
  
   //ds getters/setters
   public:
 
+    void setWorldMap(WorldMap* context_) {_context = context_;}
+    void setIntensityImageLeft(const cv::Mat* intensity_image_left_) {_intensity_image_left = intensity_image_left_;}
     BaseFrameAligner* aligner() {return _pose_optimizer;}
-    
+    const Count numberOfRowsImage() const {return _number_of_rows_image;}
+    const Count numberOfColsImage() const {return _number_of_cols_image;}
     void setMotionPreviousToCurrent(const TransformMatrix3D& motion_previous_to_current_) {_motion_previous_to_current_robot = motion_previous_to_current_;}
     BaseFramePointGenerator* framepointGenerator() {return _framepoint_generator;}
-    const Count totalNumberOfTrackedPoints() const {return _total_number_of_tracked_points;}
-    const Count totalNumberOfLandmarksClose() const {return _total_number_of_landmarks_close;}
-    const Count totalNumberOfLandmarksFar() const {return _total_number_of_landmarks_far;}
+    const BaseFramePointGenerator* framepointGenerator() const {return _framepoint_generator;}
+    const Count& totalNumberOfTrackedPoints() const {return _total_number_of_tracked_points;}
+    const Count& totalNumberOfLandmarksClose() const {return _total_number_of_landmarks_close;}
+    const Count& totalNumberOfLandmarksFar() const {return _total_number_of_landmarks_far;}
     void setPixelDistanceTrackingMaximum(const int32_t& pixel_distance_tracking_maximum_) {_pixel_distance_tracking_threshold_maximum = pixel_distance_tracking_maximum_;}
     void setPixelDistanceTrackingMinimum(const int32_t& pixel_distance_tracking_minimum_) {_pixel_distance_tracking_threshold_minimum = pixel_distance_tracking_minimum_;}
     void setMinimumNumberOfLandmarksToTrack(Count minimum_number_of_landmarks_to_track_) {_minimum_number_of_landmarks_to_track=minimum_number_of_landmarks_to_track_;}
+    const Count& binSize() const {return _bin_size_pixels;}
+    const Count& numberOfColsBin() const {return _number_of_cols_bin;}
+    const Count& numberOfRowsBin() const {return _number_of_rows_bin;}
 
   //ds helpers
   protected:
 
     //ds retrieves framepoint correspondences between previous and current frame
     void _trackFramepoints(Frame* previous_frame_, Frame* current_frame_);
+
+    //ds adds a new track
+    void _addTrack(FramePoint* framepoint_previous_, Frame* current_frame_, const Count& row_, const Count& col_);
 
     //ds adds new framepoints to the provided frame (picked from the pool of the _framepoint_generator)
     void _addNewFramepoints(Frame* frame_);
@@ -74,7 +82,7 @@ namespace proslam {
     // after having set it up with the proper arguments
     // to be overidden in the specialized classes
     virtual Frame* _makeFrame() = 0;
-    
+
   //ds attributes
   protected:
 
@@ -89,8 +97,8 @@ namespace proslam {
     Count _number_of_potential_points           = 0;
     Count _number_of_tracked_points             = 0;
     const Camera* _camera_left;
-    int32_t _camera_rows;
-    int32_t _camera_cols;
+    int32_t _number_of_rows_image;
+    int32_t _number_of_cols_image;
 
 
     // working elements
@@ -118,6 +126,12 @@ namespace proslam {
 
     //ds buffers
     std::vector<ImageCoordinates> _projected_image_coordinates_left;
+
+    //ds feature density regularization
+    Count _bin_size_pixels;
+    Count _number_of_rows_bin;
+    Count _number_of_cols_bin;
+    BaseFramePointGenerator::FramePointMatrix _bin_map_left;
 
     //ds informative only
     CREATE_CHRONOMETER(tracking)

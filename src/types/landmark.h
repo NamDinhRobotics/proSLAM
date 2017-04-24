@@ -73,6 +73,9 @@ namespace proslam {
     //ds landmark coordinates update with visual information (tracking)
     void update(const FramePoint* point_);
 
+    const Count& numberOfRecoveries() const {return _number_of_recoveries;}
+    void incrementNumberOfRecoveries() {++_number_of_recoveries;}
+
     //ds visualization only
     inline const bool isNear() const {return _is_near;}
     inline void setIsNear(const bool& is_near_) {_is_near = is_near_;}
@@ -107,6 +110,7 @@ namespace proslam {
     real _total_weight = 0;
     const real _maximum_acceptable_relative_displacement = 0.75;
     Count _number_of_updates = 0;
+    Count _number_of_recoveries = 0;
 
     //ds grant access to landmark factory
     friend WorldMap;

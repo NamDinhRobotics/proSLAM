@@ -10,9 +10,7 @@ namespace proslam {
   void DepthFramePointGenerator::setup(){
     assert(_camera_right);
 
-    _bin_size=4;
-    _detector_threshold_maximum = 40;
-    _target_number_of_points=700;
+    _target_number_of_detected_keypoints=700;
    BaseFramePointGenerator::setup();
    _maximum_depth_near_meters = 6;
    _maximum_depth_far_meters = 30;
@@ -20,10 +18,6 @@ namespace proslam {
     //ds info
     std::cerr << "DepthFramePointGenerator::DepthFramePointGenerator|maximum depth tracking close (m): " << _maximum_depth_near_meters << std::endl;
     std::cerr << "DepthFramePointGenerator::DepthFramePointGenerator|maximum depth tracking far (m): " << _maximum_depth_far_meters << std::endl;
-    std::cerr << "DepthFramePointGenerator::DepthFramePointGenerator|bin size (pixel): " << _bin_size << std::endl;
-    std::cerr << "DepthFramePointGenerator::DepthFramePointGenerator|number of bins u: " << _number_of_bins_u << std::endl;
-    std::cerr << "DepthFramePointGenerator::DepthFramePointGenerator|number of bins v: " << _number_of_bins_v << std::endl;
-    std::cerr << "DepthFramePointGenerator::DepthFramePointGenerator|total number of bins: " << _number_of_bins_u*_number_of_bins_v << std::endl;
     std::cerr << "DepthFramePointGenerator::DepthFramePointGenerator|constructed" << std::endl;
   }
 
@@ -108,9 +102,6 @@ namespace proslam {
     CHRONOMETER_START(depth_map_generation)
     _computeDepthMap(frame_->intensityImageRight());
     CHRONOMETER_STOP(depth_map_generation)
-    
-    //ds keypoint pruning - prune only left side
-    binKeypoints(_keypoints_left, _bin_map_left);
 
     //ds extract descriptors for detected features
     extractDescriptors(frame_->intensityImageLeft(), _keypoints_left, _descriptors_left);
@@ -119,9 +110,6 @@ namespace proslam {
     CHRONOMETER_START(depth_assignment)
     computeCoordinatesFromDepth(frame_);
     CHRONOMETER_STOP(depth_assignment)
-
-    //ds calibrate feature detector threshold to maintain the target number of tracked points
-    calibrateDetectionThresholds();
   }
 
   //ds computes all potential stereo keypoints (exhaustive in matching distance) and stores them as framepoints (called within compute)

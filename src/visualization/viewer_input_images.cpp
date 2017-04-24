@@ -4,9 +4,10 @@ using namespace std;
 
 namespace proslam {
 
-  ViewerInputImages::ViewerInputImages(WorldMap* world_, const std::string& window_name_): _world(world_),
-                                                                                           _cv_wait_key_timeout_milliseconds(0),
-                                                                                           _window_name(window_name_) {
+  ViewerInputImages::ViewerInputImages(const WorldMap* world_, const std::string& window_name_): _world(world_),
+                                                                                                 _tracker(0),
+                                                                                                 _cv_wait_key_timeout_milliseconds(0),
+                                                                                                 _window_name(window_name_) {
     std::cerr << "switched to stepwise mode (press backspace for switch, press space for stepping)" << std::endl;
   }
   
@@ -90,6 +91,25 @@ namespace proslam {
 
   const bool ViewerInputImages::updateGUI(){
     if (!_current_image.empty()) {
+
+//      //ds debugging - tracker related display
+//      if (_tracker) {
+//
+//        //ds visualize binning grid
+//        cv::Mat display_bin_map(_current_image);
+//        const Count& bin_size = _tracker->binSize();
+//        for (Index row = 0; row < _tracker->numberOfRowsBin(); ++row) {
+//          for (Index col = 0; col < _tracker->numberOfColsBin(); ++col) {
+//            if ((row+1)*bin_size < _tracker->numberOfRowsImage() &&
+//                (col+1)*bin_size < _tracker->numberOfColsImage() ) {
+//            cv::rectangle(display_bin_map, cv::Point2i(col*bin_size, row*bin_size), cv::Point2i((col+1)*bin_size, (row+1)*bin_size), cv::Scalar(0, 0, 255));
+//            }
+//          }
+//        }
+//        cv::imshow("debug", display_bin_map);
+//        cv::waitKey(0);
+//      }
+
       cv::imshow(_window_name.c_str(), _current_image);
 
       int last_key_stroke = cv::waitKey(_cv_wait_key_timeout_milliseconds);

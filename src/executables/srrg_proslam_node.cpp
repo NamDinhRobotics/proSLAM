@@ -205,7 +205,6 @@ int32_t main(int32_t argc, char ** argv) {
   slam_system.tracker()->aligner()->setMaximumErrorKernel(9);
   slam_system.tracker()->framepointGenerator()->setDetectorThreshold(25);
   slam_system.tracker()->framepointGenerator()->setDetectorThresholdMinimum(25);
-  slam_system.tracker()->framepointGenerator()->setDetectorThresholdMaximum(100);
   slam_system.tracker()->framepointGenerator()->setTargetNumberOfPoints(1000);
   slam_system.tracker()->framepointGenerator()->setMaximumMatchingDistanceTriangulation(50);
   slam_system.tracker()->framepointGenerator()->setMatchingDistanceTrackingThresholdMaximum(50);
