@@ -3,8 +3,11 @@
 namespace proslam {
 
   StereoFramePointGenerator::StereoFramePointGenerator(): _camera_right(0),
+                                                          _maximum_matching_distance_triangulation(50),
                                                           _baseline_pixelsmeters(0),
-                                                          _baseline_meters(0) {
+                                                          _baseline_meters(0),
+                                                          _baseline_factor(50),
+                                                          _minimum_disparity_pixels(1) {
     std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|construced" << std::endl;
   }
 
@@ -14,13 +17,14 @@ namespace proslam {
     assert(_camera_right);
 
     //ds configure base
-    _detector_threshold                           = 5;
+    _detector_threshold                           = 15;
     _detector_threshold_minimum                   = 5;
     _detector_threshold_step_size                 = 5;
     _matching_distance_tracking_threshold         = 50;
     _matching_distance_tracking_threshold_maximum = 50;
-    _matching_distance_tracking_threshold_minimum = 25;
+    _matching_distance_tracking_threshold_minimum = 15;
     _matching_distance_tracking_step_size         = 1;
+    _target_number_of_keypoints_tolerance         = 0.1;
 
     //ds integrate configuration
     BaseFramePointGenerator::setup();

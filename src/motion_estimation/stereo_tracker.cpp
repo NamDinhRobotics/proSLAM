@@ -32,7 +32,7 @@ namespace proslam {
     std::cerr << "StereoTracker::StereoTracker|destroyed" << std::endl;
   }
 
-  Frame* StereoTracker::_makeFrame(){
+  Frame* StereoTracker::_createFrame(){
     Frame* current_frame = _context->createFrame(_context->robotToWorld(), _framepoint_generator->maximumDepthNearMeters());
     current_frame->setCameraLeft(_camera_left);
     current_frame->setIntensityImageLeft(*_intensity_image_left);

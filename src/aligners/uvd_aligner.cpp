@@ -6,19 +6,19 @@ namespace proslam {
   using namespace srrg_core;
 
   //ds initialize aligner with minimal entity
-  void UVDAligner::init(Frame* context_, const TransformMatrix3D& robot_to_world_) {
-    _context = context_;
-    _errors.resize(_context->points().size());
-    _inliers.resize(_context->points().size());
+  void UVDAligner::initialize(Frame* frame_, const TransformMatrix3D& robot_to_world_) {
+    _frame = frame_;
+    _errors.resize(_frame->points().size());
+    _inliers.resize(_frame->points().size());
     _robot_to_world = robot_to_world_;
     _world_to_robot = _robot_to_world.inverse();
 
     //ds wrappers for optimization
-    _camera_to_world = _robot_to_world*_context->cameraLeft()->cameraToRobot();
+    _camera_to_world = _robot_to_world*_frame->cameraLeft()->cameraToRobot();
     _world_to_camera = _camera_to_world.inverse();
-    _camera_matrix  = _context->cameraLeft()->cameraMatrix();
-    _image_rows = _context->cameraLeft()->imageRows();
-    _image_cols = _context->cameraLeft()->imageCols();
+    _camera_matrix  = _frame->cameraLeft()->cameraMatrix();
+    _number_of_rows_image = _frame->cameraLeft()->imageRows();
+    _number_of_cols_image = _frame->cameraLeft()->imageCols();
   }
 
   //ds linearize the system: to be called inside oneRound
@@ -32,15 +32,15 @@ namespace proslam {
     _total_error        = 0;
 
     //ds loop over all points (assumed to have previous points)
-    for (Index index_point = 0; index_point < _context->points().size(); index_point++) {
+    for (Index index_point = 0; index_point < _frame->points().size(); index_point++) {
       _errors[index_point]  = -1;
       _inliers[index_point] = false;
       _omega.setIdentity();
       _omega(2,2)*=10;
       
       //ds buffer framepoint
-      FramePoint* frame_point = _context->points()[index_point];
-      assert(_context->cameraLeft()->isInFieldOfView(frame_point->imageCoordinatesLeft()));
+      FramePoint* frame_point = _frame->points()[index_point];
+      assert(_frame->cameraLeft()->isInFieldOfView(frame_point->imageCoordinatesLeft()));
       assert(frame_point->previous());
 
       //ds buffer landmark
@@ -61,7 +61,6 @@ namespace proslam {
 
       //ds retrieve homogeneous projections
       const PointCoordinates predicted_uvd_in_camera  = _camera_matrix*predicted_point_in_camera;
-
       
       //ds compute the image coordinates
       PointCoordinates predicted_point_in_image  = predicted_uvd_in_camera/depth_meters;
@@ -69,12 +68,12 @@ namespace proslam {
       predicted_point_in_image.z()=depth_meters;
       
       //ds if the point is outside the image, skip
-      if (predicted_point_in_image.x() < 0 || predicted_point_in_image.x() > _image_cols||
-          predicted_point_in_image.y() < 0 || predicted_point_in_image.y() > _image_rows) {
+      if (predicted_point_in_image.x() < 0 || predicted_point_in_image.x() > _number_of_cols_image||
+          predicted_point_in_image.y() < 0 || predicted_point_in_image.y() > _number_of_rows_image) {
         continue;
       }
 
-      assert(_context->cameraLeft()->isInFieldOfView(predicted_point_in_image));
+      assert(_frame->cameraLeft()->isInFieldOfView(predicted_point_in_image));
       
       //ds precompute
       const real inverse_predicted_d  = 1/depth_meters;
@@ -126,9 +125,9 @@ namespace proslam {
       //ds jacobian parts of the homogeneous division
       Matrix3 jacobian_projection;
       jacobian_projection <<
-	inverse_predicted_d, 0, -predicted_uvd_in_camera.x()*inverse_predicted_d_squared,
-	0, inverse_predicted_d, -predicted_uvd_in_camera.y()*inverse_predicted_d_squared,
-	0, 0, 1;
+      inverse_predicted_d, 0, -predicted_uvd_in_camera.x()*inverse_predicted_d_squared,
+      0, inverse_predicted_d, -predicted_uvd_in_camera.y()*inverse_predicted_d_squared,
+      0, 0, 1;
 
       //ds assemble final jacobian
       _jacobian = jacobian_projection*_camera_matrix*jacobian_transform;
@@ -207,9 +206,7 @@ namespace proslam {
 
     //ds update wrapped structures
     _camera_to_world = _world_to_camera.inverse();    
-    _robot_to_world = _camera_to_world*_context->cameraLeft()->robotToCamera();
+    _robot_to_world = _camera_to_world*_frame->cameraLeft()->robotToCamera();
     _world_to_robot = _robot_to_world.inverse();
-
   }
-
 }

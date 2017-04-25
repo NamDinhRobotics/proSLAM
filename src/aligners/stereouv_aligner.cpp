@@ -6,20 +6,20 @@ namespace proslam {
   using namespace srrg_core;
 
   //ds initialize aligner with minimal entity
-  void StereoUVAligner::init(Frame* context_, const TransformMatrix3D& robot_to_world_) {
-    _context = context_;
-    _errors.resize(_context->points().size());
-    _inliers.resize(_context->points().size());
+  void StereoUVAligner::initialize(Frame* frame_, const TransformMatrix3D& robot_to_world_) {
+    _frame = frame_;
+    _errors.resize(_frame->points().size());
+    _inliers.resize(_frame->points().size());
     _robot_to_world = robot_to_world_;
     _world_to_robot = _robot_to_world.inverse();
 
     //ds wrappers for optimization
-    _camera_left_to_world = _robot_to_world*_context->cameraLeft()->cameraToRobot();
-    _world_to_camera_left = _camera_left_to_world.inverse();
-    _projection_matrix_left  = _context->cameraLeft()->projectionMatrix();
-    _projection_matrix_right = _context->cameraRight()->projectionMatrix();
-    _image_rows = _context->cameraLeft()->imageRows();
-    _image_cols = _context->cameraLeft()->imageCols();
+    _camera_to_world = _robot_to_world*_frame->cameraLeft()->cameraToRobot();
+    _world_to_camera = _camera_to_world.inverse();
+    _projection_matrix_left  = _frame->cameraLeft()->projectionMatrix();
+    _projection_matrix_right = _frame->cameraRight()->projectionMatrix();
+    _number_of_rows_image = _frame->cameraLeft()->imageRows();
+    _number_of_cols_image = _frame->cameraLeft()->imageCols();
   }
 
   //ds linearize the system: to be called inside oneRound
@@ -33,15 +33,15 @@ namespace proslam {
     _total_error        = 0;
 
     //ds loop over all points (assumed to have previous points)
-    for (Index index_point = 0; index_point < _context->points().size(); index_point++) {
+    for (Index index_point = 0; index_point < _frame->points().size(); index_point++) {
       _errors[index_point]  = -1;
       _inliers[index_point] = false;
       _omega.setIdentity();
 
       //ds buffer framepoint
-      FramePoint* frame_point = _context->points()[index_point];
-      assert(_context->cameraLeft()->isInFieldOfView(frame_point->imageCoordinatesLeft()));
-      assert(_context->cameraRight()->isInFieldOfView(frame_point->imageCoordinatesRight()));
+      FramePoint* frame_point = _frame->points()[index_point];
+      assert(_frame->cameraLeft()->isInFieldOfView(frame_point->imageCoordinatesLeft()));
+      assert(_frame->cameraRight()->isInFieldOfView(frame_point->imageCoordinatesRight()));
       assert(frame_point->previous());
 
       //ds buffer landmark
@@ -50,9 +50,9 @@ namespace proslam {
       //ds compute the point in the camera frame - prefering a landmark estimate if available
       PointCoordinates sampled_point_in_camera_left = PointCoordinates::Zero();
       if (landmark && landmark->areCoordinatesValidated()) {
-        sampled_point_in_camera_left = _world_to_camera_left*landmark->coordinates();
+        sampled_point_in_camera_left = _world_to_camera*landmark->coordinates();
       } else {
-        sampled_point_in_camera_left = _world_to_camera_left*frame_point->previous()->worldCoordinates();
+        sampled_point_in_camera_left = _world_to_camera*frame_point->previous()->worldCoordinates();
         _omega *= _weight_framepoint;
       }
       const real& depth_meters = sampled_point_in_camera_left.z();
@@ -72,16 +72,16 @@ namespace proslam {
       const PointCoordinates sampled_point_in_image_right = sampled_abc_in_camera_right/sampled_c_right;
 
       //ds if the point is outside the image, skip
-      if (sampled_point_in_image_left.x() < 0 || sampled_point_in_image_left.x() > _image_cols||
-          sampled_point_in_image_left.y() < 0 || sampled_point_in_image_left.y() > _image_rows) {
+      if (sampled_point_in_image_left.x() < 0 || sampled_point_in_image_left.x() > _number_of_cols_image||
+          sampled_point_in_image_left.y() < 0 || sampled_point_in_image_left.y() > _number_of_rows_image) {
         continue;
       }
-      if (sampled_point_in_image_right.x() < 0 || sampled_point_in_image_right.x() > _image_cols||
-          sampled_point_in_image_right.y() < 0 || sampled_point_in_image_right.y() > _image_rows) {
+      if (sampled_point_in_image_right.x() < 0 || sampled_point_in_image_right.x() > _number_of_cols_image||
+          sampled_point_in_image_right.y() < 0 || sampled_point_in_image_right.y() > _number_of_rows_image) {
         continue;
       }
-      assert(_context->cameraLeft()->isInFieldOfView(sampled_point_in_image_left));
-      assert(_context->cameraRight()->isInFieldOfView(sampled_point_in_image_right));
+      assert(_frame->cameraLeft()->isInFieldOfView(sampled_point_in_image_left));
+      assert(_frame->cameraRight()->isInFieldOfView(sampled_point_in_image_right));
 
       //ds precompute
       const real inverse_sampled_c_left  = 1/sampled_c_left;
@@ -174,13 +174,13 @@ namespace proslam {
 
     //ds compute solution transformation
     const Vector6 dx = _H.ldlt().solve(-_b);
-    _world_to_camera_left = v2t(dx)*_world_to_camera_left;
+    _world_to_camera = v2t(dx)*_world_to_camera;
 
     //ds enforce proper rotation matrix
-    const Matrix3 rotation = _world_to_camera_left.linear();
+    const Matrix3 rotation = _world_to_camera.linear();
     Matrix3 rotation_squared             = rotation.transpose() * rotation;
     rotation_squared.diagonal().array() -= 1;
-    _world_to_camera_left.linear()      -= 0.5*rotation*rotation_squared;
+    _world_to_camera.linear()      -= 0.5*rotation*rotation_squared;
   }
 
   //ds solve alignment problem until convergence is reached
@@ -219,9 +219,10 @@ namespace proslam {
                   << " inliers: " << _number_of_inliers << " outliers: " << _number_of_outliers << std::endl;
       }
     }
+
     //ds update wrapped structures
-    _camera_left_to_world = _world_to_camera_left.inverse();
-     _robot_to_world = _camera_left_to_world*_context->cameraLeft()->robotToCamera();
+    _camera_to_world = _world_to_camera.inverse();
+     _robot_to_world = _camera_to_world*_frame->cameraLeft()->robotToCamera();
     _world_to_robot = _robot_to_world.inverse();
   }
 }

@@ -14,10 +14,9 @@ namespace proslam {
 
   //ds this class optimizes the SLAM pose graph by considering pose measurements only, connected landmarks are moved rigidly after the optimization
   class GraphOptimizer {
-  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds exported data types
-  public:
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     typedef g2o::BlockSolver< g2o::BlockSolverTraits<-1, -1> >  SlamBlockSolver;
     typedef g2o::LinearSolverCSparse<SlamBlockSolver::PoseMatrixType> SlamLinearSolver;

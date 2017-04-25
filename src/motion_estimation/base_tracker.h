@@ -14,27 +14,25 @@ namespace proslam {
     //ds the tracker assumes a constant stereo camera configuration
     BaseTracker();
 
-    inline void setCameraLeft(const Camera* camera_left_) {_camera_left = camera_left_; _has_odometry = false;}
-    inline void setOdometry(const TransformMatrix3D& odometry_) {_odometry = odometry_; _has_odometry = true;}
-    inline void setAligner(BaseFrameAligner* pose_optimizer_) {_pose_optimizer = pose_optimizer_;}
-      
-    void setFramePointGenerator(BaseFramePointGenerator * framepoint_generator_) {
-      _framepoint_generator = framepoint_generator_;
-    }
+    //gg to be called once all construction parameters are set
+    virtual void setup();
 
-    virtual void setup(); // to be called once all construction parameters are set
-    
     //ds dynamic cleanup
     virtual ~BaseTracker();
 
   //ds functionality
   public:
 
+    //ds magic
     virtual void compute();
  
   //ds getters/setters
   public:
 
+    void setCameraLeft(const Camera* camera_left_) {_camera_left = camera_left_; _has_odometry = false;}
+    void setOdometry(const TransformMatrix3D& odometry_) {_odometry = odometry_; _has_odometry = true;}
+    void setAligner(BaseFrameAligner* pose_optimizer_) {_pose_optimizer = pose_optimizer_;}
+    void setFramePointGenerator(BaseFramePointGenerator * framepoint_generator_) {_framepoint_generator = framepoint_generator_;}
     void setWorldMap(WorldMap* context_) {_context = context_;}
     void setIntensityImageLeft(const cv::Mat* intensity_image_left_) {_intensity_image_left = intensity_image_left_;}
     BaseFrameAligner* aligner() {return _pose_optimizer;}
@@ -77,10 +75,8 @@ namespace proslam {
     //ds attempts to recover framepoints in the current image using the more precise pose estimate, retrieved after pose optimization
     virtual void _recoverPoints(Frame* current_frame_) = 0;
 
-    // creates a frame, calling the framepoint generator,
-    // after having set it up with the proper arguments
-    // to be overidden in the specialized classes
-    virtual Frame* _makeFrame() = 0;
+    //ds creates a frame, which is filled by calling the framepoint generator
+    virtual Frame* _createFrame() = 0;
 
   //ds attributes
   protected:

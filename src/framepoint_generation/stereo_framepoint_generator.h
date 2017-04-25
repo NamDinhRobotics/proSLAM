@@ -12,8 +12,7 @@ namespace proslam {
     //ds the stereo camera setup must be provided
     StereoFramePointGenerator();
 
-    inline void setCameraRight(const Camera* camera_right_) {_camera_right = camera_right_;}
-    
+    //gg to be called after constructor and parameters are set
     virtual void setup();
     
     //ds cleanup of dynamic structures
@@ -34,10 +33,13 @@ namespace proslam {
     //ds computes all potential stereo keypoints (exhaustive in matching distance) and stores them as framepoints (called within compute)
     void findStereoKeypoints(Frame* frame_);
 
-
     //ds computes 3D position of a stereo keypoint pair in the keft camera frame (called within findStereoKeypoints)
     const PointCoordinates getCoordinatesInCameraLeft(const cv::Point2f& image_coordinates_left_, const cv::Point2f& image_coordinates_right_) const;
 
+  //ds setters/getters
+  public:
+
+    inline void setCameraRight(const Camera* camera_right_) {_camera_right = camera_right_;}
 
   //ds settings
   protected:
@@ -45,11 +47,11 @@ namespace proslam {
     const Camera* _camera_right;
 
     //ds triangulation properties
-    int32_t _maximum_matching_distance_triangulation = 50;
+    int32_t _maximum_matching_distance_triangulation;
     real _baseline_pixelsmeters;
     real _baseline_meters;
-    real _baseline_factor          = 50;
-    real _minimum_disparity_pixels = 1;
+    real _baseline_factor;
+    real _minimum_disparity_pixels;
 
     //ds inner memory buffers (operated on in compute)
     std::vector<cv::KeyPoint> _keypoints_right;

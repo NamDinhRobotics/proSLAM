@@ -12,11 +12,11 @@ namespace proslam {
     UVDAligner(): BaseFrameAligner(1e-3, 9, 1, 1e3) {}
     ~UVDAligner() {}
 
-  //ds required interface
+  //ds functionality
   public:
 
     //ds initialize aligner with minimal entity
-    virtual void init(Frame* context_, const TransformMatrix3D& robot_to_world_ = TransformMatrix3D::Identity());
+    virtual void initialize(Frame* context_, const TransformMatrix3D& robot_to_world_ = TransformMatrix3D::Identity());
 
     //ds linearize the system: to be called inside oneRound
     virtual void linearize(const bool& ignore_outliers_);
@@ -27,20 +27,10 @@ namespace proslam {
     //ds solve alignment problem until convergence is reached
     virtual void converge();
 
-
   //ds aligner specific
   protected:
 
-    //ds alignment context
-    Frame* _context = 0;
-
-    //ds objective
-    TransformMatrix3D _world_to_camera = TransformMatrix3D::Identity();
-    TransformMatrix3D _camera_to_world = TransformMatrix3D::Identity();
-
     //ds buffers
     CameraMatrix _camera_matrix = CameraMatrix::Zero();
-    Count _image_rows           = 0;
-    Count _image_cols           = 0;
   };
 }

@@ -7,10 +7,9 @@ namespace proslam {
 
   //ds this class computes potential loop closures for a given local map query (the extent of computed detail can be steered easily using the different methods)
   class Relocalizer {
-  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds exported types
-  public:
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds augmented container, wrapping a local map with additional information required by the relocalization module
     struct Query {

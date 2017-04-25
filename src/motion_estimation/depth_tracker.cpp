@@ -5,15 +5,15 @@ namespace proslam {
 
   //ds the tracker assumes a constant stereo camera configuration
   DepthTracker::DepthTracker(){
-    _camera_right=0;
-    _depth_image_right=0;
+    _depth_camera=0;
+    _depth_image=0;
     _depth_framepoint_generator=0;
     std::cerr << "DepthTracker::DepthTracker|constructed" << std::endl;
   }
 
   void DepthTracker::setup() {
     BaseTracker::setup();
-    assert(_camera_right);
+    assert(_depth_camera);
     _depth_framepoint_generator = dynamic_cast<DepthFramePointGenerator*>(_framepoint_generator);
     assert(_depth_framepoint_generator);
   }
@@ -24,18 +24,18 @@ namespace proslam {
     std::cerr << "DepthTracker::DepthTracker|destroyed" << std::endl;
   }
 
-  Frame* DepthTracker::_makeFrame(){
+  Frame* DepthTracker::_createFrame(){
     Frame* current_frame = _context->createFrame(_context->robotToWorld(), _framepoint_generator->maximumDepthNearMeters());
     current_frame->setCameraLeft(_camera_left);
     current_frame->setIntensityImageLeft(*_intensity_image_left);
-    current_frame->setCameraRight(_camera_right);
-    current_frame->setIntensityImageRight(*_depth_image_right);
+    current_frame->setCameraRight(_depth_camera);
+    current_frame->setIntensityImageRight(*_depth_image);
     return current_frame;
   }
   
   //ds creates a new Frame for the given images, retrieves the correspondences relative to the previous Frame, optimizes the current frame pose and updates landmarks
   void DepthTracker::compute() {
-    assert(_depth_image_right);
+    assert(_depth_image);
     BaseTracker::compute();
   }
 

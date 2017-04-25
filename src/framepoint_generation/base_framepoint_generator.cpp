@@ -8,6 +8,7 @@ namespace proslam {
                                                       _number_of_cols_image(0),
                                                       _target_number_of_keypoints(1000),
                                                       _number_of_available_points(0),
+                                                      _target_number_of_keypoints_tolerance(0.1),
                                                       _detector_threshold(10),
                                                       _detector_threshold_minimum(5),
                                                       _detector_threshold_step_size(10),
@@ -100,7 +101,7 @@ namespace proslam {
     const real delta = (static_cast<real>(keypoints_.size())-_target_number_of_keypoints)/keypoints_.size();
 
     //ds check if there's a significant loss of target points
-    if (delta < -0.1) {
+    if (delta < -_target_number_of_keypoints_tolerance) {
 
       //ds compute new threshold
       _detector_threshold += std::max(std::ceil(delta*_detector_threshold_step_size), -_detector_threshold_step_size);
@@ -118,7 +119,7 @@ namespace proslam {
     }
 
     //ds or if there's a significant gain of target points
-    else if (delta > 0.1) {
+    else if (delta > _target_number_of_keypoints_tolerance) {
 
       //ds compute new threshold
       _detector_threshold += std::min(std::ceil(delta*_detector_threshold_step_size), _detector_threshold_step_size);

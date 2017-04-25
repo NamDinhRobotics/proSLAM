@@ -155,7 +155,7 @@ namespace proslam {
   void Relocalizer::compute() {
     CHRONOMETER_START(overall)
     for(LocalMapCorrespondence* closure: _closures) {
-      _aligner->init(closure);
+      _aligner->initialize(closure);
       _aligner->converge();
     }
     CHRONOMETER_STOP(overall)

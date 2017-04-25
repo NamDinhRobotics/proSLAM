@@ -33,7 +33,7 @@ namespace proslam {
 
     virtual ~BaseAligner() {};
 
-  //ds access
+  //ds functionality
   public:
 
     //ds linearize the system: to be called inside oneRound
@@ -45,7 +45,9 @@ namespace proslam {
     //ds solve alignment problem until convergence is reached
     virtual void converge() = 0;
 
-    //ds getters/setters
+  //ds getters/setters
+  public:
+
     inline const std::vector<real>& errors() const {return _errors;}
     inline const std::vector<bool>& inliers() const {return _inliers;}
     inline const uint64_t numberOfInliers() const {return _number_of_inliers;}

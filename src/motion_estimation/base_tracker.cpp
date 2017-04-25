@@ -106,7 +106,7 @@ namespace proslam {
     }
 
     //ds create new frame
-    Frame* current_frame = _makeFrame();
+    Frame* current_frame = _createFrame();
  
     //ds compute full sensory prior for the current frame
     _framepoint_generator->compute(current_frame);
@@ -116,7 +116,6 @@ namespace proslam {
     if (current_frame->previous()) {
 
       //ds enable binning by default
-      _enable_keypoint_binning = true;
       CHRONOMETER_START(tracking);
       _trackFramepoints(current_frame->previous(), current_frame);
       CHRONOMETER_STOP(tracking);
@@ -134,7 +133,7 @@ namespace proslam {
 
           //ds solve pose on frame points only
           CHRONOMETER_START(pose_optimization);
-          _pose_optimizer->init(current_frame, current_frame->robotToWorld());
+          _pose_optimizer->initialize(current_frame, current_frame->robotToWorld());
           _pose_optimizer->setWeightFramepoint(1);
           _pose_optimizer->converge();
           CHRONOMETER_STOP(pose_optimization);
@@ -193,14 +192,14 @@ namespace proslam {
         }
 
         //ds compute ratio between close and far landmarks
-        const real percentage_of_far_landmarks = _number_of_tracked_landmarks_far/static_cast<real>(_number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
-        if (percentage_of_far_landmarks > 0.9) {
-          std::cerr << "BaseTracker::compute|WARNING: high percentage of far landmarks over total: " << percentage_of_far_landmarks
+        const real percentage_of_close_landmarks = _number_of_tracked_landmarks_close/static_cast<real>(_number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
+        if (percentage_of_close_landmarks < 0.1) {
+          std::cerr << "BaseTracker::compute|WARNING: low percentage of close landmarks available: " << percentage_of_close_landmarks
                     << " (" << _number_of_tracked_landmarks_far << "/" << _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close << ")" << std::endl;
         }
 
         //ds derive framepoint weight for current optimization
-        const real weight_framepoint = percentage_of_far_landmarks*(1-percentage_landmarks);
+        const real weight_framepoint = percentage_of_close_landmarks*(1-percentage_landmarks);
         assert(weight_framepoint <= 1);
 
 //        //ds compute far to close landmark ratio TODO simplify or get better logic: currently the idea is to give more weight to framepoints in case we have almost only far landmarks
@@ -209,7 +208,7 @@ namespace proslam {
 
         //ds call pose solver
         CHRONOMETER_START(pose_optimization)
-        _pose_optimizer->init(current_frame, current_frame->robotToWorld());
+        _pose_optimizer->initialize(current_frame, current_frame->robotToWorld());
         _pose_optimizer->setWeightFramepoint(std::max(weight_framepoint, static_cast<real>(0.01)));
         _pose_optimizer->converge();
         CHRONOMETER_STOP(pose_optimization)
@@ -297,6 +296,7 @@ namespace proslam {
   void BaseTracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame_) {
     assert(previous_frame_);
     assert(current_frame_);
+    _enable_keypoint_binning = true;
 
     //ds control variables
     current_frame_->points().resize(_number_of_potential_points);
@@ -461,8 +461,8 @@ namespace proslam {
     const Count row_bin = std::floor(static_cast<real>(row_)/_bin_size_pixels);
     const Count col_bin = std::floor(static_cast<real>(col_)/_bin_size_pixels);
 
-    //ds occupy a bin if binning is enabled
-    if (_enable_keypoint_binning) {_bin_map_left[row_bin][col_bin] = current_point;}
+    //ds occupy corresponding bin
+    _bin_map_left[row_bin][col_bin] = current_point;
 
     //ds disable further matching and reduce search time
     _framepoint_generator->framepointsInImage()[row_][col_] = 0;

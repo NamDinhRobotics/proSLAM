@@ -13,35 +13,43 @@ namespace proslam {
     //ds the tracker assumes a constant stereo camera configuration
     StereoTracker();
 
+    //ds configuration function
+    virtual void setup();
+
     //ds dynamic cleanup
     ~StereoTracker();
 
-    void setCameraRight(const Camera* camera_right_) { _camera_right=camera_right_;}
+  //ds functionality
+  public:
 
-    void setIntensityImageRight(const cv::Mat* intensity_image_right_) {_intensity_image_right = intensity_image_right_;}
-    virtual void setup();
-
+    //ds magic
     virtual void compute();
     
-    //ds helpers
+  //ds setters/getters
+  public:
+
+    void setCameraRight(const Camera* camera_right_) {_camera_right = camera_right_;}
+    void setIntensityImageRight(const cv::Mat* intensity_image_right_) {_intensity_image_right = intensity_image_right_;}
+
+  //ds helpers
   protected:
 
-    //gg
-    virtual Frame* _makeFrame();
+    //ds creates a frame, which is filled by calling the framepoint generator
+    virtual Frame* _createFrame();
 
     //ds attempts to recover framepoints in the current image using the more precise pose estimate, retrieved after pose optimization
     virtual void _recoverPoints(Frame* current_frame_);
 
+  //ds attributes
   protected:
 
-    // configuration
+    //ds configuration
     const Camera* _camera_right;
 
-    // processing
+    //ds processing
     const cv::Mat* _intensity_image_right;
 
-    // the one below is a typed copy of the framepoint generator
-    // accepts only stereo objects;
+    //ds specified generator instance
     StereoFramePointGenerator* _stereo_framepoint_generator;
   };
 }

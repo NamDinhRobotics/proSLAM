@@ -2,10 +2,10 @@
 
 namespace proslam {
 
-  DepthFramePointGenerator::DepthFramePointGenerator() {
-    _camera_right=0;
+  DepthFramePointGenerator::DepthFramePointGenerator(): _camera_right(0) {
+    std::cerr << "DepthFramePointGenerator::DepthFramePointGenerator|constructed" << std::endl;
   }
-  
+
   //ds the stereo camera setup must be provided
   void DepthFramePointGenerator::setup(){
     assert(_camera_right);
@@ -51,43 +51,43 @@ namespace proslam {
     for (Count r=0; r<_number_of_rows_image; ++r){
       const unsigned short* raw_depth=right_depth_image.ptr<const unsigned short>(r);
       for (Count c=0; c<_number_of_cols_image; ++c, raw_depth++){
-	if (!*raw_depth)
-	  continue;
-	// retrieve depth
-	const float depth_right_meters=(*raw_depth)*_depth_pixel_to_meters;
-	// retrieve point in right camers, meters
-	Vector3 point_in_right_camera_meters=inverse_camera_matrix_right*Vector3(c*depth_right_meters, r*depth_right_meters,depth_right_meters);
-	// map the point to the left camera
-	Vector3 point_in_left_camera_meters=right_to_left_transform*point_in_right_camera_meters;
-	// if beyond camera, discard
-	const real depth_left_meters=point_in_left_camera_meters.z();
-	if (depth_left_meters<=0)
-	  continue;
-	// project to image coordinates
-	Vector3 point_in_left_camera_pixels=_camera_left->cameraMatrix()*point_in_left_camera_meters;
-	point_in_left_camera_pixels *= 1./point_in_left_camera_pixels.z();
+        if (!*raw_depth)
+          continue;
+        // retrieve depth
+        const float depth_right_meters=(*raw_depth)*_depth_pixel_to_meters;
+        // retrieve point in right camers, meters
+        Vector3 point_in_right_camera_meters=inverse_camera_matrix_right*Vector3(c*depth_right_meters, r*depth_right_meters,depth_right_meters);
+        // map the point to the left camera
+        Vector3 point_in_left_camera_meters=right_to_left_transform*point_in_right_camera_meters;
+        // if beyond camera, discard
+        const real depth_left_meters=point_in_left_camera_meters.z();
+        if (depth_left_meters<=0)
+          continue;
+        // project to image coordinates
+        Vector3 point_in_left_camera_pixels=_camera_left->cameraMatrix()*point_in_left_camera_meters;
+        point_in_left_camera_pixels *= 1./point_in_left_camera_pixels.z();
 
-	// round to int
-	const Count dest_r=round(point_in_left_camera_pixels.y());
-	const Count dest_c=round(point_in_left_camera_pixels.x());
-	
-	// if outside skip
-	if (dest_r<0 ||
-	    dest_r>=_number_of_rows_image ||
-	    dest_c<0 ||
-	    dest_c>=_number_of_cols_image)
-	  continue;
+        // round to int
+        const Count dest_r=round(point_in_left_camera_pixels.y());
+        const Count dest_c=round(point_in_left_camera_pixels.x());
 
-	// do z buffering and update indices
-	cv::Vec3f& dest_space=_space_map_left_meters.at<cv::Vec3f>(dest_r, dest_c);
+        // if outside skip
+        if (dest_r<0 ||
+            dest_r>=_number_of_rows_image ||
+            dest_c<0 ||
+            dest_c>=_number_of_cols_image)
+          continue;
 
-	if (dest_space[2] > depth_left_meters){
-	  dest_space=cv::Vec3f(point_in_left_camera_meters.x(),
-			       point_in_left_camera_meters.y(),
-			       point_in_left_camera_meters.z());
-	  _row_map.at<unsigned short>(dest_r, dest_c)=r;
-	  _col_map.at<unsigned short>(dest_r, dest_c)=c;
-	}
+        // do z buffering and update indices
+        cv::Vec3f& dest_space=_space_map_left_meters.at<cv::Vec3f>(dest_r, dest_c);
+
+        if (dest_space[2] > depth_left_meters){
+          dest_space=cv::Vec3f(point_in_left_camera_meters.x(),
+                               point_in_left_camera_meters.y(),
+                               point_in_left_camera_meters.z());
+          _row_map.at<unsigned short>(dest_r, dest_c)=r;
+          _col_map.at<unsigned short>(dest_r, dest_c)=c;
+        }
       }
     }
   }
@@ -116,7 +116,6 @@ namespace proslam {
   void DepthFramePointGenerator::computeCoordinatesFromDepth(Frame* frame_) {
     _number_of_available_points = 0;
     
-
     for (size_t i=0; i<_keypoints_left.size(); i++) {
       const cv::KeyPoint & keypoint_left=_keypoints_left[i];
       const cv::Mat& descriptor_left=_descriptors_left.row(i);
@@ -124,7 +123,7 @@ namespace proslam {
       const Index c_left=keypoint_left.pt.x;
       const cv::Vec3f& p=_space_map_left_meters.at<const cv::Vec3f>(r_left, c_left);
       if (p[2]>=_maximum_depth_far_meters)
-	continue;
+        continue;
 
       assert(_framepoints_in_image[r_left][c_left] == 0);
 
@@ -135,10 +134,10 @@ namespace proslam {
       const PointCoordinates camera_coordinates=PointCoordinates(p[0], p[1], p[2]); // compute 
       //ds add to framepoint map
       _framepoints_in_image[r_left][c_left] = frame_->create(keypoint_left,
-							     descriptor_left,
-							     keypoint_right,
-							     descriptor_left,
-							     camera_coordinates);
+                                                             descriptor_left,
+                                                             keypoint_right,
+                                                             descriptor_left,
+                                                             camera_coordinates);
       ++_number_of_available_points;
     }
   }

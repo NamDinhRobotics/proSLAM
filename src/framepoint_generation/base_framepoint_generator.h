@@ -102,6 +102,7 @@ namespace proslam {
     Count _number_of_available_points;
 
     //ds dynamic thresholds for feature detection
+    real _target_number_of_keypoints_tolerance;
     int32_t _detector_threshold;
     int32_t _detector_threshold_minimum;
     real _detector_threshold_step_size;

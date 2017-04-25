@@ -6,47 +6,49 @@ namespace proslam {
 
   //ds this class processes two subsequent Frames and establishes Framepoint correspondences (tracks) based on the corresponding images
   class DepthTracker: public BaseTracker {
-  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-	  //ds object handling
-  public:
+  //ds object handling
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds the tracker assumes a constant stereo camera configuration
     DepthTracker();
 
-    //ds dynamic cleanup
-    ~DepthTracker();
-
-    void setCameraRight(const Camera* camera_right_) { _camera_right=camera_right_;}
-
-    void setDepthImageRight(const cv::Mat* depth_image_right_) {_depth_image_right=depth_image_right_;}
+    //gg
     virtual void setup();
 
-    virtual void compute();
+    //ds dynamic cleanup
+    ~DepthTracker();
     
-    //ds helpers
+  //ds functionality
+  public:
+
+    virtual void compute();
+
+  //ds setters/getters
+  public:
+
+    void setDepthCamera(const Camera* depth_camera_) {_depth_camera = depth_camera_;}
+    void setDepthImageRight(const cv::Mat* depth_image_) {_depth_image = depth_image_;}
+
+  //ds helpers
   protected:
 
     //gg
-    virtual Frame* _makeFrame();
+    virtual Frame* _createFrame();
 
     //ds attempts to recover framepoints in the current image using the more precise pose estimate, retrieved after pose optimization
     virtual void _recoverPoints(Frame* current_frame_);
 
+  //ds attributes
   protected:
 
-    // configuration
-    const Camera* _camera_right;
+    //ds configuration
+    const Camera* _depth_camera;
 
-    // the one below is a typed copy of the framepoint generator
-    // accepts only stereo objects;
+    //ds processing
+    const cv::Mat* _depth_image;
+
+    //ds specified generator instance
     DepthFramePointGenerator* _depth_framepoint_generator;
-
-
-    // processing
-    const cv::Mat* _depth_image_right;
-
-  public:
-    const double getTimeConsumptionSeconds_depth_map_generation() const {return _depth_framepoint_generator->getTimeConsumptionSeconds_depth_map_generation();}
   };
 }

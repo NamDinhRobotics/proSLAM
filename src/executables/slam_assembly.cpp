@@ -114,7 +114,7 @@ namespace proslam {
     //ds allocate and configure the tracker
     DepthTracker* tracker = new DepthTracker();
     tracker->setCameraLeft(camera_left_);
-    tracker->setCameraRight(camera_right_);
+    tracker->setDepthCamera(camera_right_);
     tracker->setFramePointGenerator(framepoint_generator);
     tracker->setAligner(pose_optimizer);
     tracker->setup();

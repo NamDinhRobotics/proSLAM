@@ -33,7 +33,7 @@ namespace proslam {
     //ds for all points in the current frame
     for (const FramePoint* point: current_frame->points()) {
 
-      //ds if the point is representing a landmark view
+      //ds if the point is linked to a landmark
       if (point->landmark()) {
         cv::Scalar color = CV_COLOR_CODE_WHITE;
 
@@ -85,6 +85,13 @@ namespace proslam {
         const cv::Point current_point(frame_point->imageCoordinatesLeft().x(), frame_point->imageCoordinatesLeft().y());
         const cv::Point previous_point(frame_point->previous()->imageCoordinatesLeft().x(), frame_point->previous()->imageCoordinatesLeft().y());
         cv::line(_current_image, current_point, previous_point, cv::Scalar(0, 100+intensity*155, 0));
+      } else if (frame_point->previous()) {
+
+        //ds draw point track line
+        const cv::Point current_point(frame_point->imageCoordinatesLeft().x(), frame_point->imageCoordinatesLeft().y());
+        const cv::Point previous_point(frame_point->previous()->imageCoordinatesLeft().x(), frame_point->previous()->imageCoordinatesLeft().y());
+        cv::circle(_current_image, current_point, 1, CV_COLOR_CODE_GREEN, -1);
+        cv::line(_current_image, current_point, previous_point, CV_COLOR_CODE_GREEN);
       }
     }
   }
