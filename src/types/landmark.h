@@ -109,7 +109,6 @@ namespace proslam {
 
     //ds landmark coordinates optimization
     real _total_weight = 0;
-    const real _maximum_acceptable_relative_displacement = 0.75;
     Count _number_of_updates = 0;
     Count _number_of_recoveries = 0;
 

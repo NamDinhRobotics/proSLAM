@@ -8,7 +8,9 @@ namespace proslam {
   // XYZ aligner inherits from it
   
   class BaseCloudAligner : public BaseAligner{
-  public:
+
+  //ds object handling
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     BaseCloudAligner() {};
 

@@ -41,6 +41,7 @@ namespace proslam {
   public:
 
     const Frame* rootFrame() {return _root_frame;}
+    void setCurrentFrame(Frame* current_frame_) {_current_frame = current_frame_;}
     const Frame* currentFrame() const {return _current_frame;}
     const Frame* previousFrame() const {return _previous_frame;}
 
@@ -63,7 +64,7 @@ namespace proslam {
     //ds visualization only
     const FramePointerMap& frames() const {return _frames;}
     const FramePointerVector& frameQueueForLocalMap() const {return _frame_queue_for_local_map;}
-    void setRobotToWorldGroundTruth(const TransformMatrix3D& robot_to_world_ground_truth_) {_current_frame->setRobotToWorldGroundTruth(robot_to_world_ground_truth_);}
+    void setRobotToWorldGroundTruth(const TransformMatrix3D& robot_to_world_ground_truth_) {if (_current_frame) {_current_frame->setRobotToWorldGroundTruth(robot_to_world_ground_truth_);}}
 
   //ds helpers
   public:

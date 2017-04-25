@@ -114,6 +114,17 @@ namespace proslam {
     glEnd();
   }
 
+  void ViewerOutputMap::drawFramepoints(const Frame* frame_) {
+    glBegin(GL_POINTS);
+      for (const FramePoint* framepoint: frame_->points()) {
+        if (!framepoint->landmark()) {
+          glColor3f(0.75, 0.75, 0.75);
+          glVertex3f(framepoint->worldCoordinates().x(), framepoint->worldCoordinates().y(), framepoint->worldCoordinates().z());
+        }
+      }
+    glEnd();
+  }
+
   void ViewerOutputMap::draw(){
     if (!_context) {
       return;
@@ -154,6 +165,7 @@ namespace proslam {
 
     //ds if desired, draw landmarks into map
     if (_landmarks_drawn) {
+      drawFramepoints(current_frame);
       drawLandmarks();
     }
     glPopMatrix();

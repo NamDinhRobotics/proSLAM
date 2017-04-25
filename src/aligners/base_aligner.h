@@ -10,15 +10,19 @@ namespace proslam {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     BaseAligner() {};
+
     BaseAligner(const real& error_delta_for_convergence_): _error_delta_for_convergence(error_delta_for_convergence_) {};
+
     BaseAligner(const real& error_delta_for_convergence_,
                 const real& maximum_error_kernel_): _error_delta_for_convergence(error_delta_for_convergence_),
-                                                       _maximum_error_kernel(maximum_error_kernel_) {};
+                                                    _maximum_error_kernel(maximum_error_kernel_) {};
+
     BaseAligner(const real& error_delta_for_convergence_,
                 const real& maximum_error_kernel_,
                 const real& damping_): _error_delta_for_convergence(error_delta_for_convergence_),
                                           _maximum_error_kernel(maximum_error_kernel_),
                                           _damping(damping_) {};
+
     BaseAligner(const real& error_delta_for_convergence_,
                 const real& maximum_error_kernel_,
                 const real& damping_,
@@ -26,6 +30,7 @@ namespace proslam {
                                                                 _maximum_error_kernel(maximum_error_kernel_),
                                                                 _damping(damping_),
                                                                 _maximum_number_of_iterations(maximum_number_of_iterations_) {};
+
     virtual ~BaseAligner() {};
 
   //ds access
@@ -65,19 +70,17 @@ namespace proslam {
     uint64_t _number_of_inliers  = 0;
     uint64_t _number_of_outliers = 0;
 
-    //ds convergence criteria
+    //ds linearization
     real _error_delta_for_convergence   = 1e-5;
     real _maximum_error_kernel          = 1;
     real _damping                       = 1;
     Count _maximum_number_of_iterations = 100;
     bool _has_system_converged          = false;
-
-    //ds general LS parameters
-    real _total_error = 0;
+    real _total_error                   = 0;
   };
 
-  //ds class that holds all generic (running) variables used in an aligner
-  template<uint64_t states, uint64_t dimension>
+  //ds class that holds all generic (running) variables used in an aligner - to be used in conjunction with an aligner
+  template<uint64_t states_, uint64_t dimension_>
   class AlignerWorkspace {
 
   //ds object handling
@@ -92,10 +95,10 @@ namespace proslam {
   //ds exported types
   public:
 
-    typedef Eigen::Matrix<real, states, states> StateMatrix;
-    typedef Eigen::Matrix<real, states, 1> StateVector;
-    typedef Eigen::Matrix<real, dimension, dimension> DimensionMatrix;
-    typedef Eigen::Matrix<real, dimension, states> JacobianMatrix;
+    typedef Eigen::Matrix<real, states_, states_> StateMatrix;
+    typedef Eigen::Matrix<real, states_, 1> StateVector;
+    typedef Eigen::Matrix<real, dimension_, dimension_> DimensionMatrix;
+    typedef Eigen::Matrix<real, dimension_, states_> JacobianMatrix;
 
   //ds workspace variables
   protected:

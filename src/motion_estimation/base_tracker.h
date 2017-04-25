@@ -100,11 +100,11 @@ namespace proslam {
     int32_t _number_of_cols_image;
 
 
-    // working elements
+    //gg working elements
     const cv::Mat* _intensity_image_left;
     WorldMap* _context;
     
-    // processing objects
+    //gg processing objects
     BaseFrameAligner* _pose_optimizer;
     BaseFramePointGenerator* _framepoint_generator;
 
@@ -133,6 +133,7 @@ namespace proslam {
     Count _number_of_cols_bin;
     BaseFramePointGenerator::FramePointMatrix _bin_map_left;
     real _ratio_keypoints_to_bins;
+    bool _enable_keypoint_binning;
 
     //ds informative only
     CREATE_CHRONOMETER(tracking)

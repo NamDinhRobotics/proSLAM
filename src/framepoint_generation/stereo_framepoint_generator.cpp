@@ -14,7 +14,7 @@ namespace proslam {
     assert(_camera_right);
 
     //ds configure base
-    _detector_threshold                           = 10;
+    _detector_threshold                           = 5;
     _detector_threshold_minimum                   = 5;
     _detector_threshold_step_size                 = 5;
     _matching_distance_tracking_threshold         = 50;
