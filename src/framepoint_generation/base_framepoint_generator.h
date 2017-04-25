@@ -77,7 +77,8 @@ namespace proslam {
     const Count& numberOfColsImage() const {return _number_of_cols_image;}
     const real maximumDepthNearMeters() const {return _maximum_depth_near_meters;}
     const real maximumDepthFarMeters() const {return _maximum_depth_far_meters;}
-    void setTargetNumberOfPoints(const Count& target_number_of_points_) {_target_number_of_detected_keypoints = target_number_of_points_;}
+    const Count& targetNumberOfKeypoints() const {return _target_number_of_keypoints;}
+    void setTargetNumberOfKeyoints(const Count& target_number_of_keypoints_) {_target_number_of_keypoints = target_number_of_keypoints_;}
 
     void setDetectorThreshold(const int32_t& detector_threshold_);
     void setDetectorThresholdMinimum(const int32_t& detector_threshold_minimum_) {_detector_threshold_minimum = detector_threshold_minimum_;}
@@ -97,19 +98,19 @@ namespace proslam {
     Count _number_of_cols_image;
 
     //ds point detection properties
-    Count _target_number_of_detected_keypoints;
+    Count _target_number_of_keypoints;
     Count _number_of_available_points;
 
     //ds dynamic thresholds for feature detection
     int32_t _detector_threshold;
     int32_t _detector_threshold_minimum;
-    int32_t _detector_threshold_step_size;
+    real _detector_threshold_step_size;
 
     //ds dynamic thresholds for descriptor matching
-    int32_t _matching_distance_tracking_threshold         = 50;
-    int32_t _matching_distance_tracking_threshold_maximum = 50;
-    int32_t _matching_distance_tracking_threshold_minimum = 25;
-    int32_t _matching_distance_tracking_step_size         = 1;
+    int32_t _matching_distance_tracking_threshold;
+    int32_t _matching_distance_tracking_threshold_maximum;
+    int32_t _matching_distance_tracking_threshold_minimum;
+    int32_t _matching_distance_tracking_step_size;
 
     //ds triangulation properties
     int32_t _maximum_matching_distance_triangulation;
@@ -148,7 +149,6 @@ namespace proslam {
     //ds informative only
     CREATE_CHRONOMETER(feature_detection)
     CREATE_CHRONOMETER(descriptor_extraction)
-    CREATE_CHRONOMETER(keypoint_pruning)
   };
 
   //ds custom exception (thrown in getCoordinatesInCamera if no triangulation could be achieved)

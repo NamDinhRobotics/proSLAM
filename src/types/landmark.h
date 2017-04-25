@@ -75,6 +75,7 @@ namespace proslam {
 
     const Count& numberOfRecoveries() const {return _number_of_recoveries;}
     void incrementNumberOfRecoveries() {++_number_of_recoveries;}
+    void setNumberOfRecoveries(const Count& number_of_recoveries_) {_number_of_recoveries = number_of_recoveries_;}
 
     //ds visualization only
     inline const bool isNear() const {return _is_near;}

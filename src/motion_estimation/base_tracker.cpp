@@ -3,18 +3,21 @@
 namespace proslam {
   using namespace srrg_core;
 
-  BaseTracker::BaseTracker(): _number_of_rows_image(0),
+  BaseTracker::BaseTracker(): _camera_left(0),
+                              _number_of_rows_image(0),
                               _number_of_cols_image(0),
+                              _intensity_image_left(0),
                               _context(0),
-                              _bin_size_pixels(0),
+                              _pose_optimizer(0),
+                              _framepoint_generator(0),
+                              _maximum_number_of_landmark_recoveries(5),
+                              _bin_size_pixels(10),
                               _number_of_rows_bin(0),
                               _number_of_cols_bin(0),
                               _bin_map_left(0),
+                              _ratio_keypoints_to_bins(1),
                               _has_odometry(false) {
-    _camera_left=0;
-    _pose_optimizer=0;
-    _framepoint_generator=0;
-    _intensity_image_left=0;
+    std::cerr << "BaseTracker::BaseTracker|constructed" << std::endl;
   }
 
   void BaseTracker::setup() {
@@ -33,6 +36,7 @@ namespace proslam {
     //ds binning configuration
     _number_of_cols_bin = std::floor(static_cast<real>(_number_of_cols_image)/_bin_size_pixels)+1;
     _number_of_rows_bin = std::floor(static_cast<real>(_number_of_rows_image)/_bin_size_pixels)+1;
+    _framepoint_generator->setTargetNumberOfKeyoints(_ratio_keypoints_to_bins*_number_of_cols_bin*_number_of_rows_bin);
 
     //ds allocate and initialize bin grid
     _bin_map_left = new FramePoint**[_number_of_rows_bin];
@@ -47,6 +51,7 @@ namespace proslam {
     std::cerr << "BaseTracker::setup|number of bins u: " << _number_of_cols_bin << std::endl;
     std::cerr << "BaseTracker::setup|number of bins v: " << _number_of_rows_bin << std::endl;
     std::cerr << "BaseTracker::setup|total number of bins: " << _number_of_cols_bin*_number_of_rows_bin << std::endl;
+    std::cerr << "BaseTracker::setup|target number of keypoints: " << _framepoint_generator->targetNumberOfKeypoints() << std::endl;
   }
 
   //ds dynamic cleanup
@@ -176,8 +181,22 @@ namespace proslam {
       //ds on the track
       case Frame::Tracking: {
 
-        //ds compute far to close landmark ratio TODO simplify or get better logic: currently the idea is to give more weight to framepoints in case we have almost only far landmarks
-        const real weight_framepoint = 1-(_number_of_tracked_landmarks_far+2*_number_of_tracked_landmarks_close)/static_cast<real>(_number_of_tracked_points);
+        //ds compute ratio between landmarks and tracked points
+        const real percentage_landmarks = static_cast<real>(_number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close)/_number_of_tracked_points;
+        if (percentage_landmarks < 0.2) {
+          std::cerr << "BaseTracker::compute|WARNING: low percentage of tracked landmarks over framepoints: " << percentage_landmarks
+                    << " (" << _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close << "/" << _number_of_tracked_points << ")" << std::endl;
+        }
+
+        //ds compute ratio between close and far landmarks
+        const real percentage_of_far_landmarks = _number_of_tracked_landmarks_far/static_cast<real>(_number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
+        if (percentage_of_far_landmarks > 0.9) {
+          std::cerr << "BaseTracker::compute|WARNING: high percentage of far landmarks over total: " << percentage_of_far_landmarks
+                    << " (" << _number_of_tracked_landmarks_far << "/" << _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close << ")" << std::endl;
+        }
+
+        //ds derive framepoint weight for current optimization
+        const real weight_framepoint = percentage_of_far_landmarks*(1-percentage_landmarks);
         assert(weight_framepoint <= 1);
 
         //ds call pose solver
@@ -189,7 +208,6 @@ namespace proslam {
 
         //ds solver deltas
         const Count& number_of_inliers = _pose_optimizer->numberOfInliers();
-        // _motion_previous_to_current     = _pose_optimizer->robotToWorld()*current_frame->previous()->robotToWorld().inverse();
 
         _motion_previous_to_current_robot = current_frame->previous()->worldToRobot()*_pose_optimizer->robotToWorld();
         const real delta_angular          = WorldMap::toOrientationRodrigues(_motion_previous_to_current_robot.linear()).norm();
@@ -395,8 +413,8 @@ namespace proslam {
         }
       }
 
-      //ds no match found
-      if (previous_point->landmark()) {
+      //ds no match found - if landmark - and not too many recoveries
+      if (previous_point->landmark() && previous_point->landmark()->numberOfRecoveries() < _maximum_number_of_landmark_recoveries) {
         _lost_points[_number_of_lost_points] = previous_point;
         ++_number_of_lost_points;
       }
@@ -464,6 +482,9 @@ namespace proslam {
           //ds or if we have a point with higher keypoint response
           else if (_framepoint_generator->framepointsInImage()[row][col]->keypointLeft().response > _bin_map_left[row_bin][col_bin]->keypointLeft().response) {
 
+            //ds drop the previous framepoint sitting in this bin
+            delete _bin_map_left[row_bin][col_bin];
+
             //ds set the current point
             _bin_map_left[row_bin][col_bin] = _framepoint_generator->framepointsInImage()[row][col];
           } else {
@@ -478,30 +499,24 @@ namespace proslam {
       }
     }
 
-    //ds collect new framepoints from bin map
+    //ds collect new framepoints from bin map and clear it simultaneously - TODO this could be done faster using bookkeeping
     Index index_point_new = _number_of_tracked_points;
-    for (Index row = 0; row < _number_of_rows_bin; ++row) {
-      for (Index col = 0; col < _number_of_cols_bin; ++col) {
-        if (_bin_map_left[row][col]) {
+    for (Index row_bin = 0; row_bin < _number_of_rows_bin; ++row_bin) {
+      for (Index col_bin = 0; col_bin < _number_of_cols_bin; ++col_bin) {
+        if (_bin_map_left[row_bin][col_bin]) {
 
           //ds assign the new point
-          frame_->points()[index_point_new] = _bin_map_left[row][col];
+          frame_->points()[index_point_new] = _bin_map_left[row_bin][col_bin];
 
           //ds update framepoint world position using the current pose estimate
           frame_->points()[index_point_new]->setWorldCoordinates(frame_to_world*frame_->points()[index_point_new]->robotCoordinates());
           ++index_point_new;
+          _bin_map_left[row_bin][col_bin] = 0;
         }
       }
     }
     frame_->points().resize(index_point_new);
 //    std::cerr << "BaseTracker::extractFeatures|new points: " << index_point_new-_number_of_tracked_points << std::endl;
-
-    //ds clear the bin map
-    for (Index row = 0; row < _number_of_rows_bin; ++row) {
-      for (Index col = 0; col < _number_of_cols_bin; ++col) {
-        _bin_map_left[row][col] = 0;
-      }
-    }
   }
 
   //ds retrieves framepoint projections as image coordinates in a vector (at the same time removing points with invalid projections)
@@ -577,6 +592,11 @@ namespace proslam {
 
       //ds keep the point if it has been skipped (due to insufficient maturity or invalidity) or is an inlier
       else if (_pose_optimizer->errors()[index_point] == -1 || _pose_optimizer->inliers()[index_point]) {
+
+        //ds reset recovery count
+        landmark->setNumberOfRecoveries(0);
+
+        //ds add the point
         frame_->points()[_number_of_tracked_points] = frame_->points()[index_point];
         ++_number_of_tracked_points;
       }
@@ -607,16 +627,16 @@ namespace proslam {
 
         //ds create a landmark and associate it with the current framepoint
         landmark = context_->createLandmark(point);
+        assert(landmark);
         point->setLandmark(landmark);
 
-	//        //ds include preceding measurements
-	//        const FramePoint* previous = point->previous();
-	//        while(previous) {
-	//          landmark->update(previous);
-	//          previous = previous->previous();
-	//        }
+//        //ds include preceding measurements
+//        const FramePoint* previous = point->previous();
+//        while(previous) {
+//          landmark->update(previous);
+//          previous = previous->previous();
+//        }
       }
-      assert(landmark != 0);
 
       //ds check if the current landmark position is near or far to the camera
       if (point->isNear()) {

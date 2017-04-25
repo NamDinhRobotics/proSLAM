@@ -5,10 +5,9 @@ namespace proslam {
 
   //ds this class computes potential framepoints in a stereo image pair by triangulation
   class StereoFramePointGenerator : public BaseFramePointGenerator {
-  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds object handling
-  public:
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds the stereo camera setup must be provided
     StereoFramePointGenerator();

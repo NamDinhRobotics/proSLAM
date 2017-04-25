@@ -7,16 +7,15 @@ namespace proslam {
 
   //ds this class processes two subsequent Frames and establishes Framepoint correspondences (tracks) based on the corresponding images
   class BaseTracker {
-  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds object handling
-  public:
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds the tracker assumes a constant stereo camera configuration
     BaseTracker();
 
-    inline void setCameraLeft(const Camera* camera_left_) {_camera_left=camera_left_; _has_odometry=false;}
-    inline void setOdometry(const TransformMatrix3D& odometry_) {_odometry=odometry_; _has_odometry=true;}
+    inline void setCameraLeft(const Camera* camera_left_) {_camera_left = camera_left_; _has_odometry = false;}
+    inline void setOdometry(const TransformMatrix3D& odometry_) {_odometry = odometry_; _has_odometry = true;}
     inline void setAligner(BaseFrameAligner* pose_optimizer_) {_pose_optimizer = pose_optimizer_;}
       
     void setFramePointGenerator(BaseFramePointGenerator * framepoint_generator_) {
@@ -123,6 +122,7 @@ namespace proslam {
     Count _number_of_lost_points           = 0;
     Count _number_of_lost_points_recovered = 0;
     std::vector<FramePoint*> _lost_points;
+    Count _maximum_number_of_landmark_recoveries;
 
     //ds buffers
     std::vector<ImageCoordinates> _projected_image_coordinates_left;
@@ -132,6 +132,7 @@ namespace proslam {
     Count _number_of_rows_bin;
     Count _number_of_cols_bin;
     BaseFramePointGenerator::FramePointMatrix _bin_map_left;
+    real _ratio_keypoints_to_bins;
 
     //ds informative only
     CREATE_CHRONOMETER(tracking)

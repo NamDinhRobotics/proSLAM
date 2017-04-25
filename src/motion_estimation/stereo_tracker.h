@@ -6,10 +6,9 @@ namespace proslam {
 
   //ds this class processes two subsequent Frames and establishes Framepoint correspondences (tracks) based on the corresponding images
   class StereoTracker: public BaseTracker {
-  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-	  //ds object handling
-  public:
+	//ds object handling
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds the tracker assumes a constant stereo camera configuration
     StereoTracker();
@@ -38,15 +37,11 @@ namespace proslam {
     // configuration
     const Camera* _camera_right;
 
-    // the one below is a typed copy of the framepoint generator
-    // accepts only stereo objects;
-    StereoFramePointGenerator* _stereo_framepoint_generator;
-
-
     // processing
     const cv::Mat* _intensity_image_right;
 
-  public:
-    const double getTimeConsumptionSeconds_point_triangulation() const {return _stereo_framepoint_generator->getTimeConsumptionSeconds_point_triangulation();}
+    // the one below is a typed copy of the framepoint generator
+    // accepts only stereo objects;
+    StereoFramePointGenerator* _stereo_framepoint_generator;
   };
 }

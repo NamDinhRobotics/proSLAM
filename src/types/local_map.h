@@ -5,10 +5,9 @@ namespace proslam {
 
   //ds this class condenses a group of Frame objects into a single Local Map object, which used for relocalization and pose optimization
   class LocalMap: public Frame {
-  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds exported types
-  public:
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
       //ds loop closure constraint element between 2 local maps
       struct Closure {

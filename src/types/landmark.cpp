@@ -41,8 +41,8 @@ namespace proslam {
     //ds compute relative delta to the current coordinate estimate
     const real relative_delta = (_coordinates-coordinates_in_world_).norm()/depth_meters_;
 
-    //ds check if inlier measurement
-    if (relative_delta < 0.5 || _number_of_updates < 2) {
+    //ds check if inlier measurement or less than 2 updates yet
+    if (relative_delta < 1 || _number_of_updates < 2) {
 
       //ds current weight
       const real weight_new_measurement = 1/depth_meters_;

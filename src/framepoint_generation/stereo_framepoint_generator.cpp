@@ -4,24 +4,23 @@ namespace proslam {
 
   StereoFramePointGenerator::StereoFramePointGenerator(): _camera_right(0),
                                                           _baseline_pixelsmeters(0),
-                                                          _baseline_meters(0) {}
+                                                          _baseline_meters(0) {
+    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|construced" << std::endl;
+  }
 
   //ds the stereo camera setup must be provided
   void StereoFramePointGenerator::setup(){
-    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|constructing" << std::endl;
+    std::cerr << "StereoFramePointGenerator::setup|configuring" << std::endl;
     assert(_camera_right);
 
     //ds configure base
-    _target_number_of_detected_keypoints = 1250;
-    _detector_threshold                  = 15;
-    _detector_threshold_minimum          = 5;
-    _detector_threshold_step_size        = 5;
-
-    //ds disable dynamic matching distance adjustment
+    _detector_threshold                           = 10;
+    _detector_threshold_minimum                   = 5;
+    _detector_threshold_step_size                 = 5;
     _matching_distance_tracking_threshold         = 50;
     _matching_distance_tracking_threshold_maximum = 50;
-    _matching_distance_tracking_threshold_minimum = 50;
-    _matching_distance_tracking_step_size         = 0;
+    _matching_distance_tracking_threshold_minimum = 25;
+    _matching_distance_tracking_step_size         = 1;
 
     //ds integrate configuration
     BaseFramePointGenerator::setup();
@@ -35,14 +34,16 @@ namespace proslam {
     _keypoints_with_descriptors_right.clear();
 
     //ds info
-    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|baseline (m): " << _baseline_meters << std::endl;
-    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|maximum depth tracking close (m): " << _maximum_depth_near_meters << std::endl;
-    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|maximum depth tracking far (m): " << _maximum_depth_far_meters << std::endl;
-    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|constructed" << std::endl;
+    std::cerr << "StereoFramePointGenerator::setup|baseline (m): " << _baseline_meters << std::endl;
+    std::cerr << "StereoFramePointGenerator::setup|maximum depth tracking close (m): " << _maximum_depth_near_meters << std::endl;
+    std::cerr << "StereoFramePointGenerator::setup|maximum depth tracking far (m): " << _maximum_depth_far_meters << std::endl;
+    std::cerr << "StereoFramePointGenerator::setup|configured" << std::endl;
   }
 
   //ds cleanup of dynamic structures
   StereoFramePointGenerator::~StereoFramePointGenerator() {
+    std::cerr << "StereoFramePointGenerator::setup|destroying" << std::endl;
+    std::cerr << "StereoFramePointGenerator::setup|destroyed" << std::endl;
   }
 
   //ds computes framepoints stored in a image-like matrix (_framepoints_in_image) for provided stereo images
@@ -51,9 +52,6 @@ namespace proslam {
     //ds detect new features to generate frame points from
     detectKeypoints(frame_->intensityImageLeft(), _keypoints_left);
     detectKeypoints(frame_->intensityImageRight(), _keypoints_right);
-
-//    //ds keypoint pruning - prune only left side
-//    binKeypoints(_keypoints_left, _bin_map_left);
 
     //ds extract descriptors for detected features
     extractDescriptors(frame_->intensityImageLeft(), _keypoints_left, _descriptors_left);
@@ -65,7 +63,6 @@ namespace proslam {
     findStereoKeypoints(frame_);
     CHRONOMETER_STOP(point_triangulation)
   }
-
 
   //ds initializes structures for the epipolar stereo keypoint search (called within compute)
   void StereoFramePointGenerator::initialize(const std::vector<cv::KeyPoint>& keypoints_left_,

@@ -6,22 +6,29 @@ namespace proslam {
   BaseFramePointGenerator::BaseFramePointGenerator(): _camera_left(0),
                                                       _number_of_rows_image(0),
                                                       _number_of_cols_image(0),
-                                                      _target_number_of_detected_keypoints(0),
+                                                      _target_number_of_keypoints(1000),
                                                       _number_of_available_points(0),
-                                                      _detector_threshold(0),
-                                                      _detector_threshold_minimum(0),
-                                                      _detector_threshold_step_size(0),
+                                                      _detector_threshold(10),
+                                                      _detector_threshold_minimum(5),
+                                                      _detector_threshold_step_size(10),
+                                                      _matching_distance_tracking_threshold(50),
+                                                      _matching_distance_tracking_threshold_maximum(50),
+                                                      _matching_distance_tracking_threshold_minimum(50),
+                                                      _matching_distance_tracking_step_size(0),
                                                       _maximum_matching_distance_triangulation(50),
                                                       _focal_length_pixels(0),
                                                       _principal_point_offset_u_pixels(0),
                                                       _principal_point_offset_v_pixels(0),
                                                       _maximum_depth_near_meters(0),
                                                       _maximum_depth_far_meters(0),
-                                                      _framepoints_in_image(0) {
-  }
+                                                      _framepoints_in_image(0)
+#if CV_MAJOR_VERSION == 2
+                                                      ,_keypoint_detector(0), _descriptor_extractor(0)
+#endif
+  {}
 
   void  BaseFramePointGenerator::setup(){
-    std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|constructing" << std::endl;
+    std::cerr << "BaseFramePointGenerator::setup|configuring" << std::endl;
     assert(_camera_left);
 
     _number_of_rows_image            = _camera_left->imageRows();
@@ -52,7 +59,7 @@ namespace proslam {
     //ds clear buffers
     _keypoints_left.clear();
     _keypoints_with_descriptors_left.clear();
-    std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|constructed" << std::endl;
+    std::cerr << "BaseFramePointGenerator::setup|configured" << std::endl;
   }
 
   //ds cleanup of dynamic structures
@@ -89,14 +96,20 @@ namespace proslam {
     //ds detect new keypoints
     _keypoint_detector->detect(intensity_image_, keypoints_);
 
-    //ds check if there's a significant loss of target points
-    if (keypoints_.size() < 0.9*_target_number_of_detected_keypoints) {
+    //ds compute point delta
+    const real delta = (static_cast<real>(keypoints_.size())-_target_number_of_keypoints)/keypoints_.size();
 
-      //ds lower detector threshold if possible to get more points
-      if (_detector_threshold > _detector_threshold_minimum) {
-        _detector_threshold -= _detector_threshold_step_size;
-        setDetectorThreshold(_detector_threshold);
+    //ds check if there's a significant loss of target points
+    if (delta < -0.1) {
+
+      //ds compute new threshold
+      _detector_threshold += std::max(std::ceil(delta*_detector_threshold_step_size), -_detector_threshold_step_size);
+
+      //ds cap the minimum value
+      if (_detector_threshold < _detector_threshold_minimum) {
+        _detector_threshold = _detector_threshold_minimum;
       }
+      setDetectorThreshold(_detector_threshold);
 
       //ds increase allowed matching distance if possible
       if (_matching_distance_tracking_threshold < _matching_distance_tracking_threshold_maximum) {
@@ -105,10 +118,12 @@ namespace proslam {
     }
 
     //ds or if there's a significant gain of target points
-    else if (keypoints_.size() > 1.1*_target_number_of_detected_keypoints) {
+    else if (delta > 0.1) {
 
-      //ds raise threshold - resulting in less points returned
-      _detector_threshold += _detector_threshold_step_size;
+      //ds compute new threshold
+      _detector_threshold += std::min(std::ceil(delta*_detector_threshold_step_size), _detector_threshold_step_size);
+
+      //ds raise threshold (uncapped)
       setDetectorThreshold(_detector_threshold);
 
       //ds lower allowed matching distance if possible

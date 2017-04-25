@@ -590,17 +590,15 @@ namespace proslam {
     std::cerr << "-------------------------------------------------------------------------" << std::endl;
     std::cerr << "       feature detection: " << _tracker->framepointGenerator()->getTimeConsumptionSeconds_feature_detection()/_duration_total_seconds
                                              << " (" << _tracker->framepointGenerator()->getTimeConsumptionSeconds_feature_detection() << "s)" << std::endl;
-    std::cerr << " keypoint regularization: " << _tracker->framepointGenerator()->getTimeConsumptionSeconds_keypoint_pruning()/_duration_total_seconds
-                                              << " (" << _tracker->framepointGenerator()->getTimeConsumptionSeconds_keypoint_pruning() << "s)" << std::endl;
     std::cerr << "   descriptor extraction: " << _tracker->framepointGenerator()->getTimeConsumptionSeconds_descriptor_extraction()/_duration_total_seconds
                                              << " (" << _tracker->framepointGenerator()->getTimeConsumptionSeconds_descriptor_extraction() << "s)" << std::endl;
 
     //ds display further information depending on tracking mode
     switch (ParameterServer::trackerMode()){
       case ParameterServer::TrackerMode::Stereo: {
-        StereoTracker* stereo_tracker = dynamic_cast<StereoTracker*>(_tracker);
-        std::cerr << "  stereo keypoint search: " << stereo_tracker->getTimeConsumptionSeconds_point_triangulation()/_duration_total_seconds
-                  << " (" << stereo_tracker->getTimeConsumptionSeconds_point_triangulation() << "s)" << std::endl;
+        StereoFramePointGenerator* stereo_framepoint_generator = dynamic_cast<StereoFramePointGenerator*>(_tracker->framepointGenerator());
+        std::cerr << "  stereo keypoint search: " << stereo_framepoint_generator->getTimeConsumptionSeconds_point_triangulation()/_duration_total_seconds
+                  << " (" << stereo_framepoint_generator->getTimeConsumptionSeconds_point_triangulation() << "s)" << std::endl;
         break;
       }
       case ParameterServer::TrackerMode::Depth: {
