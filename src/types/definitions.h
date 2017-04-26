@@ -12,13 +12,7 @@
 #if CV_MAJOR_VERSION == 2
   //ds no specifics
 #elif CV_MAJOR_VERSION == 3
-  #include <opencv2/imgcodecs.hpp>
-  #include <opencv2/highgui.hpp>
-  #include <opencv2/imgproc.hpp>
-  #include <opencv2/features2d.hpp>
   #include <opencv2/xfeatures2d.hpp>
-  #include <opencv2/calib3d.hpp>
-  #include <opencv/cv.h>
 #else
   #error OpenCV version not supported
 #endif
@@ -84,22 +78,6 @@ namespace proslam{
   typedef srrg_hbst::BinaryMatchable<DESCRIPTOR_SIZE_BITS> HBSTMatchable;
   typedef srrg_hbst::BinaryNode<HBSTMatchable, 50, real> HBSTNode;
   typedef srrg_hbst::BinaryTree<HBSTNode, DESCRIPTOR_MAXIMUM_HAMMING_DISTANCE> HBSTTree;
-
-  //ds HBST: converts an opencv descriptor to hbst type
-  inline HBSTMatchable::BinaryDescriptor getDescriptor(const cv::Mat& descriptor_cv_) {
-    HBSTMatchable::BinaryDescriptor binary_descriptor(DESCRIPTOR_SIZE_BITS);
-    for (Count byte_index = 0 ; byte_index < DESCRIPTOR_SIZE_BYTES; ++byte_index) {
-
-      //ds get minimal datafrom cv::mat
-      const uchar value = descriptor_cv_.at<uchar>(byte_index);
-
-      //ds get bitstring
-      for (uint8_t v = 0; v < 8; ++v) {
-        binary_descriptor[byte_index*8+v] = (value >> v) & 1;
-      }
-    }
-    return binary_descriptor;
-  }
 
   //ds cv colors
   #define CV_COLOR_CODE_GREEN cv::Scalar(0, 200, 0)

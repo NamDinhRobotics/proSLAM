@@ -23,7 +23,7 @@ namespace proslam {
     //ds configure current
     _stereo_framepoint_generator = dynamic_cast<StereoFramePointGenerator*>(_framepoint_generator);
     assert(_stereo_framepoint_generator);
-    std::cerr << "StereoTracker::setup|configuring" << std::endl;
+    std::cerr << "StereoTracker::setup|configured" << std::endl;
   }
 
   //ds dynamic cleanup

@@ -1,9 +1,9 @@
-#include "parameter_server.h"
+#include "parameter.h"
 
 namespace proslam {
 
   //ds informative
-  std::string ParameterServer::_banner = "-------------------------------------------------------------------------\n"
+  std::string Parameter::_banner = "-------------------------------------------------------------------------\n"
                                          "srrg_proslam_app: simple SLAM application\n"
                                          "usage: srrg_proslam_app [options] <dataset>\n"
                                          "\n"
@@ -25,19 +25,19 @@ namespace proslam {
                                          "-------------------------------------------------------------------------";
 
   //ds files/topics
-  std::string ParameterServer::_topic_image_left         = "/camera_left/image_raw";
-  std::string ParameterServer::_topic_image_right        = "/camera_right/image_raw";
-  std::string ParameterServer::_topic_camera_info_left   = "";
-  std::string ParameterServer::_topic_camera_info_right  = "";
-  std::string ParameterServer::_filename_dataset         = "";
+  std::string Parameter::_topic_image_left         = "/camera_left/image_raw";
+  std::string Parameter::_topic_image_right        = "/camera_right/image_raw";
+  std::string Parameter::_topic_camera_info_left   = "";
+  std::string Parameter::_topic_camera_info_right  = "";
+  std::string Parameter::_filename_dataset         = "";
 
   //ds options
-  bool ParameterServer::_option_use_gui               = false;
-  bool ParameterServer::_option_use_odometry          = false;
-  bool ParameterServer::_option_use_relocalization    = true;
-  bool ParameterServer::_option_show_top_viewer       = false;
-  bool ParameterServer::_option_drop_framepoints      = false;
-  bool ParameterServer::_option_equalize_histogram    = false;
-  bool ParameterServer::_option_rectify_and_undistort = false;
-  ParameterServer::TrackerMode ParameterServer::_tracker_mode = ParameterServer::TrackerMode::Stereo;
+  bool Parameter::_option_use_gui               = false;
+  bool Parameter::_option_use_odometry          = false;
+  bool Parameter::_option_use_relocalization    = true;
+  bool Parameter::_option_show_top_viewer       = false;
+  bool Parameter::_option_drop_framepoints      = false;
+  bool Parameter::_option_equalize_histogram    = false;
+  bool Parameter::_option_rectify_and_undistort = false;
+  Parameter::TrackerMode Parameter::_tracker_mode = Parameter::TrackerMode::Stereo;
 }

@@ -68,8 +68,8 @@ namespace proslam {
   void Landmark::update(const FramePoint* point_) {
 
     //ds always update descriptors
-    _state->appearances.push_back(new HBSTMatchable(reinterpret_cast<const void*>(_state), getDescriptor(point_->descriptorLeft())));
-    _state->appearances.push_back(new HBSTMatchable(reinterpret_cast<const void*>(_state), getDescriptor(point_->descriptorRight())));
+    _state->appearances.push_back(new HBSTMatchable(reinterpret_cast<const void*>(_state), point_->descriptorLeft()));
+    _state->appearances.push_back(new HBSTMatchable(reinterpret_cast<const void*>(_state), point_->descriptorRight()));
 
     //ds update position
     update(point_->worldCoordinates(), point_->depthMeters());

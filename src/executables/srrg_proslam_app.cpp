@@ -1,4 +1,3 @@
-#include "parameter_server.h"
 #include "slam_assembly.h"
 
 int32_t main(int32_t argc, char ** argv) {
@@ -10,10 +9,10 @@ int32_t main(int32_t argc, char ** argv) {
   cv::setUseOptimized(true);
 
   //ds obtain configuration and store it in the global parameter server (singleton)
-  proslam::ParameterServer::parseParametersFromCommandLine(argc, argv);
+  proslam::Parameter::parseParametersFromCommandLine(argc, argv);
 
   //ds print loaded configuration
-  proslam::ParameterServer::printParameters();
+  proslam::Parameter::printCommandLineParameters();
 
   //ds allocate SLAM system (has internal access to parameter server)
   proslam::SLAMAssembly slam_system;

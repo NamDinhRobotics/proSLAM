@@ -26,7 +26,9 @@ namespace proslam {
 #if CV_MAJOR_VERSION == 2
                                                       ,_keypoint_detector(0), _descriptor_extractor(0)
 #endif
-  {}
+  {
+    std::cerr << "BaseFramePointGenerator::setup|constructed" << std::endl;
+  }
 
   void  BaseFramePointGenerator::setup(){
     std::cerr << "BaseFramePointGenerator::setup|configuring" << std::endl;
@@ -56,6 +58,18 @@ namespace proslam {
         _framepoints_in_image[row][col] = 0;
       }
     }
+
+    //ds info
+    std::cerr << "BaseFramePointGenerator::setup|detection tolerance: " << _target_number_of_keypoints_tolerance << std::endl;
+    std::cerr << "BaseFramePointGenerator::setup|detector threshold start: " << _detector_threshold << std::endl;
+    std::cerr << "BaseFramePointGenerator::setup|                 minimum: " << _detector_threshold_minimum << std::endl;
+    std::cerr << "BaseFramePointGenerator::setup|               step size: " << _detector_threshold_step_size << std::endl;
+    std::cerr << "BaseFramePointGenerator::setup|matching distance start: " << _matching_distance_tracking_threshold << std::endl;
+    std::cerr << "BaseFramePointGenerator::setup|                minimum: " << _matching_distance_tracking_threshold_minimum << std::endl;
+    std::cerr << "BaseFramePointGenerator::setup|                maximum: " << _matching_distance_tracking_threshold_maximum << std::endl;
+    std::cerr << "BaseFramePointGenerator::setup|              step size: " << _matching_distance_tracking_step_size << std::endl;
+    std::cerr << "BaseFramePointGenerator::setup|          triangulation: " << _maximum_matching_distance_triangulation << std::endl;
+    std::cerr << "BaseFramePointGenerator::setup|focal length (pixels): " << _focal_length_pixels << std::endl;
 
     //ds clear buffers
     _keypoints_left.clear();

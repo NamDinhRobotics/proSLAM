@@ -1,14 +1,18 @@
 #pragma once
-#include "types/definitions.h"
+#include "definitions.h"
 
 namespace proslam {
 
   //ds this class serves as a singleton parameter base for the ProSLAM pipeline
-  class ParameterServer {
+  class Parameter {
     
     //ds functionality
     public:
     enum TrackerMode {Stereo=0x1, Depth=0x2};
+
+      static void parseParametersFromFile(const std::string& file_) {
+
+      }
 
       static void parseParametersFromCommandLine(int32_t argc, char ** argv) {
         int32_t number_of_added_parameters = 1;
@@ -67,9 +71,9 @@ namespace proslam {
         }
       }
 
-      static void printParameters() {
+      static void printCommandLineParameters() {
         std::cerr << "-------------------------------------------------------------------------" << std::endl;
-        std::cerr << "running with params:" << std::endl;
+        std::cerr << "running with command line parameters:" << std::endl;
         std::cerr << "-topic-image-left        " << _topic_image_left << std::endl;
         std::cerr << "-topic-image-right       " << _topic_image_right << std::endl;
         if (_topic_camera_info_left.length() > 0) std::cerr << "-topic-camera-left-info  " << _topic_camera_info_left << std::endl;

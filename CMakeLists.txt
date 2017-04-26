@@ -12,6 +12,9 @@ message("build type: ${CMAKE_BUILD_TYPE}")
 find_package(OpenCV REQUIRED)
 message("using OpenCV version '${OpenCV_VERSION}' (${OpenCV_DIR})")
 
+#ds enable OpenCV for HBST
+add_definitions(-DSRRG_HBST_HAS_OPENCV)
+
 #ds load eigen library
 find_package(Eigen3 REQUIRED)
 

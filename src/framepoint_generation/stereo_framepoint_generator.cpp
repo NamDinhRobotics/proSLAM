@@ -33,7 +33,7 @@ namespace proslam {
     _baseline_pixelsmeters     = _camera_right->projectionMatrix()(0,3);
     _baseline_meters           = -_baseline_pixelsmeters/_focal_length_pixels;
     _maximum_depth_near_meters = _baseline_factor*_baseline_meters;
-    _maximum_depth_far_meters  = -_baseline_pixelsmeters/_minimum_disparity_pixels,
+    _maximum_depth_far_meters  = -_baseline_pixelsmeters/_minimum_disparity_pixels;
     _keypoints_right.clear();
     _keypoints_with_descriptors_right.clear();
 

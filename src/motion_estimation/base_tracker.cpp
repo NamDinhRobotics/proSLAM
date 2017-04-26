@@ -22,6 +22,7 @@ namespace proslam {
   }
 
   void BaseTracker::setup() {
+    std::cerr << "BaseTracker::setup|configuring" << std::endl;
     assert(_camera_left);
     assert(_pose_optimizer);
     _number_of_rows_image = _camera_left->imageRows();
@@ -53,6 +54,7 @@ namespace proslam {
     std::cerr << "BaseTracker::setup|number of bins v: " << _number_of_rows_bin << std::endl;
     std::cerr << "BaseTracker::setup|total number of bins: " << _number_of_cols_bin*_number_of_rows_bin << std::endl;
     std::cerr << "BaseTracker::setup|target number of keypoints: " << _framepoint_generator->targetNumberOfKeypoints() << std::endl;
+    std::cerr << "BaseTracker::setup|configured" << std::endl;
   }
 
   //ds dynamic cleanup
