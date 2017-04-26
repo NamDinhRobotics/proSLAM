@@ -96,7 +96,6 @@ namespace proslam {
 
     //ds the 3D point coordinates of the landmark expressed in the WorldMap coordinate frame
     PointCoordinates _coordinates;
-    PointCoordinates _coordinates_alt = PointCoordinates::Zero();
 
     //ds the current connected state handle (links the landmark to the local map)
     State* _state;

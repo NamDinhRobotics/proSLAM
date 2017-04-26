@@ -40,6 +40,7 @@ namespace proslam {
   public:
 
     inline void setCameraRight(const Camera* camera_right_) {_camera_right = camera_right_;}
+    void setMaximumMatchingDistanceTriangulation(const real& maximum_matching_distance_triangulation_) {_maximum_matching_distance_triangulation = maximum_matching_distance_triangulation_;}
 
   //ds settings
   protected:

@@ -85,7 +85,6 @@ namespace proslam {
     const int32_t matchingDistanceTrackingThreshold() const {return _matching_distance_tracking_threshold;}
     void setMatchingDistanceTrackingThresholdMaximum(const real& matching_distance_tracking_threshold_maximum_) {_matching_distance_tracking_threshold_maximum = matching_distance_tracking_threshold_maximum_;}
     void setMatchingDistanceTrackingThresholdMinimum(const real& matching_distance_tracking_threshold_minimum_) {_matching_distance_tracking_threshold_minimum = matching_distance_tracking_threshold_minimum_;}
-    void setMaximumMatchingDistanceTriangulation(const real& maximum_matching_distance_triangulation_) {_maximum_matching_distance_triangulation = maximum_matching_distance_triangulation_;}
     const Count numberOfAvailablePoints() const {return _number_of_available_points;}
 
     //ds settings
@@ -114,7 +113,6 @@ namespace proslam {
     int32_t _matching_distance_tracking_step_size;
 
     //ds triangulation properties
-    int32_t _maximum_matching_distance_triangulation;
     real _focal_length_pixels;
     real _principal_point_offset_u_pixels;
     real _principal_point_offset_v_pixels;

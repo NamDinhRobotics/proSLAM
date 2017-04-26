@@ -20,7 +20,7 @@ namespace proslam {
                                 _context_viewer_bird(0),
                                 _context_viewer_top(0),
                                 _is_gui_running(true) {
-    _world_map->setDropFramepoints(proslam::Parameter::optionDropFramepoints());
+    _world_map->setDropFramepoints(proslam::Parameter::option_drop_framepoints);
     _synchronizer.reset();
     _robot_to_world_ground_truth_poses.clear();
   }
@@ -47,13 +47,13 @@ namespace proslam {
   void SLAMAssembly::initializeMessageFile() {
 
     //ds check dataset length
-    if (Parameter::filenameDataset().length() == 0) {
+    if (Parameter::filename_dataset.length() == 0) {
       std::cerr << "ERROR: no dataset provided (enter -h for help)" << std::endl;
       exit(0);
     }
 
     //ds configure sensor message source
-    _sensor_message_reader.open(Parameter::filenameDataset());
+    _sensor_message_reader.open(Parameter::filename_dataset);
 
     //ds terminate on failure
     if (!_sensor_message_reader.good()) {
@@ -65,7 +65,7 @@ namespace proslam {
   void SLAMAssembly::_makeStereoTracker(Camera* camera_left_, Camera* camera_right_){
 
     //ds if rectification is desired
-    if (Parameter::optionRectifyAndUndistort()) {
+    if (Parameter::option_rectify_and_undistort) {
 
       //ds sanity check
       if ((camera_left_->projectionMatrix().block<3,3>(0,0)-camera_right_->projectionMatrix().block<3,3>(0,0)).squaredNorm() != 0) {
@@ -97,6 +97,12 @@ namespace proslam {
     tracker->setup();
     _tracker = tracker;
     _tracker->setWorldMap(_world_map);
+
+    //ds configure relocalizer for stereo vision
+    _relocalizer->aligner()->setMaximumErrorKernel(0.5);
+    _relocalizer->aligner()->setMinimumNumberOfInliers(20);
+    _relocalizer->aligner()->setMinimumInlierRatio(0.25);
+    _relocalizer->setMinimumNumberOfMatchesPerLandmark(20);
   }
 
   void SLAMAssembly::_makeDepthTracker(const Camera* camera_left_, const Camera* camera_right_){
@@ -120,6 +126,10 @@ namespace proslam {
     tracker->setMinimumNumberOfLandmarksToTrack(50);
     _tracker = tracker;
     _tracker->setWorldMap(_world_map);
+
+    //gg adjust threshold for depth mode/indoor loop closing
+    _relocalizer->aligner()->setMaximumErrorKernel(0.01);
+    _relocalizer->setMinimumNumberOfMatchesPerLandmark(100);
   }
 
   //ds attempts to load the camera configuration based on the current input setting
@@ -127,8 +137,8 @@ namespace proslam {
 
     //ds configure message synchronizer
     std::vector<std::string> camera_topics_synchronized(0);
-    camera_topics_synchronized.push_back(Parameter::topicImageLeft());
-    camera_topics_synchronized.push_back(Parameter::topicImageRight());
+    camera_topics_synchronized.push_back(Parameter::topic_image_left);
+    camera_topics_synchronized.push_back(Parameter::topic_image_right);
     _synchronizer.setTimeInterval(0.001);
     _synchronizer.setTopics(camera_topics_synchronized);
 
@@ -140,7 +150,7 @@ namespace proslam {
       sensor_msg->untaint();
 
       //ds check for the two set topics
-      if (sensor_msg->topic() == Parameter::topicImageLeft()) {
+      if (sensor_msg->topic() == Parameter::topic_image_left) {
         srrg_core::PinholeImageMessage* message_image_left  = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_msg);
 
         //ds allocate a new camera
@@ -148,7 +158,7 @@ namespace proslam {
                                          message_image_left->image().cols,
                                          message_image_left->cameraMatrix().cast<real>(),
                                          message_image_left->offset().cast<real>());
-      } else if (sensor_msg->topic() == Parameter::topicImageRight()) {
+      } else if (sensor_msg->topic() == Parameter::topic_image_right) {
         srrg_core::PinholeImageMessage* message_image_right  = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_msg);
 
         //ds allocate a new camera
@@ -177,7 +187,7 @@ namespace proslam {
     }
 
     //ds check if we have to modify the cameras - if stereo from txt_io
-    if (Parameter::trackerMode() == Parameter::TrackerMode::Stereo) {
+    if (Parameter::tracker_mode == Parameter::TrackerMode::Stereo) {
 
       //ds reconstruct projection matrix from camera matrices (encoded in txt_io)
       ProjectionMatrix projection_matrix(ProjectionMatrix::Identity());
@@ -208,7 +218,7 @@ namespace proslam {
     if (!_tracker) {
 
       //ds allocate the tracker module with the given cameras
-      switch (Parameter::trackerMode()){
+      switch (Parameter::tracker_mode){
         case Parameter::TrackerMode::Stereo: {
           _makeStereoTracker(camera_left_, camera_right_);
           break;
@@ -232,7 +242,7 @@ namespace proslam {
 
   //ds initializes gui components
   void SLAMAssembly::initializeGUI(QApplication* ui_server_) {
-    if (Parameter::optionUseGUI() && _world_map) {
+    if (Parameter::option_use_gui && _world_map) {
       _ui_server = ui_server_;
       _viewer_input_images = new ViewerInputImages(_world_map);
       _context_viewer_bird = new ViewerOutputMap(_world_map, 0.1, "output: map (bird view)");
@@ -248,7 +258,7 @@ namespace proslam {
       _context_viewer_bird->show();
 
       //ds configure custom top viewer if requested
-      if (Parameter::optionShowTopViewer()) {
+      if (Parameter::option_show_top_viewer) {
         _context_viewer_top = new ViewerOutputMap(_world_map, 1, "output: map (top view)");
         _context_viewer_top->setCameraLeftToRobot(_camera_left->cameraToRobot());
         TransformMatrix3D center_for_kitti_sequence_00;
@@ -268,7 +278,7 @@ namespace proslam {
 
   //ds updated gui components
   void SLAMAssembly::updateGUI() {
-    if (Parameter::optionUseGUI()) {
+    if (Parameter::option_use_gui) {
       if (_optimizer->numberOfOptimizations() > 0) {
         _context_viewer_bird->setIsOpen(false);
         if (_context_viewer_top) {
@@ -294,7 +304,7 @@ namespace proslam {
     if (_is_gui_running && let_user_close_) {
 
       //ds exit in viewer if available
-      if (Parameter::optionUseGUI() && _context_viewer_bird->isVisible()) {
+      if (Parameter::option_use_gui && _context_viewer_bird->isVisible()) {
         return _ui_server->exec();
       } else {
         return 0;
@@ -308,7 +318,7 @@ namespace proslam {
   void SLAMAssembly::playbackMessageFile() {
 
     //ds restart stream
-    _sensor_message_reader.open(Parameter::filenameDataset());
+    _sensor_message_reader.open(Parameter::filename_dataset);
     _robot_to_world_ground_truth_poses.clear();
 
     //ds frame counts
@@ -330,9 +340,9 @@ namespace proslam {
       sensor_msg->untaint();
 
       //ds add to synchronizer
-      if (sensor_msg->topic() == Parameter::topicImageLeft()) {
+      if (sensor_msg->topic() == Parameter::topic_image_left) {
         _synchronizer.putMessage(sensor_msg);
-      } else if (sensor_msg->topic() == Parameter::topicImageRight()) {
+      } else if (sensor_msg->topic() == Parameter::topic_image_right) {
         _synchronizer.putMessage(sensor_msg);
       } else {
         delete sensor_msg;
@@ -353,16 +363,16 @@ namespace proslam {
           intensity_image_left_rectified = message_image_left->image();
         }
         cv::Mat intensity_image_right_rectified;
-        if (Parameter::trackerMode() == Parameter::TrackerMode::Stereo && message_image_right->image().type() == CV_8UC3) {
+        if (Parameter::tracker_mode == Parameter::TrackerMode::Stereo && message_image_right->image().type() == CV_8UC3) {
           cvtColor(message_image_right->image(), intensity_image_right_rectified, CV_BGR2GRAY);
         } else {
           intensity_image_right_rectified = message_image_right->image();
         }
 
         //ds preprocess the images if desired
-        if (Parameter::optionEqualizeHistogram()) {
+        if (Parameter::option_equalize_histogram) {
           cv::equalizeHist(intensity_image_left_rectified, intensity_image_left_rectified);
-          if (Parameter::trackerMode() == Parameter::TrackerMode::Stereo) {
+          if (Parameter::tracker_mode == Parameter::TrackerMode::Stereo) {
             cv::equalizeHist(intensity_image_right_rectified, intensity_image_right_rectified);
           }
         }
@@ -370,7 +380,7 @@ namespace proslam {
         //ds check if first frame and odometry is available
         if (_world_map->frames().size() == 0 && message_image_left->hasOdom()) {
           _world_map->setRobotToWorld(message_image_left->odometry().cast<real>()*robot_to_camera_left);
-          if (Parameter::optionUseGUI()) {
+          if (Parameter::option_use_gui) {
             _context_viewer_bird->setWorldToRobotOrigin(_world_map->robotToWorld().inverse());
           }
         }
@@ -381,7 +391,7 @@ namespace proslam {
         //ds progress SLAM with the new images
         process(intensity_image_left_rectified,
                 intensity_image_right_rectified,
-                message_image_left->hasOdom() && Parameter::optionUseOdometry(),
+                message_image_left->hasOdom() && Parameter::option_use_odometry,
                 message_image_left->odometry().cast<real>());
 
         //ds record ground truth history for error computation
@@ -398,7 +408,7 @@ namespace proslam {
           const double total_duration_seconds_current = srrg_core::getTime()-time_start_seconds;
 
           //ds runtime info - depending on set modes
-          if (Parameter::optionUseRelocalization()) {
+          if (Parameter::option_use_relocalization) {
             std::printf("processed frames: %5lu|landmarks: %6lu|local maps: %4lu (%3.2f)|closures: %3lu (%3.2f)|current fps: %5.2f (%3lu/%3.2fs)\n",
                         number_of_processed_frames_total,
                         _world_map->landmarks().size(),
@@ -446,7 +456,7 @@ namespace proslam {
     _tracker->setIntensityImageLeft(&intensity_image_left_);
 
     //ds depending on tracking mode
-    switch (Parameter::trackerMode()){
+    switch (Parameter::tracker_mode){
       case Parameter::TrackerMode::Stereo: {
         StereoTracker* stereo_tracker = dynamic_cast<StereoTracker*>(_tracker);
         assert(stereo_tracker);
@@ -471,7 +481,7 @@ namespace proslam {
     _tracker->compute();
 
     //ds check if relocalization is desired
-    if (Parameter::optionUseRelocalization()) {
+    if (Parameter::option_use_relocalization) {
 
       //ds if we have a valid frame (not the case after the track is lost)
       if (_world_map->currentFrame()) {
@@ -481,11 +491,6 @@ namespace proslam {
 
           //ds trigger relocalization
           _relocalizer->init(_world_map->currentLocalMap());
-          if (Parameter::trackerMode()==Parameter::TrackerMode::Depth) {
-            // adjust threshold for depth mode/indoor loop closing
-            _relocalizer->aligner()->setMaximumErrorKernel(0.01);
-            _relocalizer->setMinimumNumberOfMatchesPerLandmark(100);
-          }
           _relocalizer->detect();
           _relocalizer->compute();
 
@@ -499,7 +504,7 @@ namespace proslam {
                                          closure->local_map_reference,
                                          closure->transform_frame_query_to_frame_reference,
                                          closure->icp_inlier_ratio);
-              if (Parameter::optionUseGUI()) {
+              if (Parameter::option_use_gui) {
                 for (const LandmarkCorrespondence* match: closure->correspondences) {
                   _world_map->landmarks().get(match->query->landmark->identifier())->setIsInLoopClosureQuery(true);
                   _world_map->landmarks().get(match->reference->landmark->identifier())->setIsInLoopClosureReference(true);
@@ -593,7 +598,7 @@ namespace proslam {
                                              << " (" << _tracker->framepointGenerator()->getTimeConsumptionSeconds_descriptor_extraction() << "s)" << std::endl;
 
     //ds display further information depending on tracking mode
-    switch (Parameter::trackerMode()){
+    switch (Parameter::tracker_mode){
       case Parameter::TrackerMode::Stereo: {
         StereoFramePointGenerator* stereo_framepoint_generator = dynamic_cast<StereoFramePointGenerator*>(_tracker->framepointGenerator());
         std::cerr << "  stereo keypoint search: " << stereo_framepoint_generator->getTimeConsumptionSeconds_point_triangulation()/_duration_total_seconds

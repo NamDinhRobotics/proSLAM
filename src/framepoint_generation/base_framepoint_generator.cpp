@@ -16,7 +16,6 @@ namespace proslam {
                                                       _matching_distance_tracking_threshold_maximum(50),
                                                       _matching_distance_tracking_threshold_minimum(50),
                                                       _matching_distance_tracking_step_size(0),
-                                                      _maximum_matching_distance_triangulation(50),
                                                       _focal_length_pixels(0),
                                                       _principal_point_offset_u_pixels(0),
                                                       _principal_point_offset_v_pixels(0),
@@ -68,7 +67,6 @@ namespace proslam {
     std::cerr << "BaseFramePointGenerator::setup|                minimum: " << _matching_distance_tracking_threshold_minimum << std::endl;
     std::cerr << "BaseFramePointGenerator::setup|                maximum: " << _matching_distance_tracking_threshold_maximum << std::endl;
     std::cerr << "BaseFramePointGenerator::setup|              step size: " << _matching_distance_tracking_step_size << std::endl;
-    std::cerr << "BaseFramePointGenerator::setup|          triangulation: " << _maximum_matching_distance_triangulation << std::endl;
     std::cerr << "BaseFramePointGenerator::setup|focal length (pixels): " << _focal_length_pixels << std::endl;
 
     //ds clear buffers

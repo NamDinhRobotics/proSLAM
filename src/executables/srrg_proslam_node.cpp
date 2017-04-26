@@ -123,11 +123,11 @@ int32_t main(int32_t argc, char ** argv) {
   proslam::Parameter::parseParametersFromCommandLine(argc, argv);
 
   //ds check camera info topics - required for the node
-  if (proslam::Parameter::topicCameraInfoLeft().length() == 0) {
+  if (proslam::Parameter::topic_camera_info_left.length() == 0) {
     std::cerr << "ERROR: empty value entered for parameter: -topic-camera-info-left (-cl) (enter -h for help)" << std::endl;
     exit(0);
   }
-  if (proslam::Parameter::topicCameraInfoRight().length() == 0) {
+  if (proslam::Parameter::topic_camera_info_right.length() == 0) {
     std::cerr << "ERROR: empty value entered for parameter: -topic-camera-info-right (-cr) (enter -h for help)" << std::endl;
     exit(0);
   }
@@ -142,8 +142,8 @@ int32_t main(int32_t argc, char ** argv) {
   ros::NodeHandle node;
 
   //ds subscribe to camera info topics
-  ros::Subscriber subscriber_camera_info_left  = node.subscribe(proslam::Parameter::topicCameraInfoLeft(), 1, callbackCameraInfoLeft);
-  ros::Subscriber subscriber_camera_info_right = node.subscribe(proslam::Parameter::topicCameraInfoRight(), 1, callbackCameraInfoRight);
+  ros::Subscriber subscriber_camera_info_left  = node.subscribe(proslam::Parameter::topic_camera_info_left, 1, callbackCameraInfoLeft);
+  ros::Subscriber subscriber_camera_info_right = node.subscribe(proslam::Parameter::topic_camera_info_right, 1, callbackCameraInfoRight);
 
   //ds buffer camera info
   std::cerr << "main|acquiring stereo camera configuration from ROS topics" << std::endl;
@@ -205,7 +205,6 @@ int32_t main(int32_t argc, char ** argv) {
   slam_system.tracker()->framepointGenerator()->setDetectorThreshold(25);
   slam_system.tracker()->framepointGenerator()->setDetectorThresholdMinimum(25);
   slam_system.tracker()->framepointGenerator()->setTargetNumberOfKeyoints(1000);
-  slam_system.tracker()->framepointGenerator()->setMaximumMatchingDistanceTriangulation(50);
   slam_system.tracker()->framepointGenerator()->setMatchingDistanceTrackingThresholdMaximum(50);
   slam_system.tracker()->framepointGenerator()->setMatchingDistanceTrackingThresholdMinimum(50);
   slam_system.relocalizer()->aligner()->setMaximumErrorKernel(0.5);
@@ -221,8 +220,8 @@ int32_t main(int32_t argc, char ** argv) {
   if (slam_system.viewerInputImages()) slam_system.viewerInputImages()->switchMode();
 
   //ds set up subscribers
-  message_filters::Subscriber<sensor_msgs::Image> subscriber_image_left(node, proslam::Parameter::topicImageLeft(), 5);
-  message_filters::Subscriber<sensor_msgs::Image> subscriber_image_right(node, proslam::Parameter::topicImageRight(), 5);
+  message_filters::Subscriber<sensor_msgs::Image> subscriber_image_left(node, proslam::Parameter::topic_image_left, 5);
+  message_filters::Subscriber<sensor_msgs::Image> subscriber_image_right(node, proslam::Parameter::topic_image_right, 5);
 
   //ds define policy and initialize synchronizer
   typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> StereoImagePolicy;
@@ -257,13 +256,13 @@ int32_t main(int32_t argc, char ** argv) {
     if (found_image_pair) {
 
       //ds preprocess the images if desired: rectification
-      if (proslam::Parameter::optionRectifyAndUndistort()) {
+      if (proslam::Parameter::option_rectify_and_undistort) {
         cv::remap(image_left, image_left, undistort_rectify_maps_left[0], undistort_rectify_maps_left[1], cv::INTER_LINEAR);
         cv::remap(image_right, image_right, undistort_rectify_maps_right[0], undistort_rectify_maps_right[1], cv::INTER_LINEAR);
       }
 
       //ds preprocess the images if desired: histogram equalization
-      if (proslam::Parameter::optionEqualizeHistogram()) {
+      if (proslam::Parameter::option_equalize_histogram) {
         cv::equalizeHist(image_left, image_left);
         cv::equalizeHist(image_right, image_right);
       }
@@ -356,7 +355,7 @@ int32_t main(int32_t argc, char ** argv) {
     if (total_duration_seconds_current > measurement_interval_seconds) {
 
       //ds runtime info - depending on set modes
-      if (proslam::Parameter::optionUseRelocalization()) {
+      if (proslam::Parameter::option_use_relocalization) {
         std::printf("processed frames: %5lu|landmarks: %6lu|local maps: %4lu (%3.2f)|closures: %3lu (%3.2f)|current fps: %5.2f (%3lu/%3.2fs)\n",
                     slam_system.worldMap()->frames().size(),
                     slam_system.worldMap()->landmarks().size(),

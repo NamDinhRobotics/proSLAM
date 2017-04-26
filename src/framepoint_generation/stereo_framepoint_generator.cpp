@@ -41,6 +41,7 @@ namespace proslam {
     std::cerr << "StereoFramePointGenerator::setup|baseline (m): " << _baseline_meters << std::endl;
     std::cerr << "StereoFramePointGenerator::setup|maximum depth tracking close (m): " << _maximum_depth_near_meters << std::endl;
     std::cerr << "StereoFramePointGenerator::setup|maximum depth tracking far (m): " << _maximum_depth_far_meters << std::endl;
+    std::cerr << "StereoFramePointGenerator::setup|maximum matching distance triangulation: " << _maximum_matching_distance_triangulation << std::endl;
     std::cerr << "StereoFramePointGenerator::setup|configured" << std::endl;
   }
 
