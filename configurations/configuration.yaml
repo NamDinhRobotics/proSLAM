@@ -1,0 +1,92 @@
+CommandLine:
+
+  #ds files/topics
+  topic_image_left:        /camera_left/image_raw
+  topic_image_right:       /camera_right/image_raw
+  topic_camera_info_left:  /camera_left/camera_info
+  topic_camera_info_right: /camera_right/camera_info
+  filename_dataset:
+
+  #ds options
+  option_use_gui:               0
+  option_use_odometry:          0
+  option_use_relocalization:    1
+  option_show_top_viewer:       0
+  option_drop_framepoints:      0
+  option_equalize_histogram:    0
+  option_rectify_and_undistort: 0
+
+Types:
+
+  #ds Frame: this criteria is used for the decision of creating a landmark or not from a track of framepoints
+  minimum_track_length_for_landmark_creation: 3
+
+  #ds Landmark: minimum number of measurements before optimization is filtering
+  minimum_number_of_forced_updates: 2
+
+  #ds Landmark: maximum allowed measurement divergence
+  maximum_translation_error_to_depth_ratio: 1
+
+  #ds LocalMap: target minimum number of landmarks for local map creation
+  minimum_number_of_landmarks: 5
+
+  #ds WorldMap: key frame generation properties
+  minimum_distance_traveled_for_local_map: 0.5
+  minimum_degrees_rotated_for_local_map:   0.5
+  minimum_number_of_frames_for_local_map:  4
+
+FramepointGeneration:
+
+  #ds dynamic thresholds for feature detection
+  target_number_of_keypoints_tolerance: 0.1
+  detector_threshold:                   5
+  detector_threshold_minimum:           5
+  detector_threshold_step_size:         5
+
+  #ds dynamic thresholds for descriptor matching
+  matching_distance_tracking_threshold:         50
+  matching_distance_tracking_threshold_maximum: 50
+  matching_distance_tracking_threshold_minimum: 15
+  matching_distance_tracking_step_size:         1
+
+  #ds stereo: triangulation
+  maximum_matching_distance_triangulation: 50
+  baseline_factor:                         50
+  minimum_disparity_pixels:                1
+
+MotionEstimation:
+
+  #ds track lost criteria
+  minimum_number_of_landmarks_to_track: 5
+
+  #ds point tracking thresholds
+  minimum_threshold_distance_tracking_pixels: 16    #ds 4x4
+  maximum_threshold_distance_tracking_pixels: 49    #ds 7x7
+  maximum_distance_tracking_pixels:           22500 #ds 150x150 maximum allowed pixel distance between image coordinates prediction and actual detection
+  range_point_tracking:                       2     #ds pixel search range width for point vicinity tracking
+
+  #ds framepoint track recovery
+  maximum_number_of_landmark_recoveries: 3
+
+  #ds feature density regularization
+  bin_size_pixels:         16
+  ratio_keypoints_to_bins: 1
+
+Relocalization:
+
+  #ds minimum query interspace
+  preliminary_minimum_interspace_queries: 5
+
+  #ds minimum relative number of matches
+  preliminary_minimum_matching_ratio: 0.1
+
+  #ds minimum absolute number of matches
+  minimum_number_of_matches_per_landmark: 100
+
+  #ds correspondence retrieval
+  minimum_matches_per_correspondence: 0
+
+MapOptimization:
+
+Visualization:
+

@@ -10,6 +10,11 @@ namespace proslam {
                               _context(0),
                               _pose_optimizer(0),
                               _framepoint_generator(0),
+                              _pixel_distance_tracking_threshold(4*4),
+                              _minimum_threshold_distance_tracking_pixels(4*4),
+                              _maximum_threshold_distance_tracking_pixels(7*7),
+                              _range_point_tracking(2),
+                              _maximum_distance_tracking_pixels(150*150),
                               _maximum_number_of_landmark_recoveries(5),
                               _bin_size_pixels(10),
                               _number_of_rows_bin(0),
@@ -317,11 +322,11 @@ namespace proslam {
     if (_status_previous == Frame::Localizing) {
 
       //ds for localization mode we have a more relaxed tracking condition
-      _pixel_distance_tracking_threshold = _pixel_distance_tracking_threshold_maximum;
+      _pixel_distance_tracking_threshold = _maximum_threshold_distance_tracking_pixels;
     } else {
 
       //ds narrow search limit closer to projection when we're in tracking mode
-      _pixel_distance_tracking_threshold = _pixel_distance_tracking_threshold_minimum;
+      _pixel_distance_tracking_threshold = _minimum_threshold_distance_tracking_pixels;
     }
     const real _maximum_matching_distance_tracking_point  = _framepoint_generator->matchingDistanceTrackingThreshold();
     const real _maximum_matching_distance_tracking_region = _framepoint_generator->matchingDistanceTrackingThreshold();
@@ -373,7 +378,7 @@ namespace proslam {
       if (pixel_distance_best < _pixel_distance_tracking_threshold) {
 
         //ds check if track is consistent
-        if ((row_best-row_previous)*(row_best-row_previous)+(col_best-col_previous)*(col_best-col_previous) < _maximum_flow_pixels_squared) {
+        if ((row_best-row_previous)*(row_best-row_previous)+(col_best-col_previous)*(col_best-col_previous) < _maximum_distance_tracking_pixels) {
           _addTrack(previous_point, current_frame_, row_best, col_best);
           continue;
         }
@@ -418,7 +423,7 @@ namespace proslam {
       if (pixel_distance_best < _pixel_distance_tracking_threshold) {
 
         //ds check if track is consistent
-        if ((row_best-row_previous)*(row_best-row_previous)+(col_best-col_previous)*(col_best-col_previous) < _maximum_flow_pixels_squared) {
+        if ((row_best-row_previous)*(row_best-row_previous)+(col_best-col_previous)*(col_best-col_previous) < _maximum_distance_tracking_pixels) {
           _addTrack(previous_point, current_frame_, row_best, col_best);
           continue;
         }

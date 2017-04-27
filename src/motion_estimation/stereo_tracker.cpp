@@ -15,9 +15,9 @@ namespace proslam {
     assert(_camera_right);
 
     //ds configure base
-    _bin_size_pixels                       = 16;
-    _maximum_number_of_landmark_recoveries = 3;
-    _ratio_keypoints_to_bins               = 1;
+    _bin_size_pixels                       = Parameter::MotionEstimation::bin_size_pixels;
+    _maximum_number_of_landmark_recoveries = Parameter::MotionEstimation::maximum_number_of_landmark_recoveries;
+    _ratio_keypoints_to_bins               = Parameter::MotionEstimation::ratio_keypoints_to_bins;
     BaseTracker::setup();
 
     //ds configure current

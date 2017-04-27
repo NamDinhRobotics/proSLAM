@@ -44,8 +44,8 @@ namespace proslam {
     const Count& totalNumberOfTrackedPoints() const {return _total_number_of_tracked_points;}
     const Count& totalNumberOfLandmarksClose() const {return _total_number_of_landmarks_close;}
     const Count& totalNumberOfLandmarksFar() const {return _total_number_of_landmarks_far;}
-    void setPixelDistanceTrackingMaximum(const int32_t& pixel_distance_tracking_maximum_) {_pixel_distance_tracking_threshold_maximum = pixel_distance_tracking_maximum_;}
-    void setPixelDistanceTrackingMinimum(const int32_t& pixel_distance_tracking_minimum_) {_pixel_distance_tracking_threshold_minimum = pixel_distance_tracking_minimum_;}
+    void setPixelDistanceTrackingMaximum(const int32_t& pixel_distance_tracking_maximum_) {_maximum_threshold_distance_tracking_pixels = pixel_distance_tracking_maximum_;}
+    void setPixelDistanceTrackingMinimum(const int32_t& pixel_distance_tracking_minimum_) {_minimum_threshold_distance_tracking_pixels = pixel_distance_tracking_minimum_;}
     void setMinimumNumberOfLandmarksToTrack(Count minimum_number_of_landmarks_to_track_) {_minimum_number_of_landmarks_to_track=minimum_number_of_landmarks_to_track_;}
     const Count& binSize() const {return _bin_size_pixels;}
     const Count& numberOfColsBin() const {return _number_of_cols_bin;}
@@ -105,11 +105,11 @@ namespace proslam {
     BaseFramePointGenerator* _framepoint_generator;
 
     //ds framepoint tracking configuration
-    int32_t _pixel_distance_tracking_threshold         = 0;   //ds current pixel distance threshold for framepoint tracking - lower means higher precision
-    int32_t _pixel_distance_tracking_threshold_maximum = 7*7; //ds upper limit: 7x7 pixels
-    int32_t _pixel_distance_tracking_threshold_minimum = 4*4; //ds lower limit: 4x4 pixels
-    const int32_t _range_point_tracking        = 2;           //ds pixel search range width for point vicinity tracking
-    const int32_t _maximum_flow_pixels_squared = 150*150;     //ds maximum allowed pixel distance between image coordinates prediction and actual detection
+    int32_t _pixel_distance_tracking_threshold;          //ds current pixel distance threshold for framepoint tracking - lower means higher precision
+    int32_t _minimum_threshold_distance_tracking_pixels;
+    int32_t _maximum_threshold_distance_tracking_pixels;
+    int32_t _range_point_tracking;                       //ds pixel search range width for point vicinity tracking
+    int32_t _maximum_distance_tracking_pixels;           //ds maximum allowed pixel distance between image coordinates prediction and actual detection
 
     //ds pose solving
     TransformMatrix3D _motion_previous_to_current_robot;
