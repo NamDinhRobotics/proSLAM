@@ -1,4 +1,5 @@
 #pragma once
+#include <fstream>
 #include "definitions.h"
 
 namespace proslam {
