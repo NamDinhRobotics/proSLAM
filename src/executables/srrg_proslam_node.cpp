@@ -111,7 +111,7 @@ void callbackGroundTruth(const nav_msgs::OdometryConstPtr& message_) {
 }
 
 //ds don't allow any windoof compilation attempt!
-int32_t main(int32_t argc, char ** argv) {
+int32_t main(int32_t argc_, char** argv_) {
 
   //ds lock opencv to really use only 1 thread
   cv::setNumThreads(0);
@@ -120,7 +120,7 @@ int32_t main(int32_t argc, char ** argv) {
   cv::setUseOptimized(true);
 
   //ds obtain configuration
-  proslam::Parameter::parseParametersFromCommandLine(argc, argv);
+  proslam::Parameter::parseParametersFromCommandLine(argc_, argv_);
 
   //ds check camera info topics - required for the node
   if (proslam::Parameter::CommandLine::topic_camera_info_left.length() == 0) {
@@ -136,7 +136,7 @@ int32_t main(int32_t argc, char ** argv) {
   proslam::Parameter::printCommandLineParameters();
 
   //ds initialize roscpp
-  ros::init(argc, argv, "srrg_proslam_node");
+  ros::init(argc_, argv_, "srrg_proslam_node");
 
   //ds start node
   ros::NodeHandle node;
@@ -213,7 +213,7 @@ int32_t main(int32_t argc, char ** argv) {
   slam_system.relocalizer()->setMinimumNumberOfMatchesPerLandmark(50);
 
   //ds allocate a qt UI server in the main scope (required)
-  QApplication* ui_server = new QApplication(argc, argv);
+  QApplication* ui_server = new QApplication(argc_, argv_);
 
   //ds initialize gui
   slam_system.initializeGUI(ui_server);

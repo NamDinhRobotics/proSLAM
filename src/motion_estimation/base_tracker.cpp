@@ -41,6 +41,9 @@ namespace proslam {
     _projected_image_coordinates_left.clear();
 
     //ds binning configuration
+    _bin_size_pixels                       = Parameter::MotionEstimation::bin_size_pixels;
+    _maximum_number_of_landmark_recoveries = Parameter::MotionEstimation::maximum_number_of_landmark_recoveries;
+    _ratio_keypoints_to_bins               = Parameter::MotionEstimation::ratio_keypoints_to_bins;
     _number_of_cols_bin = std::floor(static_cast<real>(_number_of_cols_image)/_bin_size_pixels)+1;
     _number_of_rows_bin = std::floor(static_cast<real>(_number_of_rows_image)/_bin_size_pixels)+1;
     _framepoint_generator->setTargetNumberOfKeyoints(_ratio_keypoints_to_bins*_number_of_cols_bin*_number_of_rows_bin);

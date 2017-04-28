@@ -1,5 +1,4 @@
 #pragma once
-#include <fstream>
 #include "definitions.h"
 #include "yaml-cpp/yaml.h"
 
@@ -11,13 +10,13 @@ namespace proslam {
 
     //! @brief macro wrapping the YAML node parsing for a single parameter
     //! @param YAML_NODE the target root YAML node
-    //! @param GROUP_NAME parameter Struct name (e.g. CommandLine)
+    //! @param STRUCT_NAME parameter Struct name (e.g. CommandLine)
     //! @param PARAMETER_NAME parameter name (e.g. topic_image_left)
     //! @param PARAMETER_TYPE parameter type (e.g. std::string)
     #define PARSE_PARAMETER(YAML_NODE, STRUCT_NAME, PARAMETER_NAME, PARAMETER_TYPE) \
     try { \
       STRUCT_NAME::PARAMETER_NAME = YAML_NODE[#STRUCT_NAME][#PARAMETER_NAME].as<PARAMETER_TYPE>(); \
-      std::cerr << "parameter name: '" << #STRUCT_NAME << "::" << #PARAMETER_NAME << "' value: '" << STRUCT_NAME::PARAMETER_NAME << "'" << std::endl; \
+      /*std::cerr << "parameter name: '" << #STRUCT_NAME << "::" << #PARAMETER_NAME << "' value: '" << STRUCT_NAME::PARAMETER_NAME << "'" << std::endl;*/ \
     } catch (const YAML::TypedBadConversion<PARAMETER_TYPE>& exception_) { \
       std::cerr << "unable to parse parameter: '" << #STRUCT_NAME << "::" << #PARAMETER_NAME << "' - exception: '" << exception_.what() << "'" << std::endl; \
     }
@@ -100,52 +99,17 @@ namespace proslam {
     }
 
     //! @brief utility parsing command line parameters
-    static void parseParametersFromCommandLine(int32_t argc, char ** argv) {
-      int32_t number_of_added_parameters = 1;
-      while(number_of_added_parameters < argc){
-        if (!std::strcmp(argv[number_of_added_parameters], "-topic-image-left") || !std::strcmp(argv[number_of_added_parameters], "-il")){
-          number_of_added_parameters++;
-          if (number_of_added_parameters == argc) {break;}
-          CommandLine::topic_image_left = argv[number_of_added_parameters];
-        } else if (!std::strcmp(argv[number_of_added_parameters], "-topic-image-right") || !std::strcmp(argv[number_of_added_parameters], "-ir")){
-          number_of_added_parameters++;
-          if (number_of_added_parameters == argc) {break;}
-          CommandLine::topic_image_right = argv[number_of_added_parameters];
-        } else if (!std::strcmp(argv[number_of_added_parameters], "-topic-camera-info-left") || !std::strcmp(argv[number_of_added_parameters], "-cl")){
-          number_of_added_parameters++;
-          if (number_of_added_parameters == argc) {break;}
-          CommandLine::topic_camera_info_left = argv[number_of_added_parameters];
-        } else if (!std::strcmp(argv[number_of_added_parameters], "-topic-camera-info-right") || !std::strcmp(argv[number_of_added_parameters], "-cr")){
-          number_of_added_parameters++;
-          if (number_of_added_parameters == argc) {break;}
-          CommandLine::topic_camera_info_right = argv[number_of_added_parameters];
-        } else if (!std::strcmp(argv[number_of_added_parameters], "-h") || !std::strcmp(argv[number_of_added_parameters], "--h")) {
-          printBanner();
-          exit(0);
-        } else if (!std::strcmp(argv[number_of_added_parameters], "-use-gui") || !std::strcmp(argv[number_of_added_parameters], "-ug")) {
-          CommandLine::option_use_gui = true;
-        } else if (!std::strcmp(argv[number_of_added_parameters], "-open")) {
-          CommandLine::option_use_relocalization = false;
-        } else if (!std::strcmp(argv[number_of_added_parameters], "-show-top") || !std::strcmp(argv[number_of_added_parameters], "-st")) {
-          CommandLine::option_show_top_viewer = true;
-        } else if (!std::strcmp(argv[number_of_added_parameters], "-drop-framepoints") || !std::strcmp(argv[number_of_added_parameters], "-df")) {
-          CommandLine::option_drop_framepoints = true;
-        } else if (!std::strcmp(argv[number_of_added_parameters], "-equalize-histogram") || !std::strcmp(argv[number_of_added_parameters], "-eh")) {
-          CommandLine::option_equalize_histogram = true;
-        } else if (!std::strcmp(argv[number_of_added_parameters], "-rectify-and-undistort") || !std::strcmp(argv[number_of_added_parameters], "-ru")) {
-          CommandLine::option_rectify_and_undistort = true;
-        } else if (!std::strcmp(argv[number_of_added_parameters], "-depth-mode") || !std::strcmp(argv[number_of_added_parameters], "-dm")) {
-          CommandLine::tracker_mode = Depth;
-        } else if (!std::strcmp(argv[number_of_added_parameters], "-use-odometry") || !std::strcmp(argv[number_of_added_parameters], "-uo")) {
-          CommandLine::option_use_odometry = true;
-        } else if (!std::strcmp(argv[number_of_added_parameters], "-configuration") || !std::strcmp(argv[number_of_added_parameters], "-c")){
-          number_of_added_parameters++;
-          if (number_of_added_parameters == argc) {break;}
-          CommandLine::filename_configuration = argv[number_of_added_parameters];
-        } else {
-          CommandLine::filename_dataset = argv[number_of_added_parameters];
+    static void parseParametersFromCommandLine(const int32_t& argc_, char ** argv_) {
+
+      //ds skim the command line for configuration file input
+      int32_t number_of_checked_parameters = 1;
+      while(number_of_checked_parameters < argc_){
+        if (!std::strcmp(argv_[number_of_checked_parameters], "-configuration") || !std::strcmp(argv_[number_of_checked_parameters], "-c")){
+          number_of_checked_parameters++;
+          if (number_of_checked_parameters == argc_) {break;}
+          CommandLine::filename_configuration = argv_[number_of_checked_parameters];
         }
-        number_of_added_parameters++;
+        number_of_checked_parameters++;
       }
 
       //ds if no configuration file was specified
@@ -172,6 +136,50 @@ namespace proslam {
 
         //ds parse parameters from configuration file
         parseParametersFromFile(CommandLine::filename_configuration);
+      }
+
+      //ds reset and check for other command line parameters, potentially overwritting the ones set in the configuration file
+      number_of_checked_parameters = 1;
+      while(number_of_checked_parameters < argc_){
+        if (!std::strcmp(argv_[number_of_checked_parameters], "-topic-image-left") || !std::strcmp(argv_[number_of_checked_parameters], "-il")){
+          number_of_checked_parameters++;
+          if (number_of_checked_parameters == argc_) {break;}
+          CommandLine::topic_image_left = argv_[number_of_checked_parameters];
+        } else if (!std::strcmp(argv_[number_of_checked_parameters], "-topic-image-right") || !std::strcmp(argv_[number_of_checked_parameters], "-ir")){
+          number_of_checked_parameters++;
+          if (number_of_checked_parameters == argc_) {break;}
+          CommandLine::topic_image_right = argv_[number_of_checked_parameters];
+        } else if (!std::strcmp(argv_[number_of_checked_parameters], "-topic-camera-info-left") || !std::strcmp(argv_[number_of_checked_parameters], "-cl")){
+          number_of_checked_parameters++;
+          if (number_of_checked_parameters == argc_) {break;}
+          CommandLine::topic_camera_info_left = argv_[number_of_checked_parameters];
+        } else if (!std::strcmp(argv_[number_of_checked_parameters], "-topic-camera-info-right") || !std::strcmp(argv_[number_of_checked_parameters], "-cr")){
+          number_of_checked_parameters++;
+          if (number_of_checked_parameters == argc_) {break;}
+          CommandLine::topic_camera_info_right = argv_[number_of_checked_parameters];
+        } else if (!std::strcmp(argv_[number_of_checked_parameters], "-h") || !std::strcmp(argv_[number_of_checked_parameters], "--h")) {
+          printBanner();
+          exit(0);
+        } else if (!std::strcmp(argv_[number_of_checked_parameters], "-use-gui") || !std::strcmp(argv_[number_of_checked_parameters], "-ug")) {
+          CommandLine::option_use_gui = true;
+        } else if (!std::strcmp(argv_[number_of_checked_parameters], "-open")) {
+          CommandLine::option_use_relocalization = false;
+        } else if (!std::strcmp(argv_[number_of_checked_parameters], "-show-top") || !std::strcmp(argv_[number_of_checked_parameters], "-st")) {
+          CommandLine::option_show_top_viewer = true;
+        } else if (!std::strcmp(argv_[number_of_checked_parameters], "-drop-framepoints") || !std::strcmp(argv_[number_of_checked_parameters], "-df")) {
+          CommandLine::option_drop_framepoints = true;
+        } else if (!std::strcmp(argv_[number_of_checked_parameters], "-equalize-histogram") || !std::strcmp(argv_[number_of_checked_parameters], "-eh")) {
+          CommandLine::option_equalize_histogram = true;
+        } else if (!std::strcmp(argv_[number_of_checked_parameters], "-rectify-and-undistort") || !std::strcmp(argv_[number_of_checked_parameters], "-ru")) {
+          CommandLine::option_rectify_and_undistort = true;
+        } else if (!std::strcmp(argv_[number_of_checked_parameters], "-depth-mode") || !std::strcmp(argv_[number_of_checked_parameters], "-dm")) {
+          CommandLine::tracker_mode = Depth;
+        } else if (!std::strcmp(argv_[number_of_checked_parameters], "-use-odometry") || !std::strcmp(argv_[number_of_checked_parameters], "-uo")) {
+          CommandLine::option_use_odometry = true;
+        } else {
+          CommandLine::filename_dataset = argv_[number_of_checked_parameters];
+        }
+        number_of_checked_parameters++;
       }
 
       //ds validate input parameters and exit on failure
@@ -205,7 +213,7 @@ namespace proslam {
       std::cerr << "-open                    " << !CommandLine::option_use_relocalization << std::endl;
       std::cerr << "-show-top                " << CommandLine::option_show_top_viewer << std::endl;
       std::cerr << "-use-odometry            " << CommandLine::option_use_odometry << std::endl;
-      std::cerr << "-depth-mode              " << (CommandLine::tracker_mode==TrackerMode::Depth) << std::endl;
+      std::cerr << "-depth-mode              " << (CommandLine::tracker_mode == TrackerMode::Depth) << std::endl;
       std::cerr << "-drop-framepoints        " << CommandLine::option_drop_framepoints << std::endl;
       std::cerr << "-equalize-histogram      " << CommandLine::option_equalize_histogram << std::endl;
       std::cerr << "-rectify-and-undistort   " << CommandLine::option_rectify_and_undistort << std::endl;

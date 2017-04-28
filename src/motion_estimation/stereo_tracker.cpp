@@ -13,14 +13,7 @@ namespace proslam {
   void StereoTracker::setup() {
     std::cerr << "StereoTracker::setup|configuring" << std::endl;
     assert(_camera_right);
-
-    //ds configure base
-    _bin_size_pixels                       = Parameter::MotionEstimation::bin_size_pixels;
-    _maximum_number_of_landmark_recoveries = Parameter::MotionEstimation::maximum_number_of_landmark_recoveries;
-    _ratio_keypoints_to_bins               = Parameter::MotionEstimation::ratio_keypoints_to_bins;
     BaseTracker::setup();
-
-    //ds configure current
     _stereo_framepoint_generator = dynamic_cast<StereoFramePointGenerator*>(_framepoint_generator);
     assert(_stereo_framepoint_generator);
     std::cerr << "StereoTracker::setup|configured" << std::endl;
