@@ -8,13 +8,13 @@ CommandLine:
   filename_dataset:
 
   #ds options
-  option_use_gui:               0
-  option_use_odometry:          0
-  option_use_relocalization:    1
-  option_show_top_viewer:       0
-  option_drop_framepoints:      0
-  option_equalize_histogram:    0
-  option_rectify_and_undistort: 0
+  option_use_gui:               true
+  option_use_odometry:          false
+  option_use_relocalization:    true
+  option_show_top_viewer:       false
+  option_drop_framepoints:      false
+  option_equalize_histogram:    false
+  option_rectify_and_undistort: false
 
 Types:
 
