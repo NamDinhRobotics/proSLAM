@@ -163,7 +163,7 @@ Example configuration files can be found in the `configurations` folder. <br/>
 Upon launch the system scans the working directory for a default configuration file (`configuration.yaml`) and loads it (if none is present, internal default values apply). <br/>
 A custom configuration file can be specified as follows:
 
-    rosrun srrg_proslam srrg_proslam_app -c my_configuration.yaml 00.txt
+    rosrun srrg_proslam srrg_proslam_app 00.txt -c my_configuration.yaml
 
 ---
 ### It doesn't work? ###

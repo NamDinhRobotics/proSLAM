@@ -176,8 +176,10 @@ namespace proslam {
           CommandLine::tracker_mode = Depth;
         } else if (!std::strcmp(argv_[number_of_checked_parameters], "-use-odometry") || !std::strcmp(argv_[number_of_checked_parameters], "-uo")) {
           CommandLine::option_use_odometry = true;
+        } else if (!std::strcmp(argv_[number_of_checked_parameters], "-configuration") || !std::strcmp(argv_[number_of_checked_parameters], "-c")){
+          number_of_checked_parameters++;
         } else {
-          CommandLine::filename_dataset = argv_[number_of_checked_parameters];
+          if (CommandLine::filename_dataset.length() == 0) {CommandLine::filename_dataset = argv_[number_of_checked_parameters];}
         }
         number_of_checked_parameters++;
       }
@@ -204,11 +206,11 @@ namespace proslam {
     static void printCommandLineParameters() {
       std::cerr << "-------------------------------------------------------------------------" << std::endl;
       std::cerr << "running with command line parameters:" << std::endl;
-      if (CommandLine::filename_configuration.length() > 0) { std::cerr << "-config                  " << CommandLine::filename_configuration << std::endl;}
+      if (CommandLine::filename_configuration.length() > 0) {std::cerr << "-configuration           " << CommandLine::filename_configuration << std::endl;}
       std::cerr << "-topic-image-left        " << CommandLine::topic_image_left << std::endl;
       std::cerr << "-topic-image-right       " << CommandLine::topic_image_right << std::endl;
-      if (CommandLine::topic_camera_info_left.length() > 0) { std::cerr << "-topic-camera-left-info  " << CommandLine::topic_camera_info_left << std::endl;}
-      if (CommandLine::topic_camera_info_right.length() > 0) { std::cerr << "-topic-camera-right-info " << CommandLine::topic_camera_info_right << std::endl;}
+      if (CommandLine::topic_camera_info_left.length() > 0) {std::cerr << "-topic-camera-left-info  " << CommandLine::topic_camera_info_left << std::endl;}
+      if (CommandLine::topic_camera_info_right.length() > 0) {std::cerr << "-topic-camera-right-info " << CommandLine::topic_camera_info_right << std::endl;}
       std::cerr << "-use-gui                 " << CommandLine::option_use_gui << std::endl;
       std::cerr << "-open                    " << !CommandLine::option_use_relocalization << std::endl;
       std::cerr << "-show-top                " << CommandLine::option_show_top_viewer << std::endl;
@@ -217,7 +219,7 @@ namespace proslam {
       std::cerr << "-drop-framepoints        " << CommandLine::option_drop_framepoints << std::endl;
       std::cerr << "-equalize-histogram      " << CommandLine::option_equalize_histogram << std::endl;
       std::cerr << "-rectify-and-undistort   " << CommandLine::option_rectify_and_undistort << std::endl;
-      if (CommandLine::filename_dataset.length() > 0) { std::cerr << "-dataset                 " << CommandLine::filename_dataset << std::endl;}
+      if (CommandLine::filename_dataset.length() > 0) {std::cerr << "-dataset                 " << CommandLine::filename_dataset << std::endl;}
       std::cerr << "-------------------------------------------------------------------------" << std::endl;
     }
 
