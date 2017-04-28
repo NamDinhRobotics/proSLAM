@@ -158,10 +158,9 @@ The ROS node (`srrg_proslam_node`) is currently under development.
 ---
 ### Configuration file (YAML) ###
 
-ProSLAM supports classic YAML configuration files, enabling fine-grained adjustment of deep system parameters <br/>
-Example configuration files can be found in the `configurations` folder <br/>
-Upon launch the system scans the working directory for a default configuration file (`configuration.yaml`) and loads it <br/>
-If no configuration file is present, ProSLAM uses the internal default parameter settings <br/>
+ProSLAM supports classic YAML configuration files, enabling fine-grained adjustment of deep system parameters. <br/>
+Example configuration files can be found in the `configurations` folder. <br/>
+Upon launch the system scans the working directory for a default configuration file (`configuration.yaml`) and loads it (if none is present, internal default values apply). <br/>
 A custom configuration file can be specified as follows:
 
     rosrun srrg_proslam srrg_proslam_app -c my_configuration.yaml 00.txt
