@@ -6,13 +6,15 @@ namespace proslam {
   //ds the tracker assumes a constant stereo camera configuration
   DepthTracker::DepthTracker(): _depth_camera(0),
                                 _depth_image(0),
-                                _depth_framepoint_generator(0) {
+                                _depth_framepoint_generator(0),
+                                _parameters(0) {
     std::cerr << "DepthTracker::DepthTracker|constructed" << std::endl;
   }
 
-  void DepthTracker::setup() {
+  void DepthTracker::configure(BaseTrackerParameters* parameters_) {
     std::cerr << "DepthTracker::setup|configuring" << std::endl;
-    BaseTracker::setup();
+    _parameters = dynamic_cast<DepthTrackerParameters*>(parameters_);
+    BaseTracker::configure(parameters_);
     assert(_depth_camera);
     _depth_framepoint_generator = dynamic_cast<DepthFramePointGenerator*>(_framepoint_generator);
     assert(_depth_framepoint_generator);

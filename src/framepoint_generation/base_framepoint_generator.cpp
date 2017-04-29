@@ -8,29 +8,22 @@ namespace proslam {
                                                       _number_of_cols_image(0),
                                                       _target_number_of_keypoints(1000),
                                                       _number_of_available_points(0),
-                                                      _target_number_of_keypoints_tolerance(0.1),
-                                                      _detector_threshold(10),
-                                                      _detector_threshold_minimum(5),
-                                                      _detector_threshold_step_size(10),
-                                                      _matching_distance_tracking_threshold(50),
-                                                      _matching_distance_tracking_threshold_maximum(50),
-                                                      _matching_distance_tracking_threshold_minimum(50),
-                                                      _matching_distance_tracking_step_size(0),
                                                       _focal_length_pixels(0),
                                                       _principal_point_offset_u_pixels(0),
                                                       _principal_point_offset_v_pixels(0),
                                                       _maximum_depth_near_meters(0),
                                                       _maximum_depth_far_meters(0),
-                                                      _framepoints_in_image(0)
+                                                      _framepoints_in_image(0),
 #if CV_MAJOR_VERSION == 2
-                                                      ,_keypoint_detector(0), _descriptor_extractor(0)
+                                                      _keypoint_detector(0), _descriptor_extractor(0),
 #endif
-  {
+                                                      _parameters(0) {
     std::cerr << "BaseFramePointGenerator::setup|constructed" << std::endl;
   }
 
-  void  BaseFramePointGenerator::setup(){
+  void  BaseFramePointGenerator::configure(BaseFramepointGeneratorParameters* parameters_){
     std::cerr << "BaseFramePointGenerator::setup|configuring" << std::endl;
+    _parameters = parameters_;
     assert(_camera_left);
 
     _number_of_rows_image            = _camera_left->imageRows();
@@ -40,10 +33,10 @@ namespace proslam {
     _principal_point_offset_v_pixels = _camera_left->cameraMatrix()(1,2);
 
 #if CV_MAJOR_VERSION == 2
-    _keypoint_detector = new cv::FastFeatureDetector(_detector_threshold);
+    _keypoint_detector    = new cv::FastFeatureDetector(_parameters->detector_threshold);
     _descriptor_extractor = new cv::BriefDescriptorExtractor(DESCRIPTOR_SIZE_BYTES);
 #elif CV_MAJOR_VERSION == 3
-    _keypoint_detector = cv::FastFeatureDetector::create(_detector_threshold);
+    _keypoint_detector    = cv::FastFeatureDetector::create(_parameters->detector_threshold);
     _descriptor_extractor = cv::xfeatures2d::BriefDescriptorExtractor::create(DESCRIPTOR_SIZE_BYTES);
 #else
 #error OpenCV version not supported
@@ -58,15 +51,7 @@ namespace proslam {
       }
     }
 
-    //ds info
-    std::cerr << "BaseFramePointGenerator::setup|detection tolerance: " << _target_number_of_keypoints_tolerance << std::endl;
-    std::cerr << "BaseFramePointGenerator::setup|detector threshold start: " << _detector_threshold << std::endl;
-    std::cerr << "BaseFramePointGenerator::setup|                 minimum: " << _detector_threshold_minimum << std::endl;
-    std::cerr << "BaseFramePointGenerator::setup|               step size: " << _detector_threshold_step_size << std::endl;
-    std::cerr << "BaseFramePointGenerator::setup|matching distance start: " << _matching_distance_tracking_threshold << std::endl;
-    std::cerr << "BaseFramePointGenerator::setup|                minimum: " << _matching_distance_tracking_threshold_minimum << std::endl;
-    std::cerr << "BaseFramePointGenerator::setup|                maximum: " << _matching_distance_tracking_threshold_maximum << std::endl;
-    std::cerr << "BaseFramePointGenerator::setup|              step size: " << _matching_distance_tracking_step_size << std::endl;
+    //ds log computed values
     std::cerr << "BaseFramePointGenerator::setup|focal length (pixels): " << _focal_length_pixels << std::endl;
 
     //ds clear buffers
@@ -113,35 +98,35 @@ namespace proslam {
     const real delta = (static_cast<real>(keypoints_.size())-_target_number_of_keypoints)/keypoints_.size();
 
     //ds check if there's a significant loss of target points
-    if (delta < -_target_number_of_keypoints_tolerance) {
+    if (delta < -_parameters->target_number_of_keypoints_tolerance) {
 
       //ds compute new threshold
-      _detector_threshold += std::max(std::ceil(delta*_detector_threshold_step_size), -_detector_threshold_step_size);
+      _parameters->detector_threshold += std::max(std::ceil(delta*_parameters->detector_threshold_step_size), -_parameters->detector_threshold_step_size);
 
       //ds cap the minimum value
-      if (_detector_threshold < _detector_threshold_minimum) {
-        _detector_threshold = _detector_threshold_minimum;
+      if (_parameters->detector_threshold < _parameters->detector_threshold_minimum) {
+        _parameters->detector_threshold = _parameters->detector_threshold_minimum;
       }
-      setDetectorThreshold(_detector_threshold);
+      setDetectorThreshold(_parameters->detector_threshold);
 
       //ds increase allowed matching distance if possible
-      if (_matching_distance_tracking_threshold < _matching_distance_tracking_threshold_maximum) {
-        _matching_distance_tracking_threshold += _matching_distance_tracking_step_size;
+      if (_parameters->matching_distance_tracking_threshold < _parameters->matching_distance_tracking_threshold_maximum) {
+        _parameters->matching_distance_tracking_threshold += _parameters->matching_distance_tracking_step_size;
       }
     }
 
     //ds or if there's a significant gain of target points
-    else if (delta > _target_number_of_keypoints_tolerance) {
+    else if (delta > _parameters->target_number_of_keypoints_tolerance) {
 
       //ds compute new threshold
-      _detector_threshold += std::min(std::ceil(delta*_detector_threshold_step_size), _detector_threshold_step_size);
+      _parameters->detector_threshold += std::min(std::ceil(delta*_parameters->detector_threshold_step_size), _parameters->detector_threshold_step_size);
 
       //ds raise threshold (uncapped)
-      setDetectorThreshold(_detector_threshold);
+      setDetectorThreshold(_parameters->detector_threshold);
 
       //ds lower allowed matching distance if possible
-      if (_matching_distance_tracking_threshold > _matching_distance_tracking_threshold_minimum) {
-        _matching_distance_tracking_threshold -= _matching_distance_tracking_step_size;
+      if (_parameters->matching_distance_tracking_threshold > _parameters->matching_distance_tracking_threshold_minimum) {
+        _parameters->matching_distance_tracking_threshold -= _parameters->matching_distance_tracking_step_size;
       }
     }
 
@@ -164,12 +149,12 @@ namespace proslam {
   }
 
   void BaseFramePointGenerator::setDetectorThreshold(const int32_t& detector_threshold_) {
-    _detector_threshold = detector_threshold_;
+    _parameters->detector_threshold = detector_threshold_;
 
 #if CV_MAJOR_VERSION == 2
-    _keypoint_detector->setInt("threshold", _detector_threshold);
+    _keypoint_detector->setInt("threshold", _parameters->detector_threshold);
 #elif CV_MAJOR_VERSION == 3
-    _keypoint_detector->setThreshold(_detector_threshold);
+    _keypoint_detector->setThreshold(_parameters->detector_threshold);
 #else
 #error OpenCV version not supported
 #endif

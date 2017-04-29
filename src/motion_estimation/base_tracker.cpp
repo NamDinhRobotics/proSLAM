@@ -11,23 +11,18 @@ namespace proslam {
                               _pose_optimizer(0),
                               _framepoint_generator(0),
                               _pixel_distance_tracking_threshold(4*4),
-                              _minimum_threshold_distance_tracking_pixels(4*4),
-                              _maximum_threshold_distance_tracking_pixels(7*7),
-                              _range_point_tracking(2),
-                              _maximum_distance_tracking_pixels(150*150),
-                              _maximum_number_of_landmark_recoveries(5),
-                              _bin_size_pixels(10),
                               _number_of_rows_bin(0),
                               _number_of_cols_bin(0),
                               _bin_map_left(0),
-                              _ratio_keypoints_to_bins(1),
                               _enable_keypoint_binning(false),
+                              _parameters(0),
                               _has_odometry(false) {
     std::cerr << "BaseTracker::BaseTracker|constructed" << std::endl;
   }
 
-  void BaseTracker::setup() {
+  void BaseTracker::configure(BaseTrackerParameters* parameters_) {
     std::cerr << "BaseTracker::setup|configuring" << std::endl;
+    _parameters = parameters_;
     assert(_camera_left);
     assert(_pose_optimizer);
     _number_of_rows_image = _camera_left->imageRows();
@@ -41,12 +36,9 @@ namespace proslam {
     _projected_image_coordinates_left.clear();
 
     //ds binning configuration
-    _bin_size_pixels                       = Parameter::MotionEstimation::bin_size_pixels;
-    _maximum_number_of_landmark_recoveries = Parameter::MotionEstimation::maximum_number_of_landmark_recoveries;
-    _ratio_keypoints_to_bins               = Parameter::MotionEstimation::ratio_keypoints_to_bins;
-    _number_of_cols_bin = std::floor(static_cast<real>(_number_of_cols_image)/_bin_size_pixels)+1;
-    _number_of_rows_bin = std::floor(static_cast<real>(_number_of_rows_image)/_bin_size_pixels)+1;
-    _framepoint_generator->setTargetNumberOfKeyoints(_ratio_keypoints_to_bins*_number_of_cols_bin*_number_of_rows_bin);
+    _number_of_cols_bin = std::floor(static_cast<real>(_number_of_cols_image)/_parameters->bin_size_pixels)+1;
+    _number_of_rows_bin = std::floor(static_cast<real>(_number_of_rows_image)/_parameters->bin_size_pixels)+1;
+    _framepoint_generator->setTargetNumberOfKeyoints(_parameters->ratio_keypoints_to_bins*_number_of_cols_bin*_number_of_rows_bin);
 
     //ds allocate and initialize bin grid
     _bin_map_left = new FramePoint**[_number_of_rows_bin];
@@ -57,11 +49,7 @@ namespace proslam {
       }
     }
 
-    std::cerr << "BaseTracker::setup|bin size (pixels): " << _bin_size_pixels << std::endl;
-    std::cerr << "BaseTracker::setup|number of bins u: " << _number_of_cols_bin << std::endl;
-    std::cerr << "BaseTracker::setup|number of bins v: " << _number_of_rows_bin << std::endl;
-    std::cerr << "BaseTracker::setup|total number of bins: " << _number_of_cols_bin*_number_of_rows_bin << std::endl;
-    std::cerr << "BaseTracker::setup|target number of keypoints: " << _framepoint_generator->targetNumberOfKeypoints() << std::endl;
+    //ds print tracker configuration (with dynamic type of parameters)
     std::cerr << "BaseTracker::setup|configured" << std::endl;
   }
 
@@ -149,7 +137,7 @@ namespace proslam {
           CHRONOMETER_STOP(pose_optimization);
 
           //ds if the pose computation is acceptable
-          if (_pose_optimizer->numberOfInliers() > 2*_minimum_number_of_landmarks_to_track) {
+          if (_pose_optimizer->numberOfInliers() > _parameters->minimum_number_of_landmarks_to_track) {
 
             //ds compute resulting motion
             _motion_previous_to_current_robot = current_frame->previous()->worldToRobot()*_pose_optimizer->robotToWorld();
@@ -177,7 +165,7 @@ namespace proslam {
 
         //ds check if we can switch the state
         const Count number_of_good_points = current_frame->countPoints(current_frame->minimumTrackLengthForLandmarkCreation());
-        if (number_of_good_points > _minimum_number_of_landmarks_to_track) {
+        if (number_of_good_points > _parameters->minimum_number_of_landmarks_to_track) {
 
           //ds trigger landmark creation and framepoint update
           _updateLandmarks(_context, current_frame);
@@ -231,7 +219,7 @@ namespace proslam {
         const real delta_translational    = _motion_previous_to_current_robot.translation().norm();
 
         //ds if we don't have enough inliers - trigger fallback posit on last position
-        if (number_of_inliers < _minimum_number_of_landmarks_to_track) {
+        if (number_of_inliers < _parameters->minimum_number_of_landmarks_to_track) {
 
           //ds reset state
           std::cerr << "BaseTracker::compute|WARNING: LOST TRACK due to invalid position optimization" << std::endl;
@@ -325,11 +313,11 @@ namespace proslam {
     if (_status_previous == Frame::Localizing) {
 
       //ds for localization mode we have a more relaxed tracking condition
-      _pixel_distance_tracking_threshold = _maximum_threshold_distance_tracking_pixels;
+      _pixel_distance_tracking_threshold = _parameters->maximum_threshold_distance_tracking_pixels;
     } else {
 
       //ds narrow search limit closer to projection when we're in tracking mode
-      _pixel_distance_tracking_threshold = _minimum_threshold_distance_tracking_pixels;
+      _pixel_distance_tracking_threshold = _parameters->minimum_threshold_distance_tracking_pixels;
     }
     const real _maximum_matching_distance_tracking_point  = _framepoint_generator->matchingDistanceTrackingThreshold();
     const real _maximum_matching_distance_tracking_region = _framepoint_generator->matchingDistanceTrackingThreshold();
@@ -354,10 +342,10 @@ namespace proslam {
 
       //ds ------------------------------------------- STAGE 1: POINT VICINITY TRACKING
       //ds compute borders
-      const int32_t row_start_point = std::max(row_projection-_range_point_tracking, static_cast<int32_t>(0));
-      const int32_t row_end_point   = std::min(row_projection+_range_point_tracking, static_cast<int32_t>(_framepoint_generator->numberOfRowsImage()));
-      const int32_t col_start_point = std::max(col_projection-_range_point_tracking, static_cast<int32_t>(0));
-      const int32_t col_end_point   = std::min(col_projection+_range_point_tracking, static_cast<int32_t>(_framepoint_generator->numberOfColsImage()));
+      const int32_t row_start_point = std::max(row_projection-_parameters->range_point_tracking, static_cast<int32_t>(0));
+      const int32_t row_end_point   = std::min(row_projection+_parameters->range_point_tracking, static_cast<int32_t>(_framepoint_generator->numberOfRowsImage()));
+      const int32_t col_start_point = std::max(col_projection-_parameters->range_point_tracking, static_cast<int32_t>(0));
+      const int32_t col_end_point   = std::min(col_projection+_parameters->range_point_tracking, static_cast<int32_t>(_framepoint_generator->numberOfColsImage()));
 
       //ds locate best match
       for (int32_t row_point = row_start_point; row_point < row_end_point; ++row_point) {
@@ -381,7 +369,7 @@ namespace proslam {
       if (pixel_distance_best < _pixel_distance_tracking_threshold) {
 
         //ds check if track is consistent
-        if ((row_best-row_previous)*(row_best-row_previous)+(col_best-col_previous)*(col_best-col_previous) < _maximum_distance_tracking_pixels) {
+        if ((row_best-row_previous)*(row_best-row_previous)+(col_best-col_previous)*(col_best-col_previous) < _parameters->maximum_distance_tracking_pixels) {
           _addTrack(previous_point, current_frame_, row_best, col_best);
           continue;
         }
@@ -426,14 +414,14 @@ namespace proslam {
       if (pixel_distance_best < _pixel_distance_tracking_threshold) {
 
         //ds check if track is consistent
-        if ((row_best-row_previous)*(row_best-row_previous)+(col_best-col_previous)*(col_best-col_previous) < _maximum_distance_tracking_pixels) {
+        if ((row_best-row_previous)*(row_best-row_previous)+(col_best-col_previous)*(col_best-col_previous) < _parameters->maximum_distance_tracking_pixels) {
           _addTrack(previous_point, current_frame_, row_best, col_best);
           continue;
         }
       }
 
       //ds no match found - if landmark - and not too many recoveries
-      if (previous_point->landmark() && previous_point->landmark()->numberOfRecoveries() < _maximum_number_of_landmark_recoveries) {
+      if (previous_point->landmark() && previous_point->landmark()->numberOfRecoveries() < _parameters->maximum_number_of_landmark_recoveries) {
         _lost_points[_number_of_lost_points] = previous_point;
         ++_number_of_lost_points;
       }
@@ -468,8 +456,8 @@ namespace proslam {
     ++_number_of_tracked_points;
 
     //ds determine bin index of the current point
-    const Count row_bin = std::floor(static_cast<real>(row_)/_bin_size_pixels);
-    const Count col_bin = std::floor(static_cast<real>(col_)/_bin_size_pixels);
+    const Count row_bin = std::floor(static_cast<real>(row_)/_parameters->bin_size_pixels);
+    const Count col_bin = std::floor(static_cast<real>(col_)/_parameters->bin_size_pixels);
 
     //ds occupy corresponding bin
     _bin_map_left[row_bin][col_bin] = current_point;
@@ -497,8 +485,8 @@ namespace proslam {
           if (_framepoint_generator->framepointsInImage()[row][col]) {
 
             //ds determine bin index of the current point
-            const Index row_bin = std::floor(static_cast<real>(row)/_bin_size_pixels);
-            const Index col_bin = std::floor(static_cast<real>(col)/_bin_size_pixels);
+            const Index row_bin = std::floor(static_cast<real>(row)/_parameters->bin_size_pixels);
+            const Index col_bin = std::floor(static_cast<real>(col)/_parameters->bin_size_pixels);
             assert(row_bin < _number_of_rows_bin);
             assert(col_bin < _number_of_cols_bin);
 

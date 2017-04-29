@@ -119,21 +119,26 @@ int32_t main(int32_t argc_, char** argv_) {
   //ds enable opencv2 optimization
   cv::setUseOptimized(true);
 
+  //ds allocate the complete parameter collection with default values
+  proslam::ParameterCollection* parameters = new proslam::ParameterCollection();
+
   //ds obtain configuration
-  proslam::Parameter::parseParametersFromCommandLine(argc_, argv_);
+  parameters->parseFromCommandLine(argc_, argv_);
 
   //ds check camera info topics - required for the node
-  if (proslam::Parameter::CommandLine::topic_camera_info_left.length() == 0) {
+  if (parameters->command_line_parameters->topic_camera_info_left.length() == 0) {
     std::cerr << "ERROR: empty value entered for parameter: -topic-camera-info-left (-cl) (enter -h for help)" << std::endl;
+    delete parameters;
     exit(0);
   }
-  if (proslam::Parameter::CommandLine::topic_camera_info_right.length() == 0) {
+  if (parameters->command_line_parameters->topic_camera_info_right.length() == 0) {
     std::cerr << "ERROR: empty value entered for parameter: -topic-camera-info-right (-cr) (enter -h for help)" << std::endl;
+    delete parameters;
     exit(0);
   }
 
   //ds log configuration
-  proslam::Parameter::printCommandLineParameters();
+  parameters->command_line_parameters->print();
 
   //ds initialize roscpp
   ros::init(argc_, argv_, "srrg_proslam_node");
@@ -142,8 +147,8 @@ int32_t main(int32_t argc_, char** argv_) {
   ros::NodeHandle node;
 
   //ds subscribe to camera info topics
-  ros::Subscriber subscriber_camera_info_left  = node.subscribe(proslam::Parameter::CommandLine::topic_camera_info_left, 1, callbackCameraInfoLeft);
-  ros::Subscriber subscriber_camera_info_right = node.subscribe(proslam::Parameter::CommandLine::topic_camera_info_right, 1, callbackCameraInfoRight);
+  ros::Subscriber subscriber_camera_info_left  = node.subscribe(parameters->command_line_parameters->topic_camera_info_left, 1, callbackCameraInfoLeft);
+  ros::Subscriber subscriber_camera_info_right = node.subscribe(parameters->command_line_parameters->topic_camera_info_right, 1, callbackCameraInfoRight);
 
   //ds buffer camera info
   std::cerr << "main|acquiring stereo camera configuration from ROS topics" << std::endl;
@@ -163,6 +168,7 @@ int32_t main(int32_t argc_, char** argv_) {
   if (camera_left == 0 || camera_right == 0) {
     std::cerr << std::endl;
     std::cerr << "main|caught termination signal, aborting" << std::endl;
+    delete parameters;
     return 0;
   }
 
@@ -193,24 +199,10 @@ int32_t main(int32_t argc_, char** argv_) {
   subscriber_camera_info_right.shutdown();
 
   //ds allocate SLAM modules
-  proslam::SLAMAssembly slam_system;
+  proslam::SLAMAssembly slam_system(parameters);
 
   //ds set cameras
   slam_system.loadCameras(camera_left, camera_right);
-
-  //ds configure SLAM modules
-  slam_system.tracker()->setPixelDistanceTrackingMinimum(16);
-  slam_system.tracker()->setPixelDistanceTrackingMaximum(49);
-  slam_system.tracker()->aligner()->setMaximumErrorKernel(9);
-  slam_system.tracker()->framepointGenerator()->setDetectorThreshold(25);
-  slam_system.tracker()->framepointGenerator()->setDetectorThresholdMinimum(25);
-  slam_system.tracker()->framepointGenerator()->setTargetNumberOfKeyoints(1000);
-  slam_system.tracker()->framepointGenerator()->setMatchingDistanceTrackingThresholdMaximum(50);
-  slam_system.tracker()->framepointGenerator()->setMatchingDistanceTrackingThresholdMinimum(50);
-  slam_system.relocalizer()->aligner()->setMaximumErrorKernel(0.5);
-  slam_system.relocalizer()->aligner()->setMinimumNumberOfInliers(50);
-  slam_system.relocalizer()->aligner()->setMinimumInlierRatio(0.5);
-  slam_system.relocalizer()->setMinimumNumberOfMatchesPerLandmark(50);
 
   //ds allocate a qt UI server in the main scope (required)
   QApplication* ui_server = new QApplication(argc_, argv_);
@@ -220,8 +212,8 @@ int32_t main(int32_t argc_, char** argv_) {
   if (slam_system.viewerInputImages()) slam_system.viewerInputImages()->switchMode();
 
   //ds set up subscribers
-  message_filters::Subscriber<sensor_msgs::Image> subscriber_image_left(node, proslam::Parameter::CommandLine::topic_image_left, 5);
-  message_filters::Subscriber<sensor_msgs::Image> subscriber_image_right(node, proslam::Parameter::CommandLine::topic_image_right, 5);
+  message_filters::Subscriber<sensor_msgs::Image> subscriber_image_left(node, parameters->command_line_parameters->topic_image_left, 5);
+  message_filters::Subscriber<sensor_msgs::Image> subscriber_image_right(node, parameters->command_line_parameters->topic_image_right, 5);
 
   //ds define policy and initialize synchronizer
   typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> StereoImagePolicy;
@@ -256,13 +248,13 @@ int32_t main(int32_t argc_, char** argv_) {
     if (found_image_pair) {
 
       //ds preprocess the images if desired: rectification
-      if (proslam::Parameter::CommandLine::option_rectify_and_undistort) {
+      if (parameters->command_line_parameters->option_rectify_and_undistort) {
         cv::remap(image_left, image_left, undistort_rectify_maps_left[0], undistort_rectify_maps_left[1], cv::INTER_LINEAR);
         cv::remap(image_right, image_right, undistort_rectify_maps_right[0], undistort_rectify_maps_right[1], cv::INTER_LINEAR);
       }
 
       //ds preprocess the images if desired: histogram equalization
-      if (proslam::Parameter::CommandLine::option_equalize_histogram) {
+      if (parameters->command_line_parameters->option_equalize_histogram) {
         cv::equalizeHist(image_left, image_left);
         cv::equalizeHist(image_right, image_right);
       }
@@ -355,7 +347,7 @@ int32_t main(int32_t argc_, char** argv_) {
     if (total_duration_seconds_current > measurement_interval_seconds) {
 
       //ds runtime info - depending on set modes
-      if (proslam::Parameter::CommandLine::option_use_relocalization) {
+      if (parameters->command_line_parameters->option_use_relocalization) {
         std::printf("processed frames: %5lu|landmarks: %6lu|local maps: %4lu (%3.2f)|closures: %3lu (%3.2f)|current fps: %5.2f (%3lu/%3.2fs)\n",
                     slam_system.worldMap()->frames().size(),
                     slam_system.worldMap()->landmarks().size(),
@@ -391,7 +383,9 @@ int32_t main(int32_t argc_, char** argv_) {
 //  //ds save trajectory to disk
 //  slam_system.worldMap()->writeTrajectory("trajectory.txt");
 
+  //ds clean up parameters (since not used in GUI)
+  delete parameters;
+
   //ds exit in GUI
   return slam_system.closeGUI(ros::ok());
-  return 0;
 }

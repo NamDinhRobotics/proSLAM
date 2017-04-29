@@ -27,7 +27,7 @@ namespace proslam {
     BaseFramePointGenerator();
 
     //gg to be called after constructor and parameters are set
-    virtual void setup();
+    virtual void configure(BaseFramepointGeneratorParameters* parameters_);
 
     //ds cleanup of dynamic structures
     virtual ~BaseFramePointGenerator();
@@ -81,10 +81,7 @@ namespace proslam {
     void setTargetNumberOfKeyoints(const Count& target_number_of_keypoints_) {_target_number_of_keypoints = target_number_of_keypoints_;}
 
     void setDetectorThreshold(const int32_t& detector_threshold_);
-    void setDetectorThresholdMinimum(const int32_t& detector_threshold_minimum_) {_detector_threshold_minimum = detector_threshold_minimum_;}
-    const int32_t matchingDistanceTrackingThreshold() const {return _matching_distance_tracking_threshold;}
-    void setMatchingDistanceTrackingThresholdMaximum(const real& matching_distance_tracking_threshold_maximum_) {_matching_distance_tracking_threshold_maximum = matching_distance_tracking_threshold_maximum_;}
-    void setMatchingDistanceTrackingThresholdMinimum(const real& matching_distance_tracking_threshold_minimum_) {_matching_distance_tracking_threshold_minimum = matching_distance_tracking_threshold_minimum_;}
+    const int32_t matchingDistanceTrackingThreshold() const {return _parameters->matching_distance_tracking_threshold;}
     const Count numberOfAvailablePoints() const {return _number_of_available_points;}
 
     //ds settings
@@ -99,18 +96,6 @@ namespace proslam {
     //ds point detection properties
     Count _target_number_of_keypoints;
     Count _number_of_available_points;
-
-    //ds dynamic thresholds for feature detection
-    real _target_number_of_keypoints_tolerance;
-    int32_t _detector_threshold;
-    int32_t _detector_threshold_minimum;
-    real _detector_threshold_step_size;
-
-    //ds dynamic thresholds for descriptor matching
-    int32_t _matching_distance_tracking_threshold;
-    int32_t _matching_distance_tracking_threshold_maximum;
-    int32_t _matching_distance_tracking_threshold_minimum;
-    int32_t _matching_distance_tracking_step_size;
 
     //ds triangulation properties
     real _focal_length_pixels;
@@ -144,6 +129,11 @@ namespace proslam {
     std::vector<cv::KeyPoint> _keypoints_left;
     cv::Mat _descriptors_left;
     std::vector<KeypointWithDescriptor> _keypoints_with_descriptors_left;
+
+  private:
+
+    //! @brief configurable parameters
+    BaseFramepointGeneratorParameters* _parameters;
 
     //ds informative only
     CREATE_CHRONOMETER(feature_detection)

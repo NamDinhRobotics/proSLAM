@@ -11,7 +11,8 @@ namespace proslam {
   public:
 
     WorldMap();
-    ~WorldMap();
+    virtual void configure(WorldMapParameters* parameters_);
+    virtual ~WorldMap();
 
   //ds functionality
   public:
@@ -103,11 +104,6 @@ namespace proslam {
     real _distance_traveled_window = 0;
     real _degrees_rotated_window   = 0;
 
-    //ds key frame generation properties
-    const real _minimum_distance_traveled_for_local_map = 0.5; //ds local map generation based on translational movement
-    const real _minimum_degrees_rotated_for_local_map   = 0.5; //ds local map generation based on rotational movement
-    const Count _minimum_number_of_frames_for_local_map = 4;   //ds in case translational local map generation is triggered, this value enforces a reasonable trajectory granularity
-
     //ds local map control structures
     FramePointerVector _frame_queue_for_local_map;
     LocalMap* _current_local_map  = 0;
@@ -115,6 +111,11 @@ namespace proslam {
 
     //ds memory saving options (slightly less processing speed)
     bool _drop_framepoints = false;
+
+  private:
+
+    //! @brief configurable parameters
+    WorldMapParameters* _parameters;
 
     //ds informative/visualization only
     Count _number_of_closures = 0;

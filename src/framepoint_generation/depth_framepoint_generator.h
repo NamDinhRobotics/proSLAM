@@ -13,7 +13,7 @@ namespace proslam {
     DepthFramePointGenerator();
     
     //gg to be called after constructor and parameters are set
-    virtual void setup();
+    virtual void configure(BaseFramepointGeneratorParameters* parameters_);
     
     //ds cleanup of dynamic structures
     virtual ~DepthFramePointGenerator();
@@ -44,6 +44,11 @@ namespace proslam {
     cv::Mat _space_map_left_meters; // xyz coordinates of every pixel of the left image in meters
     cv::Mat _row_map;               // row index in the depth image(right) corresponding to the pixel ar [r,c] in left image
     cv::Mat _col_map;               // col index in the depth image(right) corresponding to the pixel ar [r,c] in left image
+
+  private:
+
+    //! @brief configurable parameters
+    DepthFramePointGeneratorParameters* _parameters;
 
     //ds informative only
     CREATE_CHRONOMETER(depth_map_generation)

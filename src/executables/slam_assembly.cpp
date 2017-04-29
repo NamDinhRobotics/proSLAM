@@ -9,18 +9,21 @@
 namespace proslam {
 
   //ds default constructor - already allocating required default objects
-  SLAMAssembly::SLAMAssembly(): _world_map(new WorldMap()),
-                                _optimizer(new GraphOptimizer()),
-                                _relocalizer(new Relocalizer()),
-                                _tracker(0),
-                                _camera_left(0),
-                                _camera_right(0),
-                                _ui_server(0),
-                                _viewer_input_images(0),
-                                _context_viewer_bird(0),
-                                _context_viewer_top(0),
-                                _is_gui_running(true) {
-    _world_map->setDropFramepoints(Parameter::CommandLine::option_drop_framepoints);
+  SLAMAssembly::SLAMAssembly(ParameterCollection* parameters_): _parameters(parameters_),
+                                                                _world_map(new WorldMap()),
+                                                                _optimizer(new GraphOptimizer()),
+                                                                _relocalizer(new Relocalizer()),
+                                                                _tracker(0),
+                                                                _camera_left(0),
+                                                                _camera_right(0),
+                                                                _ui_server(0),
+                                                                _viewer_input_images(0),
+                                                                _context_viewer_bird(0),
+                                                                _context_viewer_top(0),
+                                                                _is_gui_running(false) {
+    _relocalizer->configure(_parameters->relocalizer_parameters);
+    _world_map->configure(_parameters->world_map_parameters);
+    _world_map->setDropFramepoints(_parameters->command_line_parameters->option_drop_framepoints);
     _synchronizer.reset();
     _robot_to_world_ground_truth_poses.clear();
   }
@@ -47,29 +50,32 @@ namespace proslam {
   void SLAMAssembly::initializeMessageFile() {
 
     //ds check dataset length
-    if (Parameter::CommandLine::filename_dataset.length() == 0) {
+    if (_parameters->command_line_parameters->filename_dataset.length() == 0) {
       std::cerr << "ERROR: no dataset provided (enter -h for help)" << std::endl;
+      delete _parameters;
       exit(0);
     }
 
     //ds configure sensor message source
-    _sensor_message_reader.open(Parameter::CommandLine::filename_dataset);
+    _sensor_message_reader.open(_parameters->command_line_parameters->filename_dataset);
 
     //ds terminate on failure
     if (!_sensor_message_reader.good()) {
-      Parameter::printBanner();
+      std::cerr << _parameters->banner << std::endl;
+      delete _parameters;
       exit(0);
     }
   }
 
-  void SLAMAssembly::_makeStereoTracker(Camera* camera_left_, Camera* camera_right_){
+  void SLAMAssembly::_createStereoTracker(Camera* camera_left_, Camera* camera_right_){
 
     //ds if rectification is desired
-    if (Parameter::CommandLine::option_rectify_and_undistort) {
+    if (_parameters->command_line_parameters->option_rectify_and_undistort) {
 
       //ds sanity check
       if ((camera_left_->projectionMatrix().block<3,3>(0,0)-camera_right_->projectionMatrix().block<3,3>(0,0)).squaredNorm() != 0) {
         std::cerr << "SLAMAssembly::_makeStereoTracker|ERROR: provided mismatching projection matrices" << std::endl;
+        delete _parameters;
         exit(0);
       }
 
@@ -82,7 +88,7 @@ namespace proslam {
     StereoFramePointGenerator* framepoint_generator = new StereoFramePointGenerator();
     framepoint_generator->setCameraLeft(camera_left_);
     framepoint_generator->setCameraRight(camera_right_);
-    framepoint_generator->setup();
+    framepoint_generator->configure(_parameters->stereo_framepoint_generator_parameters);
     
     //ds allocate and configure the aligner for motion estimation
     StereoUVAligner* pose_optimizer = new StereoUVAligner();
@@ -92,9 +98,8 @@ namespace proslam {
     tracker->setCameraLeft(camera_left_);
     tracker->setCameraRight(camera_right_);
     tracker->setFramePointGenerator(framepoint_generator);
-    tracker->setMinimumNumberOfLandmarksToTrack(5);
     tracker->setAligner(pose_optimizer);
-    tracker->setup();
+    tracker->configure(_parameters->stereo_tracker_parameters);
     _tracker = tracker;
     _tracker->setWorldMap(_world_map);
 
@@ -102,16 +107,15 @@ namespace proslam {
     _relocalizer->aligner()->setMaximumErrorKernel(0.5);
     _relocalizer->aligner()->setMinimumNumberOfInliers(20);
     _relocalizer->aligner()->setMinimumInlierRatio(0.25);
-    _relocalizer->setMinimumNumberOfMatchesPerLandmark(20);
   }
 
-  void SLAMAssembly::_makeDepthTracker(const Camera* camera_left_, const Camera* camera_right_){
+  void SLAMAssembly::_createDepthTracker(const Camera* camera_left_, const Camera* camera_right_){
 
     //ds allocate and configure the framepoint generator
     DepthFramePointGenerator* framepoint_generator = new DepthFramePointGenerator();
     framepoint_generator->setCameraLeft(camera_left_);
     framepoint_generator->setCameraRight(camera_right_);
-    framepoint_generator->setup();
+    framepoint_generator->configure(_parameters->depth_framepoint_generator_parameters);
 
     //ds allocate and configure the aligner for motion estimation
     UVDAligner* pose_optimizer = new UVDAligner();
@@ -122,14 +126,12 @@ namespace proslam {
     tracker->setDepthCamera(camera_right_);
     tracker->setFramePointGenerator(framepoint_generator);
     tracker->setAligner(pose_optimizer);
-    tracker->setup();
-    tracker->setMinimumNumberOfLandmarksToTrack(50);
+    tracker->configure(_parameters->depth_tracker_parameters);
     _tracker = tracker;
     _tracker->setWorldMap(_world_map);
 
     //gg adjust threshold for depth mode/indoor loop closing
     _relocalizer->aligner()->setMaximumErrorKernel(0.01);
-    _relocalizer->setMinimumNumberOfMatchesPerLandmark(100);
   }
 
   //ds attempts to load the camera configuration based on the current input setting
@@ -137,8 +139,8 @@ namespace proslam {
 
     //ds configure message synchronizer
     std::vector<std::string> camera_topics_synchronized(0);
-    camera_topics_synchronized.push_back(Parameter::CommandLine::topic_image_left);
-    camera_topics_synchronized.push_back(Parameter::CommandLine::topic_image_right);
+    camera_topics_synchronized.push_back(_parameters->command_line_parameters->topic_image_left);
+    camera_topics_synchronized.push_back(_parameters->command_line_parameters->topic_image_right);
     _synchronizer.setTimeInterval(0.001);
     _synchronizer.setTopics(camera_topics_synchronized);
 
@@ -150,7 +152,7 @@ namespace proslam {
       sensor_msg->untaint();
 
       //ds check for the two set topics
-      if (sensor_msg->topic() == Parameter::CommandLine::topic_image_left) {
+      if (sensor_msg->topic() == _parameters->command_line_parameters->topic_image_left) {
         srrg_core::PinholeImageMessage* message_image_left  = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_msg);
 
         //ds allocate a new camera
@@ -158,7 +160,7 @@ namespace proslam {
                                          message_image_left->image().cols,
                                          message_image_left->cameraMatrix().cast<real>(),
                                          message_image_left->offset().cast<real>());
-      } else if (sensor_msg->topic() == Parameter::CommandLine::topic_image_right) {
+      } else if (sensor_msg->topic() == _parameters->command_line_parameters->topic_image_right) {
         srrg_core::PinholeImageMessage* message_image_right  = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_msg);
 
         //ds allocate a new camera
@@ -179,15 +181,17 @@ namespace proslam {
     //ds terminate on failure
     if (_camera_left == 0) {
       std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: left camera not set" << std::endl;
+      delete _parameters;
       exit(0);
     }
     if (_camera_right == 0) {
       std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: right camera not set" << std::endl;
+      delete _parameters;
       exit(0);
     }
 
     //ds check if we have to modify the cameras - if stereo from txt_io
-    if (Parameter::CommandLine::tracker_mode == Parameter::TrackerMode::Stereo) {
+    if (_parameters->command_line_parameters->tracker_mode == CommandLineParameters::TrackerMode::RGB_STEREO) {
 
       //ds reconstruct projection matrix from camera matrices (encoded in txt_io)
       ProjectionMatrix projection_matrix(ProjectionMatrix::Identity());
@@ -199,6 +203,7 @@ namespace proslam {
       //ds sanity check
       if ((_camera_left->cameraMatrix()-_camera_right->cameraMatrix()).squaredNorm() != 0) {
         std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: provided mismatching camera matrices" << std::endl;
+        delete _parameters;
         exit(0);
       }
 
@@ -218,13 +223,13 @@ namespace proslam {
     if (!_tracker) {
 
       //ds allocate the tracker module with the given cameras
-      switch (Parameter::CommandLine::tracker_mode){
-        case Parameter::TrackerMode::Stereo: {
-          _makeStereoTracker(camera_left_, camera_right_);
+      switch (_parameters->command_line_parameters->tracker_mode){
+        case CommandLineParameters::TrackerMode::RGB_STEREO: {
+          _createStereoTracker(camera_left_, camera_right_);
           break;
         }
-        case Parameter::TrackerMode::Depth: {
-          _makeDepthTracker(camera_left_, camera_right_);
+        case CommandLineParameters::TrackerMode::RGB_DEPTH: {
+          _createDepthTracker(camera_left_, camera_right_);
           break;
         }
         default: {
@@ -242,7 +247,7 @@ namespace proslam {
 
   //ds initializes gui components
   void SLAMAssembly::initializeGUI(QApplication* ui_server_) {
-    if (Parameter::CommandLine::option_use_gui && _world_map) {
+    if (_parameters->command_line_parameters->option_use_gui && _world_map) {
       _ui_server = ui_server_;
       _viewer_input_images = new ViewerInputImages(_world_map);
       _context_viewer_bird = new ViewerOutputMap(_world_map, 0.1, "output: map (bird view)");
@@ -258,7 +263,7 @@ namespace proslam {
       _context_viewer_bird->show();
 
       //ds configure custom top viewer if requested
-      if (Parameter::CommandLine::option_show_top_viewer) {
+      if (_parameters->command_line_parameters->option_show_top_viewer) {
         _context_viewer_top = new ViewerOutputMap(_world_map, 1, "output: map (top view)");
         _context_viewer_top->setCameraLeftToRobot(_camera_left->cameraToRobot());
         TransformMatrix3D center_for_kitti_sequence_00;
@@ -273,12 +278,13 @@ namespace proslam {
       }
 
       _viewer_input_images->setTracker(_tracker);
+      _is_gui_running = true;
     }
   }
 
   //ds updated gui components
-  void SLAMAssembly::updateGUI() {
-    if (Parameter::CommandLine::option_use_gui) {
+  bool SLAMAssembly::updateGUI() {
+    if (_parameters->command_line_parameters->option_use_gui) {
       if (_optimizer->numberOfOptimizations() > 0) {
         _context_viewer_bird->setIsOpen(false);
         if (_context_viewer_top) {
@@ -294,6 +300,9 @@ namespace proslam {
         _context_viewer_top->updateGL();
       }
       _ui_server->processEvents();
+      return _is_gui_running;
+    } else {
+      return true;
     }
   }
 
@@ -304,7 +313,7 @@ namespace proslam {
     if (_is_gui_running && let_user_close_) {
 
       //ds exit in viewer if available
-      if (Parameter::CommandLine::option_use_gui && _context_viewer_bird->isVisible()) {
+      if (_parameters->command_line_parameters->option_use_gui && _context_viewer_bird->isVisible()) {
         return _ui_server->exec();
       } else {
         return 0;
@@ -318,7 +327,7 @@ namespace proslam {
   void SLAMAssembly::playbackMessageFile() {
 
     //ds restart stream
-    _sensor_message_reader.open(Parameter::CommandLine::filename_dataset);
+    _sensor_message_reader.open(_parameters->command_line_parameters->filename_dataset);
     _robot_to_world_ground_truth_poses.clear();
 
     //ds frame counts
@@ -334,15 +343,15 @@ namespace proslam {
 
     //ds start playback
     srrg_core::BaseMessage* base_message = 0;
-    while ((base_message = _sensor_message_reader.readMessage()) && _is_gui_running) {
+    while ((base_message = _sensor_message_reader.readMessage())) {
       srrg_core::BaseSensorMessage* sensor_msg = dynamic_cast<srrg_core::BaseSensorMessage*>(base_message);
       assert(sensor_msg != 0);
       sensor_msg->untaint();
 
       //ds add to synchronizer
-      if (sensor_msg->topic() == Parameter::CommandLine::topic_image_left) {
+      if (sensor_msg->topic() == _parameters->command_line_parameters->topic_image_left) {
         _synchronizer.putMessage(sensor_msg);
-      } else if (sensor_msg->topic() == Parameter::CommandLine::topic_image_right) {
+      } else if (sensor_msg->topic() == _parameters->command_line_parameters->topic_image_right) {
         _synchronizer.putMessage(sensor_msg);
       } else {
         delete sensor_msg;
@@ -363,16 +372,16 @@ namespace proslam {
           intensity_image_left_rectified = message_image_left->image();
         }
         cv::Mat intensity_image_right_rectified;
-        if (Parameter::CommandLine::tracker_mode == Parameter::TrackerMode::Stereo && message_image_right->image().type() == CV_8UC3) {
+        if (_parameters->command_line_parameters->tracker_mode == CommandLineParameters::TrackerMode::RGB_STEREO && message_image_right->image().type() == CV_8UC3) {
           cvtColor(message_image_right->image(), intensity_image_right_rectified, CV_BGR2GRAY);
         } else {
           intensity_image_right_rectified = message_image_right->image();
         }
 
         //ds preprocess the images if desired
-        if (Parameter::CommandLine::option_equalize_histogram) {
+        if (_parameters->command_line_parameters->option_equalize_histogram) {
           cv::equalizeHist(intensity_image_left_rectified, intensity_image_left_rectified);
-          if (Parameter::CommandLine::tracker_mode == Parameter::TrackerMode::Stereo) {
+          if (_parameters->command_line_parameters->tracker_mode == CommandLineParameters::TrackerMode::RGB_STEREO) {
             cv::equalizeHist(intensity_image_right_rectified, intensity_image_right_rectified);
           }
         }
@@ -380,7 +389,7 @@ namespace proslam {
         //ds check if first frame and odometry is available
         if (_world_map->frames().size() == 0 && message_image_left->hasOdom()) {
           _world_map->setRobotToWorld(message_image_left->odometry().cast<real>()*robot_to_camera_left);
-          if (Parameter::CommandLine::option_use_gui) {
+          if (_parameters->command_line_parameters->option_use_gui) {
             _context_viewer_bird->setWorldToRobotOrigin(_world_map->robotToWorld().inverse());
           }
         }
@@ -391,7 +400,7 @@ namespace proslam {
         //ds progress SLAM with the new images
         process(intensity_image_left_rectified,
                 intensity_image_right_rectified,
-                message_image_left->hasOdom() && Parameter::CommandLine::option_use_odometry,
+                message_image_left->hasOdom() && _parameters->command_line_parameters->option_use_odometry,
                 message_image_left->odometry().cast<real>());
 
         //ds record ground truth history for error computation
@@ -408,7 +417,7 @@ namespace proslam {
           const double total_duration_seconds_current = srrg_core::getTime()-time_start_seconds;
 
           //ds runtime info - depending on set modes
-          if (Parameter::CommandLine::option_use_relocalization) {
+          if (_parameters->command_line_parameters->option_use_relocalization) {
             std::printf("processed frames: %5lu|landmarks: %6lu|local maps: %4lu (%3.2f)|closures: %3lu (%3.2f)|current fps: %5.2f (%3lu/%3.2fs)\n",
                         number_of_processed_frames_total,
                         _world_map->landmarks().size(),
@@ -433,7 +442,11 @@ namespace proslam {
           number_of_processed_frames_current = 0;
         }
         _synchronizer.reset();
-        updateGUI();
+
+        //ds update gui and check if termination is requested
+        if (!updateGUI() ){
+          break;
+        }
       }
     }
     _duration_total_seconds = srrg_core::getTime()-time_start_seconds_first;
@@ -456,14 +469,14 @@ namespace proslam {
     _tracker->setIntensityImageLeft(&intensity_image_left_);
 
     //ds depending on tracking mode
-    switch (Parameter::CommandLine::tracker_mode){
-      case Parameter::TrackerMode::Stereo: {
+    switch (_parameters->command_line_parameters->tracker_mode){
+      case CommandLineParameters::TrackerMode::RGB_STEREO: {
         StereoTracker* stereo_tracker = dynamic_cast<StereoTracker*>(_tracker);
         assert(stereo_tracker);
         stereo_tracker->setIntensityImageRight(&intensity_image_right_);
         break;
       }
-      case Parameter::TrackerMode::Depth: {
+      case CommandLineParameters::TrackerMode::RGB_DEPTH: {
         DepthTracker* depth_tracker = dynamic_cast<DepthTracker*>(_tracker);
         assert(depth_tracker);
         depth_tracker->setDepthImageRight(&intensity_image_right_);
@@ -481,7 +494,7 @@ namespace proslam {
     _tracker->compute();
 
     //ds check if relocalization is desired
-    if (Parameter::CommandLine::option_use_relocalization) {
+    if (_parameters->command_line_parameters->option_use_relocalization) {
 
       //ds if we have a valid frame (not the case after the track is lost)
       if (_world_map->currentFrame()) {
@@ -490,7 +503,7 @@ namespace proslam {
         if (_world_map->createLocalMap()) {
 
           //ds trigger relocalization
-          _relocalizer->init(_world_map->currentLocalMap());
+          _relocalizer->initialize(_world_map->currentLocalMap());
           _relocalizer->detect();
           _relocalizer->compute();
 
@@ -504,7 +517,7 @@ namespace proslam {
                                          closure->local_map_reference,
                                          closure->transform_frame_query_to_frame_reference,
                                          closure->icp_inlier_ratio);
-              if (Parameter::CommandLine::option_use_gui) {
+              if (_parameters->command_line_parameters->option_use_gui) {
                 for (const LandmarkCorrespondence* match: closure->correspondences) {
                   _world_map->landmarks().get(match->query->landmark->identifier())->setIsInLoopClosureQuery(true);
                   _world_map->landmarks().get(match->reference->landmark->identifier())->setIsInLoopClosureReference(true);
@@ -598,14 +611,14 @@ namespace proslam {
                                              << " (" << _tracker->framepointGenerator()->getTimeConsumptionSeconds_descriptor_extraction() << "s)" << std::endl;
 
     //ds display further information depending on tracking mode
-    switch (Parameter::CommandLine::tracker_mode){
-      case Parameter::TrackerMode::Stereo: {
+    switch (_parameters->command_line_parameters->tracker_mode){
+      case CommandLineParameters::TrackerMode::RGB_STEREO: {
         StereoFramePointGenerator* stereo_framepoint_generator = dynamic_cast<StereoFramePointGenerator*>(_tracker->framepointGenerator());
         std::cerr << "  stereo keypoint search: " << stereo_framepoint_generator->getTimeConsumptionSeconds_point_triangulation()/_duration_total_seconds
                   << " (" << stereo_framepoint_generator->getTimeConsumptionSeconds_point_triangulation() << "s)" << std::endl;
         break;
       }
-      case Parameter::TrackerMode::Depth: {
+      case CommandLineParameters::TrackerMode::RGB_DEPTH: {
         break;
       }
       default: {

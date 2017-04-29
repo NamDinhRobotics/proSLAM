@@ -1,4 +1,4 @@
-CommandLine:
+command_line:
 
   #ds files/topics
   topic_image_left:        /camera_left/image_raw
@@ -8,7 +8,7 @@ CommandLine:
   filename_dataset:
 
   #ds options
-  option_use_gui:               true
+  option_use_gui:               false
   option_use_odometry:          false
   option_use_relocalization:    true
   option_show_top_viewer:       false
@@ -16,30 +16,36 @@ CommandLine:
   option_equalize_histogram:    false
   option_rectify_and_undistort: false
 
-Types:
+frame:
 
-  #ds Frame: this criteria is used for the decision of creating a landmark or not from a track of framepoints
+  #ds this criteria is used for the decision of creating a landmark or not from a track of framepoints
   minimum_track_length_for_landmark_creation: 3
 
-  #ds Landmark: minimum number of measurements before optimization is filtering
+landmark:
+
+  #ds minimum number of measurements before optimization is filtering
   minimum_number_of_forced_updates: 2
 
-  #ds Landmark: maximum allowed measurement divergence
+  #ds maximum allowed measurement divergence
   maximum_translation_error_to_depth_ratio: 1
 
-  #ds LocalMap: target minimum number of landmarks for local map creation
-  minimum_number_of_landmarks: 5
+local_map:
 
-  #ds WorldMap: key frame generation properties
+  #ds target minimum number of landmarks for local map creation
+  minimum_number_of_landmarks: 5
+  
+world_map:
+
+  #ds key frame generation properties
   minimum_distance_traveled_for_local_map: 0.5
   minimum_degrees_rotated_for_local_map:   0.5
   minimum_number_of_frames_for_local_map:  4
 
-FramepointGeneration:
+base_framepoint_generation:
 
   #ds dynamic thresholds for feature detection
   target_number_of_keypoints_tolerance: 0.1
-  detector_threshold:                   5
+  detector_threshold:                   15
   detector_threshold_minimum:           5
   detector_threshold_step_size:         5
 
@@ -49,12 +55,20 @@ FramepointGeneration:
   matching_distance_tracking_threshold_minimum: 15
   matching_distance_tracking_step_size:         1
 
+stereo_framepoint_generation:
+
   #ds stereo: triangulation
   maximum_matching_distance_triangulation: 50
   baseline_factor:                         50
   minimum_disparity_pixels:                1
 
-MotionEstimation:
+depth_framepoint_generation:
+
+  #ds depth sensor configuration
+  maximum_depth_near_meters: 5
+  maximum_depth_far_meters:  20
+
+base_tracking:
 
   #ds track lost criteria
   minimum_number_of_landmarks_to_track: 5
@@ -72,7 +86,7 @@ MotionEstimation:
   bin_size_pixels:         16
   ratio_keypoints_to_bins: 1
 
-Relocalization:
+relocalization:
 
   #ds minimum query interspace
   preliminary_minimum_interspace_queries: 5
@@ -81,12 +95,11 @@ Relocalization:
   preliminary_minimum_matching_ratio: 0.1
 
   #ds minimum absolute number of matches
-  minimum_number_of_matches_per_landmark: 100
+  minimum_number_of_matches_per_landmark: 20
 
   #ds correspondence retrieval
   minimum_matches_per_correspondence: 0
 
-MapOptimization:
+map_optimization:
 
-Visualization:
-
+visualization:

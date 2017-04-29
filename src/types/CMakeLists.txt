@@ -5,7 +5,7 @@ add_library(srrg_proslam_types_library
   frame_point.cpp
   landmark.cpp
   camera.cpp
-  parameter.cpp
+  parameters.cpp
 )
 
 target_link_libraries(srrg_proslam_types_library

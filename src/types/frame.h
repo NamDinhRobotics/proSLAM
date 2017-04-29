@@ -1,5 +1,5 @@
 #pragma once
-#include "parameter.h"
+#include "parameters.h"
 #include "camera.h"
 #include "frame_point.h"
 

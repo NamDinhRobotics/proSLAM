@@ -7,27 +7,19 @@ namespace proslam {
                                                           _baseline_pixelsmeters(0),
                                                           _baseline_meters(0),
                                                           _baseline_factor(50),
-                                                          _minimum_disparity_pixels(1) {
+                                                          _minimum_disparity_pixels(1),
+                                                          _parameters(0) {
     std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|construced" << std::endl;
   }
 
   //ds the stereo camera setup must be provided
-  void StereoFramePointGenerator::setup(){
+  void StereoFramePointGenerator::configure(BaseFramepointGeneratorParameters* parameters_){
     std::cerr << "StereoFramePointGenerator::setup|configuring" << std::endl;
+    _parameters = dynamic_cast<StereoFramePointGeneratorParameters*>(parameters_);
     assert(_camera_right);
 
-    //ds configure base
-    _detector_threshold                           = 15;
-    _detector_threshold_minimum                   = 5;
-    _detector_threshold_step_size                 = 5;
-    _matching_distance_tracking_threshold         = 50;
-    _matching_distance_tracking_threshold_maximum = 50;
-    _matching_distance_tracking_threshold_minimum = 15;
-    _matching_distance_tracking_step_size         = 1;
-    _target_number_of_keypoints_tolerance         = 0.1;
-
     //ds integrate configuration
-    BaseFramePointGenerator::setup();
+    BaseFramePointGenerator::configure(parameters_);
 
     //ds configure current
     _baseline_pixelsmeters     = _camera_right->projectionMatrix()(0,3);
@@ -41,7 +33,6 @@ namespace proslam {
     std::cerr << "StereoFramePointGenerator::setup|baseline (m): " << _baseline_meters << std::endl;
     std::cerr << "StereoFramePointGenerator::setup|maximum depth tracking close (m): " << _maximum_depth_near_meters << std::endl;
     std::cerr << "StereoFramePointGenerator::setup|maximum depth tracking far (m): " << _maximum_depth_far_meters << std::endl;
-    std::cerr << "StereoFramePointGenerator::setup|maximum matching distance triangulation: " << _maximum_matching_distance_triangulation << std::endl;
     std::cerr << "StereoFramePointGenerator::setup|configured" << std::endl;
   }
 

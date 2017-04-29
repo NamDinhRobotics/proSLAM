@@ -14,10 +14,10 @@ namespace proslam {
     DepthTracker();
 
     //gg
-    virtual void setup();
+    virtual void configure(BaseTrackerParameters* parameters_);
 
     //ds dynamic cleanup
-    ~DepthTracker();
+    virtual ~DepthTracker();
     
   //ds functionality
   public:
@@ -50,5 +50,10 @@ namespace proslam {
 
     //ds specified generator instance
     DepthFramePointGenerator* _depth_framepoint_generator;
+
+  private:
+
+    //! @brief configurable parameters
+    DepthTrackerParameters* _parameters;
   };
 }

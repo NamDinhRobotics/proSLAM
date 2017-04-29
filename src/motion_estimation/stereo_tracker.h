@@ -14,10 +14,10 @@ namespace proslam {
     StereoTracker();
 
     //ds configuration function
-    virtual void setup();
+    virtual void configure(BaseTrackerParameters* parameters_);
 
     //ds dynamic cleanup
-    ~StereoTracker();
+    virtual ~StereoTracker();
 
   //ds functionality
   public:
@@ -51,5 +51,10 @@ namespace proslam {
 
     //ds specified generator instance
     StereoFramePointGenerator* _stereo_framepoint_generator;
+
+  private:
+
+    //! @brief configurable parameters
+    StereoTrackerParameters* _parameters;
   };
 }

@@ -15,7 +15,7 @@ namespace proslam {
     BaseTracker();
 
     //gg to be called once all construction parameters are set
-    virtual void setup();
+    virtual void configure(BaseTrackerParameters* parameters_);
 
     //ds dynamic cleanup
     virtual ~BaseTracker();
@@ -44,10 +44,7 @@ namespace proslam {
     const Count& totalNumberOfTrackedPoints() const {return _total_number_of_tracked_points;}
     const Count& totalNumberOfLandmarksClose() const {return _total_number_of_landmarks_close;}
     const Count& totalNumberOfLandmarksFar() const {return _total_number_of_landmarks_far;}
-    void setPixelDistanceTrackingMaximum(const int32_t& pixel_distance_tracking_maximum_) {_maximum_threshold_distance_tracking_pixels = pixel_distance_tracking_maximum_;}
-    void setPixelDistanceTrackingMinimum(const int32_t& pixel_distance_tracking_minimum_) {_minimum_threshold_distance_tracking_pixels = pixel_distance_tracking_minimum_;}
-    void setMinimumNumberOfLandmarksToTrack(Count minimum_number_of_landmarks_to_track_) {_minimum_number_of_landmarks_to_track=minimum_number_of_landmarks_to_track_;}
-    const Count& binSize() const {return _bin_size_pixels;}
+    const Count& binSize() const {return _parameters->bin_size_pixels;}
     const Count& numberOfColsBin() const {return _number_of_cols_bin;}
     const Count& numberOfRowsBin() const {return _number_of_rows_bin;}
 
@@ -86,7 +83,6 @@ namespace proslam {
     Frame::Status _status_previous = Frame::Localizing;
 
     //ds running variables and buffered values
-    Count _minimum_number_of_landmarks_to_track = 5;
     Count _number_of_tracked_landmarks_far      = 0;
     Count _number_of_tracked_landmarks_close    = 0;
     Count _number_of_potential_points           = 0;
@@ -105,11 +101,7 @@ namespace proslam {
     BaseFramePointGenerator* _framepoint_generator;
 
     //ds framepoint tracking configuration
-    int32_t _pixel_distance_tracking_threshold;          //ds current pixel distance threshold for framepoint tracking - lower means higher precision
-    int32_t _minimum_threshold_distance_tracking_pixels;
-    int32_t _maximum_threshold_distance_tracking_pixels;
-    int32_t _range_point_tracking;                       //ds pixel search range width for point vicinity tracking
-    int32_t _maximum_distance_tracking_pixels;           //ds maximum allowed pixel distance between image coordinates prediction and actual detection
+    int32_t _pixel_distance_tracking_threshold;
 
     //ds pose solving
     TransformMatrix3D _motion_previous_to_current_robot;
@@ -118,18 +110,20 @@ namespace proslam {
     Count _number_of_lost_points           = 0;
     Count _number_of_lost_points_recovered = 0;
     std::vector<FramePoint*> _lost_points;
-    Count _maximum_number_of_landmark_recoveries;
 
     //ds buffers
     std::vector<ImageCoordinates> _projected_image_coordinates_left;
 
     //ds feature density regularization
-    Count _bin_size_pixels;
     Count _number_of_rows_bin;
     Count _number_of_cols_bin;
     BaseFramePointGenerator::FramePointMatrix _bin_map_left;
-    real _ratio_keypoints_to_bins;
     bool _enable_keypoint_binning;
+
+  private:
+
+    //! @brief configurable parameters
+    BaseTrackerParameters* _parameters;
 
     //ds informative only
     CREATE_CHRONOMETER(tracking)

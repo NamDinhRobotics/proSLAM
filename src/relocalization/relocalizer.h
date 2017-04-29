@@ -26,13 +26,14 @@ namespace proslam {
   public:
 
     Relocalizer();
-    ~Relocalizer();
+    virtual void configure(RelocalizerParameters* parameters_);
+    virtual ~Relocalizer();
 
   //ds functionality
   public:
 
     //ds initialize relocalization module for a new local map
-    void init(const LocalMap* local_map_);
+    void initialize(const LocalMap* local_map_);
 
     //ds retrieve loop closure candidates for the given cloud
     void detect();
@@ -49,11 +50,6 @@ namespace proslam {
     inline const ClosurePointerVector& closures() const {return _closures;}
     void setClosures(ClosurePointerVector& closures_) {_closures = closures_;}
     void clear();
-
-    void setPreliminaryMinimumInterspaceQueries(const Count& preliminary_minimum_interspace_queries_) {_preliminary_minimum_interspace_queries = preliminary_minimum_interspace_queries_;}
-    void setPreliminaryMinimumMatchingRatio(const real& preliminary_minimum_matching_ratio_) {_preliminary_minimum_matching_ratio = preliminary_minimum_matching_ratio_;}
-    void setMinimumNumberOfMatchesPerLandmark(const Count& minimum_number_of_matches_per_landmark_) {_minimum_number_of_matches_per_landmark = minimum_number_of_matches_per_landmark_;}
-
     XYZAligner* aligner() {return _aligner;}
 
   //ds helpers
@@ -76,21 +72,16 @@ namespace proslam {
     //ds frame-wise descriptor point clouds
     std::vector<Query*> _query_history;
 
-    //ds minimum query interspace
-    Count _preliminary_minimum_interspace_queries = 5;
-
-    //ds minimum relative number of matches
-    real _preliminary_minimum_matching_ratio = 0.1;
-
-    //ds minimum absolute number of matches
-    Count _minimum_number_of_matches_per_landmark = 100;
-
     //ds correspondence retrieval
     std::set<Identifier> _mask_id_references_for_correspondences;
-    Count _minimum_matches_per_correspondence = 0;
 
     //ds local map to local map alignment
     XYZAligner* _aligner = 0;
+
+  private:
+
+    //! @brief configurable parameters
+    RelocalizerParameters* _parameters;
 
     //ds module time consumption
     CREATE_CHRONOMETER(overall)

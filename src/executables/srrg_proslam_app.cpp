@@ -8,14 +8,17 @@ int32_t main(int32_t argc_, char** argv_) {
   //ds enable opencv2 optimization
   cv::setUseOptimized(true);
 
-  //ds obtain configuration and store it in the global parameter server (singleton)
-  proslam::Parameter::parseParametersFromCommandLine(argc_, argv_);
+  //ds allocate the complete parameter collection with default values
+  proslam::ParameterCollection* parameters = new proslam::ParameterCollection();
+
+  //ds parse parameters from command line (optionally setting the parameter values)
+  parameters->parseFromCommandLine(argc_, argv_);
 
   //ds print loaded configuration
-  proslam::Parameter::printCommandLineParameters();
+  parameters->command_line_parameters->print();
 
   //ds allocate SLAM system (has internal access to parameter server)
-  proslam::SLAMAssembly slam_system;
+  proslam::SLAMAssembly slam_system(parameters);
 
   //ds initialize system for txt_io
   slam_system.initializeMessageFile();
@@ -37,6 +40,9 @@ int32_t main(int32_t argc_, char** argv_) {
 
   //ds save trajectory to disk
   slam_system.worldMap()->writeTrajectory("trajectory.txt");
+
+  //ds clean up parameters (since not used in GUI)
+  delete parameters;
 
   //ds exit in GUI
   return slam_system.closeGUI();

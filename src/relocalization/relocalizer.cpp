@@ -5,13 +5,20 @@
 namespace proslam {
   using namespace srrg_core;
 
-  Relocalizer::Relocalizer(): _query(0), _aligner(new XYZAligner()) {
-    std::cerr << "Relocalizer::Relocalizer|constructing" << std::endl;
+  Relocalizer::Relocalizer(): _query(0),
+                              _aligner(new XYZAligner()),
+                              _parameters(0) {
+    std::cerr << "Relocalizer::Relocalizer|constructed" << std::endl;
+  }
+
+  void Relocalizer::configure(RelocalizerParameters* parameters_) {
+    std::cerr << "Relocalizer::Relocalizer|configuring" << std::endl;
+    _parameters = parameters_;
     clear();
     _query_history.clear();
     assert(_query_history_queue.empty());
     assert(_aligner != 0);
-    std::cerr << "Relocalizer::Relocalizer|constructed" << std::endl;
+    std::cerr << "Relocalizer::Relocalizer|configured" << std::endl;
   }
 
   Relocalizer::~Relocalizer() {
@@ -50,7 +57,7 @@ namespace proslam {
   }
 
   //ds initialize relocalization module for a new local map
-  void Relocalizer::init(const LocalMap* local_map_) {
+  void Relocalizer::initialize(const LocalMap* local_map_) {
     CHRONOMETER_START(overall)
     _query = new Query(local_map_);
     CHRONOMETER_STOP(overall)
@@ -86,7 +93,7 @@ namespace proslam {
       
       
       //ds skip the candidate if the minimum number of matches is not guaranteed
-      if (reference->hbst_tree->getMatchingRatioFlat(_query->matchables) < _preliminary_minimum_matching_ratio) {
+      if (reference->hbst_tree->getMatchingRatioFlat(_query->matchables) < _parameters->preliminary_minimum_matching_ratio) {
         continue;
       }
 
@@ -124,7 +131,7 @@ namespace proslam {
       const real relative_number_of_matches = static_cast<real>(absolute_number_of_matches)/_query->matchables.size();
 
       //ds if the result quality is sufficient
-      if (matches_per_landmark.size() > _minimum_number_of_matches_per_landmark) {
+      if (matches_per_landmark.size() > _parameters->minimum_number_of_matches_per_landmark) {
 
         //ds correspondences
         CorrespondencePointerVector correspondences;
@@ -172,7 +179,7 @@ namespace proslam {
       _query_history_queue.push(_query);
 
       //ds check if we can pop the first element of the buffer into our history
-      if (_query_history_queue.size() > _preliminary_minimum_interspace_queries) {
+      if (_query_history_queue.size() > _parameters->preliminary_minimum_interspace_queries) {
         _query_history.push_back(_query_history_queue.front());
         _query_history_queue.pop();
       }
@@ -218,7 +225,7 @@ namespace proslam {
       }
     }
 
-    if(match_best != 0 && count_best > _minimum_matches_per_correspondence ) {
+    if(match_best != 0 && count_best > _parameters->minimum_matches_per_correspondence ) {
 
       //ds block matching against this point by adding it to the mask
       _mask_id_references_for_correspondences.insert(match_best->reference->landmark->identifier());

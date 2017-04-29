@@ -2,23 +2,24 @@
 
 namespace proslam {
 
-  DepthFramePointGenerator::DepthFramePointGenerator(): _camera_right(0) {
+  DepthFramePointGenerator::DepthFramePointGenerator(): _camera_right(0),
+                                                        _parameters(0) {
     std::cerr << "DepthFramePointGenerator::DepthFramePointGenerator|constructed" << std::endl;
   }
 
   //ds the stereo camera setup must be provided
-  void DepthFramePointGenerator::setup(){
+  void DepthFramePointGenerator::configure(BaseFramepointGeneratorParameters* parameters_){
+    std::cerr << "DepthFramePointGenerator::DepthFramePointGenerator|configuring" << std::endl;
     assert(_camera_right);
+    _parameters = dynamic_cast<DepthFramePointGeneratorParameters*>(parameters_);
 
-    _target_number_of_keypoints=700;
-   BaseFramePointGenerator::setup();
-   _maximum_depth_near_meters = 6;
-   _maximum_depth_far_meters = 30;
-   
+    //ds update base
+    _maximum_depth_near_meters = _parameters->maximum_depth_near_meters;
+    _maximum_depth_far_meters  = _parameters->maximum_depth_far_meters;
+    BaseFramePointGenerator::configure(parameters_);
+
     //ds info
-    std::cerr << "DepthFramePointGenerator::DepthFramePointGenerator|maximum depth tracking close (m): " << _maximum_depth_near_meters << std::endl;
-    std::cerr << "DepthFramePointGenerator::DepthFramePointGenerator|maximum depth tracking far (m): " << _maximum_depth_far_meters << std::endl;
-    std::cerr << "DepthFramePointGenerator::DepthFramePointGenerator|constructed" << std::endl;
+    std::cerr << "DepthFramePointGenerator::DepthFramePointGenerator|configured" << std::endl;
   }
 
   //ds cleanup of dynamic structures

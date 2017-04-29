@@ -13,7 +13,7 @@ namespace proslam {
     StereoFramePointGenerator();
 
     //gg to be called after constructor and parameters are set
-    virtual void setup();
+    virtual void configure(BaseFramepointGeneratorParameters* parameters_);
     
     //ds cleanup of dynamic structures
     virtual ~StereoFramePointGenerator();
@@ -58,6 +58,11 @@ namespace proslam {
     std::vector<cv::KeyPoint> _keypoints_right;
     cv::Mat _descriptors_right;
     std::vector<KeypointWithDescriptor> _keypoints_with_descriptors_right;
+
+  private:
+
+    //! @brief configurable parameters
+    StereoFramePointGeneratorParameters* _parameters;
 
     //ds informative only
     CREATE_CHRONOMETER(point_triangulation)

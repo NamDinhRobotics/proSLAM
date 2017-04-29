@@ -17,7 +17,7 @@ namespace proslam {
   public:
 
     //ds default constructor - already allocating required default objects
-    SLAMAssembly();
+    SLAMAssembly(ParameterCollection* parameters_);
 
     //ds default destructor
     ~SLAMAssembly();
@@ -38,7 +38,7 @@ namespace proslam {
     void initializeGUI(QApplication* ui_server_);
 
     //ds updated gui components
-    void updateGUI();
+    bool updateGUI();
 
     //ds clean gui components
     int32_t closeGUI(const bool& let_user_close_ = true);
@@ -72,12 +72,18 @@ namespace proslam {
     ViewerInputImages* viewerInputImages() {return _viewer_input_images;}
     const bool& isGUIRunning() const {return _is_gui_running;}
 
+  //ds helpers:
+  protected:
+
+    void _createStereoTracker(Camera* camera_left_, Camera* camera_right_);
+
+    void _createDepthTracker(const Camera* camera_left_, const Camera* camera_right_);
+
   //ds SLAM modules
   protected:
 
-    void _makeStereoTracker(Camera* camera_left_, Camera* camera_right_);
-
-    void _makeDepthTracker(const Camera* camera_left_, const Camera* camera_right_);
+    //! @brief all configurable system parameters
+    ParameterCollection* _parameters;
 
     //ds the SLAM map, containing landmarks and trajectory
     WorldMap* _world_map;
