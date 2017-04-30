@@ -5,10 +5,9 @@ namespace proslam {
 
   //ds this class is a container for all correspondence objects between 2 local maps (produced by the relocalization module)
   class LocalMapCorrespondence {
-  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds object handling
-  public:
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds ctor
     LocalMapCorrespondence(const LocalMap* local_map_query_,

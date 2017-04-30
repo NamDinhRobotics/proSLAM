@@ -28,8 +28,8 @@ namespace proslam {
       _omega.setIdentity();
 
       //ds compute error based on items: local map merging
-      const PointCoordinates& measured_point_in_reference = correspondence->reference->robot_coordinates;
-      const PointCoordinates sampled_point_in_reference   = _current_to_reference*correspondence->query->robot_coordinates;
+      const PointCoordinates& measured_point_in_reference = correspondence->reference->coordinates_in_local_map;
+      const PointCoordinates sampled_point_in_reference   = _current_to_reference*correspondence->query->coordinates_in_local_map;
       const Vector3 error                                 = sampled_point_in_reference-measured_point_in_reference;
 
       //ds adjust omega to inverse depth value (the further away the point, the less weight)

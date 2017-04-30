@@ -33,18 +33,27 @@ namespace proslam {
     void resetWindowForLocalMapCreation();
 
     //ds adds a loop closure constraint between 2 local maps
-    void addLoopClosure(LocalMap* query_, const LocalMap* reference_, const TransformMatrix3D& transform_query_to_reference_, const real& omega_ = 1);
+    void addCorrespondence(LocalMap* query_, const LocalMap* reference_, const TransformMatrix3D& transform_query_to_reference_, const real& omega_ = 1);
 
     //ds dump trajectory to file (in KITTI benchmark format: 4x4 isometries per line)
     void writeTrajectory(const std::string& filename_ = "") const;
 
+    //! @brief this function does what you think it does
+    //! @param[in] frame_ frame at which the track was broken
+    void breakTrack(const Frame* frame_);
+
+    //! @brief this function does what you think it does
+    //! @param[in] frame_ frame at which the track was found again
+    void setTrack(Frame* frame_);
+
   //ds getters/setters
   public:
 
-    const Frame* rootFrame() {return _root_frame;}
+    const Frame* rootFrame() const {return _root_frame;}
+    Frame* currentFrame() const {return _current_frame;}
     void setCurrentFrame(Frame* current_frame_) {_current_frame = current_frame_;}
-    const Frame* currentFrame() const {return _current_frame;}
     const Frame* previousFrame() const {return _previous_frame;}
+    void setPreviousFrame(Frame* previous_frame_) {_previous_frame = previous_frame_;}
 
     const LandmarkPointerMap& landmarksInWindowForLocalMap() const {return _landmarks_in_window_for_local_map;}
     LandmarkPointerMap& landmarks() {return _landmarks;}
@@ -80,9 +89,9 @@ namespace proslam {
   protected:
 
     //ds robot path information
-    Frame* _root_frame     = 0;
-    Frame* _current_frame  = 0;
-    Frame* _previous_frame = 0;
+    const Frame* _root_frame = 0;
+    Frame* _current_frame    = 0;
+    Frame* _previous_frame   = 0;
 
     //ds potential landmarks, to be moved into the permanent holder once validated
     LandmarkPointerMap _landmarks_in_window_for_local_map;
@@ -108,6 +117,11 @@ namespace proslam {
     FramePointerVector _frame_queue_for_local_map;
     LocalMap* _current_local_map  = 0;
     LocalMapPointerVector _local_maps;
+
+    //ds track recovery
+    Frame* _last_frame_before_track_break = 0;
+    LocalMap* _last_local_map_before_track_break = 0;
+    LocalMap* _root_local_map = 0;
 
     //ds memory saving options (slightly less processing speed)
     bool _drop_framepoints = false;

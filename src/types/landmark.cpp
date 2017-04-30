@@ -54,6 +54,9 @@ namespace proslam {
       _coordinates += weight_new_measurement/_total_weight*(coordinates_in_world_-_coordinates);
       _are_coordinates_validated = true;
       ++_number_of_updates;
+
+      //ds update state
+      _state->world_coordinates = _coordinates;
     } else {
 
       //ds discard measurement completely

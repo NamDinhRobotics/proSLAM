@@ -11,10 +11,9 @@ namespace proslam {
 
   //ds this class encapsulates all data gained from the processing of a stereo image pair
   class Frame {
-  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds exported types
-  public:
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds defines one of the two tracker states
     enum Status {Localizing, Tracking};
@@ -29,11 +28,8 @@ namespace proslam {
           const TransformMatrix3D& robot_to_world_,
           const real& maximum_depth_near_);
 
-    //ds deep clone constructor - without incrementing the identifier!
-    Frame(Frame* frame_);
-
     //ds FramePoints cleanup
-    virtual ~Frame() {releasePoints();}
+    ~Frame();
 
     //ds prohibit default construction
     Frame() = delete;
@@ -43,6 +39,9 @@ namespace proslam {
 
     //ds unique identifier for a frame instance (exists once in memory)
     const Identifier& identifier() const {return _identifier;}
+
+    inline const Frame* root() const {return _root;}
+    inline void setRoot(const Frame* root_) {_root = root_;}
 
     inline Frame* previous() {return _previous;}
     inline const Frame* previous() const {return _previous;}
@@ -59,7 +58,7 @@ namespace proslam {
     void setCameraRight(const Camera* camera_) {_camera_right = camera_;}
 
     inline const TransformMatrix3D& robotToWorld() const {return _robot_to_world;}
-    virtual void setRobotToWorld(const TransformMatrix3D& robot_to_world_);
+    void setRobotToWorld(const TransformMatrix3D& robot_to_world_);
     inline const TransformMatrix3D& worldToRobot() const {return _world_to_robot;}
     
     inline const TransformMatrix3D& frameToLocalMap() const {return _frame_to_local_map;}
@@ -95,11 +94,12 @@ namespace proslam {
     //ds the maximum allowed depth for framepoints to become classified as near - everything above is far
     inline const real maximumDepthNear() const {return _maximum_depth_near;}
 
-    void setLocalMap(const LocalMap* local_map_) {_local_map = local_map_;}
+    void setLocalMap(LocalMap* local_map_) {_local_map = local_map_;}
+    inline LocalMap* localMap() {return _local_map;}
     inline const LocalMap* localMap() const {return _local_map;}
     void setFrameToLocalMap(const TransformMatrix3D& frame_to_local_map_) {_frame_to_local_map = frame_to_local_map_; _local_map_to_frame = _frame_to_local_map.inverse();}
-    void setIsLocalMapAnchor(const bool& is_local_map_anchor_) {_is_local_map_anchor = is_local_map_anchor_;}
-    inline const bool isLocalMapAnchor() const {return _is_local_map_anchor;}
+    void setIsLocalMapAnchor(const bool& is_keyframe_) {_is_keyframe = is_keyframe_;}
+    inline const bool isKeyframe() const {return _is_keyframe;}
 
     //ds get a quick overview of the overall point status in the frame
     const Count countPoints(const Count& min_track_length_,
@@ -151,8 +151,8 @@ namespace proslam {
     const real _maximum_depth_near;
 
     //ds link to a local map if the frame is part of one
-    const LocalMap* _local_map = 0;
-    bool _is_local_map_anchor  = false;
+    LocalMap* _local_map;
+    bool _is_keyframe  = false;
 
     //ds access
     friend class WorldMap;
@@ -160,6 +160,7 @@ namespace proslam {
 
     //ds visualization only
     TransformMatrix3D _robot_to_world_ground_truth = TransformMatrix3D::Identity();
+    const Frame* _root;
 
     //ds class specific
     private:
@@ -175,6 +176,5 @@ namespace proslam {
   public:
     Frame* get(const Identifier& identifier_);
     void put(Frame* frame_);
-    void replace(Frame* frame_);
   };
 }

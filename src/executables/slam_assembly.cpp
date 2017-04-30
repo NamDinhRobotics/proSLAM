@@ -73,7 +73,7 @@ namespace proslam {
     if (_parameters->command_line_parameters->option_rectify_and_undistort) {
 
       //ds sanity check
-      if ((camera_left_->projectionMatrix().block<3,3>(0,0)-camera_right_->projectionMatrix().block<3,3>(0,0)).squaredNorm() != 0) {
+      if ((camera_left_->projectionMatrix().block<3,3>(0,0) - camera_right_->projectionMatrix().block<3,3>(0,0)).squaredNorm() != 0) {
         std::cerr << "SLAMAssembly::_makeStereoTracker|ERROR: provided mismatching projection matrices" << std::endl;
         delete _parameters;
         exit(0);
@@ -105,7 +105,7 @@ namespace proslam {
 
     //ds configure relocalizer for stereo vision
     _relocalizer->aligner()->setMaximumErrorKernel(0.5);
-    _relocalizer->aligner()->setMinimumNumberOfInliers(20);
+    _relocalizer->aligner()->setMinimumNumberOfInliers(25);
     _relocalizer->aligner()->setMinimumInlierRatio(0.25);
   }
 
@@ -313,7 +313,7 @@ namespace proslam {
     if (_is_gui_running && let_user_close_) {
 
       //ds exit in viewer if available
-      if (_parameters->command_line_parameters->option_use_gui && _context_viewer_bird->isVisible()) {
+      if (_context_viewer_bird->isVisible()) {
         return _ui_server->exec();
       } else {
         return 0;
@@ -512,11 +512,11 @@ namespace proslam {
             if (closure->is_valid) {
               assert(_world_map->currentLocalMap() == closure->local_map_query);
 
-              //ds add loop closure constraint
-              _world_map->addLoopClosure(_world_map->currentLocalMap(),
-                                         closure->local_map_reference,
-                                         closure->transform_frame_query_to_frame_reference,
-                                         closure->icp_inlier_ratio);
+              //ds add loop closure constraint (also detects if local maps from two different tracks are connected)
+              _world_map->addCorrespondence(_world_map->currentLocalMap(),
+                                            closure->local_map_reference,
+                                            closure->transform_frame_query_to_frame_reference,
+                                            closure->icp_inlier_ratio);
               if (_parameters->command_line_parameters->option_use_gui) {
                 for (const LandmarkCorrespondence* match: closure->correspondences) {
                   _world_map->landmarks().get(match->query->landmark->identifier())->setIsInLoopClosureQuery(true);

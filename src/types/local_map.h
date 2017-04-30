@@ -4,7 +4,7 @@
 namespace proslam {
 
   //ds this class condenses a group of Frame objects into a single Local Map object, which used for relocalization and pose optimization
-  class LocalMap: public Frame {
+  class LocalMap {
 
   //ds exported types
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -27,33 +27,78 @@ namespace proslam {
   //ds object handling
   protected:
 
-    //ds the local map is by the WorldMap and is created from a batch of Frames
-    LocalMap(FramePointerVector& frames_);
+    //! @brief constructs a local map that lives in the reference frame of the consumed frames
+    //! @param[in] frames_ the collection of frames to be contained in the local map (same track)
+    //! @param[in] local_map_root_ the first local map in the same track
+    //! @param[in] local_map_previous_ the preceding local map in the same track
+    LocalMap(FramePointerVector& frames_, LocalMap* local_map_root_ = 0, LocalMap* local_map_previous_ = 0);
 
     //ds cleanup of dynamic structures
-    virtual ~LocalMap();
+    ~LocalMap();
 
     //ds prohibit default construction
     LocalMap() = delete;
 
+  //ds functionality:
+  public:
+
+    //! @brief clears all internal structures (prepares a fresh world map)
+    void clear();
+
+    //! @brief updates local map pose, automatically updating contained Frame poses (pyramid)
+    //! @param[in] local_map_to_world_ the local map pose with respect to the world map coordinate frame
+    void update(const TransformMatrix3D& local_map_to_world_);
+
+    //! @brief adds a loop closure constraint between this local map and a reference map
+    //! @param[in] local_map_reference_ the corresponding reference local map
+    //! @param[in] transform_query_to_reference_ the spatial relation between query and reference (from query to reference)
+    //! @param[in] omega_ 1D information value of the correspondence
+    void addCorrespondence(const LocalMap* local_map_reference_,
+                           const TransformMatrix3D& transform_query_to_reference_,
+                           const real& omega_ = 1) {_closures.push_back(Closure(local_map_reference_, transform_query_to_reference_, omega_));}
+
   //ds getters/setters
   public:
 
-    //ds overridden pose method - automatically updating contained Frame poses
-    virtual void setRobotToWorld(const TransformMatrix3D& robot_to_world_);
+    inline const Identifier& identifier() const {return _identifier;}
 
-    //ds inner data
-    const HBSTNode::BinaryMatchableVector& appearances() const {return _appearances;}
-    const Landmark::StatePointerVector& landmarks() const {return _landmarks;}
+    inline const TransformMatrix3D& localMapToWorld() const {return _local_map_to_world;}
+    inline const TransformMatrix3D& worldToLocalMap() const {return _world_to_local_map;}
+    void setLocalMapToWorld(const TransformMatrix3D& local_map_to_world_) {_local_map_to_world = local_map_to_world_; _world_to_local_map = _local_map_to_world.inverse();}
+    void setWorldToLocalMap(const TransformMatrix3D& world_to_local_map_) {_world_to_local_map = world_to_local_map_; _local_map_to_world = _world_to_local_map.inverse();}
 
-    //ds adds a loop closure constraint between this local map and a reference map
-    void add(const LocalMap* local_map_reference_, const TransformMatrix3D& transform_query_to_reference_, const real& omega_ = 1) {_closures.push_back(Closure(local_map_reference_, transform_query_to_reference_, omega_));}
+    inline LocalMap* root() {return _root;}
+    void setRoot(LocalMap* root_) {_root = root_;}
+    inline LocalMap* previous() {return _previous;}
+    void setPrevious(LocalMap* local_map_) {_previous = local_map_;}
+    inline LocalMap* next() {return _next;}
+    void setNext(LocalMap* local_map_) {_next = local_map_;}
+    inline const Frame* keyframe() const {return _keyframe;}
 
-    //ds returns all active loop closures for this local map
-    const ClosureVector& closures() const {return _closures;}
+    inline const HBSTNode::BinaryMatchableVector& appearances() const {return _appearances;}
+    inline const Landmark::StatePointerVector& landmarks() const {return _landmarks;}
+
+    inline const ClosureVector& closures() const {return _closures;}
 
   //ds attributes
   protected:
+
+    //ds unique identifier for a local map (exists once in memory)
+    const Identifier _identifier;
+
+    //! @brief pose of the local map with respect to the world map coordinate frame
+    TransformMatrix3D _local_map_to_world;
+
+    //! @brief transform to map world geometries into the local map coordinate frame
+    TransformMatrix3D _world_to_local_map;
+
+    //ds links to preceding and subsequent instances
+    LocalMap* _root;
+    LocalMap* _previous;
+    LocalMap* _next;
+
+    //! @brief the keyframe of the local map
+    Frame* _keyframe;
 
     //ds the contained Frames
     FramePointerVector _frames;
@@ -72,6 +117,12 @@ namespace proslam {
 
     //ds informative only
     const Count _minimum_number_of_landmarks = 50;
+
+  //ds class specific
+  private:
+
+    //! @brief inner instance count - incremented upon constructor call (also unsuccessful calls)
+    static Count _instances;
   };
 
   typedef std::vector<LocalMap*> LocalMapPointerVector;

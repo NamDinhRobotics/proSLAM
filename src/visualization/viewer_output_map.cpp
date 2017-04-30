@@ -32,7 +32,7 @@ namespace proslam {
     glMultMatrixf((frame_->robotToWorld()*_camera_left_to_robot).cast<float>().data());
 
     //ds check if the frame is a closed keyframe and highlight it accordingly
-    if (frame_->isLocalMapAnchor() && frame_->localMap()->closures().size() > 0) {
+    if (frame_->isKeyframe() && frame_->localMap()->closures().size() > 0) {
       glColor3f(0.0, 1.0, 0.0);
     } else {
       glColor3f(color_rgb_.x(), color_rgb_.y(), color_rgb_.z());
@@ -152,15 +152,17 @@ namespace proslam {
       drawFrame(frame_for_keyframe, Vector3(0, 0, 1));
     }
 
-    //ds for all frames in the map
-    for (FramePointerMap::const_iterator it = _context->frames().begin(); it != _context->frames().end(); it++){
+    //ds for all frames in the map - obtain the current root
+    const Frame* frame_to_draw = current_frame->root();
+    while (frame_to_draw) {
 
       //ds check if we have a keyframe and drawing is enabled
-      if (it->second->isLocalMapAnchor() && _local_maps_drawn) {
-        drawFrame(it->second, Vector3(0.5, 0.5, 1));
+      if (frame_to_draw->isKeyframe() && _local_maps_drawn) {
+        drawFrame(frame_to_draw, Vector3(0.5, 0.5, 1));
       } else if (_frames_drawn) {
-        drawFrame(it->second, Vector3(0.75, 0.75, 1));
+        drawFrame(frame_to_draw, Vector3(0.75, 0.75, 1));
       }
+      frame_to_draw = frame_to_draw->next();
     }
 
     //ds if desired, draw landmarks into map

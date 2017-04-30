@@ -198,6 +198,10 @@ namespace proslam {
     //! @brief feature density regularization
     Count bin_size_pixels        = 16;
     real ratio_keypoints_to_bins = 1;
+
+    //! @brief pose optimization
+    real minimum_delta_angular_for_movement       = 0.001;
+    real minimum_delta_translational_for_movement = 0.01;
   };
 
   //! @class

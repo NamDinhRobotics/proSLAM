@@ -1,5 +1,6 @@
 #include "frame.h"
-#include "local_map.h"
+
+#include "world_map.h"
 
 namespace proslam {
 
@@ -13,40 +14,16 @@ namespace proslam {
                const real& maximum_depth_near_): _identifier(_instances),
                                                   _previous(previous_),
                                                   _next(next_),
-                                                  _maximum_depth_near(maximum_depth_near_) {
+                                                  _maximum_depth_near(maximum_depth_near_),
+                                                  _local_map(0),
+                                                  _root(context_->rootFrame()) {
     ++_instances;
     setRobotToWorld(robot_to_world_);
     _points.clear();
   }
 
-  //ds deep clone constructor, used for local map generation - without incrementing the identifier!
-  Frame::Frame(Frame* frame_): _identifier(frame_->identifier()),
-                               _status(frame_->status()),
-                               _previous(frame_->previous()),
-                               _next(frame_->next()),
-                               _maximum_depth_near(frame_->maximumDepthNear()),
-                               _local_map(frame_->localMap()) {
-
-    //ds take over point references
-    _points.clear();
-    _points.insert(_points.end(), frame_->points().begin(), frame_->points().end());
-    for (FramePoint* frame_point: _points) {
-      frame_point->setFrame(this);
-    }
-
-    //ds release points from old frame - without releasing the memory!
-    frame_->points().clear();
-
-    //ds spatial properties
-    _robot_to_world              = frame_->robotToWorld();
-    _world_to_robot              = frame_->worldToRobot();
-    _robot_to_world_ground_truth = frame_->robotToWorldGroundTruth();
-
-    //ds camera properties
-    _camera_left           = frame_->cameraLeft();
-    _camera_right          = frame_->cameraRight();
-    _intensity_image_left  = frame_->intensityImageLeft();
-    _intensity_image_right = frame_->intensityImageRight();
+  Frame::~Frame() {
+    releasePoints();
   }
 
   //ds get a quick overview of the overall point status in the frame
@@ -75,9 +52,7 @@ namespace proslam {
     _world_to_robot = _robot_to_world.inverse();
 
     //ds update framepoint world coordinates
-    for (FramePoint* point: _points) {
-      point->setWorldCoordinates(_robot_to_world*point->robotCoordinates());
-    }
+    updatePoints();
   }
 
   //ds request new framepoint with optional link to a previous point (track)
@@ -148,25 +123,5 @@ namespace proslam {
   void FramePointerMap::put(Frame* frame_) {
     assert(find(frame_->identifier()) == end());
     insert(std::make_pair(frame_->identifier(), frame_));
-  }
-
-  void FramePointerMap::replace(Frame* replacing_frame_) {
-    FramePointerMap::iterator it = find(replacing_frame_->identifier());
-    assert(it != end());
-    Frame* frame_to_be_replaced = it->second;
-
-    //ds update parent/child
-    frame_to_be_replaced->previous()->setNext(replacing_frame_);
-    replacing_frame_->setPrevious(frame_to_be_replaced->previous());
-    if (frame_to_be_replaced->next() != 0) {
-      replacing_frame_->setNext(frame_to_be_replaced->next());
-    }
-
-    //ds free old frame
-    delete frame_to_be_replaced;
-
-    //ds reinsert new frame porperly
-    erase(replacing_frame_->identifier());
-    put(replacing_frame_);
   }
 }

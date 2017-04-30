@@ -86,6 +86,10 @@ base_tracking:
   bin_size_pixels:         16
   ratio_keypoints_to_bins: 1
 
+  #ds pose optimization
+  minimum_delta_angular_for_movement:       0.001
+  minimum_delta_translational_for_movement: 0.01
+
 relocalization:
 
   #ds minimum query interspace

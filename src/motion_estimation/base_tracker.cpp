@@ -145,7 +145,7 @@ namespace proslam {
             const real delta_translational    = _motion_previous_to_current_robot.translation().norm();
 
               //ds if the posit result is significant enough
-            if (delta_angular > 0.001 || delta_translational > 0.01) {
+            if (delta_angular > _parameters->minimum_delta_angular_for_movement || delta_translational > _parameters->minimum_delta_translational_for_movement) {
 
               //ds update tracker
               current_frame->setRobotToWorld(_pose_optimizer->robotToWorld());
@@ -218,58 +218,66 @@ namespace proslam {
         const real delta_angular          = WorldMap::toOrientationRodrigues(_motion_previous_to_current_robot.linear()).norm();
         const real delta_translational    = _motion_previous_to_current_robot.translation().norm();
 
-        //ds if we don't have enough inliers - trigger fallback posit on last position
-        if (number_of_inliers < _parameters->minimum_number_of_landmarks_to_track) {
+        //ds if we have enough inliers in the pose optimization
+        if (number_of_inliers > _parameters->minimum_number_of_landmarks_to_track && current_frame->identifier() != 500 && current_frame->identifier() != 800 && current_frame->identifier() != 1000) {
+
+          //ds if the posit result is significant enough
+          if (delta_angular > _parameters->minimum_delta_angular_for_movement || delta_translational > _parameters->minimum_delta_translational_for_movement) {
+
+            //ds update robot pose with posit result
+            current_frame->setRobotToWorld(_pose_optimizer->robotToWorld());
+          } else {
+
+            //ds keep previous solution
+            current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
+            _motion_previous_to_current_robot = TransformMatrix3D::Identity();
+          }
+
+          //ds visualization only (we need to clear and push_back in order to not crash the gui since its decoupled - otherwise we could use resize)
+          _context->currentlyTrackedLandmarks().reserve(_number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
+
+          //ds prune current frame points
+          _pruneFramepoints(current_frame);
+          assert(_context->currentlyTrackedLandmarks().size() <= _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
+          assert(_number_of_tracked_points >= number_of_inliers);
+
+          //ds recover lost points based on updated pose
+          CHRONOMETER_START(point_recovery)
+          _recoverPoints(current_frame);
+          CHRONOMETER_STOP(point_recovery)
+
+          //ds update tracks
+          _context->setRobotToWorld(current_frame->robotToWorld());
+          CHRONOMETER_START(landmark_optimization)
+          _updateLandmarks(_context, current_frame);
+          CHRONOMETER_STOP(landmark_optimization)
+          _status_previous = _status;
+          _status          = Frame::Tracking;
+        } else {
 
           //ds reset state
-          std::cerr << "BaseTracker::compute|WARNING: LOST TRACK due to invalid position optimization" << std::endl;
+          std::printf("BaseTracker::compute|WARNING: LOST TRACK due to invalid position optimization at frame [%06lu]\n", current_frame->identifier());
           _status_previous = Frame::Localizing;
           _status          = Frame::Localizing;
           current_frame->setStatus(_status);
-          _context->currentlyTrackedLandmarks().clear();
 
-          //ds stick to previous solution
+          //ds stick to previous solution - simulating a fresh start
           current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
           _motion_previous_to_current_robot = TransformMatrix3D::Identity();
-          _context->setRobotToWorld(current_frame->robotToWorld());
+          _number_of_lost_points_recovered = 0;
+          _number_of_tracked_points        = 0;
 
-          //ds reset current frame -> fully restarts track
-          _context->setCurrentFrame(0);
-          return;
+          //ds reset frame in world context, triggering a restart of the pipeline
+          _context->breakTrack(current_frame);
+
+          //ds release all framepoints currently in the bin - enabling a full fresh addition in the add framepoints phase
+          for (Index row_bin = 0; row_bin < _number_of_rows_bin; ++row_bin) {
+            for (Index col_bin = 0; col_bin < _number_of_cols_bin; ++col_bin) {
+              delete _bin_map_left[row_bin][col_bin];
+              _bin_map_left[row_bin][col_bin] = 0;
+            }
+          }
         }
-
-        //ds if the posit result is significant enough
-        if (delta_angular > 0.001 || delta_translational > 0.01) {
-
-          //ds update robot pose with posit result
-          current_frame->setRobotToWorld(_pose_optimizer->robotToWorld());
-        } else {
-
-          //ds keep previous solution
-          current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
-          _motion_previous_to_current_robot = TransformMatrix3D::Identity();
-        }
-
-        //ds visualization only (we need to clear and push_back in order to not crash the gui since its decoupled - otherwise we could use resize)
-        _context->currentlyTrackedLandmarks().reserve(_number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
-
-        //ds prune current frame points
-        _pruneFramepoints(current_frame);
-        assert(_context->currentlyTrackedLandmarks().size() <= _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
-        assert(_number_of_tracked_points >= number_of_inliers);
-
-        //ds recover lost points based on updated pose
-        CHRONOMETER_START(point_recovery)
-        _recoverPoints(current_frame);
-        CHRONOMETER_STOP(point_recovery)
-
-        //ds update tracks
-        _context->setRobotToWorld(current_frame->robotToWorld());
-        CHRONOMETER_START(landmark_optimization)
-        _updateLandmarks(_context, current_frame);
-        CHRONOMETER_STOP(landmark_optimization)
-        _status_previous = _status;
-        _status          = Frame::Tracking;
         break;
       }
 

@@ -349,6 +349,8 @@ namespace proslam {
           PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, maximum_number_of_landmark_recoveries, Count)
           PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, bin_size_pixels, Count)
           PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, ratio_keypoints_to_bins, real)
+          PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, minimum_delta_angular_for_movement, real)
+          PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, minimum_delta_translational_for_movement, real)
           break;
         }
         case CommandLineParameters::TrackerMode::RGB_DEPTH: {
@@ -374,6 +376,8 @@ namespace proslam {
           PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, maximum_number_of_landmark_recoveries, Count)
           PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, bin_size_pixels, Count)
           PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, ratio_keypoints_to_bins, real)
+          PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, minimum_delta_angular_for_movement, real)
+          PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, minimum_delta_translational_for_movement, real)
           break;
         }
         default: {

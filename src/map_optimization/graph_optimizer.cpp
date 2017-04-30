@@ -32,7 +32,7 @@ namespace proslam {
         assert(landmark);
 
         //ds update landmark position
-        landmark->resetCoordinates(local_map->robotToWorld()*landmark_state->robot_coordinates);
+        landmark->resetCoordinates(local_map->localMapToWorld()*landmark_state->coordinates_in_local_map);
       }
     }
   }
@@ -41,36 +41,43 @@ namespace proslam {
     _optimizer->clear();
     _optimizer->clearParameters();
 
-    //ds vertex linking
-    g2o::VertexSE3* vertex_local_map_previous = 0;
-    TransformMatrix3D world_to_frame_previous(TransformMatrix3D::Identity());
-
     //ds added measurements
     LocalMapPointerVector local_maps_in_graph(0);
     
-    //ds pose measurements
-    for (LocalMap* local_map: context_->localMaps()) {
+    //ds add pose measurements to the graph
+    LocalMap* current_map = context_->currentLocalMap()->root();
+
+    //ds add first pose
+    g2o::VertexSE3* vertex_local_map = new g2o::VertexSE3;
+    vertex_local_map->setId(current_map->identifier());
+    vertex_local_map->setEstimate(current_map->localMapToWorld().cast<double>());
+    _optimizer->addVertex(vertex_local_map);
+    vertex_local_map->setFixed(true);
+    local_maps_in_graph.push_back(current_map);
+    current_map = current_map->next();
+
+    //ds add other poses
+    while (current_map) {
 
       //ds add the pose to g2o
       g2o::VertexSE3* vertex_local_map = new g2o::VertexSE3;
-      vertex_local_map->setId(local_map->identifier());
-      vertex_local_map->setEstimate(local_map->robotToWorld().cast<double>());
+      vertex_local_map->setId(current_map->identifier());
+      vertex_local_map->setEstimate(current_map->localMapToWorld().cast<double>());
       _optimizer->addVertex(vertex_local_map);
 
-      //ds if previous pose is not set (first frame)
-      if (0 == vertex_local_map_previous) {
-        vertex_local_map->setFixed(true);
-      } else {
+      //ds if the vertices are directly connected (no track break in between)
+      if (current_map->identifier() - current_map->previous()->identifier() == 1) {
         _optimizer->addEdge(getPoseEdge(_optimizer,
-                                        vertex_local_map->id(),
-                                        vertex_local_map_previous->id(),
-                                        world_to_frame_previous*local_map->robotToWorld()));
+                                        current_map->identifier(),
+                                        current_map->previous()->identifier(),
+                                        current_map->previous()->worldToLocalMap()*current_map->localMapToWorld()));
       }
 
       //ds update previous
-      vertex_local_map_previous = vertex_local_map;
-      world_to_frame_previous = local_map->worldToRobot();
-      local_maps_in_graph.push_back(local_map);
+      local_maps_in_graph.push_back(current_map);
+
+      //ds move to the next pose
+      current_map = current_map->next();
     }
 
     //ds pose measurements: check for closures now as all id's are in the graph
@@ -81,12 +88,12 @@ namespace proslam {
         const TransformMatrix3D transform_query_to_reference = closure.relation;
 
         //ds compute required transform delta
-        const TransformMatrix3D transform_query_to_reference_current = local_map_reference->worldToRobot()*local_map_query->robotToWorld();
+        const TransformMatrix3D transform_query_to_reference_current = local_map_reference->worldToLocalMap()*local_map_query->localMapToWorld();
         const Vector3 translation_delta = transform_query_to_reference.translation()-transform_query_to_reference_current.translation();
 
         //ds informative only
         if (4.0 < translation_delta.norm()) {
-          std::printf("Mapper::optimizePoses|WARNING: adding large impact closure: [%06lu] > [%06lu] absolute translation (m): %f\n",
+          std::printf("Mapper::optimizePoses|WARNING: adding large impact closure for local maps: [%06lu] - [%06lu] absolute translation (m): %f\n",
                       local_map_query->identifier(), local_map_reference->identifier(), translation_delta.norm());
         }
 
@@ -109,8 +116,8 @@ namespace proslam {
     for (LocalMap* local_map: local_maps_in_graph) {
       g2o::VertexSE3* vertex_local_map = dynamic_cast<g2o::VertexSE3*>(_optimizer->vertex(local_map->identifier()));
       assert(0 != vertex_local_map);
-      local_map->setRobotToWorld(vertex_local_map->estimate().cast<real>());
+      local_map->update(vertex_local_map->estimate().cast<real>());
     }
-    context_->setRobotToWorld(context_->currentLocalMap()->robotToWorld());
+    context_->setRobotToWorld(context_->currentLocalMap()->keyframe()->robotToWorld());
   }
 }

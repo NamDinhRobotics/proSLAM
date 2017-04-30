@@ -5,10 +5,9 @@ namespace proslam {
 
   //ds container class for a single correspondence pair (produced by the relocalization module)
   class LandmarkCorrespondence {
-  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds exported types
-  public:
+  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds match information between two landmark states
     struct Match {

@@ -51,21 +51,31 @@ namespace proslam {
 
   //ds creates a new frame living in this instance at the provided pose
   Frame* WorldMap::createFrame(const TransformMatrix3D& robot_to_world_, const real& maximum_depth_near_){
+
+    //ds free cv images if possible
     if (_previous_frame) {
       _previous_frame->releaseImages();
     }
+
+    //ds update current frame
     _previous_frame = _current_frame;
     _current_frame  = new Frame(this, _previous_frame, 0, robot_to_world_, maximum_depth_near_);
-    if (_root_frame == 0) {
-      _root_frame = _current_frame;
-    }
+
+    //ds check if the frame has a predecessor
     if (_previous_frame) {
       _previous_frame->setNext(_current_frame);
+    } else {
+
+      //ds we have a new root frame
+      _root_frame = _current_frame;
+      _current_frame ->setRoot(_root_frame);
     }
 
     //ds bookkeeping
     _frames.put(_current_frame);
     _frame_queue_for_local_map.push_back(_current_frame);
+
+    //ds done
     return _current_frame;
   }
 
@@ -96,15 +106,19 @@ namespace proslam {
         (_frame_queue_for_local_map.size() > _parameters->minimum_number_of_frames_for_local_map && _local_maps.size() < 5)) {
 
       //ds create the new keyframe and add it to the keyframe database
-      _current_local_map = new LocalMap(_frame_queue_for_local_map);
+      _current_local_map = new LocalMap(_frame_queue_for_local_map, _root_local_map, _current_local_map);
       _local_maps.push_back(_current_local_map);
+      assert(_current_frame->isKeyframe());
+      assert(_current_frame->localMap() == _current_local_map);
+
+      //ds set local map root
+      if (!_root_local_map) {
+        _root_local_map = _current_local_map;
+        _root_local_map->setRoot(_current_local_map);
+      }
 
       //ds reset generation properties
       resetWindowForLocalMapCreation();
-
-      //ds current frame is now center of a local map - update structures
-      _current_frame = _current_local_map;
-      _frames.replace(_current_frame);
 
       //ds local map generated
       return true;
@@ -123,7 +137,10 @@ namespace proslam {
     //ds free memory if desired (saves a lot of memory costs a little computation)
     if (_drop_framepoints) {
 
-      //ds the last frame well need for the next tracking step
+      //ds the last frame we'll need for the next tracking step
+      _frame_queue_for_local_map.pop_back();
+
+      //ds the pre-last frame is needed for visualization only (optical flow)
       _frame_queue_for_local_map.pop_back();
 
       //ds purge the rest
@@ -166,11 +183,20 @@ namespace proslam {
   }
 
   //ds adds a loop closure constraint between 2 local maps
-  void WorldMap::addLoopClosure(LocalMap* query_,
-                                const LocalMap* reference_,
-                                const TransformMatrix3D& transform_query_to_reference_,
-                                const real& omega_) {
-    query_->add(reference_, transform_query_to_reference_, omega_);
+  void WorldMap::addCorrespondence(LocalMap* query_,
+                                   const LocalMap* reference_,
+                                   const TransformMatrix3D& transform_query_to_reference_,
+                                   const real& omega_) {
+
+    //ds check if local maps from different tracks were fused by comparing the respective map origins (roots)
+    if (_frames.at(0)->root() != _current_frame->root()) {
+      assert(_current_frame->localMap() == query_);
+
+      //ds rudely link the current frame into the list (proper map merging will be coming soon!)
+      setTrack(_current_frame);
+    }
+
+    query_->addCorrespondence(reference_, transform_query_to_reference_, omega_);
     _relocalized = true;
 
     //ds informative only
@@ -210,6 +236,50 @@ namespace proslam {
     }
     outfile_trajectory.close();
     std::cerr << "WorldMap::WorldMap|saved trajectory to: " << filename << std::endl;
+  }
+
+  void WorldMap::breakTrack(const Frame* frame_) {
+
+    //ds if the track is not already broken
+    if (_last_frame_before_track_break == 0)
+    {
+      _last_frame_before_track_break     = _previous_frame;
+      _last_local_map_before_track_break = _current_local_map;
+    }
+
+    //ds purge previous and set new root - this will trigger a new start
+    _previous_frame = 0;
+    _root_frame     = frame_;
+    _root_local_map = 0;
+
+    //ds reset current head
+    _currently_tracked_landmarks.clear();
+    resetWindowForLocalMapCreation();
+    setRobotToWorld(frame_->robotToWorld());
+  }
+
+  void WorldMap::setTrack(Frame* frame_) {
+    assert(frame_->localMap());
+    assert(_last_local_map_before_track_break);
+    std::printf("WorldMap::setTrack|RELOCALIZED - connecting [Frame] < [LocalMap]: [%06lu] < [%06lu] with [%06lu] < [%06lu]\n",
+                _last_frame_before_track_break->identifier(), _last_local_map_before_track_break->identifier(), frame_->identifier(), frame_->localMap()->identifier());
+
+    //ds return to original roots
+    _root_frame = _last_frame_before_track_break->root();
+    frame_->setRoot(_root_frame);
+    _root_local_map = _last_local_map_before_track_break->root();
+    frame_->localMap()->setRoot(_root_local_map);
+
+    //ds connect the given frame to the last one before the track broke and vice versa
+    _last_frame_before_track_break->setNext(frame_);
+    frame_->setPrevious(frame_);
+
+    //ds connect local maps
+    _last_local_map_before_track_break->setNext(frame_->localMap());
+    frame_->localMap()->setPrevious(_last_local_map_before_track_break);
+
+    _last_frame_before_track_break     = 0;
+    _last_local_map_before_track_break = 0;
   }
 }
 

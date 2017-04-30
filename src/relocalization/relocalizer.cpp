@@ -76,9 +76,11 @@ namespace proslam {
     //ds evaluate all past queries
     for (const Query* reference: _query_history) {
 
-      TransformMatrix3D delta=reference->local_map->worldToRobot()*_query->local_map->robotToWorld();
+      //ds get transform prior
+      const TransformMatrix3D transform_estimate_query_to_reference = reference->local_map->worldToLocalMap()*_query->local_map->localMapToWorld();
+
       //ds compute absolute distance
-      const real distance_meters_squared = delta.translation().squaredNorm();
+      const real distance_meters_squared = transform_estimate_query_to_reference.translation().squaredNorm();
 
       //ds skip the candidate if too far from the odometry
       if (distance_meters_squared > 25*25) {
@@ -86,11 +88,10 @@ namespace proslam {
       }
 
       //gg drop if angular distance is too big
-      Eigen::AngleAxisd aa(delta.linear());
-      if(fabs(aa.angle())>1.0)
-	continue;
-      
-      
+      const Eigen::AngleAxis<real> distance_angular(transform_estimate_query_to_reference.linear());
+      if( std::fabs(distance_angular.angle()) > 1) {
+        continue;
+      }
       
       //ds skip the candidate if the minimum number of matches is not guaranteed
       if (reference->hbst_tree->getMatchingRatioFlat(_query->matchables) < _parameters->preliminary_minimum_matching_ratio) {
