@@ -219,7 +219,7 @@ namespace proslam {
         const real delta_translational    = _motion_previous_to_current_robot.translation().norm();
 
         //ds if we have enough inliers in the pose optimization
-        if (number_of_inliers > _parameters->minimum_number_of_landmarks_to_track && current_frame->identifier() != 500 && current_frame->identifier() != 800 && current_frame->identifier() != 1000) {
+        if (number_of_inliers > _parameters->minimum_number_of_landmarks_to_track) {
 
           //ds if the posit result is significant enough
           if (delta_angular > _parameters->minimum_delta_angular_for_movement || delta_translational > _parameters->minimum_delta_translational_for_movement) {
