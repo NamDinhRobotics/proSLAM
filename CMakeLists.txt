@@ -76,6 +76,13 @@ find_package(SuiteSparse REQUIRED)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -Wall -O0 -g -fPIC -fstack-check")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -Wall -Ofast -DNDEBUG -fPIC")
 
+#ds enable ARM flags if applicable
+if(${CMAKE_HOST_SYSTEM_PROCESSOR} MATCHES armv7l)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -funsafe-math-optimizations")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -funsafe-math-optimizations")
+  message("enabling ARM neon optimizations")
+endif()
+
 #ds specify additional locations of header files
 include_directories(
   ${EIGEN3_INCLUDE_DIR}
