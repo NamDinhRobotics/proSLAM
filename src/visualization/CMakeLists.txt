@@ -8,8 +8,5 @@ target_link_libraries(srrg_proslam_visualization_library
   ${OPENGL_gl_LIBRARY}
   ${OPENGL_glu_LIBRARY}
   ${QGLVIEWER_LIBRARY}
-  ${catkin_LIBRARIES}
-  ${OPENGL_gl_LIBRARY} 
-  ${OPENGL_glu_LIBRARY}
   ${SRRG_QT_LIBRARIES}
 )

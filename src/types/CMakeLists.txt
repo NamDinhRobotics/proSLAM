@@ -9,6 +9,7 @@ add_library(srrg_proslam_types_library
 )
 
 target_link_libraries(srrg_proslam_types_library
+  ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
   yaml-cpp
 )
