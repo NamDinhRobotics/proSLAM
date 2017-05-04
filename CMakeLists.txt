@@ -21,6 +21,9 @@ add_definitions(-DSRRG_HBST_HAS_OPENCV)
 find_package(Eigen3 REQUIRED)
 message("using Eigen version: '3' (${EIGEN3_INCLUDE_DIR})")
 
+#ds enable Eigen for HBST
+add_definitions(-DSRRG_HBST_HAS_EIGEN)
+
 #ds load QGLViewer library - inherently also loads a matching Qt version
 find_package(QGLViewer REQUIRED)
 

@@ -18,7 +18,7 @@ namespace proslam {
                                          matchables(local_map_->appearances()),
                                          hbst_tree(new HBSTTree(local_map_->identifier(), matchables)) {}
       const LocalMap* local_map;
-      const HBSTNode::BinaryMatchableVector matchables;
+      const HBSTNode::MatchableVector matchables;
       const HBSTTree* hbst_tree;
     };
 

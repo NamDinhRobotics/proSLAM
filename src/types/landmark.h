@@ -20,7 +20,7 @@ namespace proslam {
       }
 
       Landmark* landmark;
-      HBSTNode::BinaryMatchableVector appearances;
+      HBSTNode::MatchableVector appearances;
       PointCoordinates coordinates_in_local_map;
       PointCoordinates world_coordinates;
       const LocalMap* local_map = 0;

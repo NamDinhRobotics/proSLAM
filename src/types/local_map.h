@@ -75,7 +75,7 @@ namespace proslam {
     void setNext(LocalMap* local_map_) {_next = local_map_;}
     inline const Frame* keyframe() const {return _keyframe;}
 
-    inline const HBSTNode::BinaryMatchableVector& appearances() const {return _appearances;}
+    inline const HBSTNode::MatchableVector& appearances() const {return _appearances;}
     inline const Landmark::StatePointerVector& landmarks() const {return _landmarks;}
 
     inline const ClosureVector& closures() const {return _closures;}
@@ -107,7 +107,7 @@ namespace proslam {
     Landmark::StatePointerVector _landmarks;
 
     //ds one merged pool of all corresponding landmark appearances
-    HBSTNode::BinaryMatchableVector _appearances;
+    HBSTNode::MatchableVector _appearances;
 
     //ds loop closures for the local map
     ClosureVector _closures;

@@ -94,7 +94,7 @@ namespace proslam {
       }
       
       //ds skip the candidate if the minimum number of matches is not guaranteed
-      if (reference->hbst_tree->getMatchingRatioFlat(_query->matchables) < _parameters->preliminary_minimum_matching_ratio) {
+      if (reference->hbst_tree->getMatchingRatioLazyEvaluation(_query->matchables) < _parameters->preliminary_minimum_matching_ratio) {
         continue;
       }
 
