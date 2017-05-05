@@ -118,7 +118,6 @@ namespace proslam {
 //      }
 
       cv::imshow(_window_name.c_str(), _current_image);
-
       int last_key_stroke = cv::waitKey(_cv_wait_key_timeout_milliseconds);
       if(last_key_stroke != -1) {
         switch(last_key_stroke) {

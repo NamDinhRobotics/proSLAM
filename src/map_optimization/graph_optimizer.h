@@ -31,8 +31,8 @@ namespace proslam {
   public:
 
     void optimize(WorldMap* context_);
-    void optimizeLandmarks(WorldMap* context_);
     void optimizePoses(WorldMap* context_);
+    void optimizeLandmarks(WorldMap* context_);
 
   //ds getters/setters
   public:
@@ -42,12 +42,12 @@ namespace proslam {
   //ds g2o wrapper functions
   public:
 
-    static g2o::EdgeSE3* getPoseEdge(g2o::SparseOptimizer* optimizer_,
-                                     const Identifier& id_from_,
-                                     const Identifier& id_to_,
-                                     const TransformMatrix3D& transform_from_to_,
-                                     Eigen::Matrix<double, 6, 6> information_ = Eigen::Matrix<double, 6, 6>::Identity()) {
-      g2o::EdgeSE3* edge_pose = new g2o::EdgeSE3;
+    static void setPoseEdge(g2o::SparseOptimizer* optimizer_,
+                            const Identifier& id_from_,
+                            const Identifier& id_to_,
+                            const TransformMatrix3D& transform_from_to_,
+                            Eigen::Matrix<double, 6, 6> information_ = Eigen::Matrix<double, 6, 6>::Identity()) {
+      g2o::EdgeSE3* edge_pose = new g2o::EdgeSE3();
       g2o::OptimizableGraph::Vertex* vertex_keyframe_from = optimizer_->vertex(id_from_);
       g2o::OptimizableGraph::Vertex* vertex_keyframe_to   = optimizer_->vertex(id_to_);
       assert(0 != vertex_keyframe_from);
@@ -59,29 +59,10 @@ namespace proslam {
       //ds free translational component
       information_.block<3,3>(0,0) *= 1e-4;
       edge_pose->setInformation(information_);
-      return edge_pose;
+      optimizer_->addEdge(edge_pose);
     }
 
-    static g2o::EdgeSE3* getClosureEdge(g2o::SparseOptimizer* optimizer_,
-                                        const Identifier& id_query_,
-                                        const Identifier& id_reference_,
-                                        const TransformMatrix3D& transform_query_to_reference_,
-                                        Eigen::Matrix<double, 6, 6> information_ = Eigen::Matrix<double, 6, 6>::Identity()) {
-      g2o::EdgeSE3* edge_closure = new g2o::EdgeSE3;
-      g2o::OptimizableGraph::Vertex* vertex_keyframe_from = optimizer_->vertex(id_query_);
-      g2o::OptimizableGraph::Vertex* vertex_keyframe_to   = optimizer_->vertex(id_reference_);
-      vertex_keyframe_to->setFixed(true);
-      assert(0 != vertex_keyframe_from);
-      assert(0 != vertex_keyframe_to);
-      edge_closure->setVertex(1, vertex_keyframe_from);
-      edge_closure->setVertex(0, vertex_keyframe_to);
-      edge_closure->setMeasurement(transform_query_to_reference_.cast<double>());
-      information_.block<3,3>(0,0) *= 1e-4;
-      edge_closure->setInformation(information_);
-      return edge_closure;
-    }
-
-    static g2o::SparseOptimizer * getOptimizer() {
+    static g2o::SparseOptimizer* getOptimizer() {
       SlamLinearSolver* linearSolver = new SlamLinearSolver();
       linearSolver->setBlockOrdering(true);
       SlamBlockSolver* blockSolver=new SlamBlockSolver(linearSolver);
