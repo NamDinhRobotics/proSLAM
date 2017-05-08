@@ -12,7 +12,7 @@ namespace proslam {
 
     //ds container describing the landmark at the time of local map construction
     struct State {
-      State(Landmark* landmark_): landmark(landmark_), coordinates_in_local_map(Vector3::Zero()), world_coordinates(Vector3::Zero()) {
+      State(Landmark* landmark_): landmark(landmark_), coordinates_in_local_map(Vector3::Zero()), world_coordinates(Vector3::Zero()), local_map(0) {
         appearances.clear();
       }
       ~State() {
@@ -26,7 +26,7 @@ namespace proslam {
       HBSTNode::MatchableVector appearances;
       PointCoordinates coordinates_in_local_map;
       PointCoordinates world_coordinates;
-      const LocalMap* local_map = 0;
+      const LocalMap* local_map;
     };
     typedef std::vector<State*> StatePointerVector;
 

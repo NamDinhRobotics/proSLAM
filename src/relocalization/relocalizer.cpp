@@ -34,9 +34,6 @@ namespace proslam {
 
     //ds free history
     for (const Query* query: _query_history) {
-      for (const HBSTMatchable* matchable: query->matchables) {
-        delete matchable;
-      }
       delete query;
     }
     _query_history.clear();
@@ -45,9 +42,6 @@ namespace proslam {
     for (Index i = 0; i < _query_history_queue.size(); ++i) {
       const Query* query = _query_history_queue.front();
       _query_history_queue.pop();
-      for (const HBSTMatchable* matchable: query->matchables) {
-        delete matchable;
-      }
       delete query;
     }
 

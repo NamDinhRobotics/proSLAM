@@ -18,8 +18,8 @@ namespace proslam {
   //ds cleanup of dynamic structures
   Landmark::~Landmark() {
 
-    //ds if the current state is not connected to a local map yet - we have to clean it up
-    if (_state->local_map == 0) {
+    //ds if the current state is not connected to a local map yet - the landmark has to clean it up
+    if (!_state->local_map) {
       delete _state;
     }
   }

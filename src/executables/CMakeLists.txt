@@ -19,7 +19,3 @@ endif()
 
 #ds add kitti benchmark evaluation (snippet)
 add_executable(kitti_evaluate_odometry kitti_evaluate_odometry.cpp)
-target_link_libraries(kitti_evaluate_odometry
-  ${OpenCV_LIBS}
-  ${catkin_LIBRARIES}
-)
