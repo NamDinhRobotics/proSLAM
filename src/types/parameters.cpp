@@ -67,6 +67,14 @@ namespace proslam {
 
 
 
+  void AlignerParameters::print() const {
+    std::cerr << "AlignerParameters::print|maximum_error_kernel: " << maximum_error_kernel << std::endl;
+    std::cerr << "AlignerParameters::print|minimum_number_of_inliers: " << minimum_number_of_inliers << std::endl;
+    std::cerr << "AlignerParameters::print|minimum_inlier_ratio: " << minimum_inlier_ratio << std::endl;
+  }
+
+
+
   //ds Types
   void FrameParameters::print() const {
     std::cerr << "FrameParameters::print|minimum_track_length_for_landmark_creation: " << minimum_track_length_for_landmark_creation << std::endl;
@@ -142,18 +150,24 @@ namespace proslam {
     std::cerr << "RelocalizerParameters::print|preliminary_minimum_matching_ratio: " << preliminary_minimum_matching_ratio << std::endl;
     std::cerr << "RelocalizerParameters::print|minimum_number_of_matches_per_landmark: " << minimum_number_of_matches_per_landmark << std::endl;
     std::cerr << "RelocalizerParameters::print|minimum_matches_per_correspondence: " << minimum_matches_per_correspondence << std::endl;
+    aligner->print();
   }
 
 
 
   ParameterCollection::ParameterCollection(): number_of_parameters_detected(0), number_of_parameters_parsed(0) {
     std::cerr << "ParameterCollection::ParameterCollection|constructing" << std::endl;
+
+    //ds allocate minimal set of parameters
     command_line_parameters = new CommandLineParameters();
     frame_parameters        = new FrameParameters();
     landmark_parameters     = new LandmarkParameters();
     local_map_parameters    = new LocalMapParameters();
     world_map_parameters    = new WorldMapParameters();
     relocalizer_parameters  = new RelocalizerParameters();
+
+    //ds allocate inner parameters
+    relocalizer_parameters->aligner = new AlignerParameters();
     std::cerr << "ParameterCollection::ParameterCollection|constructed" << std::endl;
   }
 
@@ -214,23 +228,7 @@ namespace proslam {
     }
 
     //ds generate tracker mode specific parameters
-    switch (command_line_parameters->tracker_mode) {
-      case CommandLineParameters::TrackerMode::RGB_STEREO: {
-        stereo_framepoint_generator_parameters = new StereoFramePointGeneratorParameters();
-        stereo_tracker_parameters = new StereoTrackerParameters();
-        break;
-      }
-      case CommandLineParameters::TrackerMode::RGB_DEPTH: {
-        depth_framepoint_generator_parameters = new DepthFramePointGeneratorParameters();
-        depth_tracker_parameters = new DepthTrackerParameters();
-        break;
-      }
-      default: {
-        std::cerr << "ParameterCollection::parseFromCommandLine|ERROR: invalid tracker mode" << std::endl;
-        destroy();
-        exit(0);
-      }
-    }
+    setMode(command_line_parameters->tracker_mode);
 
     //ds if a valid configuration file is set (otherwise the field must be empty)
     if (command_line_parameters->filename_configuration.length()) {
@@ -392,6 +390,9 @@ namespace proslam {
       PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, preliminary_minimum_matching_ratio, real)
       PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, minimum_number_of_matches_per_landmark, Count)
       PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, minimum_matches_per_correspondence, Count)
+      PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, aligner->maximum_error_kernel, real)
+      PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, aligner->minimum_number_of_inliers, Count)
+      PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, aligner->minimum_inlier_ratio, real)
 
       //ds done
       std::cerr << "ParameterCollection::parseParametersFromFile|successfully loaded configuration from file: " << filename_ << std::endl;
@@ -414,5 +415,40 @@ namespace proslam {
       destroy();
       exit(0);
     }
+  }
+
+  void ParameterCollection::setMode(const CommandLineParameters::TrackerMode& mode_) {
+
+    //ds generate tracker mode specific parameters
+    switch (mode_) {
+      case CommandLineParameters::TrackerMode::RGB_STEREO: {
+        stereo_framepoint_generator_parameters = new StereoFramePointGeneratorParameters();
+        stereo_tracker_parameters = new StereoTrackerParameters();
+        break;
+      }
+      case CommandLineParameters::TrackerMode::RGB_DEPTH: {
+        depth_framepoint_generator_parameters = new DepthFramePointGeneratorParameters();
+        depth_tracker_parameters = new DepthTrackerParameters();
+        break;
+      }
+      default: {
+        std::cerr << "ParameterCollection::setMode|ERROR: invalid tracker mode" << std::endl;
+        destroy();
+        exit(0);
+      }
+    }
+  }
+
+  void ParameterCollection::print() const {
+    if (command_line_parameters) {command_line_parameters->print();}
+    if (frame_parameters) {frame_parameters->print();}
+    if (landmark_parameters) {landmark_parameters->print();}
+    if (local_map_parameters) {local_map_parameters->print();}
+    if (world_map_parameters) {world_map_parameters->print();}
+    if (stereo_framepoint_generator_parameters) {stereo_framepoint_generator_parameters->print();}
+    if (depth_framepoint_generator_parameters) {depth_framepoint_generator_parameters->print();}
+    if (stereo_tracker_parameters) {stereo_tracker_parameters->print();}
+    if (depth_tracker_parameters) {depth_tracker_parameters->print();}
+    if (relocalizer_parameters) {relocalizer_parameters->print();}
   }
 }

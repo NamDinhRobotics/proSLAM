@@ -62,6 +62,9 @@ namespace proslam {
     //ds image preprocessing
     void translate(cv::Mat &image_, const int32_t& offsetx_, const int32_t& offsety_);
 
+    //! @brief resets the complete pipeline, releasing memory
+    void reset();
+
   //ds getters/setters
   public:
 

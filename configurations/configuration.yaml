@@ -1,5 +1,8 @@
 command_line:
 
+  #ds processing mode (select one: RGB_STEREO, RGB_DEPTH)
+  tracker_mode: RGB_STEREO
+
   #ds files/topics
   topic_image_left:        /camera_left/image_raw
   topic_image_right:       /camera_right/image_raw
@@ -103,6 +106,11 @@ relocalization:
 
   #ds correspondence retrieval
   minimum_matches_per_correspondence: 0
+  
+  #ds aligner unit configuration
+  aligner->maximum_error_kernel: 0.5
+  aligner->minimum_number_of_inliers: 25
+  aligner->minimum_inlier_ratio: 0.25
 
 map_optimization:
 

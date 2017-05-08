@@ -18,6 +18,12 @@ namespace proslam {
 
   WorldMap::~WorldMap() {
     std::cerr << "WorldMap::WorldMap|destroying" << std::endl;
+    clear();
+    std::cerr << "WorldMap::WorldMap|destroyed" << std::endl;
+  }
+  
+  //ds clears all internal structures
+  void WorldMap::clear() {
 
     //ds free landmarks
     for(LandmarkPointerMap::iterator it = _landmarks.begin(); it != _landmarks.end(); ++it) {
@@ -29,18 +35,17 @@ namespace proslam {
       delete it->second;
     }
 
-    //ds free all frames (also destroys local maps by their anchors)
+    //ds free all frames
     for(FramePointerMap::iterator it = _frames.begin(); it != _frames.end(); ++it) {
       delete it->second;
     }
 
-    //ds clear all stacks
-    clear();
-    std::cerr << "WorldMap::WorldMap|destroyed" << std::endl;
-  }
-  
-  //ds clears all internal structures
-  void WorldMap::clear() {
+    //ds free all local maps
+    for(const LocalMap* local_map: _local_maps) {
+      delete local_map;
+    }
+
+    //ds clear containers
     _frame_queue_for_local_map.clear();
     _landmarks_in_window_for_local_map.clear();
     _landmarks.clear();
@@ -203,7 +208,6 @@ namespace proslam {
     ++_number_of_closures;
   }
 
-  //ds dump trajectory to file (in KITTI benchmark format: 4x4 isometries per line)
   void WorldMap::writeTrajectory(const std::string& filename_) const {
 
     //ds construct filename
@@ -221,10 +225,10 @@ namespace proslam {
     assert(outfile_trajectory.good());
 
     //ds for each frame (assuming continuous, sequential indexing)
-    for (Index index_frame = 0; index_frame < _frames.size(); ++index_frame) {
+    for (const FramePointerMapElement frame: _frames) {
 
       //ds buffer transform
-      const TransformMatrix3D& robot_to_world = _frames.at(index_frame)->robotToWorld();
+      const TransformMatrix3D& robot_to_world = frame.second->robotToWorld();
 
       //ds dump transform according to KITTI format
       for (uint8_t u = 0; u < 3; ++u) {
@@ -236,6 +240,19 @@ namespace proslam {
     }
     outfile_trajectory.close();
     std::cerr << "WorldMap::WorldMap|saved trajectory to: " << filename << std::endl;
+  }
+
+  void WorldMap::writeTrajectory(std::vector<Matrix4>& poses_) const {
+
+    //ds prepare output vector
+    poses_.resize(_frames.size());
+
+    //ds add the pose for each frame
+    Identifier identifier_frame = 0;
+    for (const FramePointerMapElement frame: _frames) {
+      poses_[identifier_frame] = frame.second->robotToWorld().matrix();
+      ++identifier_frame;
+    }
   }
 
   void WorldMap::breakTrack(const Frame* frame_) {

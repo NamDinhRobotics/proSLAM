@@ -127,10 +127,27 @@ include_directories(
   src
 )
 
-#ds set up catkin package
+#ds set up catkin package (exported components)
 catkin_package(
-  INCLUDE_DIRS src
-  LIBRARIES srrg_proslam_types_library srrg_proslam_ui_library srrg_proslam_core_library
+  INCLUDE_DIRS
+  ${EIGEN3_INCLUDE_DIR}
+  ${g2o_catkin_INCLUDE_DIRS}
+  ${CSPARSE_INCLUDE_DIR}
+  ${OpenCV_INCLUDE_DIRS}
+  ${QGLVIEWER_INCLUDE_DIR}
+  ${catkin_INCLUDE_DIRS}
+  ${SRRG_QT_INCLUDE_DIRS}
+  src
+
+  LIBRARIES
+  srrg_proslam_aligners_library 
+  srrg_proslam_framepoint_generation_library 
+  srrg_proslam_map_optimization_library 
+  srrg_proslam_motion_estimation_library 
+  srrg_proslam_relocalization_library 
+  srrg_proslam_types_library 
+  srrg_proslam_visualization_library 
+  srrg_proslam_slam_assembly_library
 )
 
 #ds set sources

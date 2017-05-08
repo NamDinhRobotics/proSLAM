@@ -66,6 +66,25 @@ namespace proslam {
 
 
 
+  //! @class generic aligner parameters, present in modules with aligner units
+  class AlignerParameters: public Parameters {
+  public:
+
+    //! @brief parameter printing function
+    virtual void print() const;
+
+    //! @brief maximum allowed robust kernel error
+    real maximum_error_kernel       = 0.5;
+
+    //! @brief the minimum number of inliers required for a valid alignment
+    Count minimum_number_of_inliers = 25;
+
+    //! @brief the minimum ratio of inliers to outliers required for a valid alignment
+    real minimum_inlier_ratio       = 0.25;
+  };
+
+
+
   //ds Types
   //! @class
   class FrameParameters: public Parameters {
@@ -241,6 +260,9 @@ namespace proslam {
 
     //! @brief correspondence retrieval
     Count minimum_matches_per_correspondence = 0;
+
+    //! @brief parameters of aligner unit
+    AlignerParameters* aligner = 0;
   };
 
 
@@ -273,6 +295,12 @@ namespace proslam {
 
     //! @brief validates certain parameters
     void validateParameters();
+
+    //! @brief sets tracking mode related objects
+    void setMode(const CommandLineParameters::TrackerMode& mode_);
+
+    //! @brief triggers all inner print methods of set parameters
+    void print() const;
 
   //ds parameter bundles
   public:

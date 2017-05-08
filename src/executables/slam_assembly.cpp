@@ -52,7 +52,6 @@ namespace proslam {
     //ds check dataset length
     if (_parameters->command_line_parameters->filename_dataset.length() == 0) {
       std::cerr << "ERROR: no dataset provided (enter -h for help)" << std::endl;
-      delete _parameters;
       exit(0);
     }
 
@@ -62,7 +61,6 @@ namespace proslam {
     //ds terminate on failure
     if (!_sensor_message_reader.good()) {
       std::cerr << _parameters->banner << std::endl;
-      delete _parameters;
       exit(0);
     }
   }
@@ -75,7 +73,6 @@ namespace proslam {
       //ds sanity check
       if ((camera_left_->projectionMatrix().block<3,3>(0,0) - camera_right_->projectionMatrix().block<3,3>(0,0)).squaredNorm() != 0) {
         std::cerr << "SLAMAssembly::_makeStereoTracker|ERROR: provided mismatching projection matrices" << std::endl;
-        delete _parameters;
         exit(0);
       }
 
@@ -102,11 +99,6 @@ namespace proslam {
     tracker->configure(_parameters->stereo_tracker_parameters);
     _tracker = tracker;
     _tracker->setWorldMap(_world_map);
-
-    //ds configure relocalizer for stereo vision
-    _relocalizer->aligner()->setMaximumErrorKernel(0.5);
-    _relocalizer->aligner()->setMinimumNumberOfInliers(25);
-    _relocalizer->aligner()->setMinimumInlierRatio(0.25);
   }
 
   void SLAMAssembly::_createDepthTracker(const Camera* camera_left_, const Camera* camera_right_){
@@ -129,9 +121,6 @@ namespace proslam {
     tracker->configure(_parameters->depth_tracker_parameters);
     _tracker = tracker;
     _tracker->setWorldMap(_world_map);
-
-    //gg adjust threshold for depth mode/indoor loop closing
-    _relocalizer->aligner()->setMaximumErrorKernel(0.01);
   }
 
   //ds attempts to load the camera configuration based on the current input setting
@@ -157,17 +146,17 @@ namespace proslam {
 
         //ds allocate a new camera
         _camera_left = new Camera(message_image_left->image().rows,
-                                         message_image_left->image().cols,
-                                         message_image_left->cameraMatrix().cast<real>(),
-                                         message_image_left->offset().cast<real>());
+                                  message_image_left->image().cols,
+                                  message_image_left->cameraMatrix().cast<real>(),
+                                  message_image_left->offset().cast<real>());
       } else if (sensor_msg->topic() == _parameters->command_line_parameters->topic_image_right) {
         srrg_core::PinholeImageMessage* message_image_right  = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_msg);
 
         //ds allocate a new camera
         _camera_right = new Camera(message_image_right->image().rows,
-                                          message_image_right->image().cols,
-                                          message_image_right->cameraMatrix().cast<real>(),
-                                          message_image_right->offset().cast<real>());
+                                   message_image_right->image().cols,
+                                   message_image_right->cameraMatrix().cast<real>(),
+                                   message_image_right->offset().cast<real>());
       }
       delete sensor_msg;
 
@@ -181,12 +170,18 @@ namespace proslam {
     //ds terminate on failure
     if (_camera_left == 0) {
       std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: left camera not set" << std::endl;
-      delete _parameters;
       exit(0);
     }
     if (_camera_right == 0) {
       std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: right camera not set" << std::endl;
-      delete _parameters;
+      exit(0);
+    }
+    if (_camera_left->imageCols() == 0 || _camera_left->imageRows() == 0) {
+      std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: left camera images not set" << std::endl;
+      exit(0);
+    }
+    if (_camera_right->imageCols() == 0 || _camera_right->imageRows() == 0) {
+      std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: right camera images not set" << std::endl;
       exit(0);
     }
 
@@ -203,7 +198,6 @@ namespace proslam {
       //ds sanity check
       if ((_camera_left->cameraMatrix()-_camera_right->cameraMatrix()).squaredNorm() != 0) {
         std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: provided mismatching camera matrices" << std::endl;
-        delete _parameters;
         exit(0);
       }
 
@@ -641,9 +635,12 @@ namespace proslam {
     std::cerr << "-------------------------------------------------------------------------" << std::endl;
   }
 
-  //ds image preprocessing
   void SLAMAssembly::translate(cv::Mat &image_, const int32_t& offsetx_, const int32_t& offsety_){
     cv::Mat trans_mat = (cv::Mat_<double>(2,3) << 1, 0, offsetx_, 0, 1, offsety_);
     warpAffine(image_, image_, trans_mat,image_.size());
+  }
+
+  void SLAMAssembly::reset() {
+    _world_map->clear();
   }
 }
