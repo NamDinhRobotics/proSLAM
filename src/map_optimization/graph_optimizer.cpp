@@ -9,6 +9,7 @@ namespace proslam {
 
   GraphOptimizer::~GraphOptimizer(){
     std::cerr << "GraphOptimizer::GraphOptimizer|destroying" << std::endl;
+    delete _optimizer;
     std::cerr << "GraphOptimizer::GraphOptimizer|destroyed" << std::endl;
   }
 
@@ -91,6 +92,10 @@ namespace proslam {
       local_map->update(vertex_local_map->estimate().cast<real>());
     }
     context_->setRobotToWorld(context_->currentLocalMap()->keyframe()->robotToWorld());
+
+    //ds clear g2o memory
+    _optimizer->clear();
+    _optimizer->clearParameters();
   }
 
   //ds optimizes all landmarks by computing rudely the average without using g2o
