@@ -242,19 +242,6 @@ namespace proslam {
     std::cerr << "WorldMap::WorldMap|saved trajectory to: " << filename << std::endl;
   }
 
-  void WorldMap::writeTrajectory(std::vector<Matrix4>& poses_) const {
-
-    //ds prepare output vector
-    poses_.resize(_frames.size());
-
-    //ds add the pose for each frame
-    Identifier identifier_frame = 0;
-    for (const FramePointerMapElement frame: _frames) {
-      poses_[identifier_frame] = frame.second->robotToWorld().matrix();
-      ++identifier_frame;
-    }
-  }
-
   void WorldMap::breakTrack(const Frame* frame_) {
 
     //ds if the track is not already broken

@@ -8,7 +8,7 @@ namespace proslam {
   public:
 
     //! @brief constructor
-    Parameters():indentifier(_number_of_instances) {++_number_of_instances;}
+    Parameters(): indentifier(_number_of_instances) {++_number_of_instances;}
 
     //! @brief destructor
     virtual ~Parameters() {}

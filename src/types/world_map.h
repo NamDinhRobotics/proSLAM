@@ -41,7 +41,19 @@ namespace proslam {
 
     //! @brief dump trajectory to file (in KITTI benchmark format: 4x4 isometries per line)
     //! @param[in,out] poses_ vector with poses, set in the function
-    void writeTrajectory(std::vector<Matrix4>& poses_) const;
+    template<typename RealType>
+    void writeTrajectory(std::vector<Eigen::Matrix<RealType, 4, 4>>& poses_) const {
+
+      //ds prepare output vector
+      poses_.resize(_frames.size());
+
+      //ds add the pose for each frame
+      Identifier identifier_frame = 0;
+      for (const FramePointerMapElement frame: _frames) {
+        poses_[identifier_frame] = frame.second->robotToWorld().matrix().cast<RealType>();
+        ++identifier_frame;
+      }
+    }
 
     //! @brief this function does what you think it does
     //! @param[in] frame_ frame at which the track was broken

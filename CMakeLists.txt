@@ -17,7 +17,7 @@ message("using OpenCV version: '${OpenCV_VERSION}' (${OpenCV_DIR})")
 #ds enable OpenCV for HBST
 add_definitions(-DSRRG_HBST_HAS_OPENCV)
 
-#ds load eigen library
+#ds load Eigen library
 find_package(Eigen3 REQUIRED)
 message("using Eigen version: '3' (${EIGEN3_INCLUDE_DIR})")
 
@@ -126,6 +126,10 @@ include_directories(
   ${SRRG_QT_INCLUDE_DIRS}
   src
 )
+
+#ds help the catkin tool on 16.04 (cmake seems unable to find single libraries, although catkin claims the link_directories call is not required)
+#ds in order to avoid linking against the catkin_LIBRARIES bulk everytime enable this so one can select single libraries
+link_directories(${catkin_LIBRARY_DIRS})
 
 #ds set up catkin package (exported components)
 catkin_package(
