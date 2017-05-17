@@ -140,6 +140,7 @@ After a complete run we can evaluate the KITTI error statistics by calling:
  - `KITTI Sequence 00`: https://drive.google.com/open?id=0ByaBRAPfmgEqdXhJRmktQ2lsMEE (2.8GB)
  - `KITTI Sequence 01`: https://drive.google.com/open?id=0ByaBRAPfmgEqN19hTUJjRG9XV3M (0.7GB)
  - `KITTI Sequence 04`: https://drive.google.com/open?id=0ByaBRAPfmgEqOEhEdEdLcUJUMlE (0.2GB)
+ - `KITTI Sequence 06`: https://drive.google.com/open?id=0ByaBRAPfmgEqcC14TS1mbF9XSmc (0.7GB)
  - `EuRoC MH_01_easy`: https://drive.google.com/open?id=0ByaBRAPfmgEqbUctejZwb0xRaFk (1.9GB)
  - `EuRoC MH_05_difficult`: https://drive.google.com/open?id=0ByaBRAPfmgEqTWVCZDVqNTY2QXc (0.9GB)
  - `EuRoC V1_01_easy`: https://drive.google.com/open?id=0ByaBRAPfmgEqRW5aWUZWV1NLSVE (1.3GB) <br/>

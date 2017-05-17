@@ -17,7 +17,6 @@
   <build_depend>cv_bridge</build_depend>
   <build_depend>nav_msgs</build_depend>
   <build_depend>message_filters</build_depend>
-  <run_depend>srrg_cmake_modules</run_depend>
   <run_depend>srrg_core</run_depend>
   <run_depend>srrg_hbst</run_depend>
   <run_depend>srrg_core_viewers</run_depend>
