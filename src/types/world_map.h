@@ -27,10 +27,10 @@ namespace proslam {
     Landmark* createLandmark(const FramePoint* origin_);
 
     //ds attempts to create a new local map if the generation criteria are met (returns true if a local map was generated)
-    const bool createLocalMap();
+    const bool createLocalMap(const bool& drop_framepoints_ = false);
 
     //ds resets the window for the local map generation
-    void resetWindowForLocalMapCreation();
+    void resetWindowForLocalMapCreation(const bool& drop_framepoints_ = false);
 
     //ds adds a loop closure constraint between 2 local maps
     void addCorrespondence(LocalMap* query_, const LocalMap* reference_, const TransformMatrix3D& transform_query_to_reference_, const real& omega_ = 1);
@@ -85,9 +85,6 @@ namespace proslam {
     const bool relocalized() const {return _relocalized;}
     const Count numberOfClosures() const {return _number_of_closures;}
 
-    //ds memory saving option
-    void setDropFramepoints(const bool& drop_framepoints_) {_drop_framepoints = drop_framepoints_;}
-
     //ds visualization only
     const FramePointerMap& frames() const {return _frames;}
     const FramePointerVector& frameQueueForLocalMap() const {return _frame_queue_for_local_map;}
@@ -139,9 +136,6 @@ namespace proslam {
     Frame* _last_frame_before_track_break = 0;
     LocalMap* _last_local_map_before_track_break = 0;
     LocalMap* _root_local_map = 0;
-
-    //ds memory saving options (slightly less processing speed)
-    bool _drop_framepoints = false;
 
   private:
 

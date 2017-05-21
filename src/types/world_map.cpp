@@ -57,8 +57,10 @@ namespace proslam {
   //ds creates a new frame living in this instance at the provided pose
   Frame* WorldMap::createFrame(const TransformMatrix3D& robot_to_world_, const real& maximum_depth_near_){
 
-    //ds free cv images if possible
+    //ds if we have a preceeding frame
     if (_previous_frame) {
+
+      //ds free cv images if possible
       _previous_frame->releaseImages();
     }
 
@@ -92,7 +94,7 @@ namespace proslam {
   }
 
   //ds attempts to create a new local map if the generation criteria are met (returns true if a local map was generated)
-  const bool WorldMap::createLocalMap() {
+  const bool WorldMap::createLocalMap(const bool& drop_framepoints_) {
     if (_previous_frame == 0) {
       return false;
     }
@@ -123,7 +125,7 @@ namespace proslam {
       }
 
       //ds reset generation properties
-      resetWindowForLocalMapCreation();
+      resetWindowForLocalMapCreation(drop_framepoints_);
 
       //ds local map generated
       return true;
@@ -135,12 +137,12 @@ namespace proslam {
   }
 
   //ds resets the window for the local map generation
-  void WorldMap::resetWindowForLocalMapCreation() {
+  void WorldMap::resetWindowForLocalMapCreation(const bool& drop_framepoints_) {
     _distance_traveled_window = 0;
     _degrees_rotated_window   = 0;
 
     //ds free memory if desired (saves a lot of memory costs a little computation)
-    if (_drop_framepoints) {
+    if (drop_framepoints_) {
 
       //ds the last frame we'll need for the next tracking step
       _frame_queue_for_local_map.pop_back();
@@ -150,7 +152,7 @@ namespace proslam {
 
       //ds purge the rest
       for (Frame* frame: _frame_queue_for_local_map) {
-        frame->releasePoints();
+        frame->clear();
       }
     }
     _frame_queue_for_local_map.clear();

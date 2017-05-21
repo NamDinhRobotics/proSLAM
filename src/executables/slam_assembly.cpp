@@ -23,7 +23,6 @@ namespace proslam {
                                                                 _is_gui_running(false) {
     _relocalizer->configure(_parameters->relocalizer_parameters);
     _world_map->configure(_parameters->world_map_parameters);
-    _world_map->setDropFramepoints(_parameters->command_line_parameters->option_drop_framepoints);
     _synchronizer.reset();
     _robot_to_world_ground_truth_poses.clear();
   }
@@ -44,6 +43,7 @@ namespace proslam {
     if (_context_viewer_bird) {delete _context_viewer_bird;}
     if (_context_viewer_top) {delete _context_viewer_top;}
     if (_ui_server) {delete _ui_server;}
+    _robot_to_world_ground_truth_poses.clear();
   }
 
   //ds initializes txt_io playback modules
@@ -494,7 +494,7 @@ namespace proslam {
       if (_world_map->currentFrame()) {
 
         //ds local map generation - regardless of tracker state
-        if (_world_map->createLocalMap()) {
+        if (_world_map->createLocalMap(_parameters->command_line_parameters->option_drop_framepoints)) {
 
           //ds trigger relocalization
           _relocalizer->initialize(_world_map->currentLocalMap());
@@ -527,6 +527,16 @@ namespace proslam {
 
           //ds optimize graph
           _optimizer->optimize(_world_map);
+        }
+      }
+    } else {
+
+      //ds open loop options: save memory
+      if (_parameters->command_line_parameters->option_drop_framepoints) {
+
+        //ds free framepoints if available
+        if (_world_map->currentFrame()->previous() && _world_map->currentFrame()->previous()->previous()) {
+          _world_map->currentFrame()->previous()->previous()->clear();
         }
       }
     }

@@ -451,8 +451,10 @@ bool eval (const std::string& file_trajectory_test_, const std::string& file_tra
   result = system(("mkdir " + error_dir).c_str());
   result = system(("mkdir " + plot_path_dir).c_str());
   result = system(("mkdir " + plot_error_dir).c_str());
-
-  std::cerr << result << std::endl;
+  if (result == 0) {
+    printf("system io error\n");
+    return false;
+  }
 
   // read ground truth and result poses
   std::vector<Matrix4> poses_gt     = loadPoses(file_trajectory_ground_truth_);

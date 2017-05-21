@@ -184,7 +184,7 @@ namespace proslam {
 
         //ds compute ratio between landmarks and tracked points
         const real percentage_landmarks = static_cast<real>(_number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close)/_number_of_tracked_points;
-        if (percentage_landmarks < 0.2) {
+        if (percentage_landmarks < 0.1) {
           std::cerr << "BaseTracker::compute|WARNING: low percentage of tracked landmarks over framepoints: " << percentage_landmarks
                     << " (" << _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close << "/" << _number_of_tracked_points << ")" << std::endl;
         }

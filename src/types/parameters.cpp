@@ -21,7 +21,7 @@ namespace proslam {
   "-use-gui (-ug):                          displays GUI elements\n"
   "-use-odometry (-uo):                     uses odometry instead of inner motion model for prediction\n"
   "-depth-mode (-dm):                       depth tracking (-topic-image-left: intensity image, -topic-image-right: depth)\n"
-  "-open:                                   disables relocalization (open loop mode)\n"
+  "-open-loop (-ol):                        disables relocalization and loop closing (open loop mode)\n"
   "-show-top (-st):                         enable top map viewer\n"
   "-drop-framepoints (-df):                 deallocation of past framepoints at runtime (reduces memory demand)\n"
   "-equalize-histogram (-eh):               equalize stereo image histogram before processing\n"
@@ -48,20 +48,21 @@ namespace proslam {
   void CommandLineParameters::print() const {
     std::cerr << "-------------------------------------------------------------------------" << std::endl;
     std::cerr << "running with command line parameters:" << std::endl;
-    if (filename_configuration.length() > 0) {std::cerr << "-configuration           " << filename_configuration << std::endl;}
-    std::cerr << "-topic-image-left        " << topic_image_left << std::endl;
-    std::cerr << "-topic-image-right       " << topic_image_right << std::endl;
-    if (topic_camera_info_left.length() > 0) {std::cerr << "-topic-camera-left-info  " << topic_camera_info_left << std::endl;}
-    if (topic_camera_info_right.length() > 0) {std::cerr << "-topic-camera-right-info " << topic_camera_info_right << std::endl;}
-    std::cerr << "-use-gui                 " << option_use_gui << std::endl;
-    std::cerr << "-open                    " << !option_use_relocalization << std::endl;
-    std::cerr << "-show-top                " << option_show_top_viewer << std::endl;
-    std::cerr << "-use-odometry            " << option_use_odometry << std::endl;
-    std::cerr << "-depth-mode              " << (tracker_mode == TrackerMode::RGB_DEPTH) << std::endl;
-    std::cerr << "-drop-framepoints        " << option_drop_framepoints << std::endl;
-    std::cerr << "-equalize-histogram      " << option_equalize_histogram << std::endl;
-    std::cerr << "-rectify-and-undistort   " << option_rectify_and_undistort << std::endl;
-    if (filename_dataset.length() > 0) {std::cerr << "-dataset                 " << filename_dataset << std::endl;}
+    if (filename_configuration.length() > 0) {std::cerr << "-configuration (-c)            '" << filename_configuration << "'" << std::endl;}
+    std::cerr << "-topic-image-left (-il)        '" << topic_image_left << "'" << std::endl;
+    std::cerr << "-topic-image-right (-ir)       '" << topic_image_right << "'" << std::endl;
+    if (topic_camera_info_left.length() > 0) {std::cerr << "-topic-camera-left-info  (-cl) '" << topic_camera_info_left << "'" << std::endl;}
+    if (topic_camera_info_right.length() > 0) {std::cerr << "-topic-camera-right-info (-cr) '" << topic_camera_info_right << "'" << std::endl;}
+    std::cerr << "-use-gui (-ug)                 " << option_use_gui << std::endl;
+    std::cerr << "-open-loop (-ol)               " << !option_use_relocalization << std::endl;
+    std::cerr << "-show-top (-st)                " << option_show_top_viewer << std::endl;
+    std::cerr << "-use-odometry (-uo)            " << option_use_odometry << std::endl;
+    std::cerr << "-depth-mode (-dm)              " << (tracker_mode == TrackerMode::RGB_DEPTH) << std::endl;
+    std::cerr << "-drop-framepoints (-df)        " << option_drop_framepoints << std::endl;
+    std::cerr << "-equalize-histogram (-eh)      " << option_equalize_histogram << std::endl;
+    std::cerr << "-rectify-and-undistort (ru)    " << option_rectify_and_undistort << std::endl;
+    if (filename_dataset.length() > 0) {std::cerr
+              << "-dataset                       '" << filename_dataset  << "'" << std::endl;}
     std::cerr << "-------------------------------------------------------------------------" << std::endl;
   }
 
@@ -194,15 +195,14 @@ namespace proslam {
 
   void ParameterCollection::parseFromCommandLine(const int32_t& argc_, char ** argv_) {
 
-    //ds skim the command line for configuration file input and tracker mode
+    //ds skim the command line for configuration file input
     int32_t number_of_checked_parameters = 1;
     while(number_of_checked_parameters < argc_){
       if (!std::strcmp(argv_[number_of_checked_parameters], "-configuration") || !std::strcmp(argv_[number_of_checked_parameters], "-c")){
         number_of_checked_parameters++;
         if (number_of_checked_parameters == argc_) {break;}
         command_line_parameters->filename_configuration = argv_[number_of_checked_parameters];
-      } else if (!std::strcmp(argv_[number_of_checked_parameters], "-depth-mode") || !std::strcmp(argv_[number_of_checked_parameters], "-dm")) {
-        command_line_parameters->tracker_mode = CommandLineParameters::TrackerMode::RGB_DEPTH;
+        break;
       }
       number_of_checked_parameters++;
     }
@@ -227,9 +227,6 @@ namespace proslam {
       }
     }
 
-    //ds generate tracker mode specific parameters
-    setMode(command_line_parameters->tracker_mode);
-
     //ds if a valid configuration file is set (otherwise the field must be empty)
     if (command_line_parameters->filename_configuration.length()) {
 
@@ -239,7 +236,7 @@ namespace proslam {
 
     //ds reset and check for other command line parameters, potentially overwritting the ones set in the configuration file
     number_of_checked_parameters = 1;
-    while(number_of_checked_parameters < argc_){
+    while (number_of_checked_parameters < argc_) {
       if (!std::strcmp(argv_[number_of_checked_parameters], "-topic-image-left") || !std::strcmp(argv_[number_of_checked_parameters], "-il")){
         number_of_checked_parameters++;
         if (number_of_checked_parameters == argc_) {break;}
@@ -266,7 +263,7 @@ namespace proslam {
         exit(0);
       } else if (!std::strcmp(argv_[number_of_checked_parameters], "-use-gui") || !std::strcmp(argv_[number_of_checked_parameters], "-ug")) {
         command_line_parameters->option_use_gui = true;
-      } else if (!std::strcmp(argv_[number_of_checked_parameters], "-open")) {
+      } else if (!std::strcmp(argv_[number_of_checked_parameters], "-open-loop") || !std::strcmp(argv_[number_of_checked_parameters], "-ol")) {
         command_line_parameters->option_use_relocalization = false;
       } else if (!std::strcmp(argv_[number_of_checked_parameters], "-show-top") || !std::strcmp(argv_[number_of_checked_parameters], "-st")) {
         command_line_parameters->option_show_top_viewer = true;
@@ -288,6 +285,9 @@ namespace proslam {
       number_of_checked_parameters++;
     }
 
+    //ds generate tracker mode specific parameters (no effect if configuration file and tracker mode not overwritten)
+    setMode(command_line_parameters->tracker_mode);
+
     //ds validate input parameters and exit on failure
     validateParameters();
   }
@@ -297,6 +297,21 @@ namespace proslam {
 
       //ds attempt to open the configuration file and parse it into a YAML node
       YAML::Node configuration = YAML::LoadFile(filename_);
+
+      //ds parse desired tracker mode as string
+      const std::string& tracker_mode = configuration["command_line"]["tracker_mode"].as<std::string>();
+      if (tracker_mode == "RGB_STEREO") {
+        command_line_parameters->tracker_mode = CommandLineParameters::TrackerMode::RGB_STEREO;
+      } else if (tracker_mode == "RGB_DEPTH") {
+        command_line_parameters->tracker_mode = CommandLineParameters::TrackerMode::RGB_DEPTH;
+      } else {
+        std::cerr << "ParameterCollection::parseFromFile|ERROR: invalid tracker mode: " << tracker_mode << std::endl;
+        destroy();
+        exit(0);
+      }
+
+      //ds generate tracker mode specific parameters
+      setMode(command_line_parameters->tracker_mode);
 
       //CommandLine
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, topic_image_left, std::string)
@@ -379,7 +394,7 @@ namespace proslam {
           break;
         }
         default: {
-          std::cerr << "ParameterCollection::parseParametersFromFile|ERROR: invalid tracker mode" << std::endl;
+          std::cerr << "ParameterCollection::parseFromFile|ERROR: invalid tracker mode" << std::endl;
           destroy();
           exit(0);
         }
@@ -395,10 +410,10 @@ namespace proslam {
       PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, aligner->minimum_inlier_ratio, real)
 
       //ds done
-      std::cerr << "ParameterCollection::parseParametersFromFile|successfully loaded configuration from file: " << filename_ << std::endl;
-      std::cerr << "ParameterCollection::parseParametersFromFile|number of imported parameters: " << number_of_parameters_parsed << "/" << number_of_parameters_detected << std::endl;
+      std::cerr << "ParameterCollection::parseFromFile|successfully loaded configuration from file: " << filename_ << std::endl;
+      std::cerr << "ParameterCollection::parseFromFile|number of imported parameters: " << number_of_parameters_parsed << "/" << number_of_parameters_detected << std::endl;
     } catch (const YAML::BadFile& exception_) {
-      std::cerr << "ParameterCollection::parseParametersFromFile|ERROR: unable to parse configuration file: " << filename_ << " - exception: '" << exception_.what() << "'" << std::endl;
+      std::cerr << "ParameterCollection::parseFromFile|ERROR: unable to parse configuration file: " << filename_ << " - exception: '" << exception_.what() << "'" << std::endl;
     }
   }
 
@@ -422,13 +437,13 @@ namespace proslam {
     //ds generate tracker mode specific parameters
     switch (mode_) {
       case CommandLineParameters::TrackerMode::RGB_STEREO: {
-        stereo_framepoint_generator_parameters = new StereoFramePointGeneratorParameters();
-        stereo_tracker_parameters = new StereoTrackerParameters();
+        if (!stereo_framepoint_generator_parameters) {stereo_framepoint_generator_parameters = new StereoFramePointGeneratorParameters();}
+        if (!stereo_tracker_parameters) {stereo_tracker_parameters = new StereoTrackerParameters();}
         break;
       }
       case CommandLineParameters::TrackerMode::RGB_DEPTH: {
-        depth_framepoint_generator_parameters = new DepthFramePointGeneratorParameters();
-        depth_tracker_parameters = new DepthTrackerParameters();
+        if (!depth_framepoint_generator_parameters) {depth_framepoint_generator_parameters = new DepthFramePointGeneratorParameters();}
+        if (!depth_tracker_parameters) {depth_tracker_parameters = new DepthTrackerParameters();}
         break;
       }
       default: {

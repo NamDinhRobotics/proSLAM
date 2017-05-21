@@ -23,7 +23,7 @@ namespace proslam {
   }
 
   Frame::~Frame() {
-    releasePoints();
+    clear();
   }
 
   //ds get a quick overview of the overall point status in the frame
@@ -100,7 +100,7 @@ namespace proslam {
   }
 
   //ds free all point instances
-  void Frame::releasePoints() {
+  void Frame::clear() {
     for (const FramePoint* frame_point: _points) {
       delete frame_point;
     }

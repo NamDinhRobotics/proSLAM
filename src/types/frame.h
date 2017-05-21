@@ -109,7 +109,7 @@ namespace proslam {
     void releaseImages();
 
     //ds free all point instances
-    void releasePoints();
+    void clear();
 
     //ds update framepoint world coordinates
     void updatePoints();
