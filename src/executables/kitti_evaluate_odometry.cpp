@@ -451,7 +451,7 @@ bool eval (const std::string& file_trajectory_test_, const std::string& file_tra
   result = system(("mkdir " + error_dir).c_str());
   result = system(("mkdir " + plot_path_dir).c_str());
   result = system(("mkdir " + plot_error_dir).c_str());
-  if (result == 0) {
+  if (result < 0) {
     printf("system io error\n");
     return false;
   }

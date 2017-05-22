@@ -55,7 +55,6 @@ namespace proslam {
     std::cerr << "BaseFramePointGenerator::setup|focal length (pixels): " << _focal_length_pixels << std::endl;
 
     //ds clear buffers
-    _keypoints_left.clear();
     _keypoints_with_descriptors_left.clear();
     std::cerr << "BaseFramePointGenerator::setup|configured" << std::endl;
   }
@@ -143,6 +142,7 @@ namespace proslam {
   void BaseFramePointGenerator::clearFramepointsInImage() {
     for (Index row = 0; row < _number_of_rows_image; ++row) {
       for (Count col = 0; col < _number_of_cols_image; ++col) {
+        if (_framepoints_in_image[row][col]) {delete _framepoints_in_image[row][col];}
         _framepoints_in_image[row][col] = 0;
       }
     }

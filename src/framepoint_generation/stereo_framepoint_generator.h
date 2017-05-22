@@ -55,8 +55,6 @@ namespace proslam {
     real _minimum_disparity_pixels;
 
     //ds inner memory buffers (operated on in compute)
-    std::vector<cv::KeyPoint> _keypoints_right;
-    cv::Mat _descriptors_right;
     std::vector<KeypointWithDescriptor> _keypoints_with_descriptors_right;
 
   private:

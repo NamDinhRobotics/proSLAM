@@ -24,7 +24,7 @@ namespace proslam {
     //ds computes framepoints stored in a image-like matrix (_framepoints_in_image) for provided stereo images
     virtual void compute(Frame* frame_);
 
-    void computeCoordinatesFromDepth(Frame* frame_);
+    void computeCoordinatesFromDepth(Frame* frame_, std::vector<cv::KeyPoint>& keypoints_, cv::Mat& descriptors_);
 
   //ds setters/getters
   public:

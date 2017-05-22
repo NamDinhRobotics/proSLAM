@@ -435,6 +435,9 @@ namespace proslam {
           time_start_seconds = srrg_core::getTime();
           number_of_processed_frames_current = 0;
         }
+
+        message_image_left->release();
+        message_image_right->release();
         _synchronizer.reset();
 
         //ds update gui and check if termination is requested
@@ -534,7 +537,7 @@ namespace proslam {
       //ds open loop options: save memory
       if (_parameters->command_line_parameters->option_drop_framepoints) {
 
-        //ds free framepoints if available
+        //ds free framepoints if available (previous is still required to draw the optical flow from current to previous point)
         if (_world_map->currentFrame()->previous() && _world_map->currentFrame()->previous()->previous()) {
           _world_map->currentFrame()->previous()->previous()->clear();
         }

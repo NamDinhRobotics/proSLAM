@@ -60,7 +60,7 @@ namespace proslam {
     std::cerr << "-depth-mode (-dm)              " << (tracker_mode == TrackerMode::RGB_DEPTH) << std::endl;
     std::cerr << "-drop-framepoints (-df)        " << option_drop_framepoints << std::endl;
     std::cerr << "-equalize-histogram (-eh)      " << option_equalize_histogram << std::endl;
-    std::cerr << "-rectify-and-undistort (ru)    " << option_rectify_and_undistort << std::endl;
+    std::cerr << "-rectify-and-undistort (-ru)   " << option_rectify_and_undistort << std::endl;
     if (filename_dataset.length() > 0) {std::cerr
               << "-dataset                       '" << filename_dataset  << "'" << std::endl;}
     std::cerr << "-------------------------------------------------------------------------" << std::endl;

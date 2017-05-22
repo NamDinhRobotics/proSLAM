@@ -125,7 +125,8 @@ namespace proslam {
       keypoint_buffer_left[0]    = point_previous->keypointLeft();
       keypoint_buffer_left[0].pt = offset_keypoint_half;
       cv::Mat descriptor_left;
-      _framepoint_generator->descriptorExtractor()->compute(intensity_image_left(region_of_interest_left), keypoint_buffer_left, descriptor_left);
+      const cv::Mat roi_left(intensity_image_left(region_of_interest_left));
+      _framepoint_generator->descriptorExtractor()->compute(roi_left, keypoint_buffer_left, descriptor_left);
       if (descriptor_left.rows == 0) {
         continue;
       }
@@ -135,7 +136,8 @@ namespace proslam {
       keypoint_buffer_right[0] = point_previous->keypointRight();
       keypoint_buffer_right[0].pt = offset_keypoint_half;
       cv::Mat descriptor_right;
-      _framepoint_generator->descriptorExtractor()->compute(intensity_image_right(region_of_interest_right), keypoint_buffer_right, descriptor_right);
+      const cv::Mat roi_right(intensity_image_right(region_of_interest_right));
+      _framepoint_generator->descriptorExtractor()->compute(roi_right, keypoint_buffer_right, descriptor_right);
       if (descriptor_right.rows == 0) {
         continue;
       }

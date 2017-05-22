@@ -126,8 +126,6 @@ namespace proslam {
 #endif
 
     //ds inner memory buffers (operated on in compute)
-    std::vector<cv::KeyPoint> _keypoints_left;
-    cv::Mat _descriptors_left;
     std::vector<KeypointWithDescriptor> _keypoints_with_descriptors_left;
 
   private:

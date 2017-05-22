@@ -26,11 +26,15 @@ int32_t main(int32_t argc_, char** argv_) {
   //ds load cameras
   slam_system.loadCamerasFromMessageFile();
 
-  //ds allocate a qt UI server in the main scope (required)
-  QApplication* ui_server = new QApplication(argc_, argv_);
+  //ds if visualization is desired
+  if (parameters->command_line_parameters->option_use_gui) {
 
-  //ds initialize gui
-  slam_system.initializeGUI(ui_server);
+    //ds allocate a qt UI server in the main scope (required)
+    QApplication* ui_server = new QApplication(argc_, argv_);
+
+    //ds initialize GUI
+    slam_system.initializeGUI(ui_server);
+  }
 
   //ds start message playback - blocks until dataset is completed or aborted
   slam_system.playbackMessageFile();
@@ -41,9 +45,9 @@ int32_t main(int32_t argc_, char** argv_) {
   //ds save trajectory to disk
   slam_system.worldMap()->writeTrajectory("trajectory.txt");
 
-  //ds clean up parameters (since not used in GUI)
+  //ds clean up parameters
   delete parameters;
 
-  //ds exit in GUI
+  //ds exit in GUI, keeping active viewers open (directly returns without GUI option)
   return slam_system.closeGUI();
 }

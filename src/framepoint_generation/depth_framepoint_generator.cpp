@@ -97,29 +97,33 @@ namespace proslam {
   void DepthFramePointGenerator::compute(Frame* frame_) {
     assert(frame_->intensityImageRight().type() == CV_16UC1);
 
+    //ds buffers in local scope to not confuse opencvs memory management
+    std::vector<cv::KeyPoint> keypoints_left;
+    cv::Mat descriptors_left;
+
     //ds detect new features
-    detectKeypoints(frame_->intensityImageLeft(), _keypoints_left);
+    detectKeypoints(frame_->intensityImageLeft(), keypoints_left);
 
     CHRONOMETER_START(depth_map_generation)
     _computeDepthMap(frame_->intensityImageRight());
     CHRONOMETER_STOP(depth_map_generation)
 
     //ds extract descriptors for detected features
-    extractDescriptors(frame_->intensityImageLeft(), _keypoints_left, _descriptors_left);
+    extractDescriptors(frame_->intensityImageLeft(), keypoints_left, descriptors_left);
 
     //ds prepare and execute stereo keypoint search
     CHRONOMETER_START(depth_assignment)
-    computeCoordinatesFromDepth(frame_);
+    computeCoordinatesFromDepth(frame_, keypoints_left, descriptors_left);
     CHRONOMETER_STOP(depth_assignment)
   }
 
   //ds computes all potential stereo keypoints (exhaustive in matching distance) and stores them as framepoints (called within compute)
-  void DepthFramePointGenerator::computeCoordinatesFromDepth(Frame* frame_) {
+  void DepthFramePointGenerator::computeCoordinatesFromDepth(Frame* frame_, std::vector<cv::KeyPoint>& keypoints_, cv::Mat& descriptors_) {
     _number_of_available_points = 0;
     
-    for (size_t i=0; i<_keypoints_left.size(); i++) {
-      const cv::KeyPoint & keypoint_left=_keypoints_left[i];
-      const cv::Mat& descriptor_left=_descriptors_left.row(i);
+    for (size_t i=0; i<keypoints_.size(); i++) {
+      const cv::KeyPoint & keypoint_left=keypoints_[i];
+      const cv::Mat& descriptor_left=descriptors_.row(i);
       const Index r_left=keypoint_left.pt.y;
       const Index c_left=keypoint_left.pt.x;
       const cv::Vec3f& p=_space_map_left_meters.at<const cv::Vec3f>(r_left, c_left);

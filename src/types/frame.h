@@ -83,10 +83,10 @@ namespace proslam {
                        FramePoint* previous_point_ = 0);
 
     inline const IntensityImage& intensityImageLeft() const {return _intensity_image_left;}
-    void setIntensityImageLeft(const IntensityImage& intensity_image_)  {_intensity_image_left = intensity_image_.clone();}
+    void setIntensityImageLeft(const IntensityImage& intensity_image_)  {_intensity_image_left = intensity_image_;}
 
     inline const IntensityImage& intensityImageRight() const {return _intensity_image_right;}
-    void setIntensityImageRight(const IntensityImage& intensity_image_)  {_intensity_image_right = intensity_image_.clone();}
+    void setIntensityImageRight(const IntensityImage& intensity_image_)  {_intensity_image_right = intensity_image_;}
 
     inline const Status& status() const {return _status;}
     void setStatus(const Status& status_) {_status = status_;}

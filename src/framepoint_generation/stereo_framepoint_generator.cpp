@@ -26,7 +26,7 @@ namespace proslam {
     _baseline_meters           = -_baseline_pixelsmeters/_focal_length_pixels;
     _maximum_depth_near_meters = _baseline_factor*_baseline_meters;
     _maximum_depth_far_meters  = -_baseline_pixelsmeters/_minimum_disparity_pixels;
-    _keypoints_right.clear();
+    _keypoints_with_descriptors_left.clear();
     _keypoints_with_descriptors_right.clear();
 
     //ds info
@@ -38,33 +38,39 @@ namespace proslam {
 
   //ds cleanup of dynamic structures
   StereoFramePointGenerator::~StereoFramePointGenerator() {
-    std::cerr << "StereoFramePointGenerator::setup|destroying" << std::endl;
-    std::cerr << "StereoFramePointGenerator::setup|destroyed" << std::endl;
+    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|destroying" << std::endl;
+    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|destroyed" << std::endl;
   }
 
   //ds computes framepoints stored in a image-like matrix (_framepoints_in_image) for provided stereo images
   void StereoFramePointGenerator::compute(Frame* frame_) {
 
+    //ds buffers in local scope to not confuse opencvs memory management
+    std::vector<cv::KeyPoint> keypoints_left;
+    std::vector<cv::KeyPoint> keypoints_right;
+    cv::Mat descriptors_left;
+    cv::Mat descriptors_right;
+
     //ds detect new features to generate frame points from
-    detectKeypoints(frame_->intensityImageLeft(), _keypoints_left);
-    detectKeypoints(frame_->intensityImageRight(), _keypoints_right);
+    detectKeypoints(frame_->intensityImageLeft(), keypoints_left);
+    detectKeypoints(frame_->intensityImageRight(), keypoints_right);
 
     //ds extract descriptors for detected features
-    extractDescriptors(frame_->intensityImageLeft(), _keypoints_left, _descriptors_left);
-    extractDescriptors(frame_->intensityImageRight(), _keypoints_right, _descriptors_right);
+    extractDescriptors(frame_->intensityImageLeft(), keypoints_left, descriptors_left);
+    extractDescriptors(frame_->intensityImageRight(), keypoints_right, descriptors_right);
 
     //ds prepare and execute stereo keypoint search
     CHRONOMETER_START(point_triangulation)
-    initialize(_keypoints_left, _keypoints_right, _descriptors_left, _descriptors_right);
+    initialize(keypoints_left, keypoints_right, descriptors_left, descriptors_right);
     findStereoKeypoints(frame_);
     CHRONOMETER_STOP(point_triangulation)
   }
 
   //ds initializes structures for the epipolar stereo keypoint search (called within compute)
   void StereoFramePointGenerator::initialize(const std::vector<cv::KeyPoint>& keypoints_left_,
-                                      const std::vector<cv::KeyPoint>& keypoints_right_,
-                                      const cv::Mat& descriptors_left_,
-                                      const cv::Mat& descriptors_right_) {
+                                             const std::vector<cv::KeyPoint>& keypoints_right_,
+                                             const cv::Mat& descriptors_left_,
+                                             const cv::Mat& descriptors_right_) {
 
     //ds prepare keypoint with descriptors vectors for stereo keypoint search
     _keypoints_with_descriptors_left.resize(keypoints_left_.size());
