@@ -9,12 +9,12 @@ namespace proslam {
                                                           _baseline_factor(50),
                                                           _minimum_disparity_pixels(1),
                                                           _parameters(0) {
-    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|construced" << std::endl;
+    LOG_INFO(std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|construced" << std::endl)
   }
 
   //ds the stereo camera setup must be provided
   void StereoFramePointGenerator::configure(BaseFramepointGeneratorParameters* parameters_){
-    std::cerr << "StereoFramePointGenerator::setup|configuring" << std::endl;
+    LOG_INFO(std::cerr << "StereoFramePointGenerator::setup|configuring" << std::endl)
     _parameters = dynamic_cast<StereoFramePointGeneratorParameters*>(parameters_);
     assert(_camera_right);
 
@@ -30,16 +30,16 @@ namespace proslam {
     _keypoints_with_descriptors_right.clear();
 
     //ds info
-    std::cerr << "StereoFramePointGenerator::setup|baseline (m): " << _baseline_meters << std::endl;
-    std::cerr << "StereoFramePointGenerator::setup|maximum depth tracking close (m): " << _maximum_depth_near_meters << std::endl;
-    std::cerr << "StereoFramePointGenerator::setup|maximum depth tracking far (m): " << _maximum_depth_far_meters << std::endl;
-    std::cerr << "StereoFramePointGenerator::setup|configured" << std::endl;
+    LOG_INFO(std::cerr << "StereoFramePointGenerator::setup|baseline (m): " << _baseline_meters << std::endl)
+    LOG_INFO(std::cerr << "StereoFramePointGenerator::setup|maximum depth tracking close (m): " << _maximum_depth_near_meters << std::endl)
+    LOG_INFO(std::cerr << "StereoFramePointGenerator::setup|maximum depth tracking far (m): " << _maximum_depth_far_meters << std::endl)
+    LOG_INFO(std::cerr << "StereoFramePointGenerator::setup|configured" << std::endl)
   }
 
   //ds cleanup of dynamic structures
   StereoFramePointGenerator::~StereoFramePointGenerator() {
-    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|destroying" << std::endl;
-    std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|destroyed" << std::endl;
+    LOG_INFO(std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|destroying" << std::endl)
+    LOG_INFO(std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|destroyed" << std::endl)
   }
 
   //ds computes framepoints stored in a image-like matrix (_framepoints_in_image) for provided stereo images
@@ -183,8 +183,8 @@ namespace proslam {
     //ds sanity check
     const real triangulation_succcess_ratio = static_cast<real>(_number_of_available_points)/_keypoints_with_descriptors_left.size();
     if (triangulation_succcess_ratio < 0.25) {
-      std::cerr << "StereoFramePointGenerator::findStereoKeypoints|WARNING: low triangulation success ratio: " << triangulation_succcess_ratio
-                << " (" << _number_of_available_points << "/" << _keypoints_with_descriptors_left.size() << ")" << std::endl;
+      LOG_INFO(std::cerr << "StereoFramePointGenerator::findStereoKeypoints|WARNING: low triangulation success ratio: " << triangulation_succcess_ratio
+                << " (" << _number_of_available_points << "/" << _keypoints_with_descriptors_left.size() << ")" << std::endl)
     }
   }
 

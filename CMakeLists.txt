@@ -10,6 +10,9 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 message("build type: '${CMAKE_BUILD_TYPE}'")
 
+#ds enable logging
+add_definitions(-DSRRG_PROSLAM_ENABLE_LOGGING)
+
 #ds OpenCV - OpenCV_DIR might be overwritten by user
 find_package(OpenCV REQUIRED)
 message("using OpenCV version: '${OpenCV_VERSION}' (${OpenCV_DIR})")

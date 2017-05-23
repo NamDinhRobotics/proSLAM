@@ -41,79 +41,79 @@ namespace proslam {
     ++number_of_parameters_parsed; \
     /*std::cerr << "parameter name: '" << #STRUCT_NAME << ": " << #PARAMETER_NAME << "' value: '" << STRUCT_NAME->PARAMETER_NAME << "'" << std::endl;*/ \
   } catch (const YAML::TypedBadConversion<PARAMETER_TYPE>& exception_) { \
-    std::cerr << "WARNING: unable to parse parameter: '" << #STRUCT_NAME << ": " << #PARAMETER_NAME << "' (exception: '" << exception_.what() << "')" << std::endl; \
+    LOG_INFO(std::cerr << "WARNING: unable to parse parameter: '" << #STRUCT_NAME << ": " << #PARAMETER_NAME << "' (exception: '" << exception_.what() << "')" << std::endl) \
   }
 
   //ds Command line
   void CommandLineParameters::print() const {
-    std::cerr << "-------------------------------------------------------------------------" << std::endl;
-    std::cerr << "running with command line parameters:" << std::endl;
-    if (filename_configuration.length() > 0) {std::cerr << "-configuration (-c)            '" << filename_configuration << "'" << std::endl;}
-    std::cerr << "-topic-image-left (-il)        '" << topic_image_left << "'" << std::endl;
-    std::cerr << "-topic-image-right (-ir)       '" << topic_image_right << "'" << std::endl;
-    if (topic_camera_info_left.length() > 0) {std::cerr << "-topic-camera-left-info  (-cl) '" << topic_camera_info_left << "'" << std::endl;}
-    if (topic_camera_info_right.length() > 0) {std::cerr << "-topic-camera-right-info (-cr) '" << topic_camera_info_right << "'" << std::endl;}
-    std::cerr << "-use-gui (-ug)                 " << option_use_gui << std::endl;
-    std::cerr << "-open-loop (-ol)               " << !option_use_relocalization << std::endl;
-    std::cerr << "-show-top (-st)                " << option_show_top_viewer << std::endl;
-    std::cerr << "-use-odometry (-uo)            " << option_use_odometry << std::endl;
-    std::cerr << "-depth-mode (-dm)              " << (tracker_mode == TrackerMode::RGB_DEPTH) << std::endl;
-    std::cerr << "-drop-framepoints (-df)        " << option_drop_framepoints << std::endl;
-    std::cerr << "-equalize-histogram (-eh)      " << option_equalize_histogram << std::endl;
-    std::cerr << "-rectify-and-undistort (-ru)   " << option_rectify_and_undistort << std::endl;
-    if (filename_dataset.length() > 0) {std::cerr
-              << "-dataset                       '" << filename_dataset  << "'" << std::endl;}
-    std::cerr << "-------------------------------------------------------------------------" << std::endl;
+    LOG_INFO(std::cerr << "-------------------------------------------------------------------------" << std::endl)
+    LOG_INFO(std::cerr << "running with command line parameters:" << std::endl)
+    if (filename_configuration.length() > 0) {LOG_INFO(std::cerr << "-configuration (-c)            '" << filename_configuration << "'" << std::endl)}
+    LOG_INFO(std::cerr << "-topic-image-left (-il)        '" << topic_image_left << "'" << std::endl)
+    LOG_INFO(std::cerr << "-topic-image-right (-ir)       '" << topic_image_right << "'" << std::endl)
+    if (topic_camera_info_left.length() > 0) {LOG_INFO(std::cerr << "-topic-camera-left-info  (-cl) '" << topic_camera_info_left << "'" << std::endl)}
+    if (topic_camera_info_right.length() > 0) {LOG_INFO(std::cerr << "-topic-camera-right-info (-cr) '" << topic_camera_info_right << "'" << std::endl)}
+    LOG_INFO(std::cerr << "-use-gui (-ug)                 " << option_use_gui << std::endl)
+    LOG_INFO(std::cerr << "-open-loop (-ol)               " << !option_use_relocalization << std::endl)
+    LOG_INFO(std::cerr << "-show-top (-st)                " << option_show_top_viewer << std::endl)
+    LOG_INFO(std::cerr << "-use-odometry (-uo)            " << option_use_odometry << std::endl)
+    LOG_INFO(std::cerr << "-depth-mode (-dm)              " << (tracker_mode == TrackerMode::RGB_DEPTH) << std::endl)
+    LOG_INFO(std::cerr << "-drop-framepoints (-df)        " << option_drop_framepoints << std::endl)
+    LOG_INFO(std::cerr << "-equalize-histogram (-eh)      " << option_equalize_histogram << std::endl)
+    LOG_INFO(std::cerr << "-rectify-and-undistort (-ru)   " << option_rectify_and_undistort << std::endl)
+    if (filename_dataset.length() > 0) {LOG_INFO(std::cerr
+              << "-dataset                       '" << filename_dataset  << "'" << std::endl)}
+    LOG_INFO(std::cerr << "-------------------------------------------------------------------------" << std::endl)
   }
 
 
 
   void AlignerParameters::print() const {
-    std::cerr << "AlignerParameters::print|maximum_error_kernel: " << maximum_error_kernel << std::endl;
-    std::cerr << "AlignerParameters::print|minimum_number_of_inliers: " << minimum_number_of_inliers << std::endl;
-    std::cerr << "AlignerParameters::print|minimum_inlier_ratio: " << minimum_inlier_ratio << std::endl;
+    LOG_INFO(std::cerr << "AlignerParameters::print|maximum_error_kernel: " << maximum_error_kernel << std::endl)
+    LOG_INFO(std::cerr << "AlignerParameters::print|minimum_number_of_inliers: " << minimum_number_of_inliers << std::endl)
+    LOG_INFO(std::cerr << "AlignerParameters::print|minimum_inlier_ratio: " << minimum_inlier_ratio << std::endl)
   }
 
 
 
   //ds Types
   void FrameParameters::print() const {
-    std::cerr << "FrameParameters::print|minimum_track_length_for_landmark_creation: " << minimum_track_length_for_landmark_creation << std::endl;
+    LOG_INFO(std::cerr << "FrameParameters::print|minimum_track_length_for_landmark_creation: " << minimum_track_length_for_landmark_creation << std::endl)
   }
 
   void LandmarkParameters::print() const {
-    std::cerr << "LandmarkParameters::print|minimum_number_of_forced_updates: " << minimum_number_of_forced_updates << std::endl;
-    std::cerr << "LandmarkParameters::print|maximum_translation_error_to_depth_ratio: " << maximum_translation_error_to_depth_ratio << std::endl;
+    LOG_INFO(std::cerr << "LandmarkParameters::print|minimum_number_of_forced_updates: " << minimum_number_of_forced_updates << std::endl)
+    LOG_INFO(std::cerr << "LandmarkParameters::print|maximum_translation_error_to_depth_ratio: " << maximum_translation_error_to_depth_ratio << std::endl)
   }
 
   void LocalMapParameters::print() const {
-    std::cerr << "LocalMapParameters::print|minimum_number_of_landmarks: " << minimum_number_of_landmarks << std::endl;
+    LOG_INFO(std::cerr << "LocalMapParameters::print|minimum_number_of_landmarks: " << minimum_number_of_landmarks << std::endl)
   }
 
   void WorldMapParameters::print() const {
-    std::cerr << "WorldMapParameters::print|minimum_distance_traveled_for_local_map: " << minimum_distance_traveled_for_local_map << std::endl;
-    std::cerr << "WorldMapParameters::print|minimum_degrees_rotated_for_local_map: " << minimum_degrees_rotated_for_local_map << std::endl;
-    std::cerr << "WorldMapParameters::print|minimum_number_of_frames_for_local_map: " << minimum_number_of_frames_for_local_map << std::endl;
+    LOG_INFO(std::cerr << "WorldMapParameters::print|minimum_distance_traveled_for_local_map: " << minimum_distance_traveled_for_local_map << std::endl)
+    LOG_INFO(std::cerr << "WorldMapParameters::print|minimum_degrees_rotated_for_local_map: " << minimum_degrees_rotated_for_local_map << std::endl)
+    LOG_INFO(std::cerr << "WorldMapParameters::print|minimum_number_of_frames_for_local_map: " << minimum_number_of_frames_for_local_map << std::endl)
   }
 
 
 
   //ds Framepoint estimation
   void BaseFramepointGeneratorParameters::print() const {
-    std::cerr << "BaseFramepointGeneratorParameters::print|target_number_of_keypoints_tolerance: " << target_number_of_keypoints_tolerance << std::endl;
-    std::cerr << "BaseFramepointGeneratorParameters::print|detector_threshold: " << detector_threshold << std::endl;
-    std::cerr << "BaseFramepointGeneratorParameters::print|detector_threshold_minimum: " << detector_threshold_minimum << std::endl;
-    std::cerr << "BaseFramepointGeneratorParameters::print|detector_threshold_step_size: " << detector_threshold_step_size << std::endl;
-    std::cerr << "BaseFramepointGeneratorParameters::print|matching_distance_tracking_threshold: " << matching_distance_tracking_threshold << std::endl;
-    std::cerr << "BaseFramepointGeneratorParameters::print|matching_distance_tracking_threshold_maximum: " << matching_distance_tracking_threshold_maximum << std::endl;
-    std::cerr << "BaseFramepointGeneratorParameters::print|matching_distance_tracking_threshold_minimum: " << matching_distance_tracking_threshold_minimum << std::endl;
-    std::cerr << "BaseFramepointGeneratorParameters::print|matching_distance_tracking_step_size: " << matching_distance_tracking_step_size << std::endl;
+    LOG_INFO(std::cerr << "BaseFramepointGeneratorParameters::print|target_number_of_keypoints_tolerance: " << target_number_of_keypoints_tolerance << std::endl)
+    LOG_INFO(std::cerr << "BaseFramepointGeneratorParameters::print|detector_threshold: " << detector_threshold << std::endl)
+    LOG_INFO(std::cerr << "BaseFramepointGeneratorParameters::print|detector_threshold_minimum: " << detector_threshold_minimum << std::endl)
+    LOG_INFO(std::cerr << "BaseFramepointGeneratorParameters::print|detector_threshold_step_size: " << detector_threshold_step_size << std::endl)
+    LOG_INFO(std::cerr << "BaseFramepointGeneratorParameters::print|matching_distance_tracking_threshold: " << matching_distance_tracking_threshold << std::endl)
+    LOG_INFO(std::cerr << "BaseFramepointGeneratorParameters::print|matching_distance_tracking_threshold_maximum: " << matching_distance_tracking_threshold_maximum << std::endl)
+    LOG_INFO(std::cerr << "BaseFramepointGeneratorParameters::print|matching_distance_tracking_threshold_minimum: " << matching_distance_tracking_threshold_minimum << std::endl)
+    LOG_INFO(std::cerr << "BaseFramepointGeneratorParameters::print|matching_distance_tracking_step_size: " << matching_distance_tracking_step_size << std::endl)
   }
 
   void StereoFramePointGeneratorParameters::print() const {
-    std::cerr << "StereoFramepointGeneratorParameters::print|maximum_matching_distance_triangulation: " << maximum_matching_distance_triangulation << std::endl;
-    std::cerr << "StereoFramepointGeneratorParameters::print|baseline_factor: " << baseline_factor << std::endl;
-    std::cerr << "StereoFramepointGeneratorParameters::print|minimum_disparity_pixels: " << minimum_disparity_pixels << std::endl;
+    LOG_INFO(std::cerr << "StereoFramepointGeneratorParameters::print|maximum_matching_distance_triangulation: " << maximum_matching_distance_triangulation << std::endl)
+    LOG_INFO(std::cerr << "StereoFramepointGeneratorParameters::print|baseline_factor: " << baseline_factor << std::endl)
+    LOG_INFO(std::cerr << "StereoFramepointGeneratorParameters::print|minimum_disparity_pixels: " << minimum_disparity_pixels << std::endl)
     BaseFramepointGeneratorParameters::print();
   }
 
@@ -125,14 +125,14 @@ namespace proslam {
 
   //ds Motion estimation
   void BaseTrackerParameters::print() const {
-    std::cerr << "BaseTrackerParameters::print|minimum_number_of_landmarks_to_track: " << minimum_number_of_landmarks_to_track << std::endl;
-    std::cerr << "BaseTrackerParameters::print|minimum_threshold_distance_tracking_pixels: " << minimum_threshold_distance_tracking_pixels << std::endl;
-    std::cerr << "BaseTrackerParameters::print|maximum_threshold_distance_tracking_pixels: " << maximum_threshold_distance_tracking_pixels << std::endl;
-    std::cerr << "BaseTrackerParameters::print|range_point_tracking: " << range_point_tracking << std::endl;
-    std::cerr << "BaseTrackerParameters::print|maximum_distance_tracking_pixels: " << maximum_distance_tracking_pixels << std::endl;
-    std::cerr << "BaseTrackerParameters::print|maximum_number_of_landmark_recoveries: " << maximum_number_of_landmark_recoveries << std::endl;
-    std::cerr << "BaseTrackerParameters::print|bin_size_pixels: " << bin_size_pixels << std::endl;
-    std::cerr << "BaseTrackerParameters::print|ratio_keypoints_to_bins: " << ratio_keypoints_to_bins << std::endl;
+    LOG_INFO(std::cerr << "BaseTrackerParameters::print|minimum_number_of_landmarks_to_track: " << minimum_number_of_landmarks_to_track << std::endl)
+    LOG_INFO(std::cerr << "BaseTrackerParameters::print|minimum_threshold_distance_tracking_pixels: " << minimum_threshold_distance_tracking_pixels << std::endl)
+    LOG_INFO(std::cerr << "BaseTrackerParameters::print|maximum_threshold_distance_tracking_pixels: " << maximum_threshold_distance_tracking_pixels << std::endl)
+    LOG_INFO(std::cerr << "BaseTrackerParameters::print|range_point_tracking: " << range_point_tracking << std::endl)
+    LOG_INFO(std::cerr << "BaseTrackerParameters::print|maximum_distance_tracking_pixels: " << maximum_distance_tracking_pixels << std::endl)
+    LOG_INFO(std::cerr << "BaseTrackerParameters::print|maximum_number_of_landmark_recoveries: " << maximum_number_of_landmark_recoveries << std::endl)
+    LOG_INFO(std::cerr << "BaseTrackerParameters::print|bin_size_pixels: " << bin_size_pixels << std::endl)
+    LOG_INFO(std::cerr << "BaseTrackerParameters::print|ratio_keypoints_to_bins: " << ratio_keypoints_to_bins << std::endl)
   }
 
   void StereoTrackerParameters::print() const {
@@ -147,17 +147,17 @@ namespace proslam {
 
   //ds Relocalization
   void RelocalizerParameters::print() const {
-    std::cerr << "RelocalizerParameters::print|preliminary_minimum_interspace_queries: " << preliminary_minimum_interspace_queries << std::endl;
-    std::cerr << "RelocalizerParameters::print|preliminary_minimum_matching_ratio: " << preliminary_minimum_matching_ratio << std::endl;
-    std::cerr << "RelocalizerParameters::print|minimum_number_of_matches_per_landmark: " << minimum_number_of_matches_per_landmark << std::endl;
-    std::cerr << "RelocalizerParameters::print|minimum_matches_per_correspondence: " << minimum_matches_per_correspondence << std::endl;
+    LOG_INFO(std::cerr << "RelocalizerParameters::print|preliminary_minimum_interspace_queries: " << preliminary_minimum_interspace_queries << std::endl)
+    LOG_INFO(std::cerr << "RelocalizerParameters::print|preliminary_minimum_matching_ratio: " << preliminary_minimum_matching_ratio << std::endl)
+    LOG_INFO(std::cerr << "RelocalizerParameters::print|minimum_number_of_matches_per_landmark: " << minimum_number_of_matches_per_landmark << std::endl)
+    LOG_INFO(std::cerr << "RelocalizerParameters::print|minimum_matches_per_correspondence: " << minimum_matches_per_correspondence << std::endl)
     aligner->print();
   }
 
 
 
   ParameterCollection::ParameterCollection(): number_of_parameters_detected(0), number_of_parameters_parsed(0) {
-    std::cerr << "ParameterCollection::ParameterCollection|constructing" << std::endl;
+    LOG_INFO(std::cerr << "ParameterCollection::ParameterCollection|constructing" << std::endl)
 
     //ds allocate minimal set of parameters
     command_line_parameters = new CommandLineParameters();
@@ -169,11 +169,11 @@ namespace proslam {
 
     //ds allocate inner parameters
     relocalizer_parameters->aligner = new AlignerParameters();
-    std::cerr << "ParameterCollection::ParameterCollection|constructed" << std::endl;
+    LOG_INFO(std::cerr << "ParameterCollection::ParameterCollection|constructed" << std::endl)
   }
 
   void ParameterCollection::destroy() {
-    std::cerr << "ParameterCollection::destroy|destroying" << std::endl;
+    LOG_INFO(std::cerr << "ParameterCollection::destroy|destroying" << std::endl)
     if (command_line_parameters) {delete command_line_parameters;}
     if (frame_parameters) {delete frame_parameters;}
     if (landmark_parameters) {delete landmark_parameters;}
@@ -184,13 +184,13 @@ namespace proslam {
     if (stereo_tracker_parameters) {delete stereo_tracker_parameters;}
     if (depth_tracker_parameters) {delete depth_tracker_parameters;}
     if (relocalizer_parameters) {delete relocalizer_parameters;}
-    std::cerr << "ParameterCollection::destroy|destroyed" << std::endl;
+    LOG_INFO(std::cerr << "ParameterCollection::destroy|destroyed" << std::endl)
   }
 
   ParameterCollection::~ParameterCollection() {
-    std::cerr << "ParameterCollection::ParameterCollection|destroying" << std::endl;
+    LOG_INFO(std::cerr << "ParameterCollection::ParameterCollection|destroying" << std::endl)
     destroy();
-    std::cerr << "ParameterCollection::ParameterCollection|destroyed" << std::endl;
+    LOG_INFO(std::cerr << "ParameterCollection::ParameterCollection|destroyed" << std::endl)
   }
 
   void ParameterCollection::parseFromCommandLine(const int32_t& argc_, char ** argv_) {
@@ -213,15 +213,15 @@ namespace proslam {
       //ds check if a default configuration file is present
       if (srrg_core::isAccessible("configuration.yaml")) {
         command_line_parameters->filename_configuration = "configuration.yaml";
-        std::cerr << "ParameterCollection::parseParametersFromCommandLine|loading default configuration file: " << command_line_parameters->filename_configuration << std::endl;
+        LOG_INFO(std::cerr << "ParameterCollection::parseParametersFromCommandLine|loading default configuration file: " << command_line_parameters->filename_configuration << std::endl)
       } else {
-        std::cerr << "ParameterCollection::parseParametersFromCommandLine|WARNING: no configuration file found (running with internal settings)" << std::endl;
+        LOG_INFO(std::cerr << "ParameterCollection::parseParametersFromCommandLine|WARNING: no configuration file found (running with internal settings)" << std::endl)
       }
     } else {
 
       //ds check if specified configuration file is not accessible
       if (!srrg_core::isAccessible(command_line_parameters->filename_configuration)) {
-        std::cerr << "ParameterCollection::parseParametersFromCommandLine|ERROR: specified configuration file is not accessible: " << command_line_parameters->filename_configuration << std::endl;
+        LOG_INFO(std::cerr << "ParameterCollection::parseParametersFromCommandLine|ERROR: specified configuration file is not accessible: " << command_line_parameters->filename_configuration << std::endl)
         destroy();
         exit(0);
       }
@@ -254,11 +254,11 @@ namespace proslam {
         if (number_of_checked_parameters == argc_) {break;}
         command_line_parameters->topic_camera_info_right = argv_[number_of_checked_parameters];
       } else if (!std::strcmp(argv_[number_of_checked_parameters], "-h") || !std::strcmp(argv_[number_of_checked_parameters], "--h")) {
-        std::cerr << banner << std::endl;
+        LOG_INFO(std::cerr << banner << std::endl)
         destroy();
         exit(0);
       } else if (!std::strcmp(argv_[number_of_checked_parameters], "-help") || !std::strcmp(argv_[number_of_checked_parameters], "--help")) {
-        std::cerr << banner << std::endl;
+        LOG_INFO(std::cerr << banner << std::endl)
         destroy();
         exit(0);
       } else if (!std::strcmp(argv_[number_of_checked_parameters], "-use-gui") || !std::strcmp(argv_[number_of_checked_parameters], "-ug")) {
@@ -305,7 +305,7 @@ namespace proslam {
       } else if (tracker_mode == "RGB_DEPTH") {
         command_line_parameters->tracker_mode = CommandLineParameters::TrackerMode::RGB_DEPTH;
       } else {
-        std::cerr << "ParameterCollection::parseFromFile|ERROR: invalid tracker mode: " << tracker_mode << std::endl;
+        LOG_INFO(std::cerr << "ParameterCollection::parseFromFile|ERROR: invalid tracker mode: " << tracker_mode << std::endl)
         destroy();
         exit(0);
       }
@@ -394,7 +394,7 @@ namespace proslam {
           break;
         }
         default: {
-          std::cerr << "ParameterCollection::parseFromFile|ERROR: invalid tracker mode" << std::endl;
+          LOG_INFO(std::cerr << "ParameterCollection::parseFromFile|ERROR: invalid tracker mode" << std::endl)
           destroy();
           exit(0);
         }
@@ -410,10 +410,10 @@ namespace proslam {
       PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, aligner->minimum_inlier_ratio, real)
 
       //ds done
-      std::cerr << "ParameterCollection::parseFromFile|successfully loaded configuration from file: " << filename_ << std::endl;
-      std::cerr << "ParameterCollection::parseFromFile|number of imported parameters: " << number_of_parameters_parsed << "/" << number_of_parameters_detected << std::endl;
+      LOG_INFO(std::cerr << "ParameterCollection::parseFromFile|successfully loaded configuration from file: " << filename_ << std::endl)
+      LOG_INFO(std::cerr << "ParameterCollection::parseFromFile|number of imported parameters: " << number_of_parameters_parsed << "/" << number_of_parameters_detected << std::endl)
     } catch (const YAML::BadFile& exception_) {
-      std::cerr << "ParameterCollection::parseFromFile|ERROR: unable to parse configuration file: " << filename_ << " - exception: '" << exception_.what() << "'" << std::endl;
+      LOG_INFO(std::cerr << "ParameterCollection::parseFromFile|ERROR: unable to parse configuration file: " << filename_ << " - exception: '" << exception_.what() << "'" << std::endl)
     }
   }
 
@@ -421,12 +421,12 @@ namespace proslam {
 
     //ds check camera topics
     if (command_line_parameters->topic_image_left.length() == 0) {
-      std::cerr << "ParameterCollection::validateParameters|ERROR: empty value entered for parameter: -topic-image-left (-il) (enter -h for help)" << std::endl;
+      LOG_INFO(std::cerr << "ParameterCollection::validateParameters|ERROR: empty value entered for parameter: -topic-image-left (-il) (enter -h for help)" << std::endl)
       destroy();
       exit(0);
     }
     if (command_line_parameters->topic_image_right.length() == 0) {
-      std::cerr << "ParameterCollection::validateParameters|ERROR: empty value entered for parameter: -topic-image-right (-ir) (enter -h for help)" << std::endl;
+      LOG_INFO(std::cerr << "ParameterCollection::validateParameters|ERROR: empty value entered for parameter: -topic-image-right (-ir) (enter -h for help)" << std::endl)
       destroy();
       exit(0);
     }
@@ -447,7 +447,7 @@ namespace proslam {
         break;
       }
       default: {
-        std::cerr << "ParameterCollection::setMode|ERROR: invalid tracker mode" << std::endl;
+        LOG_INFO(std::cerr << "ParameterCollection::setMode|ERROR: invalid tracker mode" << std::endl)
         destroy();
         exit(0);
       }

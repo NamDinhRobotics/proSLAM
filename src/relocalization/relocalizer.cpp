@@ -8,11 +8,11 @@ namespace proslam {
   Relocalizer::Relocalizer(): _query(0),
                               _aligner(new XYZAligner()),
                               _parameters(0) {
-    std::cerr << "Relocalizer::Relocalizer|constructed" << std::endl;
+    LOG_INFO(std::cerr << "Relocalizer::Relocalizer|constructed" << std::endl)
   }
 
   void Relocalizer::configure(RelocalizerParameters* parameters_) {
-    std::cerr << "Relocalizer::Relocalizer|configuring" << std::endl;
+    LOG_INFO(std::cerr << "Relocalizer::Relocalizer|configuring" << std::endl)
     _parameters = parameters_;
     clear();
     _query_history.clear();
@@ -23,11 +23,11 @@ namespace proslam {
     _aligner->setMaximumErrorKernel(_parameters->aligner->maximum_error_kernel);
     _aligner->setMinimumNumberOfInliers(_parameters->aligner->minimum_number_of_inliers);
     _aligner->setMinimumInlierRatio(_parameters->aligner->minimum_inlier_ratio);
-    std::cerr << "Relocalizer::Relocalizer|configured" << std::endl;
+    LOG_INFO(std::cerr << "Relocalizer::Relocalizer|configured" << std::endl)
   }
 
   Relocalizer::~Relocalizer() {
-    std::cerr << "Relocalizer::Relocalizer|destroying" << std::endl;
+    LOG_INFO(std::cerr << "Relocalizer::Relocalizer|destroying" << std::endl)
 
     //ds free closure buffer
     clear();
@@ -52,7 +52,7 @@ namespace proslam {
 
     //ds free aligner
     delete _aligner;
-    std::cerr << "Relocalizer::Relocalizer|destroyed" << std::endl;
+    LOG_INFO(std::cerr << "Relocalizer::Relocalizer|destroyed" << std::endl)
   }
 
   //ds initialize relocalization module for a new local map

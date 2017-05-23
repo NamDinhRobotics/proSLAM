@@ -198,9 +198,9 @@ namespace proslam {
       //ds check last iteration
       if(iteration == _maximum_number_of_iterations-1) {
         _has_system_converged = false;
-        std::cerr << "UVDAligner::converge|WARNING: system did not converge - total error: "  << _total_error
+        LOG_INFO(std::cerr << "UVDAligner::converge|WARNING: system did not converge - total error: "  << _total_error
                   << " average error: " << _total_error/(_number_of_inliers+_number_of_outliers)
-                  << " inliers: " << _number_of_inliers << " outliers: " << _number_of_outliers << std::endl;
+                  << " inliers: " << _number_of_inliers << " outliers: " << _number_of_outliers << std::endl)
       }
     }
 

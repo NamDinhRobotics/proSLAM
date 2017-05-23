@@ -8,23 +8,23 @@ namespace proslam {
                                   _intensity_image_right(0),
                                   _stereo_framepoint_generator(0),
                                   _parameters(0) {
-    std::cerr << "StereoTracker::StereoTracker|constructed" << std::endl;
+    LOG_INFO(std::cerr << "StereoTracker::StereoTracker|constructed" << std::endl)
   }
 
   void StereoTracker::configure(BaseTrackerParameters* parameters_) {
-    std::cerr << "StereoTracker::setup|configuring" << std::endl;
+    LOG_INFO(std::cerr << "StereoTracker::setup|configuring" << std::endl)
     _parameters = dynamic_cast<StereoTrackerParameters*>(parameters_);
     assert(_camera_right);
     BaseTracker::configure(parameters_);
     _stereo_framepoint_generator = dynamic_cast<StereoFramePointGenerator*>(_framepoint_generator);
     assert(_stereo_framepoint_generator);
-    std::cerr << "StereoTracker::setup|configured" << std::endl;
+    LOG_INFO(std::cerr << "StereoTracker::setup|configured" << std::endl)
   }
 
   //ds dynamic cleanup
   StereoTracker::~StereoTracker() {
-    std::cerr << "StereoTracker::StereoTracker|destroying" << std::endl;
-    std::cerr << "StereoTracker::StereoTracker|destroyed" << std::endl;
+    LOG_INFO(std::cerr << "StereoTracker::StereoTracker|destroying" << std::endl)
+    LOG_INFO(std::cerr << "StereoTracker::StereoTracker|destroyed" << std::endl)
   }
 
   Frame* StereoTracker::_createFrame(){

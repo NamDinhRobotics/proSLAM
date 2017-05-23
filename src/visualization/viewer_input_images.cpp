@@ -8,7 +8,7 @@ namespace proslam {
                                                                                                  _tracker(0),
                                                                                                  _cv_wait_key_timeout_milliseconds(0),
                                                                                                  _window_name(window_name_) {
-    std::cerr << "switched to stepwise mode (press backspace for switch, press space for stepping)" << std::endl;
+    LOG_INFO(std::cerr << "switched to stepwise mode (press backspace for switch, press space for stepping)" << std::endl)
   }
   
   void ViewerInputImages::initDrawing(){
@@ -147,11 +147,11 @@ namespace proslam {
   void ViewerInputImages::switchMode() {
     if(_cv_wait_key_timeout_milliseconds > 0) {
       _cv_wait_key_timeout_milliseconds = 0;
-      std::cerr << "switched to stepwise mode (press backspace for switch, press space for stepping)" << std::endl;
+      LOG_INFO(std::cerr << "switched to stepwise mode (press backspace for switch, press space for stepping)" << std::endl)
     }
     else {
       _cv_wait_key_timeout_milliseconds = 1;
-      std::cerr << "switched to benchmark mode (press backspace for switch)" << std::endl;
+      LOG_INFO(std::cerr << "switched to benchmark mode (press backspace for switch)" << std::endl)
     }
   }
 }

@@ -103,9 +103,18 @@ namespace proslam{
   #define CHRONOMETER_START(NAME) const double time_start_seconds_##NAME = srrg_core::getTime();
   #define CHRONOMETER_STOP(NAME) _time_consumption_seconds_##NAME += srrg_core::getTime()-time_start_seconds_##NAME;
 
-  //ds release assertions
+  //ds "release assertions"
   #define ASSERT(CONDITION) \
     if (!CONDITION) { \
       throw std::runtime_error("flying polar buffalo error"); \
     }
+
+  //ds conditional logging (currently only 1 log level: INFO)
+  #ifdef SRRG_PROSLAM_ENABLE_LOGGING
+    #define LOG_INFO(EXPRESSION) \
+      EXPRESSION;
+  #else
+    #define LOG_INFO(EXPRESSION)
+  #endif
+
 };

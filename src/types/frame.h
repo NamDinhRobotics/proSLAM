@@ -98,7 +98,7 @@ namespace proslam {
     inline LocalMap* localMap() {return _local_map;}
     inline const LocalMap* localMap() const {return _local_map;}
     void setFrameToLocalMap(const TransformMatrix3D& frame_to_local_map_) {_frame_to_local_map = frame_to_local_map_; _local_map_to_frame = _frame_to_local_map.inverse();}
-    void setIsLocalMapAnchor(const bool& is_keyframe_) {_is_keyframe = is_keyframe_;}
+    void setIsKeyframe(const bool& is_keyframe_) {_is_keyframe = is_keyframe_;}
     inline const bool isKeyframe() const {return _is_keyframe;}
 
     //ds get a quick overview of the overall point status in the frame

@@ -176,43 +176,68 @@ namespace proslam {
   void ViewerOutputMap::keyPressEvent(QKeyEvent* event_){
     switch( event_->key( ) ) {
       case Qt::Key_1: {
-        if(_landmarks_drawn) {_landmarks_drawn = false; std::cerr << "ViewerOutputMap::keyPressEvent|landmarks drawn - DISABLED" << std::endl;}
-        else {_landmarks_drawn = true; std::cerr << "ViewerOutputMap::keyPressEvent|landmarks drawn - ENABLED" << std::endl;}
+        if(_landmarks_drawn) {
+          _landmarks_drawn = false;
+          LOG_INFO(std::cerr << "ViewerOutputMap::keyPressEvent|landmarks drawn - DISABLED" << std::endl)
+        }
+        else {
+          _landmarks_drawn = true;
+          LOG_INFO(std::cerr << "ViewerOutputMap::keyPressEvent|landmarks drawn - ENABLED" << std::endl)
+        }
         break;
       }
       case Qt::Key_2: {
-        if(_frames_drawn) {_frames_drawn = false; std::cerr << "ViewerOutputMap::keyPressEvent|all frames drawn - DISABLED" << std::endl;}
-        else {_frames_drawn = true; std::cerr << "ViewerOutputMap::keyPressEvent|all frames drawn - ENABLED" << std::endl;}
+        if(_frames_drawn) {
+          _frames_drawn = false;
+          LOG_INFO(std::cerr << "ViewerOutputMap::keyPressEvent|all frames drawn - DISABLED" << std::endl)
+        }
+        else {
+          _frames_drawn = true;
+          LOG_INFO(std::cerr << "ViewerOutputMap::keyPressEvent|all frames drawn - ENABLED" << std::endl)
+        }
         break;
       }
       case Qt::Key_3: {
-        if(_follow_robot) {_follow_robot = false; std::cerr << "ViewerOutputMap::keyPressEvent|follow robot - DISABLED" << std::endl;}
-        else {_follow_robot = true; std::cerr << "ViewerOutputMap::keyPressEvent|follow robot - ENABLED" << std::endl;}
+        if(_follow_robot) {
+          _follow_robot = false;
+          LOG_INFO(std::cerr << "ViewerOutputMap::keyPressEvent|follow robot - DISABLED" << std::endl)
+        }
+        else {
+          _follow_robot = true;
+          LOG_INFO(std::cerr << "ViewerOutputMap::keyPressEvent|follow robot - ENABLED" << std::endl)
+        }
         break;
       }
       case Qt::Key_4: {
-        if(_ground_truth_drawn) {_ground_truth_drawn = false; std::cerr << "ViewerOutputMap::keyPressEvent|draw ground truth - DISABLED" << std::endl;}
-        else {_ground_truth_drawn = true; std::cerr << "ViewerOutputMap::keyPressEvent|draw ground truth - ENABLED" << std::endl;}
+        if(_ground_truth_drawn) {
+          _ground_truth_drawn = false;
+          LOG_INFO(std::cerr << "ViewerOutputMap::keyPressEvent|draw ground truth - DISABLED" << std::endl)
+        }
+        else {
+          _ground_truth_drawn = true;
+          LOG_INFO(std::cerr << "ViewerOutputMap::keyPressEvent|draw ground truth - ENABLED" << std::endl)
+        }
         break;
       }
       case Qt::Key_5: {
         _object_scale /= 2;
-        std::cerr << "ViewerOutputMap::keyPressEvent|decreasing object scale to: " << _object_scale << std::endl;
+        LOG_INFO(std::cerr << "ViewerOutputMap::keyPressEvent|decreasing object scale to: " << _object_scale << std::endl)
         break;
       }
       case Qt::Key_6: {
         _object_scale *= 2;
-        std::cerr << "ViewerOutputMap::keyPressEvent|increasing object scale to: " << _object_scale << std::endl;
+        LOG_INFO(std::cerr << "ViewerOutputMap::keyPressEvent|increasing object scale to: " << _object_scale << std::endl)
         break;
       }
       case Qt::Key_7: {
         _point_size /= 2;
-        std::cerr << "ViewerOutputMap::keyPressEvent|decreasing point size to: " << _point_size << std::endl;
+        LOG_INFO(std::cerr << "ViewerOutputMap::keyPressEvent|decreasing point size to: " << _point_size << std::endl)
+
         break;
       }
       case Qt::Key_8: {
         _point_size *= 2;
-        std::cerr << "ViewerOutputMap::keyPressEvent|increasing point size to: " << _point_size << std::endl;
+        LOG_INFO(std::cerr << "ViewerOutputMap::keyPressEvent|increasing point size to: " << _point_size << std::endl)
         break;
       }
       default: {

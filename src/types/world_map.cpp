@@ -6,20 +6,20 @@ namespace proslam {
   using namespace srrg_core;
 
   WorldMap::WorldMap(): _parameters(0) {
-    std::cerr << "WorldMap::WorldMap|constructed" << std::endl;
+    LOG_INFO(std::cerr << "WorldMap::WorldMap|constructed" << std::endl)
   };
 
   void WorldMap::configure(WorldMapParameters* parameters_) {
-    std::cerr << "WorldMap::WorldMap|configuring" << std::endl;
+    LOG_INFO(std::cerr << "WorldMap::WorldMap|configuring" << std::endl)
     _parameters = parameters_;
     clear();
-    std::cerr << "WorldMap::WorldMap|configured" << std::endl;
+    LOG_INFO(std::cerr << "WorldMap::WorldMap|configured" << std::endl)
   }
 
   WorldMap::~WorldMap() {
-    std::cerr << "WorldMap::WorldMap|destroying" << std::endl;
+    LOG_INFO(std::cerr << "WorldMap::WorldMap|destroying" << std::endl)
     clear();
-    std::cerr << "WorldMap::WorldMap|destroyed" << std::endl;
+    LOG_INFO(std::cerr << "WorldMap::WorldMap|destroyed" << std::endl)
   }
   
   //ds clears all internal structures
@@ -234,7 +234,7 @@ namespace proslam {
       outfile_trajectory << "\n";
     }
     outfile_trajectory.close();
-    std::cerr << "WorldMap::WorldMap|saved trajectory to: " << filename << std::endl;
+    LOG_INFO(std::cerr << "WorldMap::WorldMap|saved trajectory to: " << filename << std::endl)
   }
 
   void WorldMap::breakTrack(const Frame* frame_) {
@@ -260,8 +260,8 @@ namespace proslam {
   void WorldMap::setTrack(Frame* frame_) {
     assert(frame_->localMap());
     assert(_last_local_map_before_track_break);
-    std::printf("WorldMap::setTrack|RELOCALIZED - connecting [Frame] < [LocalMap]: [%06lu] < [%06lu] with [%06lu] < [%06lu]\n",
-                _last_frame_before_track_break->identifier(), _last_local_map_before_track_break->identifier(), frame_->identifier(), frame_->localMap()->identifier());
+    LOG_INFO(std::printf("WorldMap::setTrack|RELOCALIZED - connecting [Frame] < [LocalMap]: [%06lu] < [%06lu] with [%06lu] < [%06lu]\n",
+                _last_frame_before_track_break->identifier(), _last_local_map_before_track_break->identifier(), frame_->identifier(), frame_->localMap()->identifier()))
 
     //ds return to original roots
     _root_frame = _last_frame_before_track_break->root();
