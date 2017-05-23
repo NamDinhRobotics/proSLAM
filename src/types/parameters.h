@@ -278,9 +278,6 @@ namespace proslam {
     //! specific parameter sets are allocated automatically after parsing the command line
     ParameterCollection();
 
-    //! @brief manual destruction (used when the program is terminated from within - e.g. exit)
-    void destroy();
-
     //! @brief default destructor
     ~ParameterCollection();
 

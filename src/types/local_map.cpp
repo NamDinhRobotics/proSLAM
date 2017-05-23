@@ -73,7 +73,7 @@ namespace proslam {
 
     //ds check for low item counts
     if (_minimum_number_of_landmarks > landmarks_added_to_context.size()) {
-      LOG_INFO(std::cerr << "LocalMap::LocalMap|WARNING: creating local map with low landmark number: " << landmarks_added_to_context.size() << std::endl)
+      LOG_WARNING(std::cerr << "LocalMap::LocalMap|WARNING: creating local map with low landmark number: " << landmarks_added_to_context.size() << std::endl)
     }
 
     //ds add frames to the local map

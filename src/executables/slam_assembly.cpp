@@ -51,8 +51,8 @@ namespace proslam {
 
     //ds check dataset length
     if (_parameters->command_line_parameters->filename_dataset.length() == 0) {
-      LOG_INFO(std::cerr << "ERROR: no dataset provided (enter -h for help)" << std::endl)
-      exit(0);
+      LOG_ERROR(std::cerr << "SLAMAssembly::initializeMessageFile|ERROR: no dataset provided (enter -h for help)" << std::endl)
+      throw std::runtime_error("no dataset provided");
     }
 
     //ds configure sensor message source
@@ -61,7 +61,7 @@ namespace proslam {
     //ds terminate on failure
     if (!_sensor_message_reader.good()) {
       LOG_INFO(std::cerr << _parameters->banner << std::endl)
-      exit(0);
+      throw std::runtime_error("unable to open dataset");
     }
   }
 
@@ -72,8 +72,8 @@ namespace proslam {
 
       //ds sanity check
       if ((camera_left_->projectionMatrix().block<3,3>(0,0) - camera_right_->projectionMatrix().block<3,3>(0,0)).squaredNorm() != 0) {
-        LOG_INFO(std::cerr << "SLAMAssembly::_makeStereoTracker|ERROR: provided mismatching projection matrices" << std::endl)
-        exit(0);
+        LOG_ERROR(std::cerr << "SLAMAssembly::_createStereoTracker|ERROR: provided mismatching projection matrices" << std::endl)
+        throw std::runtime_error("mismatching projection matrices");
       }
 
       //ds replace camera matrices with identical one
@@ -169,20 +169,20 @@ namespace proslam {
 
     //ds terminate on failure
     if (_camera_left == 0) {
-      LOG_INFO(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: left camera not set" << std::endl)
-      exit(0);
+      LOG_ERROR(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: left camera not set" << std::endl)
+      throw std::runtime_error("left camera not set");
     }
     if (_camera_right == 0) {
-      LOG_INFO(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: right camera not set" << std::endl)
-      exit(0);
+      LOG_ERROR(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: right camera not set" << std::endl)
+      throw std::runtime_error("right camera not set");
     }
     if (_camera_left->imageCols() == 0 || _camera_left->imageRows() == 0) {
-      LOG_INFO(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: left camera images not set" << std::endl)
-      exit(0);
+      LOG_ERROR(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: left camera images not set" << std::endl)
+      throw std::runtime_error("left camera images not set");
     }
     if (_camera_right->imageCols() == 0 || _camera_right->imageRows() == 0) {
-      LOG_INFO(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: right camera images not set" << std::endl)
-      exit(0);
+      LOG_ERROR(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: right camera images not set" << std::endl)
+      throw std::runtime_error("right camera images not set");
     }
 
     //ds check if we have to modify the cameras - if stereo from txt_io
@@ -197,8 +197,8 @@ namespace proslam {
 
       //ds sanity check
       if ((_camera_left->cameraMatrix()-_camera_right->cameraMatrix()).squaredNorm() != 0) {
-        LOG_INFO(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: provided mismatching camera matrices" << std::endl)
-        exit(0);
+        LOG_ERROR(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: provided mismatching camera matrices" << std::endl)
+        throw std::runtime_error("provided mismatching camera matrices");
       }
 
       //ds compute right camera with baseline offset

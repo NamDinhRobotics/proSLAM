@@ -122,19 +122,26 @@ int32_t main(int32_t argc_, char** argv_) {
   //ds allocate the complete parameter collection with default values
   proslam::ParameterCollection* parameters = new proslam::ParameterCollection();
 
-  //ds obtain configuration
-  parameters->parseFromCommandLine(argc_, argv_);
+  try {
+
+    //ds obtain configuration
+    parameters->parseFromCommandLine(argc_, argv_);
+  } catch (const std::runtime_error& exception_) {
+    LOG_ERROR(std::cerr << "ERROR: caught exception '" << exception_.what() << "'" << std::endl)
+    delete parameters;
+    return 0;
+  }
 
   //ds check camera info topics - required for the node
   if (parameters->command_line_parameters->topic_camera_info_left.length() == 0) {
     std::cerr << "ERROR: empty value entered for parameter: -topic-camera-info-left (-cl) (enter -h for help)" << std::endl;
     delete parameters;
-    exit(0);
+    return 0;
   }
   if (parameters->command_line_parameters->topic_camera_info_right.length() == 0) {
     std::cerr << "ERROR: empty value entered for parameter: -topic-camera-info-right (-cr) (enter -h for help)" << std::endl;
     delete parameters;
-    exit(0);
+    return 0;
   }
 
   //ds log configuration
@@ -234,147 +241,151 @@ int32_t main(int32_t argc_, char** argv_) {
   proslam::Count number_of_frames_current_window = 0;
   double start_time_current_window_seconds       = srrg_core::getTime();
   const double measurement_interval_seconds      = 5;
+  try {
 
-  const cv::Point2f point_offset(camera_left->imageCols(), 0);
+    //ds start processing loop
+    std::cerr << "main|starting processing loop" << std::endl;
+    while (ros::ok() && slam_system.isGUIRunning()) {
 
-  //ds start processing loop
-  std::cerr << "main|starting processing loop" << std::endl;
-  while (ros::ok() && slam_system.isGUIRunning()) {
+      //ds trigger callbacks
+      ros::spinOnce();
 
-    //ds trigger callbacks
-    ros::spinOnce();
+      //ds if we got a valid stereo image pair (enabled only in callback)
+      if (found_image_pair) {
 
-    //ds if we got a valid stereo image pair (enabled only in callback)
-    if (found_image_pair) {
+        //ds preprocess the images if desired: rectification
+        if (parameters->command_line_parameters->option_rectify_and_undistort) {
+          cv::remap(image_left, image_left, undistort_rectify_maps_left[0], undistort_rectify_maps_left[1], cv::INTER_LINEAR);
+          cv::remap(image_right, image_right, undistort_rectify_maps_right[0], undistort_rectify_maps_right[1], cv::INTER_LINEAR);
+        }
 
-      //ds preprocess the images if desired: rectification
-      if (parameters->command_line_parameters->option_rectify_and_undistort) {
-        cv::remap(image_left, image_left, undistort_rectify_maps_left[0], undistort_rectify_maps_left[1], cv::INTER_LINEAR);
-        cv::remap(image_right, image_right, undistort_rectify_maps_right[0], undistort_rectify_maps_right[1], cv::INTER_LINEAR);
+        //ds preprocess the images if desired: histogram equalization
+        if (parameters->command_line_parameters->option_equalize_histogram) {
+          cv::equalizeHist(image_left, image_left);
+          cv::equalizeHist(image_right, image_right);
+        }
+
+  //      //ds get a dummy frame
+  //      proslam::Frame* frame = slam_system.worldMap()->createFrame(proslam::TransformMatrix3D::Identity(), slam_system.tracker()->framepointGenerator()->maximumDepthNearMeters());
+  //      frame->setCameraLeft(camera_left);
+  //      frame->setCameraRight(camera_right);
+  //
+  //      //ds compute keypoints
+  //      std::vector<cv::KeyPoint> keypoints_left;
+  //      std::vector<cv::KeyPoint> keypoints_right;
+  //      slam_system.tracker()->framepointGenerator()->detectKeypoints(image_left, keypoints_left);
+  //      slam_system.tracker()->framepointGenerator()->detectKeypoints(image_right, keypoints_right);
+  //
+  //      const proslam::Count number_of_keypoints_left  = keypoints_left.size();
+  //      const proslam::Count number_of_keypoints_right = keypoints_right.size();
+  //
+  //      //ds compute descriptors
+  //      cv::Mat descriptors_left;
+  //      cv::Mat descriptors_right;
+  //
+  //      proslam::StereoFramePointGenerator* triangulator = dynamic_cast<proslam::StereoFramePointGenerator*>(slam_system.tracker()->framepointGenerator());
+  //      assert(triangulator);
+  //
+  //      triangulator->extractDescriptors(image_left, keypoints_left, descriptors_left);
+  //      triangulator->extractDescriptors(image_right, keypoints_right, descriptors_right);
+  //      triangulator->initialize(keypoints_left, keypoints_right, descriptors_left, descriptors_right);
+  //
+  //          //ds triangulate points and fill the frame
+  //      triangulator->findStereoKeypoints(frame);
+  //
+  //      //ds show the images
+  //      cv::Mat image_display;
+  //      cv::hconcat(image_left, image_right, image_display);
+  //      cv::cvtColor(image_display, image_display, CV_GRAY2RGB);
+  //
+  ////      //ds draw keypoints on image
+  ////      for (const cv::KeyPoint& keypoint_left: keypoints_left) {
+  ////        cv::circle(image_display, keypoint_left.pt, 2, cv::Scalar(0, 255, 0));
+  ////      }
+  ////      for (const cv::KeyPoint& keypoint_right: keypoints_right) {
+  ////        cv::circle(image_display, keypoint_right.pt+point_offset, 2, cv::Scalar(0, 255, 0));
+  ////      }
+  //
+  //      //ds visualize triangulated points
+  //      for (proslam::Index row = 0; row < triangulator->numberOfRowsImage(); ++row) {
+  //        for (proslam::Index col = 0; col < triangulator->numberOfColsImage(); ++col) {
+  //          if (triangulator->framepointsInImage()[row][col]) {
+  //            const proslam::FramePoint* point = triangulator->framepointsInImage()[row][col];
+  //
+  //            //ds determine colorization
+  //            cv::Scalar color (0, 0, 0);
+  //            if (point->isNear()) {
+  //              color = cv::Scalar(255, 0, 0);
+  //            } else {
+  //              color = cv::Scalar(255, 0, 255);
+  //            }
+  //
+  //            //ds draw left and right detection
+  //            cv::circle(image_display, point->keypointLeft().pt, 2, color, -1);
+  //            cv::circle(image_display, point->keypointRight().pt+point_offset, 2, color, -1);
+  //            triangulator->framepointsInImage()[row][col] = 0;
+  //          }
+  //        }
+  //      }
+  //
+  //      std::cerr << "L keypoints: " << number_of_keypoints_left << " descriptors: " << descriptors_left.rows
+  //                << " R keypoints: " << number_of_keypoints_right << " descriptors: " << descriptors_right.rows
+  //                << " framepoints: " << triangulator->numberOfAvailablePoints() << std::endl;
+  //
+  //      cv::imshow("FAST detection", image_display);
+  //      cv::waitKey(1);
+
+
+
+
+
+        //ds process images
+        slam_system.process(image_left, image_right);
+
+        //ds add ground truth if available
+  //      slam_system.addGroundTruthMeasurement(orientation_correction*ground_truth);
+        ++number_of_frames_current_window;
+        found_image_pair = false;
       }
 
-      //ds preprocess the images if desired: histogram equalization
-      if (parameters->command_line_parameters->option_equalize_histogram) {
-        cv::equalizeHist(image_left, image_left);
-        cv::equalizeHist(image_right, image_right);
+      //ds display stats after each interval
+      const double total_duration_seconds_current = srrg_core::getTime()-start_time_current_window_seconds;
+      if (total_duration_seconds_current > measurement_interval_seconds) {
+
+        //ds runtime info - depending on set modes
+        if (parameters->command_line_parameters->option_use_relocalization) {
+          std::printf("processed frames: %5lu|landmarks: %6lu|local maps: %4lu (%3.2f)|closures: %3lu (%3.2f)|current fps: %5.2f (%3lu/%3.2fs)\n",
+                      slam_system.worldMap()->frames().size(),
+                      slam_system.worldMap()->landmarks().size(),
+                      slam_system.worldMap()->localMaps().size(),
+                      slam_system.worldMap()->localMaps().size()/static_cast<proslam::real>(slam_system.worldMap()->frames().size()),
+                      slam_system.worldMap()->numberOfClosures(),
+                      slam_system.worldMap()->numberOfClosures()/static_cast<proslam::real>(slam_system.worldMap()->localMaps().size()),
+                      number_of_frames_current_window/total_duration_seconds_current,
+                      number_of_frames_current_window,
+                      total_duration_seconds_current);
+        } else {
+          std::printf("processed frames: %5lu|landmarks: %6lu|current fps: %5.2f (%3lu/%3.2fs)\n",
+                      slam_system.worldMap()->frames().size(),
+                      slam_system.worldMap()->landmarks().size(),
+                      number_of_frames_current_window/total_duration_seconds_current,
+                      number_of_frames_current_window,
+                      total_duration_seconds_current);
+        }
+
+  //      std::cerr << "fps: " << number_of_frames_current_window/total_duration_seconds_current << std::endl;
+
+        number_of_frames_current_window   = 0;
+        start_time_current_window_seconds = srrg_core::getTime();
       }
 
-//      //ds get a dummy frame
-//      proslam::Frame* frame = slam_system.worldMap()->createFrame(proslam::TransformMatrix3D::Identity(), slam_system.tracker()->framepointGenerator()->maximumDepthNearMeters());
-//      frame->setCameraLeft(camera_left);
-//      frame->setCameraRight(camera_right);
-//
-//      //ds compute keypoints
-//      std::vector<cv::KeyPoint> keypoints_left;
-//      std::vector<cv::KeyPoint> keypoints_right;
-//      slam_system.tracker()->framepointGenerator()->detectKeypoints(image_left, keypoints_left);
-//      slam_system.tracker()->framepointGenerator()->detectKeypoints(image_right, keypoints_right);
-//
-//      const proslam::Count number_of_keypoints_left  = keypoints_left.size();
-//      const proslam::Count number_of_keypoints_right = keypoints_right.size();
-//
-//      //ds compute descriptors
-//      cv::Mat descriptors_left;
-//      cv::Mat descriptors_right;
-//
-//      proslam::StereoFramePointGenerator* triangulator = dynamic_cast<proslam::StereoFramePointGenerator*>(slam_system.tracker()->framepointGenerator());
-//      assert(triangulator);
-//
-//      triangulator->extractDescriptors(image_left, keypoints_left, descriptors_left);
-//      triangulator->extractDescriptors(image_right, keypoints_right, descriptors_right);
-//      triangulator->initialize(keypoints_left, keypoints_right, descriptors_left, descriptors_right);
-//
-//          //ds triangulate points and fill the frame
-//      triangulator->findStereoKeypoints(frame);
-//
-//      //ds show the images
-//      cv::Mat image_display;
-//      cv::hconcat(image_left, image_right, image_display);
-//      cv::cvtColor(image_display, image_display, CV_GRAY2RGB);
-//
-////      //ds draw keypoints on image
-////      for (const cv::KeyPoint& keypoint_left: keypoints_left) {
-////        cv::circle(image_display, keypoint_left.pt, 2, cv::Scalar(0, 255, 0));
-////      }
-////      for (const cv::KeyPoint& keypoint_right: keypoints_right) {
-////        cv::circle(image_display, keypoint_right.pt+point_offset, 2, cv::Scalar(0, 255, 0));
-////      }
-//
-//      //ds visualize triangulated points
-//      for (proslam::Index row = 0; row < triangulator->numberOfRowsImage(); ++row) {
-//        for (proslam::Index col = 0; col < triangulator->numberOfColsImage(); ++col) {
-//          if (triangulator->framepointsInImage()[row][col]) {
-//            const proslam::FramePoint* point = triangulator->framepointsInImage()[row][col];
-//
-//            //ds determine colorization
-//            cv::Scalar color (0, 0, 0);
-//            if (point->isNear()) {
-//              color = cv::Scalar(255, 0, 0);
-//            } else {
-//              color = cv::Scalar(255, 0, 255);
-//            }
-//
-//            //ds draw left and right detection
-//            cv::circle(image_display, point->keypointLeft().pt, 2, color, -1);
-//            cv::circle(image_display, point->keypointRight().pt+point_offset, 2, color, -1);
-//            triangulator->framepointsInImage()[row][col] = 0;
-//          }
-//        }
-//      }
-//
-//      std::cerr << "L keypoints: " << number_of_keypoints_left << " descriptors: " << descriptors_left.rows
-//                << " R keypoints: " << number_of_keypoints_right << " descriptors: " << descriptors_right.rows
-//                << " framepoints: " << triangulator->numberOfAvailablePoints() << std::endl;
-//
-//      cv::imshow("FAST detection", image_display);
-//      cv::waitKey(1);
-
-
-
-
-
-      //ds process images
-      slam_system.process(image_left, image_right);
-
-      //ds add ground truth if available
-//      slam_system.addGroundTruthMeasurement(orientation_correction*ground_truth);
-      ++number_of_frames_current_window;
-      found_image_pair = false;
+      //ds update ui
+      slam_system.updateGUI();
     }
-
-    //ds display stats after each interval
-    const double total_duration_seconds_current = srrg_core::getTime()-start_time_current_window_seconds;
-    if (total_duration_seconds_current > measurement_interval_seconds) {
-
-      //ds runtime info - depending on set modes
-      if (parameters->command_line_parameters->option_use_relocalization) {
-        std::printf("processed frames: %5lu|landmarks: %6lu|local maps: %4lu (%3.2f)|closures: %3lu (%3.2f)|current fps: %5.2f (%3lu/%3.2fs)\n",
-                    slam_system.worldMap()->frames().size(),
-                    slam_system.worldMap()->landmarks().size(),
-                    slam_system.worldMap()->localMaps().size(),
-                    slam_system.worldMap()->localMaps().size()/static_cast<proslam::real>(slam_system.worldMap()->frames().size()),
-                    slam_system.worldMap()->numberOfClosures(),
-                    slam_system.worldMap()->numberOfClosures()/static_cast<proslam::real>(slam_system.worldMap()->localMaps().size()),
-                    number_of_frames_current_window/total_duration_seconds_current,
-                    number_of_frames_current_window,
-                    total_duration_seconds_current);
-      } else {
-        std::printf("processed frames: %5lu|landmarks: %6lu|current fps: %5.2f (%3lu/%3.2fs)\n",
-                    slam_system.worldMap()->frames().size(),
-                    slam_system.worldMap()->landmarks().size(),
-                    number_of_frames_current_window/total_duration_seconds_current,
-                    number_of_frames_current_window,
-                    total_duration_seconds_current);
-      }
-
-//      std::cerr << "fps: " << number_of_frames_current_window/total_duration_seconds_current << std::endl;
-
-      number_of_frames_current_window   = 0;
-      start_time_current_window_seconds = srrg_core::getTime();
-    }
-
-    //ds update ui
-    slam_system.updateGUI();
+  } catch (const std::runtime_error& exception_) {
+    LOG_ERROR(std::cerr << "ERROR: caught exception '" << exception_.what() << "'" << std::endl)
+    delete parameters;
+    return 0;
   }
 
 //  //ds print full report TODO merge into assembly

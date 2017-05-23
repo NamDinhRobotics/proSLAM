@@ -109,12 +109,33 @@ namespace proslam{
       throw std::runtime_error("flying polar buffalo error"); \
     }
 
-  //ds conditional logging (currently only 1 log level: INFO)
-  #ifdef SRRG_PROSLAM_ENABLE_LOGGING
+  //ds conditional log levels
+  #if SRRG_PROSLAM_LOG_LEVEL == 1
+
+    //ds display warnings and errors but no info
+    #define LOG_INFO(EXPRESSION)
+    #define LOG_WARNING(EXPRESSION) \
+      EXPRESSION;
+    #define LOG_ERROR(EXPRESSION) \
+      EXPRESSION;
+
+  #elif SRRG_PROSLAM_LOG_LEVEL == 2
+
+    //ds display only errors
+    #define LOG_INFO(EXPRESSION)
+    #define LOG_WARNING(EXPRESSION)
+    #define LOG_ERROR(EXPRESSION) \
+      EXPRESSION;
+
+  #else
+
+    //ds default = 0, all logging active
     #define LOG_INFO(EXPRESSION) \
       EXPRESSION;
-  #else
-    #define LOG_INFO(EXPRESSION)
-  #endif
+    #define LOG_WARNING(EXPRESSION) \
+      EXPRESSION;
+    #define LOG_ERROR(EXPRESSION) \
+      EXPRESSION;
 
+  #endif
 };

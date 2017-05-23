@@ -183,7 +183,7 @@ namespace proslam {
     //ds sanity check
     const real triangulation_succcess_ratio = static_cast<real>(_number_of_available_points)/_keypoints_with_descriptors_left.size();
     if (triangulation_succcess_ratio < 0.25) {
-      LOG_INFO(std::cerr << "StereoFramePointGenerator::findStereoKeypoints|WARNING: low triangulation success ratio: " << triangulation_succcess_ratio
+      LOG_WARNING(std::cerr << "StereoFramePointGenerator::findStereoKeypoints|WARNING: low triangulation success ratio: " << triangulation_succcess_ratio
                 << " (" << _number_of_available_points << "/" << _keypoints_with_descriptors_left.size() << ")" << std::endl)
     }
   }

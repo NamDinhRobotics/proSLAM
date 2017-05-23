@@ -149,7 +149,7 @@ namespace proslam {
 
               //ds update tracker
               current_frame->setRobotToWorld(_pose_optimizer->robotToWorld());
-              LOG_INFO(std::cerr << "BaseTracker::compute|WARNING: using posit on frame points (experimental) inliers: " << _pose_optimizer->numberOfInliers()
+              LOG_WARNING(std::cerr << "BaseTracker::compute|WARNING: using posit on frame points (experimental) inliers: " << _pose_optimizer->numberOfInliers()
                         << " outliers: " << _pose_optimizer->numberOfOutliers() << " average error: " << _pose_optimizer->totalError()/_pose_optimizer->numberOfInliers() <<  std::endl)
             } else {
 
@@ -185,14 +185,14 @@ namespace proslam {
         //ds compute ratio between landmarks and tracked points
         const real percentage_landmarks = static_cast<real>(_number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close)/_number_of_tracked_points;
         if (percentage_landmarks < 0.1) {
-          LOG_INFO(std::cerr << "BaseTracker::compute|WARNING: low percentage of tracked landmarks over framepoints: " << percentage_landmarks
+          LOG_WARNING(std::cerr << "BaseTracker::compute|WARNING: low percentage of tracked landmarks over framepoints: " << percentage_landmarks
                     << " (" << _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close << "/" << _number_of_tracked_points << ")" << std::endl)
         }
 
         //ds compute ratio between close and far landmarks
         const real percentage_of_close_landmarks = _number_of_tracked_landmarks_close/static_cast<real>(_number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
         if (percentage_of_close_landmarks < 0.1) {
-          LOG_INFO(std::cerr << "BaseTracker::compute|WARNING: low percentage of close landmarks available: " << percentage_of_close_landmarks
+          LOG_WARNING(std::cerr << "BaseTracker::compute|WARNING: low percentage of close landmarks available: " << percentage_of_close_landmarks
                     << " (" << _number_of_tracked_landmarks_far << "/" << _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close << ")" << std::endl)
         }
 
@@ -256,7 +256,7 @@ namespace proslam {
         } else {
 
           //ds reset state
-          LOG_INFO(std::printf("BaseTracker::compute|WARNING: LOST TRACK due to invalid position optimization at frame [%06lu]\n", current_frame->identifier()))
+          LOG_WARNING(std::printf("BaseTracker::compute|WARNING: LOST TRACK due to invalid position optimization at frame [%06lu]\n", current_frame->identifier()))
           _status_previous = Frame::Localizing;
           _status          = Frame::Localizing;
           current_frame->setStatus(_status);
