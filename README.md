@@ -3,8 +3,8 @@
 Contributors: Dominik Schlegel, Mirco Colosi, Giorgio Grisetti <br/>
 As this is a working repository, none of the code is assumed to be static. <br/>
 For related publications please refer to revision 69671dfe <br/>
-<br/>
 
+---
 ### Demo videos ###
 [ProSLAM: Full run KITTI Sequence 00 updated (real-time, 1 thread@2.40GHz/i7-4700MQ)][kitti_00_updated]
 
