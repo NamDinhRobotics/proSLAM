@@ -19,7 +19,8 @@ namespace proslam {
                                                   _root(context_->rootFrame()) {
     ++_instances;
     setRobotToWorld(robot_to_world_);
-    _points.clear();
+    _created_points.clear();
+    _active_points.clear();
   }
 
   Frame::~Frame() {
@@ -30,7 +31,7 @@ namespace proslam {
   const Count Frame::countPoints(const Count& min_track_length_,
                                  const ThreeValued& has_landmark_) const {
     Count count = 0;
-    for (const FramePoint* frame_point: points()){
+    for (const FramePoint* frame_point: activePoints()){
       if(frame_point->trackLength() < min_track_length_) {
         continue;
       }
@@ -52,7 +53,7 @@ namespace proslam {
     _world_to_robot = _robot_to_world.inverse();
 
     //ds update framepoint world coordinates
-    updatePoints();
+    updateActivePoints();
   }
 
   //ds request new framepoint with optional link to a previous point (track)
@@ -90,26 +91,24 @@ namespace proslam {
     if (frame_point->depthMeters() < _maximum_depth_near) {
       frame_point->setIsNear(true);
     }
-    return frame_point;
-  }
 
-  //ds free open cv images
-  void Frame::releaseImages() {
-    _intensity_image_left.release();
-    _intensity_image_right.release();
+    //ds bookkeep each generated point for resize immune memory management (TODO remove costly bookkeeping)
+    _created_points.push_back(frame_point);
+    return frame_point;
   }
 
   //ds free all point instances
   void Frame::clear() {
-    for (const FramePoint* frame_point: _points) {
+    for (const FramePoint* frame_point: _created_points) {
       delete frame_point;
     }
-    _points.clear();
+    _created_points.clear();
+    _active_points.clear();
   }
 
   //ds update framepoint world coordinates
-  void Frame::updatePoints() {
-    for (FramePoint* point: _points) {
+  void Frame::updateActivePoints() {
+    for (FramePoint* point: _active_points) {
       point->setWorldCoordinates(_robot_to_world*point->robotCoordinates());
     }
   }

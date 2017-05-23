@@ -116,7 +116,7 @@ namespace proslam {
 
   void ViewerOutputMap::drawFramepoints(const Frame* frame_) {
     glBegin(GL_POINTS);
-      for (const FramePoint* framepoint: frame_->points()) {
+      for (const FramePoint* framepoint: frame_->activePoints()) {
         if (!framepoint->landmark()) {
           glColor3f(0.75, 0.75, 0.75);
           glVertex3f(framepoint->worldCoordinates().x(), framepoint->worldCoordinates().y(), framepoint->worldCoordinates().z());

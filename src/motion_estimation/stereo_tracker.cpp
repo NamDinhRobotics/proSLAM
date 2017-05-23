@@ -30,9 +30,9 @@ namespace proslam {
   Frame* StereoTracker::_createFrame(){
     Frame* current_frame = _context->createFrame(_context->robotToWorld(), _framepoint_generator->maximumDepthNearMeters());
     current_frame->setCameraLeft(_camera_left);
-    current_frame->setIntensityImageLeft(*_intensity_image_left);
+    current_frame->setIntensityImageLeft(_intensity_image_left);
     current_frame->setCameraRight(_camera_right);
-    current_frame->setIntensityImageRight(*_intensity_image_right);
+    current_frame->setIntensityImageRight(_intensity_image_right);
     return current_frame;
   }
   
@@ -58,7 +58,7 @@ namespace proslam {
 
     //ds recover lost landmarks
     Index index_lost_point_recovered = _number_of_tracked_points;
-    current_frame_->points().resize(_number_of_tracked_points+_number_of_lost_points);
+    current_frame_->activePoints().resize(_number_of_tracked_points+_number_of_lost_points);
     for (FramePoint* point_previous: _lost_points) {
 
       //ds get point into current camera - based on last track
@@ -159,14 +159,14 @@ namespace proslam {
                                                              point_previous);
 
           //ds set the point to the control structure
-          current_frame_->points()[index_lost_point_recovered] = current_point;
+          current_frame_->activePoints()[index_lost_point_recovered] = current_point;
           ++index_lost_point_recovered;
         } catch (const ExceptionTriangulation& /*exception_*/) {}
       }
     }
     _number_of_lost_points_recovered = index_lost_point_recovered-_number_of_tracked_points;
     _number_of_tracked_points = index_lost_point_recovered;
-    current_frame_->points().resize(_number_of_tracked_points);
+    current_frame_->activePoints().resize(_number_of_tracked_points);
     //    std::cerr << "StereoTracker::recoverPoints|recovered points: " << _number_of_lost_points_recovered << "/" << _number_of_lost_points << std::endl;
   }
 }

@@ -65,13 +65,6 @@ namespace proslam {
 
     //ds deallocate dynamic data structures
     for (Index row = 0; row < _number_of_rows_image; ++row) {
-
-      //ds check for unclaimed framepoints and remove them
-      for (Index col = 0; col < _number_of_cols_image; ++col) {
-        if (_framepoints_in_image[row][col]) {
-          delete _framepoints_in_image[row][col];
-        }
-      }
       delete[] _framepoints_in_image[row];
     }
     delete[] _framepoints_in_image;
@@ -137,15 +130,6 @@ namespace proslam {
     CHRONOMETER_START(descriptor_extraction)
     _descriptor_extractor->compute(intensity_image_, keypoints_, descriptors_);
     CHRONOMETER_STOP(descriptor_extraction)
-  }
-
-  void BaseFramePointGenerator::clearFramepointsInImage() {
-    for (Index row = 0; row < _number_of_rows_image; ++row) {
-      for (Count col = 0; col < _number_of_cols_image; ++col) {
-        if (_framepoints_in_image[row][col]) {delete _framepoints_in_image[row][col];}
-        _framepoints_in_image[row][col] = 0;
-      }
-    }
   }
 
   void BaseFramePointGenerator::setDetectorThreshold(const int32_t& detector_threshold_) {

@@ -444,6 +444,10 @@ namespace proslam {
         if (!updateGUI() ){
           break;
         }
+
+        //ds free image references (GUI gets copies)
+        intensity_image_left_rectified.release();
+        intensity_image_right_rectified.release();
       }
     }
     _duration_total_seconds = srrg_core::getTime()-time_start_seconds_first;

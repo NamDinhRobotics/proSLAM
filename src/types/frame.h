@@ -68,8 +68,8 @@ namespace proslam {
     void setRobotToWorldGroundTruth(const TransformMatrix3D& robot_to_world_ground_truth_) {_robot_to_world_ground_truth = robot_to_world_ground_truth_;}
     const TransformMatrix3D& robotToWorldGroundTruth() const {return _robot_to_world_ground_truth;}
 
-    inline const FramePointPointerVector& points() const {return _points;}
-    inline FramePointPointerVector& points() {return _points;}
+    inline const FramePointPointerVector& activePoints() const {return _active_points;}
+    inline FramePointPointerVector& activePoints() {return _active_points;}
 
     //ds this criteria is used for the decision of creating a landmark or not from a track of framepoints
     const Count& minimumTrackLengthForLandmarkCreation() const {return _minimum_track_length_for_landmark_creation;}
@@ -82,11 +82,11 @@ namespace proslam {
                        const PointCoordinates& camera_coordinates_left_,
                        FramePoint* previous_point_ = 0);
 
-    inline const IntensityImage& intensityImageLeft() const {return _intensity_image_left;}
-    void setIntensityImageLeft(const IntensityImage& intensity_image_)  {_intensity_image_left = intensity_image_;}
+    inline const IntensityImage& intensityImageLeft() const {return *_intensity_image_left;}
+    void setIntensityImageLeft(const IntensityImage* intensity_image_)  {_intensity_image_left = intensity_image_;}
 
-    inline const IntensityImage& intensityImageRight() const {return _intensity_image_right;}
-    void setIntensityImageRight(const IntensityImage& intensity_image_)  {_intensity_image_right = intensity_image_;}
+    inline const IntensityImage& intensityImageRight() const {return *_intensity_image_right;}
+    void setIntensityImageRight(const IntensityImage* intensity_image_)  {_intensity_image_right = intensity_image_;}
 
     inline const Status& status() const {return _status;}
     void setStatus(const Status& status_) {_status = status_;}
@@ -105,14 +105,11 @@ namespace proslam {
     const Count countPoints(const Count& min_track_length_,
 		                        const ThreeValued& has_landmark_ = Unknown) const;
 
-    //ds free open cv images
-    void releaseImages();
-
     //ds free all point instances
     void clear();
 
     //ds update framepoint world coordinates
-    void updatePoints();
+    void updateActivePoints();
 
   //ds attributes
   protected:
@@ -127,8 +124,11 @@ namespace proslam {
     Frame* _previous = 0;
     Frame* _next     = 0;
 
-    //ds contained framepoints
-    FramePointPointerVector _points;
+    //! @brief bookkeeping: all created framepoints for this frame (create function)
+    FramePointPointerVector _created_points;
+
+    //! @brief bookkeeping: active (used) framepoints in the pipeline (a subset of _created_points)
+    FramePointPointerVector _active_points;
 
     //ds this criteria is used for the decision of creating a landmark or not from a track of framepoints
     const Count _minimum_track_length_for_landmark_creation = 3;
@@ -144,8 +144,8 @@ namespace proslam {
     const Camera* _camera_right  = 0;
 
     //ds to support arbitrary number of rgb/depth image combinations
-    IntensityImage _intensity_image_left;
-    IntensityImage _intensity_image_right;
+    const IntensityImage* _intensity_image_left;
+    const IntensityImage* _intensity_image_right;
 
     //ds the maximum allowed depth for framepoints to become classified as near - everything above is far
     const real _maximum_depth_near;

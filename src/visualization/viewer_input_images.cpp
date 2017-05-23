@@ -31,7 +31,7 @@ namespace proslam {
     }
 
     //ds for all points in the current frame
-    for (const FramePoint* point: current_frame->points()) {
+    for (const FramePoint* point: current_frame->activePoints()) {
 
       //ds if the point is linked to a landmark
       if (point->landmark()) {
@@ -77,7 +77,7 @@ namespace proslam {
     const Frame* current_frame = _world->currentFrame();
     if (! current_frame)
       return;
-    for (const FramePoint* frame_point: current_frame->points()) {
+    for (const FramePoint* frame_point: current_frame->activePoints()) {
       if (frame_point->landmark()) {
 
         //ds compute intensity -> old landmarks appear brighter
