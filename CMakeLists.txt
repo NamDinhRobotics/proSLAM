@@ -11,7 +11,7 @@ endif()
 message("build type: '${CMAKE_BUILD_TYPE}'")
 
 #ds specify logging level, 0(or not specified): INFO, 1:WARNING, 2:ERROR
-add_definitions(-DSRRG_PROSLAM_LOG_LEVEL=2)
+add_definitions(-DSRRG_PROSLAM_LOG_LEVEL=0)
 
 #ds OpenCV - OpenCV_DIR might be overwritten by user
 find_package(OpenCV REQUIRED)
