@@ -6,12 +6,12 @@ For related publications please refer to revision 69671dfe <br/>
 
 ---
 ### Demo videos ###
-[ProSLAM: Full run KITTI Sequence 00 updated (real-time, 1 thread@2.40GHz/i7-4700MQ)][kitti_00_updated]
-[ProSLAM: Full run KITTI Sequence 00 (real-time, 1 thread@2.40GHz/i7-4700MQ)][kitti_00]
-[ProSLAM: Full run KITTI Sequence 01 (real-time, 1 thread@2.40GHz/i7-4700MQ)][kitti_01]
-[ProSLAM: Full run KITTI Sequence 06 (real-time, 1 thread@3.50GHz/i7-4770K)][kitti_06]
-[ProSLAM: Full run KITTI Sequence 10 (real-time, 1 thread@2.40GHz/i7-4700MQ)][kitti_10]
-[ProSLAM: Full run EuRoC MH_01_easy (real-time, 1 thread@3.50GHz/i7-4770K)][euroc_01]
+[ProSLAM: Full run KITTI Sequence 00 updated (real-time, 1 thread@2.40GHz/i7-4700MQ)][kitti_00_updated] <br/>
+[ProSLAM: Full run KITTI Sequence 00 (real-time, 1 thread@2.40GHz/i7-4700MQ)][kitti_00] <br/>
+[ProSLAM: Full run KITTI Sequence 01 (real-time, 1 thread@2.40GHz/i7-4700MQ)][kitti_01] <br/>
+[ProSLAM: Full run KITTI Sequence 06 (real-time, 1 thread@3.50GHz/i7-4770K)][kitti_06] <br/>
+[ProSLAM: Full run KITTI Sequence 10 (real-time, 1 thread@2.40GHz/i7-4700MQ)][kitti_10] <br/>
+[ProSLAM: Full run EuRoC MH_01_easy (real-time, 1 thread@3.50GHz/i7-4770K)][euroc_01] <br/>
 
 (All of the above are clickable YouTube links)
 
