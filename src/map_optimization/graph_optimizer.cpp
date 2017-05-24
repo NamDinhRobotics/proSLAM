@@ -3,14 +3,13 @@
 namespace proslam {
 
   GraphOptimizer::GraphOptimizer(): _optimizer(getOptimizer()) {
-    LOG_INFO(std::cerr << "GraphOptimizer::GraphOptimizer|constructing" << std::endl)
-    LOG_INFO(std::cerr << "GraphOptimizer::GraphOptimizer|constructed" << std::endl)
+    LOG_DEBUG(std::cerr << "GraphOptimizer::GraphOptimizer|constructed" << std::endl)
   }
 
   GraphOptimizer::~GraphOptimizer(){
-    LOG_INFO(std::cerr << "GraphOptimizer::GraphOptimizer|destroying" << std::endl)
+    LOG_DEBUG(std::cerr << "GraphOptimizer::~GraphOptimizer|destroying" << std::endl)
     delete _optimizer;
-    LOG_INFO(std::cerr << "GraphOptimizer::GraphOptimizer|destroyed" << std::endl)
+    LOG_DEBUG(std::cerr << "GraphOptimizer::~GraphOptimizer|destroyed" << std::endl)
   }
 
   void GraphOptimizer::optimize(WorldMap* context_) {

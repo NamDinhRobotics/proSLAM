@@ -8,23 +8,23 @@ namespace proslam {
                                   _intensity_image_right(0),
                                   _stereo_framepoint_generator(0),
                                   _parameters(0) {
-    LOG_INFO(std::cerr << "StereoTracker::StereoTracker|constructed" << std::endl)
+    LOG_DEBUG(std::cerr << "StereoTracker::StereoTracker|constructed" << std::endl)
   }
 
   void StereoTracker::configure(BaseTrackerParameters* parameters_) {
-    LOG_INFO(std::cerr << "StereoTracker::setup|configuring" << std::endl)
+    LOG_DEBUG(std::cerr << "StereoTracker::configure|configuring" << std::endl)
     _parameters = dynamic_cast<StereoTrackerParameters*>(parameters_);
     assert(_camera_right);
     BaseTracker::configure(parameters_);
     _stereo_framepoint_generator = dynamic_cast<StereoFramePointGenerator*>(_framepoint_generator);
     assert(_stereo_framepoint_generator);
-    LOG_INFO(std::cerr << "StereoTracker::setup|configured" << std::endl)
+    LOG_DEBUG(std::cerr << "StereoTracker::configure|configured" << std::endl)
   }
 
   //ds dynamic cleanup
   StereoTracker::~StereoTracker() {
-    LOG_INFO(std::cerr << "StereoTracker::StereoTracker|destroying" << std::endl)
-    LOG_INFO(std::cerr << "StereoTracker::StereoTracker|destroyed" << std::endl)
+    LOG_DEBUG(std::cerr << "StereoTracker::~StereoTracker|destroying" << std::endl)
+    LOG_DEBUG(std::cerr << "StereoTracker::~StereoTracker|destroyed" << std::endl)
   }
 
   Frame* StereoTracker::_createFrame(){
@@ -167,6 +167,6 @@ namespace proslam {
     _number_of_lost_points_recovered = index_lost_point_recovered-_number_of_tracked_points;
     _number_of_tracked_points = index_lost_point_recovered;
     current_frame_->activePoints().resize(_number_of_tracked_points);
-    //    std::cerr << "StereoTracker::recoverPoints|recovered points: " << _number_of_lost_points_recovered << "/" << _number_of_lost_points << std::endl;
+//    LOG_DEBUG(std::cerr << "StereoTracker::_recoverPoints|recovered points: " << _number_of_lost_points_recovered << "/" << _number_of_lost_points << std::endl)
   }
 }

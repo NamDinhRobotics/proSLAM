@@ -18,11 +18,11 @@ namespace proslam {
                                                       _keypoint_detector(0), _descriptor_extractor(0),
 #endif
                                                       _parameters(0) {
-    LOG_INFO(std::cerr << "BaseFramePointGenerator::setup|constructed" << std::endl)
+    LOG_DEBUG(std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|constructed" << std::endl)
   }
 
   void  BaseFramePointGenerator::configure(BaseFramepointGeneratorParameters* parameters_){
-    LOG_INFO(std::cerr << "BaseFramePointGenerator::setup|configuring" << std::endl)
+    LOG_DEBUG(std::cerr << "BaseFramePointGenerator::configure|configuring" << std::endl)
     _parameters = parameters_;
     assert(_camera_left);
 
@@ -52,16 +52,16 @@ namespace proslam {
     }
 
     //ds log computed values
-    LOG_INFO(std::cerr << "BaseFramePointGenerator::setup|focal length (pixels): " << _focal_length_pixels << std::endl)
+    LOG_INFO(std::cerr << "BaseFramePointGenerator::configure|focal length (pixels): " << _focal_length_pixels << std::endl)
 
     //ds clear buffers
     _keypoints_with_descriptors_left.clear();
-    LOG_INFO(std::cerr << "BaseFramePointGenerator::setup|configured" << std::endl)
+    LOG_DEBUG(std::cerr << "BaseFramePointGenerator::configure|configured" << std::endl)
   }
 
   //ds cleanup of dynamic structures
   BaseFramePointGenerator::~BaseFramePointGenerator() {
-    LOG_INFO(std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|destroying" << std::endl)
+    LOG_DEBUG(std::cerr << "BaseFramePointGenerator::~BaseFramePointGenerator|destroying" << std::endl)
 
     //ds deallocate dynamic data structures
     for (Index row = 0; row < _number_of_rows_image; ++row) {
@@ -75,7 +75,7 @@ namespace proslam {
     delete _descriptor_extractor;
 #endif
 
-    LOG_INFO(std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|destroyed" << std::endl)
+    LOG_DEBUG(std::cerr << "BaseFramePointGenerator::~BaseFramePointGenerator|destroyed" << std::endl)
   }
 
 

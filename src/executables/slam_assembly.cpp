@@ -51,7 +51,7 @@ namespace proslam {
 
     //ds check dataset length
     if (_parameters->command_line_parameters->filename_dataset.length() == 0) {
-      LOG_ERROR(std::cerr << "SLAMAssembly::initializeMessageFile|ERROR: no dataset provided (enter -h for help)" << std::endl)
+      LOG_ERROR(std::cerr << "SLAMAssembly::initializeMessageFile|no dataset provided (enter -h for help)" << std::endl)
       throw std::runtime_error("no dataset provided");
     }
 
@@ -72,7 +72,7 @@ namespace proslam {
 
       //ds sanity check
       if ((camera_left_->projectionMatrix().block<3,3>(0,0) - camera_right_->projectionMatrix().block<3,3>(0,0)).squaredNorm() != 0) {
-        LOG_ERROR(std::cerr << "SLAMAssembly::_createStereoTracker|ERROR: provided mismatching projection matrices" << std::endl)
+        LOG_ERROR(std::cerr << "SLAMAssembly::_createStereoTracker|provided mismatching projection matrices" << std::endl)
         throw std::runtime_error("mismatching projection matrices");
       }
 
@@ -169,19 +169,19 @@ namespace proslam {
 
     //ds terminate on failure
     if (_camera_left == 0) {
-      LOG_ERROR(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: left camera not set" << std::endl)
+      LOG_ERROR(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|left camera not set" << std::endl)
       throw std::runtime_error("left camera not set");
     }
     if (_camera_right == 0) {
-      LOG_ERROR(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: right camera not set" << std::endl)
+      LOG_ERROR(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|right camera not set" << std::endl)
       throw std::runtime_error("right camera not set");
     }
     if (_camera_left->imageCols() == 0 || _camera_left->imageRows() == 0) {
-      LOG_ERROR(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: left camera images not set" << std::endl)
+      LOG_ERROR(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|left camera images not set" << std::endl)
       throw std::runtime_error("left camera images not set");
     }
     if (_camera_right->imageCols() == 0 || _camera_right->imageRows() == 0) {
-      LOG_ERROR(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: right camera images not set" << std::endl)
+      LOG_ERROR(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|right camera images not set" << std::endl)
       throw std::runtime_error("right camera images not set");
     }
 
@@ -197,7 +197,7 @@ namespace proslam {
 
       //ds sanity check
       if ((_camera_left->cameraMatrix()-_camera_right->cameraMatrix()).squaredNorm() != 0) {
-        LOG_ERROR(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|ERROR: provided mismatching camera matrices" << std::endl)
+        LOG_ERROR(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|provided mismatching camera matrices" << std::endl)
         throw std::runtime_error("provided mismatching camera matrices");
       }
 
@@ -554,14 +554,14 @@ namespace proslam {
 
     //ds header
     const Count number_of_processed_frames_total = _world_map->frames().size();
-    LOG_INFO(std::cerr << "-------------------------------------------------------------------------" << std::endl)
-    LOG_INFO(std::cerr << "dataset completed" << std::endl)
-    LOG_INFO(std::cerr << "-------------------------------------------------------------------------" << std::endl)
+    std::cerr << "-------------------------------------------------------------------------" << std::endl;
+    std::cerr << "dataset completed" << std::endl;
+    std::cerr << "-------------------------------------------------------------------------" << std::endl;
 
     //ds if nothing was processed - exit right away
     if (number_of_processed_frames_total == 0) {
-      LOG_INFO(std::cerr << "no frames processed" << std::endl)
-      LOG_INFO(std::cerr << "-------------------------------------------------------------------------" << std::endl)
+      std::cerr << "no frames processed" << std::endl;
+      std::cerr << "-------------------------------------------------------------------------" << std::endl;
       return;
     }
 
@@ -600,33 +600,33 @@ namespace proslam {
       }
       mean_error_translation_relative /= errors_translation_relative.size();
 
-      LOG_INFO(std::cerr << "    absolute translation RMSE (m): " << root_mean_squared_error_translation_absolute << std::endl)
-      LOG_INFO(std::cerr << "    relative translation   ME (m): " << mean_error_translation_relative << std::endl)
-      LOG_INFO(std::cerr << "    final translational error (m): " << (_world_map->currentFrame()->robotToWorld().translation()-odometry_robot_to_world_previous_ground_truth.translation()).norm() << std::endl)
+      std::cerr << "    absolute translation RMSE (m): " << root_mean_squared_error_translation_absolute << std::endl;
+      std::cerr << "    relative translation   ME (m): " << mean_error_translation_relative << std::endl;
+      std::cerr << "    final translational error (m): " << (_world_map->currentFrame()->robotToWorld().translation()-odometry_robot_to_world_previous_ground_truth.translation()).norm() << std::endl;
     }
     
-    LOG_INFO(std::cerr << "                     total frames: " << number_of_processed_frames_total << std::endl)
-    LOG_INFO(std::cerr << "               total duration (s): " << _duration_total_seconds << std::endl)
-    LOG_INFO(std::cerr << "                      average fps: " << number_of_processed_frames_total/_duration_total_seconds << std::endl)
-    LOG_INFO(std::cerr << "average processing time (s/frame): " << _duration_total_seconds/number_of_processed_frames_total << std::endl)
-    LOG_INFO(std::cerr << "average landmarks close per frame: " << _tracker->totalNumberOfLandmarksClose()/number_of_processed_frames_total << std::endl)
-    LOG_INFO(std::cerr << "  average landmarks far per frame: " << _tracker->totalNumberOfLandmarksFar()/number_of_processed_frames_total << std::endl)
-    LOG_INFO(std::cerr << "         average tracks per frame: " << _tracker->totalNumberOfTrackedPoints()/number_of_processed_frames_total << std::endl)
-    LOG_INFO(std::cerr << "        average tracks per second: " << _tracker->totalNumberOfTrackedPoints()/_duration_total_seconds << std::endl)
-    LOG_INFO(std::cerr << "-------------------------------------------------------------------------" << std::endl)
-    LOG_INFO(std::cerr << "runtime" << std::endl)
-    LOG_INFO(std::cerr << "-------------------------------------------------------------------------" << std::endl)
-    LOG_INFO(std::cerr << "       feature detection: " << _tracker->framepointGenerator()->getTimeConsumptionSeconds_feature_detection()/_duration_total_seconds
-                                             << " (" << _tracker->framepointGenerator()->getTimeConsumptionSeconds_feature_detection() << "s)" << std::endl)
-    LOG_INFO(std::cerr << "   descriptor extraction: " << _tracker->framepointGenerator()->getTimeConsumptionSeconds_descriptor_extraction()/_duration_total_seconds
-                                             << " (" << _tracker->framepointGenerator()->getTimeConsumptionSeconds_descriptor_extraction() << "s)" << std::endl)
+    std::cerr << "                     total frames: " << number_of_processed_frames_total << std::endl;
+    std::cerr << "               total duration (s): " << _duration_total_seconds << std::endl;
+    std::cerr << "                      average fps: " << number_of_processed_frames_total/_duration_total_seconds << std::endl;
+    std::cerr << "average processing time (s/frame): " << _duration_total_seconds/number_of_processed_frames_total << std::endl;
+    std::cerr << "average landmarks close per frame: " << _tracker->totalNumberOfLandmarksClose()/number_of_processed_frames_total << std::endl;
+    std::cerr << "  average landmarks far per frame: " << _tracker->totalNumberOfLandmarksFar()/number_of_processed_frames_total << std::endl;
+    std::cerr << "         average tracks per frame: " << _tracker->totalNumberOfTrackedPoints()/number_of_processed_frames_total << std::endl;
+    std::cerr << "        average tracks per second: " << _tracker->totalNumberOfTrackedPoints()/_duration_total_seconds << std::endl;
+    std::cerr << "-------------------------------------------------------------------------" << std::endl;
+    std::cerr << "runtime" << std::endl;
+    std::cerr << "-------------------------------------------------------------------------" << std::endl;
+    std::cerr << "       feature detection: " << _tracker->framepointGenerator()->getTimeConsumptionSeconds_feature_detection()/_duration_total_seconds
+                                             << " (" << _tracker->framepointGenerator()->getTimeConsumptionSeconds_feature_detection() << "s)" << std::endl;
+    std::cerr << "   descriptor extraction: " << _tracker->framepointGenerator()->getTimeConsumptionSeconds_descriptor_extraction()/_duration_total_seconds
+                                             << " (" << _tracker->framepointGenerator()->getTimeConsumptionSeconds_descriptor_extraction() << "s)" << std::endl;
 
     //ds display further information depending on tracking mode
     switch (_parameters->command_line_parameters->tracker_mode){
       case CommandLineParameters::TrackerMode::RGB_STEREO: {
         StereoFramePointGenerator* stereo_framepoint_generator = dynamic_cast<StereoFramePointGenerator*>(_tracker->framepointGenerator());
-        LOG_INFO(std::cerr << "  stereo keypoint search: " << stereo_framepoint_generator->getTimeConsumptionSeconds_point_triangulation()/_duration_total_seconds
-                  << " (" << stereo_framepoint_generator->getTimeConsumptionSeconds_point_triangulation() << "s)" << std::endl)
+        std::cerr << "  stereo keypoint search: " << stereo_framepoint_generator->getTimeConsumptionSeconds_point_triangulation()/_duration_total_seconds
+                  << " (" << stereo_framepoint_generator->getTimeConsumptionSeconds_point_triangulation() << "s)" << std::endl;
         break;
       }
       case CommandLineParameters::TrackerMode::RGB_DEPTH: {
@@ -637,19 +637,19 @@ namespace proslam {
       }
     }
 
-    LOG_INFO(std::cerr << "                tracking: " << _tracker->getTimeConsumptionSeconds_tracking()/_duration_total_seconds
-                                             << " (" << _tracker->getTimeConsumptionSeconds_tracking() << "s)" << std::endl)
-    LOG_INFO(std::cerr << "       pose optimization: " << _tracker->getTimeConsumptionSeconds_pose_optimization()/_duration_total_seconds
-                                             << " (" << _tracker->getTimeConsumptionSeconds_pose_optimization() << "s)" << std::endl)
-    LOG_INFO(std::cerr << "   landmark optimization: " << _tracker->getTimeConsumptionSeconds_landmark_optimization()/_duration_total_seconds
-                                             << " (" << _tracker->getTimeConsumptionSeconds_landmark_optimization() << "s)" << std::endl)
-    LOG_INFO(std::cerr << " correspondence recovery: " << _tracker->getTimeConsumptionSeconds_point_recovery()/_duration_total_seconds
-                                             << " (" << _tracker->getTimeConsumptionSeconds_point_recovery() << "s)" << std::endl)
-    LOG_INFO(std::cerr << "similarity search (HBST): " << _relocalizer->getTimeConsumptionSeconds_overall()/_duration_total_seconds
-                                             << " (" << _relocalizer->getTimeConsumptionSeconds_overall() << "s)" << std::endl)
-    LOG_INFO(std::cerr << "              map update: " << _optimizer->getTimeConsumptionSeconds_overall()/_duration_total_seconds
-                                             << " (" << _optimizer->getTimeConsumptionSeconds_overall() << "s)" << std::endl)
-    LOG_INFO(std::cerr << "-------------------------------------------------------------------------" << std::endl)
+    std::cerr << "                tracking: " << _tracker->getTimeConsumptionSeconds_tracking()/_duration_total_seconds
+                                             << " (" << _tracker->getTimeConsumptionSeconds_tracking() << "s)" << std::endl;
+    std::cerr << "       pose optimization: " << _tracker->getTimeConsumptionSeconds_pose_optimization()/_duration_total_seconds
+                                             << " (" << _tracker->getTimeConsumptionSeconds_pose_optimization() << "s)" << std::endl;
+    std::cerr << "   landmark optimization: " << _tracker->getTimeConsumptionSeconds_landmark_optimization()/_duration_total_seconds
+                                             << " (" << _tracker->getTimeConsumptionSeconds_landmark_optimization() << "s)" << std::endl;
+    std::cerr << "     framepoint recovery: " << _tracker->getTimeConsumptionSeconds_point_recovery()/_duration_total_seconds
+                                             << " (" << _tracker->getTimeConsumptionSeconds_point_recovery() << "s)" << std::endl;
+    std::cerr << "          relocalization: " << _relocalizer->getTimeConsumptionSeconds_overall()/_duration_total_seconds
+                                             << " (" << _relocalizer->getTimeConsumptionSeconds_overall() << "s)" << std::endl;
+    std::cerr << "              map update: " << _optimizer->getTimeConsumptionSeconds_overall()/_duration_total_seconds
+                                             << " (" << _optimizer->getTimeConsumptionSeconds_overall() << "s)" << std::endl;
+    std::cerr << "-------------------------------------------------------------------------" << std::endl;
   }
 
   void SLAMAssembly::translate(cv::Mat &image_, const int32_t& offsetx_, const int32_t& offsety_){

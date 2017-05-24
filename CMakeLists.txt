@@ -10,8 +10,14 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 message("build type: '${CMAKE_BUILD_TYPE}'")
 
-#ds specify logging level, 0(or not specified): INFO, 1:WARNING, 2:ERROR
+#ds specify logging level, 0(or not specified): DEBUG, 1: INFO, 2: WARNING, 3: ERROR)
 add_definitions(-DSRRG_PROSLAM_LOG_LEVEL=0)
+
+#ds specify target binary descriptor bit size
+add_definitions(-DSRRG_PROSLAM_DESCRIPTOR_SIZE_BITS=256)
+
+#ds specify target binary descriptor maximum acceptable matching distance
+add_definitions(-DSRRG_PROSLAM_DESCRIPTOR_MAXIMUM_HAMMING_DISTANCE=25)
 
 #ds OpenCV - OpenCV_DIR might be overwritten by user
 find_package(OpenCV REQUIRED)

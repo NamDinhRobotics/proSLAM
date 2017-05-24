@@ -41,7 +41,7 @@ namespace proslam {
     ++number_of_parameters_parsed; \
     /*std::cerr << "parameter name: '" << #STRUCT_NAME << ": " << #PARAMETER_NAME << "' value: '" << STRUCT_NAME->PARAMETER_NAME << "'" << std::endl;*/ \
   } catch (const YAML::TypedBadConversion<PARAMETER_TYPE>& exception_) { \
-    LOG_WARNING(std::cerr << "WARNING: unable to parse parameter: '" << #STRUCT_NAME << ": " << #PARAMETER_NAME << "' (exception: '" << exception_.what() << "')" << std::endl) \
+    LOG_WARNING(std::cerr << "unable to parse parameter: '" << #STRUCT_NAME << ": " << #PARAMETER_NAME << "' (exception: '" << exception_.what() << "')" << std::endl) \
   }
 
   //ds Command line
@@ -157,7 +157,7 @@ namespace proslam {
 
 
   ParameterCollection::ParameterCollection(): number_of_parameters_detected(0), number_of_parameters_parsed(0) {
-    LOG_INFO(std::cerr << "ParameterCollection::ParameterCollection|constructing" << std::endl)
+    LOG_DEBUG(std::cerr << "ParameterCollection::ParameterCollection|constructing" << std::endl)
 
     //ds allocate minimal set of parameters
     command_line_parameters = new CommandLineParameters();
@@ -169,11 +169,11 @@ namespace proslam {
 
     //ds allocate inner parameters
     relocalizer_parameters->aligner = new AlignerParameters();
-    LOG_INFO(std::cerr << "ParameterCollection::ParameterCollection|constructed" << std::endl)
+    LOG_DEBUG(std::cerr << "ParameterCollection::ParameterCollection|constructed" << std::endl)
   }
 
   ParameterCollection::~ParameterCollection() {
-    LOG_INFO(std::cerr << "ParameterCollection::ParameterCollection|destroying" << std::endl)
+    LOG_DEBUG(std::cerr << "ParameterCollection::~ParameterCollection|destroying" << std::endl)
     if (command_line_parameters) {delete command_line_parameters;}
     if (frame_parameters) {delete frame_parameters;}
     if (landmark_parameters) {delete landmark_parameters;}
@@ -184,7 +184,7 @@ namespace proslam {
     if (stereo_tracker_parameters) {delete stereo_tracker_parameters;}
     if (depth_tracker_parameters) {delete depth_tracker_parameters;}
     if (relocalizer_parameters) {delete relocalizer_parameters;}
-    LOG_INFO(std::cerr << "ParameterCollection::ParameterCollection|destroyed" << std::endl)
+    LOG_DEBUG(std::cerr << "ParameterCollection::~ParameterCollection|destroyed" << std::endl)
   }
 
   void ParameterCollection::parseFromCommandLine(const int32_t& argc_, char ** argv_) {
@@ -209,13 +209,13 @@ namespace proslam {
         command_line_parameters->filename_configuration = "configuration.yaml";
         LOG_INFO(std::cerr << "ParameterCollection::parseParametersFromCommandLine|loading default configuration file: " << command_line_parameters->filename_configuration << std::endl)
       } else {
-        LOG_WARNING(std::cerr << "ParameterCollection::parseParametersFromCommandLine|WARNING: no configuration file found (running with internal settings)" << std::endl)
+        LOG_WARNING(std::cerr << "ParameterCollection::parseParametersFromCommandLine|no configuration file found (running with internal settings)" << std::endl)
       }
     } else {
 
       //ds check if specified configuration file is not accessible
       if (!srrg_core::isAccessible(command_line_parameters->filename_configuration)) {
-        LOG_ERROR(std::cerr << "ParameterCollection::parseParametersFromCommandLine|ERROR: specified configuration file is not accessible: " << command_line_parameters->filename_configuration << std::endl)
+        LOG_ERROR(std::cerr << "ParameterCollection::parseParametersFromCommandLine|specified configuration file is not accessible: " << command_line_parameters->filename_configuration << std::endl)
         throw std::runtime_error("specified configuration file is not accessible");
       }
     }
@@ -296,7 +296,7 @@ namespace proslam {
       } else if (tracker_mode == "RGB_DEPTH") {
         command_line_parameters->tracker_mode = CommandLineParameters::TrackerMode::RGB_DEPTH;
       } else {
-        LOG_ERROR(std::cerr << "ParameterCollection::parseFromFile|ERROR: invalid tracker mode: " << tracker_mode << std::endl)
+        LOG_ERROR(std::cerr << "ParameterCollection::parseFromFile|invalid tracker mode: " << tracker_mode << std::endl)
         throw std::runtime_error("invalid tracker mode");
       }
 
@@ -384,7 +384,7 @@ namespace proslam {
           break;
         }
         default: {
-          LOG_ERROR(std::cerr << "ParameterCollection::parseFromFile|ERROR: invalid tracker mode" << std::endl)
+          LOG_ERROR(std::cerr << "ParameterCollection::parseFromFile|invalid tracker mode" << std::endl)
           throw std::runtime_error("invalid tracker mode");
         }
       }
@@ -402,7 +402,7 @@ namespace proslam {
       LOG_INFO(std::cerr << "ParameterCollection::parseFromFile|successfully loaded configuration from file: " << filename_ << std::endl)
       LOG_INFO(std::cerr << "ParameterCollection::parseFromFile|number of imported parameters: " << number_of_parameters_parsed << "/" << number_of_parameters_detected << std::endl)
     } catch (const YAML::BadFile& exception_) {
-      LOG_ERROR(std::cerr << "ParameterCollection::parseFromFile|ERROR: unable to parse configuration file: " << filename_ << " - exception: '" << exception_.what() << "'" << std::endl)
+      LOG_ERROR(std::cerr << "ParameterCollection::parseFromFile|unable to parse configuration file: " << filename_ << " - exception: '" << exception_.what() << "'" << std::endl)
     }
   }
 
@@ -410,11 +410,11 @@ namespace proslam {
 
     //ds check camera topics
     if (command_line_parameters->topic_image_left.length() == 0) {
-      LOG_ERROR(std::cerr << "ParameterCollection::validateParameters|ERROR: empty value entered for parameter: -topic-image-left (-il) (enter -h for help)" << std::endl)
+      LOG_ERROR(std::cerr << "ParameterCollection::validateParameters|empty value entered for parameter: -topic-image-left (-il) (enter -h for help)" << std::endl)
       throw std::runtime_error("empty value entered for parameter: -topic-image-left");
     }
     if (command_line_parameters->topic_image_right.length() == 0) {
-      LOG_ERROR(std::cerr << "ParameterCollection::validateParameters|ERROR: empty value entered for parameter: -topic-image-right (-ir) (enter -h for help)" << std::endl)
+      LOG_ERROR(std::cerr << "ParameterCollection::validateParameters|empty value entered for parameter: -topic-image-right (-ir) (enter -h for help)" << std::endl)
       throw std::runtime_error("empty value entered for parameter: -topic-image-right");
     }
   }
@@ -434,7 +434,7 @@ namespace proslam {
         break;
       }
       default: {
-        LOG_ERROR(std::cerr << "ParameterCollection::setMode|ERROR: invalid tracker mode" << std::endl)
+        LOG_ERROR(std::cerr << "ParameterCollection::setMode|invalid tracker mode" << std::endl)
         throw std::runtime_error("invalid tracker mode");
       }
     }

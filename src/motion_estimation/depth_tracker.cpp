@@ -8,23 +8,23 @@ namespace proslam {
                                 _depth_image(0),
                                 _depth_framepoint_generator(0),
                                 _parameters(0) {
-    LOG_INFO(std::cerr << "DepthTracker::DepthTracker|constructed" << std::endl)
+    LOG_DEBUG(std::cerr << "DepthTracker::DepthTracker|constructed" << std::endl)
   }
 
   void DepthTracker::configure(BaseTrackerParameters* parameters_) {
-    LOG_INFO(std::cerr << "DepthTracker::setup|configuring" << std::endl)
+    LOG_DEBUG(std::cerr << "DepthTracker::configure|configuring" << std::endl)
     _parameters = dynamic_cast<DepthTrackerParameters*>(parameters_);
     BaseTracker::configure(parameters_);
     assert(_depth_camera);
     _depth_framepoint_generator = dynamic_cast<DepthFramePointGenerator*>(_framepoint_generator);
     assert(_depth_framepoint_generator);
-    LOG_INFO(std::cerr << "DepthTracker::setup|configured" << std::endl)
+    LOG_DEBUG(std::cerr << "DepthTracker::configure|configured" << std::endl)
   }
 
   //ds dynamic cleanup
   DepthTracker::~DepthTracker() {
-    LOG_INFO(std::cerr << "DepthTracker::DepthTracker|destroying" << std::endl)
-    LOG_INFO(std::cerr << "DepthTracker::DepthTracker|destroyed" << std::endl)
+    LOG_DEBUG(std::cerr << "DepthTracker::~DepthTracker|destroying" << std::endl)
+    LOG_DEBUG(std::cerr << "DepthTracker::~DepthTracker|destroyed" << std::endl)
   }
 
   Frame* DepthTracker::_createFrame(){

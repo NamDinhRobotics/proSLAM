@@ -40,21 +40,19 @@ namespace proslam {
   public:
 
     inline void setCameraRight(const Camera* camera_right_) {_camera_right = camera_right_;}
-    void setMaximumMatchingDistanceTriangulation(const real& maximum_matching_distance_triangulation_) {_maximum_matching_distance_triangulation = maximum_matching_distance_triangulation_;}
+    void setMaximumMatchingDistanceTriangulation(const real& maximum_matching_distance_triangulation_) {_parameters->maximum_matching_distance_triangulation = maximum_matching_distance_triangulation_;}
 
   //ds settings
   protected:
 
+    //! @brief right camera handle
     const Camera* _camera_right;
 
-    //ds triangulation properties
-    int32_t _maximum_matching_distance_triangulation;
+    //! @brief derived triangulation properties
     real _baseline_pixelsmeters;
     real _baseline_meters;
-    real _baseline_factor;
-    real _minimum_disparity_pixels;
 
-    //ds inner memory buffers (operated on in compute)
+    //! @brief inner memory buffers (operated on in compute, kept here for readability)
     std::vector<KeypointWithDescriptor> _keypoints_with_descriptors_right;
 
   private:

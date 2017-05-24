@@ -16,7 +16,7 @@ int32_t main(int32_t argc_, char** argv_) {
     //ds parse parameters from command line (optionally setting the parameter values)
     parameters->parseFromCommandLine(argc_, argv_);
   } catch (const std::runtime_error& exception_) {
-    LOG_ERROR(std::cerr << "ERROR: caught exception '" << exception_.what() << "'" << std::endl)
+    LOG_ERROR(std::cerr << "main|caught exception '" << exception_.what() << "'" << std::endl)
     delete parameters;
     return 0;
   }
@@ -54,7 +54,7 @@ int32_t main(int32_t argc_, char** argv_) {
     //ds save trajectory to disk
     slam_system.worldMap()->writeTrajectory("trajectory.txt");
   } catch (const std::runtime_error& exception_) {
-    LOG_ERROR(std::cerr << "ERROR: caught exception '" << exception_.what() << "'" << std::endl)
+    LOG_ERROR(std::cerr << "main|caught exception '" << exception_.what() << "'" << std::endl)
     delete parameters;
     return 0;
   }

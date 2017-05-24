@@ -129,7 +129,7 @@ namespace proslam {
       //ds check last iteration
       if(iteration == _maximum_number_of_iterations-1) {
         _has_system_converged = false;
-        LOG_WARNING(std::cerr << "XYZAligner::converge|WARNING: system did not converge - inlier ratio: " << static_cast<real>(_number_of_inliers)/_context->correspondences.size() << std::endl)
+        LOG_WARNING(std::cerr << "XYZAligner::converge|system did not converge - inlier ratio: " << static_cast<real>(_number_of_inliers)/_context->correspondences.size() << std::endl)
       }
     }
   }

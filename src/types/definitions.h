@@ -26,9 +26,13 @@ namespace proslam{
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% //CONFIGURATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   //ds descriptor bit width
-  #define DESCRIPTOR_SIZE_BITS 256
-  #define DESCRIPTOR_SIZE_BYTES DESCRIPTOR_SIZE_BITS/8
-  #define DESCRIPTOR_MAXIMUM_HAMMING_DISTANCE 25
+#ifndef SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS
+  #define SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS 256
+#endif
+  #define DESCRIPTOR_SIZE_BYTES SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS/8
+#ifndef SRRG_PROSLAM_DESCRIPTOR_MAXIMUM_HAMMING_DISTANCE
+  #define SRRG_PROSLAM_DESCRIPTOR_MAXIMUM_HAMMING_DISTANCE 256
+#endif
   #define DESCRIPTOR_NORM cv::NORM_HAMMING
 
   //ds adjust floating point precision
@@ -75,9 +79,9 @@ namespace proslam{
   typedef Eigen::Matrix<real, 4, 3> Matrix4_3;
 
   //ds HBST: readability
-  typedef srrg_hbst::BinaryMatchable<DESCRIPTOR_SIZE_BITS> HBSTMatchable;
+  typedef srrg_hbst::BinaryMatchable<SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS> HBSTMatchable;
   typedef srrg_hbst::BinaryNode<HBSTMatchable, 50, real> HBSTNode;
-  typedef srrg_hbst::BinaryTree<HBSTNode, DESCRIPTOR_MAXIMUM_HAMMING_DISTANCE> HBSTTree;
+  typedef srrg_hbst::BinaryTree<HBSTNode, SRRG_PROSLAM_DESCRIPTOR_MAXIMUM_HAMMING_DISTANCE> HBSTTree;
 
   //ds cv colors
   #define CV_COLOR_CODE_GREEN cv::Scalar(0, 200, 0)
@@ -109,33 +113,56 @@ namespace proslam{
       throw std::runtime_error("flying polar buffalo error"); \
     }
 
-  //ds conditional log levels
-  #if SRRG_PROSLAM_LOG_LEVEL == 1
-
-    //ds display warnings and errors but no info
-    #define LOG_INFO(EXPRESSION)
-    #define LOG_WARNING(EXPRESSION) \
-      EXPRESSION;
-    #define LOG_ERROR(EXPRESSION) \
+  //ds generic logging macro - called by each implemented logging function
+  #define LOG_GENERIC(LOG_LEVEL, EXPRESSION) \
+      std::cerr << srrg_core::getTimestamp() << "|" << LOG_LEVEL << "|"; \
       EXPRESSION;
 
-  #elif SRRG_PROSLAM_LOG_LEVEL == 2
+//ds conditional log levels, 1: INFO
+#if SRRG_PROSLAM_LOG_LEVEL == 1
 
-    //ds display only errors
-    #define LOG_INFO(EXPRESSION)
-    #define LOG_WARNING(EXPRESSION)
-    #define LOG_ERROR(EXPRESSION) \
-      EXPRESSION;
+  //ds display all available logging except debug
+  #define LOG_DEBUG(EXPRESSION)
+  #define LOG_INFO(EXPRESSION) \
+    LOG_GENERIC("INFO   ", EXPRESSION)
+  #define LOG_WARNING(EXPRESSION) \
+    LOG_GENERIC("WARNING", EXPRESSION)
+  #define LOG_ERROR(EXPRESSION) \
+    LOG_GENERIC("ERROR  ", EXPRESSION)
 
-  #else
+//ds 2: WARNING
+#elif SRRG_PROSLAM_LOG_LEVEL == 2
 
-    //ds default = 0, all logging active
-    #define LOG_INFO(EXPRESSION) \
-      EXPRESSION;
-    #define LOG_WARNING(EXPRESSION) \
-      EXPRESSION;
-    #define LOG_ERROR(EXPRESSION) \
-      EXPRESSION;
+  //ds display warnings and errors but no info and no debug
+  #define LOG_DEBUG(EXPRESSION)
+  #define LOG_INFO(EXPRESSION)
+  #define LOG_WARNING(EXPRESSION) \
+    LOG_GENERIC("WARNING", EXPRESSION)
+  #define LOG_ERROR(EXPRESSION) \
+    LOG_GENERIC("ERROR  ", EXPRESSION)
 
-  #endif
+//ds 3: ERROR
+#elif SRRG_PROSLAM_LOG_LEVEL == 3
+
+  //ds display only errors
+  #define LOG_DEBUG(EXPRESSION)
+  #define LOG_INFO(EXPRESSION)
+  #define LOG_WARNING(EXPRESSION)
+  #define LOG_ERROR(EXPRESSION) \
+    LOG_GENERIC("ERROR  ", EXPRESSION)
+
+//ds default or 0: DEBUG
+#else
+
+  //ds default = 0, all logging active
+  #define LOG_DEBUG(EXPRESSION) \
+    LOG_GENERIC("DEBUG  ", EXPRESSION)
+  #define LOG_INFO(EXPRESSION) \
+    LOG_GENERIC("INFO   ", EXPRESSION)
+  #define LOG_WARNING(EXPRESSION) \
+    LOG_GENERIC("WARNING", EXPRESSION)
+  #define LOG_ERROR(EXPRESSION) \
+    LOG_GENERIC("ERROR  ", EXPRESSION)
+
+#endif
 };
