@@ -5,16 +5,11 @@
 namespace proslam {
   using namespace srrg_core;
 
-  WorldMap::WorldMap(): _parameters(0) {
+  WorldMap::WorldMap(const WorldMapParameters* parameters_): _parameters(parameters_) {
+    LOG_DEBUG(std::cerr << "WorldMap::WorldMap|constructing" << std::endl)
+    clear();
     LOG_DEBUG(std::cerr << "WorldMap::WorldMap|constructed" << std::endl)
   };
-
-  void WorldMap::configure(WorldMapParameters* parameters_) {
-    LOG_DEBUG(std::cerr << "WorldMap::configure|configuring" << std::endl)
-    _parameters = parameters_;
-    clear();
-    LOG_DEBUG(std::cerr << "WorldMap::configure|configured" << std::endl)
-  }
 
   WorldMap::~WorldMap() {
     LOG_DEBUG(std::cerr << "WorldMap::~WorldMap|destroying" << std::endl)
@@ -81,7 +76,7 @@ namespace proslam {
 
   //ds creates a new landmark living in this instance, using the provided framepoint as origin
   Landmark* WorldMap::createLandmark(const FramePoint* origin_){
-    Landmark* landmark = new Landmark(origin_);
+    Landmark* landmark = new Landmark(origin_, _parameters->landmark);
     _landmarks_in_window_for_local_map.put(landmark);
     return landmark;
   }
@@ -106,7 +101,7 @@ namespace proslam {
         (_frame_queue_for_local_map.size() > _parameters->minimum_number_of_frames_for_local_map && _local_maps.size() < 5)) {
 
       //ds create the new keyframe and add it to the keyframe database
-      _current_local_map = new LocalMap(_frame_queue_for_local_map, _root_local_map, _current_local_map);
+      _current_local_map = new LocalMap(_frame_queue_for_local_map, _root_local_map, _current_local_map, _parameters->local_map->minimum_number_of_landmarks);
       _local_maps.push_back(_current_local_map);
       assert(_current_frame->isKeyframe());
       assert(_current_frame->localMap() == _current_local_map);

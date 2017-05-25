@@ -34,7 +34,7 @@ namespace proslam {
   protected:
 
     //ds initial landmark coordinates must be provided
-    Landmark(const FramePoint* origin_);
+    Landmark(const FramePoint* origin_, const LandmarkParameters* parameters_);
 
     //ds cleanup of dynamic structures
     ~Landmark();
@@ -71,7 +71,7 @@ namespace proslam {
     inline const bool isCurrentlyTracked() const {return _is_currently_tracked;}
     inline void setIsCurrentlyTracked(const bool& is_currently_tracked_) {_is_currently_tracked = is_currently_tracked_;}
 
-    //ds landmark coordinates update - no visual information (e.g. map optimization)
+    //ds landmark coordinates update - without visual information (e.g. map optimization)
     void update(const PointCoordinates& coordinates_in_world_, const real& depth_meters_ = 1);
 
     //ds landmark coordinates update with visual information (tracking)
@@ -124,6 +124,9 @@ namespace proslam {
 
   //ds class specific
   private:
+
+    //! @brief configurable parameters
+    const LandmarkParameters* _parameters;
 
     //ds inner instance count - incremented upon constructor call (also unsuccessful calls)
     static Count _instances;

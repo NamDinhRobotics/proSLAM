@@ -6,9 +6,10 @@ namespace proslam {
   Count Landmark::_instances = 0;
 
   //ds initial landmark coordinates must be provided
-  Landmark::Landmark(const FramePoint* origin_): _identifier(_instances),
-                                                 _origin(origin_),
-                                                 _coordinates(origin_->worldCoordinates()) {
+  Landmark::Landmark(const FramePoint* origin_, const LandmarkParameters* parameters_): _identifier(_instances),
+                                                                                        _origin(origin_),
+                                                                                        _coordinates(origin_->worldCoordinates()),
+                                                                                        _parameters(parameters_) {
     ++_instances;
 
     //ds allocate fresh state (trading construction correctness for enclosed generation)
@@ -28,8 +29,9 @@ namespace proslam {
   void Landmark::resetCoordinates(const PointCoordinates& coordinates_) {
 
     //ds clear past measurements
-    _total_weight = 0;
-    _number_of_updates = 0;
+    _total_weight         = 0;
+    _number_of_updates    = 0;
+    _number_of_recoveries = 0;
 
     //ds add fresh measurement
     update(coordinates_);
@@ -42,7 +44,7 @@ namespace proslam {
     const real relative_delta = (_coordinates-coordinates_in_world_).norm()/depth_meters_;
 
     //ds check if inlier measurement or less than 2 updates yet
-    if (relative_delta < 1 || _number_of_updates < 2) {
+    if (relative_delta < _parameters->maximum_translation_error_to_depth_ratio || _number_of_updates < _parameters->minimum_number_of_forced_updates) {
 
       //ds current weight
       const real weight_new_measurement = 1/depth_meters_;

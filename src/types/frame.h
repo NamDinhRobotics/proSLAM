@@ -71,9 +71,6 @@ namespace proslam {
     inline const FramePointPointerVector& activePoints() const {return _active_points;}
     inline FramePointPointerVector& activePoints() {return _active_points;}
 
-    //ds this criteria is used for the decision of creating a landmark or not from a track of framepoints
-    const Count& minimumTrackLengthForLandmarkCreation() const {return _minimum_track_length_for_landmark_creation;}
-
     //ds request a new framepoint instance with an optional link to a previous point (track)
     FramePoint* create(const cv::KeyPoint& keypoint_left_,
                        const cv::Mat& descriptor_left_,
@@ -129,9 +126,6 @@ namespace proslam {
 
     //! @brief bookkeeping: active (used) framepoints in the pipeline (a subset of _created_points)
     FramePointPointerVector _active_points;
-
-    //ds this criteria is used for the decision of creating a landmark or not from a track of framepoints
-    const Count _minimum_track_length_for_landmark_creation = 3;
 
     //ds spatials
     TransformMatrix3D _frame_to_local_map = TransformMatrix3D::Identity();

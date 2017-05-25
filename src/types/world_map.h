@@ -10,9 +10,8 @@ namespace proslam {
   //ds object handling
   public:
 
-    WorldMap();
-    virtual void configure(WorldMapParameters* parameters_);
-    virtual ~WorldMap();
+    WorldMap(const WorldMapParameters* parameters_);
+    ~WorldMap();
 
   //ds functionality
   public:
@@ -140,7 +139,7 @@ namespace proslam {
   private:
 
     //! @brief configurable parameters
-    WorldMapParameters* _parameters;
+    const WorldMapParameters* _parameters;
 
     //ds informative/visualization only
     Count _number_of_closures = 0;

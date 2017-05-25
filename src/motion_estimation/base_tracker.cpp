@@ -164,7 +164,7 @@ namespace proslam {
         }
 
         //ds check if we can switch the state
-        const Count number_of_good_points = current_frame->countPoints(current_frame->minimumTrackLengthForLandmarkCreation());
+        const Count number_of_good_points = current_frame->countPoints(_parameters->minimum_track_length_for_landmark_creation);
         if (number_of_good_points > _parameters->minimum_number_of_landmarks_to_track) {
 
           //ds trigger landmark creation and framepoint update
@@ -659,7 +659,7 @@ namespace proslam {
       point->setWorldCoordinates(frame_to_world*point->robotCoordinates());
 
       //ds skip point if tracking and not mature enough to be a landmark - for localizing state this is skipped
-      if (point->trackLength() < frame_->minimumTrackLengthForLandmarkCreation()) {
+      if (point->trackLength() < _parameters->minimum_track_length_for_landmark_creation) {
         continue;
       }
 

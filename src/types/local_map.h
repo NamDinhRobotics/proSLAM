@@ -31,7 +31,8 @@ namespace proslam {
     //! @param[in] frames_ the collection of frames to be contained in the local map (same track)
     //! @param[in] local_map_root_ the first local map in the same track
     //! @param[in] local_map_previous_ the preceding local map in the same track
-    LocalMap(FramePointerVector& frames_, LocalMap* local_map_root_ = 0, LocalMap* local_map_previous_ = 0);
+    //! @param[in] minimum_number_of_landmarks_ target minimum number of landmarks to contain in local map
+    LocalMap(FramePointerVector& frames_, LocalMap* local_map_root_ = 0, LocalMap* local_map_previous_ = 0, const Count& minimum_number_of_landmarks_ = 50);
 
     //ds cleanup of dynamic structures
     ~LocalMap();
@@ -114,9 +115,6 @@ namespace proslam {
 
     //ds grant access to local map producer
     friend WorldMap;
-
-    //ds informative only
-    const Count _minimum_number_of_landmarks = 50;
 
   //ds class specific
   private:

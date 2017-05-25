@@ -60,7 +60,7 @@ namespace proslam {
     bool option_show_top_viewer       = false;
     bool option_drop_framepoints      = false;
     bool option_equalize_histogram    = false;
-    bool option_rectify_and_undistort = false;
+    bool option_undistort_and_rectify = false;
     bool option_use_odometry          = false;
   };
 
@@ -87,17 +87,6 @@ namespace proslam {
 
   //ds Types
   //! @class
-  class FrameParameters: public Parameters {
-  public:
-
-    //! @brief parameter printing function
-    virtual void print() const;
-
-    //! @brief this criteria is used for the decision of creating a landmark or not from a track of framepoints
-    Count minimum_track_length_for_landmark_creation = 3;
-  };
-
-  //! @class
   class LandmarkParameters: public Parameters {
   public:
 
@@ -105,7 +94,7 @@ namespace proslam {
     virtual void print() const;
 
     //! @brief minimum number of measurements before optimization is filtering
-    Count minimum_number_of_forced_updates = 2;
+    Count minimum_number_of_forced_updates        = 2;
 
     //! @brief maximum allowed measurement divergence
     real maximum_translation_error_to_depth_ratio = 1;
@@ -126,6 +115,12 @@ namespace proslam {
   class WorldMapParameters: public Parameters {
   public:
 
+    //! @brief default constructor
+    WorldMapParameters(): landmark(new LandmarkParameters()), local_map(new LocalMapParameters()) {};
+
+    //! @brief destructor: clean inner parameters
+    ~WorldMapParameters() {delete landmark; delete local_map;}
+
     //! @brief parameter printing function
     virtual void print() const;
 
@@ -133,6 +128,12 @@ namespace proslam {
     real minimum_distance_traveled_for_local_map = 0.5;
     real minimum_degrees_rotated_for_local_map   = 0.5;
     Count minimum_number_of_frames_for_local_map = 4;
+
+    //! @brief landmark generation parameters
+    LandmarkParameters* landmark  = 0;
+
+    //! @brief local map generation parameters
+    LocalMapParameters* local_map = 0;
   };
 
 
@@ -198,6 +199,9 @@ namespace proslam {
     //! @brief parameter printing function
     virtual void print() const;
 
+    //! @brief this criteria is used for the decision of whether creating a landmark or not from a track of framepoints
+    Count minimum_track_length_for_landmark_creation = 3;
+
     //! @brief track lost criteria
     Count minimum_number_of_landmarks_to_track = 5;
 
@@ -246,6 +250,12 @@ namespace proslam {
   class RelocalizerParameters: public Parameters {
   public:
 
+    //! @brief default constructor
+    RelocalizerParameters(): aligner(new AlignerParameters()) {}
+
+    //! @brief destructor: clean inner parameters
+    ~RelocalizerParameters() {delete aligner;}
+
     //! @brief parameter printing function
     virtual void print() const;
 
@@ -253,16 +263,16 @@ namespace proslam {
     Count preliminary_minimum_interspace_queries = 5;
 
     //! @brief minimum relative number of matches
-    real preliminary_minimum_matching_ratio = 0.1;
+    real preliminary_minimum_matching_ratio      = 0.1;
 
     //! @brief minimum absolute number of matches
     Count minimum_number_of_matches_per_landmark = 20;
 
     //! @brief correspondence retrieval
-    Count minimum_matches_per_correspondence = 0;
+    Count minimum_matches_per_correspondence     = 0;
 
     //! @brief parameters of aligner unit
-    AlignerParameters* aligner = 0;
+    AlignerParameters* aligner                   = 0;
   };
 
 
@@ -307,16 +317,13 @@ namespace proslam {
 
     CommandLineParameters* command_line_parameters = 0;
 
-    FrameParameters* frame_parameters = 0;
-    LandmarkParameters* landmark_parameters = 0;
-    LocalMapParameters* local_map_parameters = 0;
     WorldMapParameters* world_map_parameters = 0;
 
     StereoFramePointGeneratorParameters* stereo_framepoint_generator_parameters = 0;
-    DepthFramePointGeneratorParameters* depth_framepoint_generator_parameters = 0;
+    DepthFramePointGeneratorParameters* depth_framepoint_generator_parameters   = 0;
 
     StereoTrackerParameters* stereo_tracker_parameters = 0;
-    DepthTrackerParameters* depth_tracker_parameters = 0;
+    DepthTrackerParameters* depth_tracker_parameters   = 0;
 
     RelocalizerParameters* relocalizer_parameters = 0;
 

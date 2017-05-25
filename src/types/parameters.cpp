@@ -25,7 +25,7 @@ namespace proslam {
   "-show-top (-st):                         enable top map viewer\n"
   "-drop-framepoints (-df):                 deallocation of past framepoints at runtime (reduces memory demand)\n"
   "-equalize-histogram (-eh):               equalize stereo image histogram before processing\n"
-  "-rectify-and-undistort (-ru):            rectifies and undistorts input images based on camera info\n"
+  "-undistort-rectify (-ur):                undistorts and rectifies input images based on camera info\n"
   "-------------------------------------------------------------------------";
 
   //! @brief macro wrapping the YAML node parsing for a single parameter
@@ -48,11 +48,17 @@ namespace proslam {
   void CommandLineParameters::print() const {
     std::cerr << "-------------------------------------------------------------------------" << std::endl;
     std::cerr << "running with command line parameters:" << std::endl;
-    if (filename_configuration.length() > 0) {std::cerr << "-configuration (-c)            '" << filename_configuration << "'" << std::endl;}
+    if (filename_configuration.length() > 0) {
+    std::cerr << "-configuration (-c)            '" << filename_configuration << "'" << std::endl;
+    }
     std::cerr << "-topic-image-left (-il)        '" << topic_image_left << "'" << std::endl;
     std::cerr << "-topic-image-right (-ir)       '" << topic_image_right << "'" << std::endl;
-    if (topic_camera_info_left.length() > 0) {std::cerr << "-topic-camera-left-info  (-cl) '" << topic_camera_info_left << "'" << std::endl;}
-    if (topic_camera_info_right.length() > 0) {std::cerr << "-topic-camera-right-info (-cr) '" << topic_camera_info_right << "'" << std::endl;}
+    if (topic_camera_info_left.length() > 0) {
+    std::cerr << "-topic-camera-left-info  (-cl) '" << topic_camera_info_left << "'" << std::endl;
+    }
+    if (topic_camera_info_right.length() > 0) {
+    std::cerr << "-topic-camera-right-info (-cr) '" << topic_camera_info_right << "'" << std::endl;
+    }
     std::cerr << "-use-gui (-ug)                 " << option_use_gui << std::endl;
     std::cerr << "-open-loop (-ol)               " << !option_use_relocalization << std::endl;
     std::cerr << "-show-top (-st)                " << option_show_top_viewer << std::endl;
@@ -60,9 +66,10 @@ namespace proslam {
     std::cerr << "-depth-mode (-dm)              " << (tracker_mode == TrackerMode::RGB_DEPTH) << std::endl;
     std::cerr << "-drop-framepoints (-df)        " << option_drop_framepoints << std::endl;
     std::cerr << "-equalize-histogram (-eh)      " << option_equalize_histogram << std::endl;
-    std::cerr << "-rectify-and-undistort (-ru)   " << option_rectify_and_undistort << std::endl;
-    if (filename_dataset.length() > 0) {std::cerr
-              << "-dataset                       '" << filename_dataset  << "'" << std::endl;}
+    std::cerr << "-undistort-rectify (-ur)       " << option_undistort_and_rectify << std::endl;
+    if (filename_dataset.length() > 0) {
+    std::cerr << "-dataset                       '" << filename_dataset  << "'" << std::endl;
+    }
     std::cerr << "-------------------------------------------------------------------------" << std::endl;
   }
 
@@ -77,10 +84,6 @@ namespace proslam {
 
 
   //ds Types
-  void FrameParameters::print() const {
-    std::cerr << "FrameParameters::print|minimum_track_length_for_landmark_creation: " << minimum_track_length_for_landmark_creation << std::endl;
-  }
-
   void LandmarkParameters::print() const {
     std::cerr << "LandmarkParameters::print|minimum_number_of_forced_updates: " << minimum_number_of_forced_updates << std::endl;
     std::cerr << "LandmarkParameters::print|maximum_translation_error_to_depth_ratio: " << maximum_translation_error_to_depth_ratio << std::endl;
@@ -94,6 +97,8 @@ namespace proslam {
     std::cerr << "WorldMapParameters::print|minimum_distance_traveled_for_local_map: " << minimum_distance_traveled_for_local_map << std::endl;
     std::cerr << "WorldMapParameters::print|minimum_degrees_rotated_for_local_map: " << minimum_degrees_rotated_for_local_map << std::endl;
     std::cerr << "WorldMapParameters::print|minimum_number_of_frames_for_local_map: " << minimum_number_of_frames_for_local_map << std::endl;
+    landmark->print();
+    local_map->print();
   }
 
 
@@ -161,23 +166,15 @@ namespace proslam {
 
     //ds allocate minimal set of parameters
     command_line_parameters = new CommandLineParameters();
-    frame_parameters        = new FrameParameters();
-    landmark_parameters     = new LandmarkParameters();
-    local_map_parameters    = new LocalMapParameters();
     world_map_parameters    = new WorldMapParameters();
     relocalizer_parameters  = new RelocalizerParameters();
 
-    //ds allocate inner parameters
-    relocalizer_parameters->aligner = new AlignerParameters();
     LOG_DEBUG(std::cerr << "ParameterCollection::ParameterCollection|constructed" << std::endl)
   }
 
   ParameterCollection::~ParameterCollection() {
     LOG_DEBUG(std::cerr << "ParameterCollection::~ParameterCollection|destroying" << std::endl)
     if (command_line_parameters) {delete command_line_parameters;}
-    if (frame_parameters) {delete frame_parameters;}
-    if (landmark_parameters) {delete landmark_parameters;}
-    if (world_map_parameters) {delete local_map_parameters;}
     if (world_map_parameters) {delete world_map_parameters;}
     if (stereo_framepoint_generator_parameters) {delete stereo_framepoint_generator_parameters;}
     if (depth_framepoint_generator_parameters) {delete depth_framepoint_generator_parameters;}
@@ -262,8 +259,8 @@ namespace proslam {
         command_line_parameters->option_drop_framepoints = true;
       } else if (!std::strcmp(argv_[number_of_checked_parameters], "-equalize-histogram") || !std::strcmp(argv_[number_of_checked_parameters], "-eh")) {
         command_line_parameters->option_equalize_histogram = true;
-      } else if (!std::strcmp(argv_[number_of_checked_parameters], "-rectify-and-undistort") || !std::strcmp(argv_[number_of_checked_parameters], "-ru")) {
-        command_line_parameters->option_rectify_and_undistort = true;
+      } else if (!std::strcmp(argv_[number_of_checked_parameters], "-undistort-rectify") || !std::strcmp(argv_[number_of_checked_parameters], "-ur")) {
+        command_line_parameters->option_undistort_and_rectify = true;
       } else if (!std::strcmp(argv_[number_of_checked_parameters], "-depth-mode") || !std::strcmp(argv_[number_of_checked_parameters], "-dm")) {
         command_line_parameters->tracker_mode = CommandLineParameters::TrackerMode::RGB_DEPTH;
       } else if (!std::strcmp(argv_[number_of_checked_parameters], "-use-odometry") || !std::strcmp(argv_[number_of_checked_parameters], "-uo")) {
@@ -315,16 +312,15 @@ namespace proslam {
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_show_top_viewer, bool)
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_drop_framepoints, bool)
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_equalize_histogram, bool)
-      PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_rectify_and_undistort, bool)
+      PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_undistort_and_rectify, bool)
 
       //Types
-      PARSE_PARAMETER(configuration, frame, frame_parameters, minimum_track_length_for_landmark_creation, Count)
-      PARSE_PARAMETER(configuration, landmark, landmark_parameters, minimum_number_of_forced_updates, Count)
-      PARSE_PARAMETER(configuration, landmark, landmark_parameters, maximum_translation_error_to_depth_ratio, real)
-      PARSE_PARAMETER(configuration, local_map, local_map_parameters, minimum_number_of_landmarks, Count)
       PARSE_PARAMETER(configuration, world_map, world_map_parameters, minimum_distance_traveled_for_local_map, real)
       PARSE_PARAMETER(configuration, world_map, world_map_parameters, minimum_degrees_rotated_for_local_map, real)
       PARSE_PARAMETER(configuration, world_map, world_map_parameters, minimum_number_of_frames_for_local_map, Count)
+      PARSE_PARAMETER(configuration, landmark, world_map_parameters->landmark, minimum_number_of_forced_updates, Count)
+      PARSE_PARAMETER(configuration, landmark, world_map_parameters->landmark, maximum_translation_error_to_depth_ratio, real)
+      PARSE_PARAMETER(configuration, local_map, world_map_parameters->local_map, minimum_number_of_landmarks, Count)
 
       //ds mode specific parameters
       switch (command_line_parameters->tracker_mode) {
@@ -344,6 +340,7 @@ namespace proslam {
           PARSE_PARAMETER(configuration, stereo_framepoint_generation, stereo_framepoint_generator_parameters, minimum_disparity_pixels, real)
 
           //MotionEstimation
+          PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, minimum_track_length_for_landmark_creation, Count)
           PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, minimum_number_of_landmarks_to_track, Count)
           PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, maximum_threshold_distance_tracking_pixels, int32_t)
           PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, minimum_threshold_distance_tracking_pixels, int32_t)
@@ -371,6 +368,7 @@ namespace proslam {
           PARSE_PARAMETER(configuration, depth_framepoint_generation, depth_framepoint_generator_parameters, maximum_depth_far_meters, real)
 
           //MotionEstimation
+          PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, minimum_track_length_for_landmark_creation, Count)
           PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, minimum_number_of_landmarks_to_track, Count)
           PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, maximum_threshold_distance_tracking_pixels, int32_t)
           PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, minimum_threshold_distance_tracking_pixels, int32_t)
@@ -442,9 +440,6 @@ namespace proslam {
 
   void ParameterCollection::print() const {
     if (command_line_parameters) {command_line_parameters->print();}
-    if (frame_parameters) {frame_parameters->print();}
-    if (landmark_parameters) {landmark_parameters->print();}
-    if (local_map_parameters) {local_map_parameters->print();}
     if (world_map_parameters) {world_map_parameters->print();}
     if (stereo_framepoint_generator_parameters) {stereo_framepoint_generator_parameters->print();}
     if (depth_framepoint_generator_parameters) {depth_framepoint_generator_parameters->print();}

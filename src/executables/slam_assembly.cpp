@@ -10,7 +10,7 @@ namespace proslam {
 
   //ds default constructor - already allocating required default objects
   SLAMAssembly::SLAMAssembly(ParameterCollection* parameters_): _parameters(parameters_),
-                                                                _world_map(new WorldMap()),
+                                                                _world_map(new WorldMap(_parameters->world_map_parameters)),
                                                                 _optimizer(new GraphOptimizer()),
                                                                 _relocalizer(new Relocalizer()),
                                                                 _tracker(0),
@@ -22,7 +22,6 @@ namespace proslam {
                                                                 _context_viewer_top(0),
                                                                 _is_gui_running(false) {
     _relocalizer->configure(_parameters->relocalizer_parameters);
-    _world_map->configure(_parameters->world_map_parameters);
     _synchronizer.reset();
     _robot_to_world_ground_truth_poses.clear();
   }
@@ -68,7 +67,7 @@ namespace proslam {
   void SLAMAssembly::_createStereoTracker(Camera* camera_left_, Camera* camera_right_){
 
     //ds if rectification is desired
-    if (_parameters->command_line_parameters->option_rectify_and_undistort) {
+    if (_parameters->command_line_parameters->option_undistort_and_rectify) {
 
       //ds sanity check
       if ((camera_left_->projectionMatrix().block<3,3>(0,0) - camera_right_->projectionMatrix().block<3,3>(0,0)).squaredNorm() != 0) {
