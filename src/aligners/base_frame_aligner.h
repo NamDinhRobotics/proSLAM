@@ -11,27 +11,6 @@ namespace proslam {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     BaseFrameAligner() {}
-
-    BaseFrameAligner(const real& error_delta_for_convergence_):BaseAligner(error_delta_for_convergence_) {}
-
-    BaseFrameAligner(const real& error_delta_for_convergence_,
-                     const real& maximum_error_kernel_): BaseAligner(error_delta_for_convergence_,
-                                                                     maximum_error_kernel_) {}
-
-    BaseFrameAligner(const real& error_delta_for_convergence_,
-                     const real& maximum_error_kernel_,
-                     const real& damping_): BaseAligner(error_delta_for_convergence_,
-                                                        maximum_error_kernel_,
-                                                        damping_) {}
-
-    BaseFrameAligner(const real& error_delta_for_convergence_,
-                     const real& maximum_error_kernel_,
-                     const real& damping_,
-                     const uint64_t& maximum_number_of_iterations_): BaseAligner(error_delta_for_convergence_,
-                                                                                 maximum_error_kernel_,
-                                                                                 damping_,
-                                                                                 maximum_number_of_iterations_) {}
-
     virtual ~BaseFrameAligner() {};
 
   //ds functionality

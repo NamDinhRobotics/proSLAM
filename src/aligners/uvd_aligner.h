@@ -9,7 +9,7 @@ namespace proslam {
   //ds object handling
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-    UVDAligner(): BaseFrameAligner(1e-3, 9, 1, 1e3) {}
+    UVDAligner() {}
     ~UVDAligner() {}
 
   //ds functionality

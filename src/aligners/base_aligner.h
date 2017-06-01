@@ -9,28 +9,14 @@ namespace proslam {
   //ds object handling
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
+    //! @brief default constructor
     BaseAligner() {};
 
-    BaseAligner(const real& error_delta_for_convergence_): _error_delta_for_convergence(error_delta_for_convergence_) {};
+    //! @brief configuration method, called once all construction parameters are set
+    //! @param[in] parameters_ target parameters
+    virtual void configure(AlignerParameters* parameters_) {_parameters = parameters_;}
 
-    BaseAligner(const real& error_delta_for_convergence_,
-                const real& maximum_error_kernel_): _error_delta_for_convergence(error_delta_for_convergence_),
-                                                    _maximum_error_kernel(maximum_error_kernel_) {};
-
-    BaseAligner(const real& error_delta_for_convergence_,
-                const real& maximum_error_kernel_,
-                const real& damping_): _error_delta_for_convergence(error_delta_for_convergence_),
-                                          _maximum_error_kernel(maximum_error_kernel_),
-                                          _damping(damping_) {};
-
-    BaseAligner(const real& error_delta_for_convergence_,
-                const real& maximum_error_kernel_,
-                const real& damping_,
-                const uint64_t& maximum_number_of_iterations_): _error_delta_for_convergence(error_delta_for_convergence_),
-                                                                _maximum_error_kernel(maximum_error_kernel_),
-                                                                _damping(damping_),
-                                                                _maximum_number_of_iterations(maximum_number_of_iterations_) {};
-
+    //! @brief default destructor
     virtual ~BaseAligner() {};
 
   //ds functionality
@@ -53,15 +39,8 @@ namespace proslam {
     inline const uint64_t numberOfInliers() const {return _number_of_inliers;}
     inline const uint64_t numberOfOutliers() const {return _number_of_outliers;}
     inline const uint64_t numberOfCorrespondences() const {return _number_of_inliers+_number_of_outliers;}
-    inline const real errorDeltaForConvergence() const {return _error_delta_for_convergence;}
-    inline void setErrorDeltaForConvergence(const real edfc)  {_error_delta_for_convergence=edfc;}
-    inline const Count maximumNumberOfIterations() const {return _maximum_number_of_iterations;}
-    inline void setDamping(const real& damping_) {_damping = damping_;}
-    inline const real damping() const {return _damping;}
     inline const real totalError() const {return _total_error;}
     inline const bool hasSystemConverged() const {return _has_system_converged;}
-    inline void setMaximumErrorKernel(const real& maximum_error_kernel_) {_maximum_error_kernel = maximum_error_kernel_;}
-    inline const real maximumErrorKernel() const {return _maximum_error_kernel;}
 
   //ds aligner specific
   protected:
@@ -73,12 +52,12 @@ namespace proslam {
     uint64_t _number_of_outliers = 0;
 
     //ds linearization
-    real _error_delta_for_convergence   = 1e-5;
-    real _maximum_error_kernel          = 1;
-    real _damping                       = 1;
-    Count _maximum_number_of_iterations = 100;
     bool _has_system_converged          = false;
     real _total_error                   = 0;
+
+    //! @brief configurable parameters
+    AlignerParameters* _parameters = 0;
+
   };
 
   //ds class that holds all generic (running) variables used in an aligner - to be used in conjunction with an aligner

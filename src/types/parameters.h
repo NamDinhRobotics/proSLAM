@@ -73,14 +73,23 @@ namespace proslam {
     //! @brief parameter printing function
     virtual void print() const;
 
+    //! @brief minimum error delta for convergence
+    real error_delta_for_convergence   = 1e-5;
+
     //! @brief maximum allowed robust kernel error
-    real maximum_error_kernel       = 0.5;
+    real maximum_error_kernel          = 0.5;
+
+    //! @brief system damping factor
+    real damping                       = 1;
+
+    //! @brief alignment iteration cap
+    Count maximum_number_of_iterations = 100;
 
     //! @brief the minimum number of inliers required for a valid alignment
-    Count minimum_number_of_inliers = 25;
+    Count minimum_number_of_inliers    = 25;
 
     //! @brief the minimum ratio of inliers to outliers required for a valid alignment
-    real minimum_inlier_ratio       = 0.25;
+    real minimum_inlier_ratio          = 0.25;
   };
 
 
@@ -192,7 +201,10 @@ namespace proslam {
   protected:
 
     //! @brief prohibit direct construction (only by subclasses)
-    BaseTrackerParameters() {};
+    BaseTrackerParameters();
+
+    //! @brief destructor: clean inner parameters
+    ~BaseTrackerParameters() {delete aligner;}
 
   public:
 
@@ -225,6 +237,9 @@ namespace proslam {
     //! @brief pose optimization
     real minimum_delta_angular_for_movement       = 0.001;
     real minimum_delta_translational_for_movement = 0.01;
+
+    //! @brief parameters of aligner unit
+    AlignerParameters* aligner;
   };
 
   //! @class
@@ -272,7 +287,7 @@ namespace proslam {
     Count minimum_matches_per_correspondence     = 0;
 
     //! @brief parameters of aligner unit
-    AlignerParameters* aligner                   = 0;
+    AlignerParameters* aligner;
   };
 
 
@@ -295,15 +310,19 @@ namespace proslam {
   public:
 
     //! @brief utility parsing command line parameters - overwriting the configuration specified by file
-    void parseFromCommandLine(const int32_t& argc_, char ** argv_);
+    //! @param[in] argc_ main argument count
+    //! @param[in] argv_ main argument values
+    void parseFromCommandLine(const int32_t& argc_, char** argv_);
 
     //! @brief utility parsing parameters from a file (YAML)
+    //! @param[in] filename_ target parameter YAML file
     void parseFromFile(const std::string& filename_);
 
     //! @brief validates certain parameters
     void validateParameters();
 
     //! @brief sets tracking mode related objects
+    //! @param[in] mode_ desired tracking mode
     void setMode(const CommandLineParameters::TrackerMode& mode_);
 
     //! @brief triggers all inner print methods of set parameters

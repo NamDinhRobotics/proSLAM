@@ -10,7 +10,7 @@ namespace proslam {
     //ds unused
     _errors.clear();
     _inliers.clear();
-    _damping = 0.0;
+    _parameters->damping = 0;
   }
 
   //ds linearize the system: to be called inside oneRound
@@ -40,12 +40,12 @@ namespace proslam {
 
       //ds check if outlier
       real weight = 1.0;
-      if (error_squared > _maximum_error_kernel) {
+      if (error_squared > _parameters->maximum_error_kernel) {
         ++_number_of_outliers;
         if (ignore_outliers_) {
           continue;
         }
-        weight=_maximum_error_kernel/error_squared;
+        weight=_parameters->maximum_error_kernel/error_squared;
       } else {
         ++_number_of_inliers;
       }
@@ -87,11 +87,11 @@ namespace proslam {
     real total_error_previous = 0.0;
 
     //ds start LS
-    for (Count iteration = 0; iteration < _maximum_number_of_iterations; ++iteration) {
+    for (Count iteration = 0; iteration < _parameters->maximum_number_of_iterations; ++iteration) {
       oneRound(false);
 
       //ds check if converged (no descent required)
-      if (_error_delta_for_convergence > std::fabs(total_error_previous-_total_error)) {
+      if (_parameters->error_delta_for_convergence > std::fabs(total_error_previous-_total_error)) {
 
         //ds trigger inlier only runs
         oneRound(true);
@@ -111,14 +111,14 @@ namespace proslam {
         _context->icp_number_of_iterations = iteration;
 
         //ds if the solution is acceptable
-        if (_number_of_inliers > _minimum_number_of_inliers && inlier_ratio > _minimum_inlier_ratio) {
+        if (_number_of_inliers > _parameters->minimum_number_of_inliers && inlier_ratio > _parameters->minimum_inlier_ratio) {
           LOG_INFO(std::printf( "XYZAligner::converge|found   alignment for local maps [%06lu] > [%06lu] (correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu, kernel size: %5.3f)\n",
-          _context->identifier_query, _context->identifier_reference, _context->correspondences.size( ), iteration, inlier_ratio, _number_of_inliers, _maximum_error_kernel ))
+          _context->identifier_query, _context->identifier_reference, _context->correspondences.size( ), iteration, inlier_ratio, _number_of_inliers, _parameters->maximum_error_kernel ))
           _context->is_valid = true;
           break;
         } else {
           LOG_INFO(std::printf( "XYZAligner::converge|dropped alignment for local maps [%06lu] > [%06lu] (correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu, kernel size: %5.3f)\n",
-          _context->identifier_query, _context->identifier_reference, _context->correspondences.size( ), iteration, inlier_ratio, _number_of_inliers, _maximum_error_kernel ))
+          _context->identifier_query, _context->identifier_reference, _context->correspondences.size( ), iteration, inlier_ratio, _number_of_inliers, _parameters->maximum_error_kernel ))
           _context->is_valid = false;
           break;
         }
@@ -127,7 +127,7 @@ namespace proslam {
       }
 
       //ds check last iteration
-      if(iteration == _maximum_number_of_iterations-1) {
+      if(iteration == _parameters->maximum_number_of_iterations-1) {
         _has_system_converged = false;
         LOG_WARNING(std::cerr << "XYZAligner::converge|system did not converge - inlier ratio: " << static_cast<real>(_number_of_inliers)/_context->correspondences.size() << std::endl)
       }

@@ -129,6 +129,14 @@ namespace proslam {
 
 
   //ds Motion estimation
+  BaseTrackerParameters::BaseTrackerParameters(): aligner(new AlignerParameters()) {
+
+    //ds set specific default parameters
+    aligner->error_delta_for_convergence  = 1e-3;
+    aligner->maximum_error_kernel         = 9;
+    aligner->maximum_number_of_iterations = 1e3;
+  }
+
   void BaseTrackerParameters::print() const {
     std::cerr << "BaseTrackerParameters::print|minimum_number_of_landmarks_to_track: " << minimum_number_of_landmarks_to_track << std::endl;
     std::cerr << "BaseTrackerParameters::print|minimum_threshold_distance_tracking_pixels: " << minimum_threshold_distance_tracking_pixels << std::endl;
@@ -138,6 +146,7 @@ namespace proslam {
     std::cerr << "BaseTrackerParameters::print|maximum_number_of_landmark_recoveries: " << maximum_number_of_landmark_recoveries << std::endl;
     std::cerr << "BaseTrackerParameters::print|bin_size_pixels: " << bin_size_pixels << std::endl;
     std::cerr << "BaseTrackerParameters::print|ratio_keypoints_to_bins: " << ratio_keypoints_to_bins << std::endl;
+    aligner->print();
   }
 
   void StereoTrackerParameters::print() const {
@@ -351,6 +360,12 @@ namespace proslam {
           PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, ratio_keypoints_to_bins, real)
           PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, minimum_delta_angular_for_movement, real)
           PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, minimum_delta_translational_for_movement, real)
+          PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, aligner->error_delta_for_convergence, real)
+          PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, aligner->maximum_error_kernel, real)
+          PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, aligner->damping, real)
+          PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, aligner->maximum_number_of_iterations, Count)
+          PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, aligner->minimum_number_of_inliers, Count)
+          PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, aligner->minimum_inlier_ratio, real)
           break;
         }
         case CommandLineParameters::TrackerMode::RGB_DEPTH: {
@@ -379,6 +394,12 @@ namespace proslam {
           PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, ratio_keypoints_to_bins, real)
           PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, minimum_delta_angular_for_movement, real)
           PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, minimum_delta_translational_for_movement, real)
+          PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, aligner->error_delta_for_convergence, real)
+          PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, aligner->maximum_error_kernel, real)
+          PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, aligner->damping, real)
+          PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, aligner->maximum_number_of_iterations, Count)
+          PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, aligner->minimum_number_of_inliers, Count)
+          PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, aligner->minimum_inlier_ratio, real)
           break;
         }
         default: {
@@ -392,7 +413,10 @@ namespace proslam {
       PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, preliminary_minimum_matching_ratio, real)
       PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, minimum_number_of_matches_per_landmark, Count)
       PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, minimum_matches_per_correspondence, Count)
+      PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, aligner->error_delta_for_convergence, real)
       PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, aligner->maximum_error_kernel, real)
+      PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, aligner->damping, real)
+      PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, aligner->maximum_number_of_iterations, Count)
       PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, aligner->minimum_number_of_inliers, Count)
       PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, aligner->minimum_inlier_ratio, real)
 

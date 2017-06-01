@@ -55,10 +55,10 @@ namespace proslam {
     }
 
     //ds configure sensor message source
-    _sensor_message_reader.open(_parameters->command_line_parameters->filename_dataset);
+    _message_reader.open(_parameters->command_line_parameters->filename_dataset);
 
     //ds terminate on failure
-    if (!_sensor_message_reader.good()) {
+    if (!_message_reader.good()) {
       LOG_INFO(std::cerr << _parameters->banner << std::endl)
       throw std::runtime_error("unable to open dataset");
     }
@@ -88,6 +88,7 @@ namespace proslam {
     
     //ds allocate and configure the aligner for motion estimation
     StereoUVAligner* pose_optimizer = new StereoUVAligner();
+    pose_optimizer->configure(_parameters->stereo_tracker_parameters->aligner);
 
     //ds allocate and configure the tracker
     StereoTracker* tracker = new StereoTracker();
@@ -110,6 +111,7 @@ namespace proslam {
 
     //ds allocate and configure the aligner for motion estimation
     UVDAligner* pose_optimizer = new UVDAligner();
+    pose_optimizer->configure(_parameters->depth_tracker_parameters->aligner);
 
     //ds allocate and configure the tracker
     DepthTracker* tracker = new DepthTracker();
@@ -133,23 +135,23 @@ namespace proslam {
     _synchronizer.setTopics(camera_topics_synchronized);
 
     //ds quickly read the first messages to buffer camera info
-    srrg_core::BaseMessage* base_message = 0;
-    while ((base_message = _sensor_message_reader.readMessage())) {
-      srrg_core::BaseSensorMessage* sensor_msg = dynamic_cast<srrg_core::BaseSensorMessage*>(base_message);
-      assert(sensor_msg != 0);
-      sensor_msg->untaint();
+    srrg_core::BaseMessage* message = 0;
+    while ((message = _message_reader.readMessage())) {
+      srrg_core::BaseSensorMessage* sensor_message = dynamic_cast<srrg_core::BaseSensorMessage*>(message);
+      assert(sensor_message != 0);
+      sensor_message->untaint();
 
       //ds check for the two set topics
-      if (sensor_msg->topic() == _parameters->command_line_parameters->topic_image_left) {
-        srrg_core::PinholeImageMessage* message_image_left  = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_msg);
+      if (sensor_message->topic() == _parameters->command_line_parameters->topic_image_left) {
+        srrg_core::PinholeImageMessage* message_image_left  = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_message);
 
         //ds allocate a new camera
         _camera_left = new Camera(message_image_left->image().rows,
                                   message_image_left->image().cols,
                                   message_image_left->cameraMatrix().cast<real>(),
                                   message_image_left->offset().cast<real>());
-      } else if (sensor_msg->topic() == _parameters->command_line_parameters->topic_image_right) {
-        srrg_core::PinholeImageMessage* message_image_right  = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_msg);
+      } else if (sensor_message->topic() == _parameters->command_line_parameters->topic_image_right) {
+        srrg_core::PinholeImageMessage* message_image_right  = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_message);
 
         //ds allocate a new camera
         _camera_right = new Camera(message_image_right->image().rows,
@@ -157,21 +159,21 @@ namespace proslam {
                                    message_image_right->cameraMatrix().cast<real>(),
                                    message_image_right->offset().cast<real>());
       }
-      delete sensor_msg;
+      delete sensor_message;
 
       //ds if we got all the information we need
-      if (_camera_left != 0 && _camera_right != 0) {
+      if (_camera_left && _camera_right) {
         break;
       }
     }
-    _sensor_message_reader.close();
+    _message_reader.close();
 
     //ds terminate on failure
-    if (_camera_left == 0) {
+    if (!_camera_left) {
       LOG_ERROR(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|left camera not set" << std::endl)
       throw std::runtime_error("left camera not set");
     }
-    if (_camera_right == 0) {
+    if (!_camera_right) {
       LOG_ERROR(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|right camera not set" << std::endl)
       throw std::runtime_error("right camera not set");
     }
@@ -320,7 +322,7 @@ namespace proslam {
   void SLAMAssembly::playbackMessageFile() {
 
     //ds restart stream
-    _sensor_message_reader.open(_parameters->command_line_parameters->filename_dataset);
+    _message_reader.open(_parameters->command_line_parameters->filename_dataset);
     _robot_to_world_ground_truth_poses.clear();
 
     //ds frame counts
@@ -335,40 +337,40 @@ namespace proslam {
     const TransformMatrix3D robot_to_camera_left(_camera_left->robotToCamera());
 
     //ds start playback
-    srrg_core::BaseMessage* base_message = 0;
-    while ((base_message = _sensor_message_reader.readMessage())) {
-      srrg_core::BaseSensorMessage* sensor_msg = dynamic_cast<srrg_core::BaseSensorMessage*>(base_message);
-      assert(sensor_msg != 0);
-      sensor_msg->untaint();
+    srrg_core::BaseMessage* message = 0;
+    while ((message = _message_reader.readMessage())) {
+      srrg_core::BaseSensorMessage* sensor_message = dynamic_cast<srrg_core::BaseSensorMessage*>(message);
+      assert(sensor_message != 0);
+      sensor_message->untaint();
 
       //ds add to synchronizer
-      if (sensor_msg->topic() == _parameters->command_line_parameters->topic_image_left) {
-        _synchronizer.putMessage(sensor_msg);
-      } else if (sensor_msg->topic() == _parameters->command_line_parameters->topic_image_right) {
-        _synchronizer.putMessage(sensor_msg);
+      if (sensor_message->topic() == _parameters->command_line_parameters->topic_image_left) {
+        _synchronizer.putMessage(sensor_message);
+      } else if (sensor_message->topic() == _parameters->command_line_parameters->topic_image_right) {
+        _synchronizer.putMessage(sensor_message);
       } else {
-        delete sensor_msg;
+        delete sensor_message;
       }
 
       //ds if we have a synchronized package of sensor messages ready
       if (_synchronizer.messagesReady()) {
 
         //ds buffer sensor data
-        srrg_core::PinholeImageMessage* message_image_left  = dynamic_cast<srrg_core::PinholeImageMessage*>(_synchronizer.messages()[0].get());
-        srrg_core::PinholeImageMessage* message_image_right = dynamic_cast<srrg_core::PinholeImageMessage*>(_synchronizer.messages()[1].get());
+        srrg_core::PinholeImageMessage* image_message_left  = dynamic_cast<srrg_core::PinholeImageMessage*>(_synchronizer.messages()[0].get());
+        srrg_core::PinholeImageMessage* image_message_right = dynamic_cast<srrg_core::PinholeImageMessage*>(_synchronizer.messages()[1].get());
 
         //ds buffer images
         cv::Mat intensity_image_left_rectified;
-        if(message_image_left->image().type() == CV_8UC3){
-          cvtColor(message_image_left->image(), intensity_image_left_rectified, CV_BGR2GRAY);
+        if(image_message_left->image().type() == CV_8UC3){
+          cvtColor(image_message_left->image(), intensity_image_left_rectified, CV_BGR2GRAY);
         } else {
-          intensity_image_left_rectified = message_image_left->image();
+          intensity_image_left_rectified = image_message_left->image();
         }
         cv::Mat intensity_image_right_rectified;
-        if (_parameters->command_line_parameters->tracker_mode == CommandLineParameters::TrackerMode::RGB_STEREO && message_image_right->image().type() == CV_8UC3) {
-          cvtColor(message_image_right->image(), intensity_image_right_rectified, CV_BGR2GRAY);
+        if (_parameters->command_line_parameters->tracker_mode == CommandLineParameters::TrackerMode::RGB_STEREO && image_message_right->image().type() == CV_8UC3) {
+          cvtColor(image_message_right->image(), intensity_image_right_rectified, CV_BGR2GRAY);
         } else {
-          intensity_image_right_rectified = message_image_right->image();
+          intensity_image_right_rectified = image_message_right->image();
         }
 
         //ds preprocess the images if desired
@@ -380,8 +382,8 @@ namespace proslam {
         }
 
         //ds check if first frame and odometry is available
-        if (_world_map->frames().size() == 0 && message_image_left->hasOdom()) {
-          _world_map->setRobotToWorld(message_image_left->odometry().cast<real>()*robot_to_camera_left);
+        if (_world_map->frames().size() == 0 && image_message_left->hasOdom()) {
+          _world_map->setRobotToWorld(image_message_left->odometry().cast<real>()*robot_to_camera_left);
           if (_parameters->command_line_parameters->option_use_gui) {
             _context_viewer_bird->setWorldToRobotOrigin(_world_map->robotToWorld().inverse());
           }
@@ -393,12 +395,12 @@ namespace proslam {
         //ds progress SLAM with the new images
         process(intensity_image_left_rectified,
                 intensity_image_right_rectified,
-                message_image_left->hasOdom() && _parameters->command_line_parameters->option_use_odometry,
-                message_image_left->odometry().cast<real>());
+                image_message_left->hasOdom() && _parameters->command_line_parameters->option_use_odometry,
+                image_message_left->odometry().cast<real>());
 
         //ds record ground truth history for error computation
-        if (message_image_left->hasOdom()) {
-          addGroundTruthMeasurement(message_image_left->odometry().cast<real>()*robot_to_camera_left);
+        if (image_message_left->hasOdom()) {
+          addGroundTruthMeasurement(image_message_left->odometry().cast<real>()*robot_to_camera_left);
         }
 
         //ds runtime info
@@ -435,8 +437,8 @@ namespace proslam {
           number_of_processed_frames_current = 0;
         }
 
-        message_image_left->release();
-        message_image_right->release();
+        image_message_left->release();
+        image_message_right->release();
         _synchronizer.reset();
 
         //ds update gui and check if termination is requested
@@ -450,7 +452,7 @@ namespace proslam {
       }
     }
     _duration_total_seconds = srrg_core::getTime()-time_start_seconds_first;
-    _sensor_message_reader.close();
+    _message_reader.close();
   }
 
   //ds sets ground truth to current frame

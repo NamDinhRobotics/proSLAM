@@ -17,7 +17,7 @@ command_line:
   option_show_top_viewer:       false
   option_drop_framepoints:      false
   option_equalize_histogram:    false
-  option_rectify_and_undistort: false
+  option_undistort_and_rectify: false
 
 landmark:
 
@@ -90,6 +90,14 @@ base_tracking:
   #ds pose optimization
   minimum_delta_angular_for_movement:       0.001
   minimum_delta_translational_for_movement: 0.01
+  
+  #ds pose optimization: aligner unit configuration
+  aligner->error_delta_for_convergence:  1e-3
+  aligner->maximum_error_kernel:         9
+  aligner->damping:                      1
+  aligner->maximum_number_of_iterations: 1000
+  aligner->minimum_number_of_inliers:    0
+  aligner->minimum_inlier_ratio:         0
 
 relocalization:
 
@@ -105,10 +113,13 @@ relocalization:
   #ds correspondence retrieval
   minimum_matches_per_correspondence: 0
   
-  #ds aligner unit configuration
-  aligner->maximum_error_kernel: 0.5
-  aligner->minimum_number_of_inliers: 25
-  aligner->minimum_inlier_ratio: 0.25
+  #ds icp: aligner unit configuration
+  aligner->error_delta_for_convergence:  1e-5
+  aligner->maximum_error_kernel:         0.5
+  aligner->damping:                      1
+  aligner->maximum_number_of_iterations: 100
+  aligner->minimum_number_of_inliers:    25
+  aligner->minimum_inlier_ratio:         0.25
 
 map_optimization:
 

@@ -9,7 +9,7 @@ namespace proslam {
   //ds object handling
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-    XYZAligner(): BaseLocalMapAligner(1e-5, 0.05) {}
+    XYZAligner() {}
     ~XYZAligner() {}
 
   //ds functionality

@@ -121,7 +121,7 @@ namespace proslam {
   protected:
 
     //ds txt_io message parser
-    srrg_core::MessageReader _sensor_message_reader;
+    srrg_core::MessageReader _message_reader;
 
     //ds txt_io message synchronizer
     srrg_core::MessageTimestampSynchronizer _synchronizer;

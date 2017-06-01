@@ -20,9 +20,7 @@ namespace proslam {
     assert(_aligner != 0);
 
     //ds configure aligner unit
-    _aligner->setMaximumErrorKernel(_parameters->aligner->maximum_error_kernel);
-    _aligner->setMinimumNumberOfInliers(_parameters->aligner->minimum_number_of_inliers);
-    _aligner->setMinimumInlierRatio(_parameters->aligner->minimum_inlier_ratio);
+    _aligner->configure(parameters_->aligner);
     LOG_DEBUG(std::cerr << "Relocalizer::configure|configured" << std::endl)
   }
 

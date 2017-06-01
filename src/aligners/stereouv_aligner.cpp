@@ -107,14 +107,14 @@ namespace proslam {
       _errors[index_point] = chi;
 
       //ds if outlier
-      if (chi > _maximum_error_kernel) {
+      if (chi > _parameters->maximum_error_kernel) {
         ++_number_of_outliers;
         if (ignore_outliers_) {
           continue;
         }
 
         //ds include kernel in omega
-        _omega *= _maximum_error_kernel/chi;
+        _omega *= _parameters->maximum_error_kernel/chi;
       } else {
         _inliers[index_point] = true;
         ++_number_of_inliers;
@@ -170,7 +170,7 @@ namespace proslam {
     linearize(ignore_outliers_);
 
     //ds always damp
-    _H += _damping*Matrix6::Identity();
+    _H += _parameters->damping*Matrix6::Identity();
 
     //ds compute solution transformation
     const Vector6 dx = _H.ldlt().solve(-_b);
@@ -190,11 +190,11 @@ namespace proslam {
     real total_error_previous = 0;
 
     //ds start LS
-    for (Count iteration = 0; iteration < _maximum_number_of_iterations; ++iteration) {
+    for (Count iteration = 0; iteration < _parameters->maximum_number_of_iterations; ++iteration) {
       oneRound(false);
 
       //ds check if converged (no descent required)
-      if (_error_delta_for_convergence > std::fabs(total_error_previous-_total_error)) {
+      if (_parameters->error_delta_for_convergence > std::fabs(total_error_previous-_total_error)) {
 
         //ds trigger inlier only runs
         oneRound(true);
@@ -212,7 +212,7 @@ namespace proslam {
       }
 
       //ds check last iteration
-      if(iteration == _maximum_number_of_iterations-1) {
+      if(iteration == _parameters->maximum_number_of_iterations-1) {
         _has_system_converged = false;
         LOG_WARNING(std::cerr << "StereoUVAligner::converge|system did not converge - total error: "  << _total_error
                   << " average error: " << _total_error/(_number_of_inliers+_number_of_outliers)
@@ -222,7 +222,7 @@ namespace proslam {
 
     //ds update wrapped structures
     _camera_to_world = _world_to_camera.inverse();
-     _robot_to_world = _camera_to_world*_frame->cameraLeft()->robotToCamera();
-    _world_to_robot = _robot_to_world.inverse();
+    _robot_to_world  = _camera_to_world*_frame->cameraLeft()->robotToCamera();
+    _world_to_robot  = _robot_to_world.inverse();
   }
 }
