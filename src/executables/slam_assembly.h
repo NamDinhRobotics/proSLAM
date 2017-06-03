@@ -1,6 +1,6 @@
 #include "qapplication.h"
-#include "srrg_txt_io/message_reader.h"
-#include "srrg_txt_io/message_timestamp_synchronizer.h"
+#include "srrg_messages/message_reader.h"
+#include "srrg_messages/message_timestamp_synchronizer.h"
 
 #include "map_optimization/graph_optimizer.h"
 #include "relocalization/relocalizer.h"

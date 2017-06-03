@@ -5,7 +5,7 @@ target_link_libraries(srrg_proslam_slam_assembly_library
   srrg_proslam_motion_estimation_library
   srrg_proslam_relocalization_library
   srrg_proslam_visualization_library
-  srrg_txt_io_library
+  srrg_messages_library
   srrg_system_utils_library
 )
 

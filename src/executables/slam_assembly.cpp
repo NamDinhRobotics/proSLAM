@@ -1,6 +1,6 @@
 #include "slam_assembly.h"
 
-#include "srrg_txt_io/pinhole_image_message.h"
+#include "srrg_messages/pinhole_image_message.h"
 #include "aligners/stereouv_aligner.h"
 #include "aligners/uvd_aligner.h"
 #include "motion_estimation/stereo_tracker.h"
