@@ -11,7 +11,7 @@ target_link_libraries(srrg_proslam_slam_assembly_library
 
 #ds main executable
 add_executable(srrg_proslam_app srrg_proslam_app.cpp)
-target_link_libraries(srrg_proslam_app srrg_proslam_slam_assembly_library)
+target_link_libraries(srrg_proslam_app srrg_proslam_slam_assembly_library boost_system)
 
 #ds ROS related - only build it if ROS is present (blindly link against the whole catkin library collection)
 if(${SRRG_PROSLAM_HAS_ROS})
