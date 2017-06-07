@@ -31,7 +31,7 @@ namespace proslam {
     const real relative_number_of_matches;
     const LandmarkCorrespondence::MatchMap matches_per_point;
     CorrespondencePointerVector correspondences;
-    TransformMatrix3D transform_frame_query_to_frame_reference = TransformMatrix3D::Identity();
+    TransformMatrix3D query_to_reference = TransformMatrix3D::Identity();
     real icp_inlier_ratio          = 0;
     Count icp_number_of_iterations = 0;
     Count icp_number_of_inliers    = 0;

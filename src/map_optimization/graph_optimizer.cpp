@@ -21,8 +21,12 @@ namespace proslam {
   }
 
   void GraphOptimizer::optimizePoses(WorldMap* context_) {
+
+    //ds clear graph completely
     _optimizer->clear();
+#ifndef SRRG_PROSLAM_USE_G3O
     _optimizer->clearParameters();
+#endif
 
     //ds added measurements
     LocalMapPointerVector local_maps_in_graph(0);
@@ -31,11 +35,18 @@ namespace proslam {
     LocalMap* current_map = context_->currentLocalMap()->root();
 
     //ds add first pose
+#ifdef SRRG_PROSLAM_USE_G3O
+    _optimizer->addVertex(current_map->identifier(), current_map->localMapToWorld().cast<g2o_slim::Real>());
+    _optimizer->setVertexFixedByID(current_map->identifier(), true);
+    assert(_optimizer->getVertexPtrByID(current_map->identifier()));
+    assert(_optimizer->getVertexPtrByID(current_map->identifier())->fixed());
+#else
     g2o::VertexSE3* vertex_local_map = new g2o::VertexSE3();
     vertex_local_map->setId(current_map->identifier());
     vertex_local_map->setEstimate(current_map->localMapToWorld().cast<double>());
     _optimizer->addVertex(vertex_local_map);
     vertex_local_map->setFixed(true);
+#endif
     local_maps_in_graph.push_back(current_map);
     current_map = current_map->next();
 
@@ -43,10 +54,14 @@ namespace proslam {
     while (current_map) {
 
       //ds add the pose to g2o
+#ifdef SRRG_PROSLAM_USE_G3O
+      _optimizer->addVertex(current_map->identifier(), current_map->localMapToWorld().cast<g2o_slim::Real>());
+#else
       g2o::VertexSE3* vertex_local_map = new g2o::VertexSE3();
       vertex_local_map->setId(current_map->identifier());
       vertex_local_map->setEstimate(current_map->localMapToWorld().cast<double>());
       _optimizer->addVertex(vertex_local_map);
+#endif
 
       //ds if the vertices are directly connected (no track break in between)
       if (current_map->identifier() - current_map->previous()->identifier() == 1) {
@@ -68,7 +83,11 @@ namespace proslam {
       for (const LocalMap::Closure& closure: local_map_query->closures()) {
 
         //ds fix reference vertex
+#ifdef SRRG_PROSLAM_USE_G3O
+        _optimizer->setVertexFixedByID(closure.local_map->identifier(), true);
+#else
         _optimizer->vertex(closure.local_map->identifier())->setFixed(true);
+#endif
 
         //ds retrieve closure edge
         setPoseEdge(_optimizer,
@@ -80,21 +99,36 @@ namespace proslam {
     }
 
     //ds optimize poses
+#ifdef SRRG_PROSLAM_USE_G3O
+    _optimizer->initialize(AMD);
+    _optimizer->converge();
+#else
     _optimizer->initializeOptimization();
     _optimizer->setVerbose(false);
     _optimizer->optimize(10);
+#endif
 
     //ds backpropagate solution to tracking context: local maps
     for (LocalMap* local_map: local_maps_in_graph) {
+
+      //ds retrieve optimized pose measurement
+#ifdef SRRG_PROSLAM_USE_G3O
+      const g2o_slim::Vertex* vertex_local_map = _optimizer->getVertexPtrByID(local_map->identifier());
+      assert(vertex_local_map);
+      local_map->update(vertex_local_map->data().cast<real>());
+#else
       g2o::VertexSE3* vertex_local_map = dynamic_cast<g2o::VertexSE3*>(_optimizer->vertex(local_map->identifier()));
-      assert(0 != vertex_local_map);
+      assert(vertex_local_map);
       local_map->update(vertex_local_map->estimate().cast<real>());
+#endif
     }
     context_->setRobotToWorld(context_->currentLocalMap()->keyframe()->robotToWorld());
 
-    //ds clear g2o memory
+    //ds clear g2o memory (TODO perform continuous graph optimization)
     _optimizer->clear();
+#ifndef SRRG_PROSLAM_USE_G3O
     _optimizer->clearParameters();
+#endif
   }
 
   //ds optimizes all landmarks by computing rudely the average without using g2o

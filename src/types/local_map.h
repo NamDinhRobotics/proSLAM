@@ -55,8 +55,8 @@ namespace proslam {
     //! @param[in] transform_query_to_reference_ the spatial relation between query and reference (from query to reference)
     //! @param[in] omega_ 1D information value of the correspondence
     void addCorrespondence(const LocalMap* local_map_reference_,
-                           const TransformMatrix3D& transform_query_to_reference_,
-                           const real& omega_ = 1) {_closures.push_back(Closure(local_map_reference_, transform_query_to_reference_, omega_));}
+                           const TransformMatrix3D& query_to_reference_,
+                           const real& omega_ = 1) {_closures.push_back(Closure(local_map_reference_, query_to_reference_, omega_));}
 
   //ds getters/setters
   public:

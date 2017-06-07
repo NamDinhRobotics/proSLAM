@@ -1,4 +1,10 @@
 #pragma once
+
+//#define SRRG_PROSLAM_USE_G3O
+
+#ifdef SRRG_PROSLAM_USE_G3O
+#include "g2o_slim/sparse_optimizer.h"
+#else
 #include "g2o/core/optimizable_graph.h"
 #include "g2o/core/sparse_optimizer.h"
 #include "g2o/core/block_solver.h"
@@ -8,6 +14,8 @@
 #include "g2o/solvers/csparse/linear_solver_csparse.h"
 #include "g2o/solvers/cholmod/linear_solver_cholmod.h"
 #include "g2o/types/slam3d/types_slam3d.h"
+#endif
+
 #include "types/world_map.h"
 
 namespace proslam {
@@ -18,8 +26,10 @@ namespace proslam {
   //ds exported data types
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
+#ifndef SRRG_PROSLAM_USE_G3O
     typedef g2o::BlockSolver< g2o::BlockSolverTraits<-1, -1> >  SlamBlockSolver;
     typedef g2o::LinearSolverCSparse<SlamBlockSolver::PoseMatrixType> SlamLinearSolver;
+#endif
 
   //ds object management
   public:
@@ -41,6 +51,31 @@ namespace proslam {
 
   //ds g2o wrapper functions
   public:
+
+#ifdef SRRG_PROSLAM_USE_G3O
+
+    static void setPoseEdge(g2o_slim::SparseOptimizer* optimizer_,
+                            const Identifier& id_from_,
+                            const Identifier& id_to_,
+                            const TransformMatrix3D& transform_from_to_,
+                            Eigen::Matrix<double, 6, 6> information_ = Eigen::Matrix<double, 6, 6>::Identity()) {
+
+      //ds free translational component
+      information_.block<3,3>(0,0) *= 1e-4;
+
+      //ds add the edge (TODO flip indices once g2o_slim is updated)
+      optimizer_->addEdge(id_to_, id_from_, transform_from_to_, information_);
+    }
+
+    static g2o_slim::SparseOptimizer* getOptimizer() {
+
+      //ds configure optimizer at instantiation
+      const Count number_of_iterations = 10;
+      const real maximum_error_kernel  = 1e3;
+      return new g2o_slim::SparseOptimizer(number_of_iterations, maximum_error_kernel);
+    }
+
+#else
 
     static void setPoseEdge(g2o::SparseOptimizer* optimizer_,
                             const Identifier& id_from_,
@@ -72,11 +107,17 @@ namespace proslam {
       return optimizer;
     }
 
+#endif
+
   //ds attributes
   protected:
 
-    //ds optimization
+//ds optimization
+#ifdef SRRG_PROSLAM_USE_G3O
+    g2o_slim::SparseOptimizer* _optimizer;
+#else
     g2o::SparseOptimizer* _optimizer;
+#endif
 
     //ds informative only
     CREATE_CHRONOMETER(overall)

@@ -105,7 +105,7 @@ namespace proslam {
         const real inlier_ratio = static_cast<real>(_number_of_inliers)/_context->correspondences.size();
 
         //ds set out values
-        _context->transform_frame_query_to_frame_reference = _current_to_reference;
+        _context->query_to_reference       = _current_to_reference;
         _context->icp_inlier_ratio         = inlier_ratio;
         _context->icp_number_of_inliers    = _number_of_inliers;
         _context->icp_number_of_iterations = iteration;

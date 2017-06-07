@@ -517,7 +517,7 @@ namespace proslam {
               //ds add loop closure constraint (also detects if local maps from two different tracks are connected)
               _world_map->addCorrespondence(_world_map->currentLocalMap(),
                                             closure->local_map_reference,
-                                            closure->transform_frame_query_to_frame_reference,
+                                            closure->query_to_reference,
                                             closure->icp_inlier_ratio);
               if (_parameters->command_line_parameters->option_use_gui) {
                 for (const LandmarkCorrespondence* match: closure->correspondences) {

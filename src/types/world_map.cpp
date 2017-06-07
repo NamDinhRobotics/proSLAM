@@ -180,7 +180,7 @@ namespace proslam {
   //ds adds a loop closure constraint between 2 local maps
   void WorldMap::addCorrespondence(LocalMap* query_,
                                    const LocalMap* reference_,
-                                   const TransformMatrix3D& transform_query_to_reference_,
+                                   const TransformMatrix3D& query_to_reference_,
                                    const real& omega_) {
 
     //ds check if local maps from different tracks were fused by comparing the respective map origins (roots)
@@ -191,7 +191,7 @@ namespace proslam {
       setTrack(_current_frame);
     }
 
-    query_->addCorrespondence(reference_, transform_query_to_reference_, omega_);
+    query_->addCorrespondence(reference_, query_to_reference_, omega_);
     _relocalized = true;
 
     //ds informative only
