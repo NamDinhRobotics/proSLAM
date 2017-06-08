@@ -1,7 +1,5 @@
 #pragma once
 
-//#define SRRG_PROSLAM_USE_G3O
-
 #ifdef SRRG_PROSLAM_USE_G3O
 #include "g2o_slim/sparse_optimizer.h"
 #else
@@ -64,7 +62,7 @@ namespace proslam {
       information_.block<3,3>(0,0) *= 1e-4;
 
       //ds add the edge (TODO flip indices once g2o_slim is updated)
-      optimizer_->addEdge(id_to_, id_from_, transform_from_to_, information_);
+      optimizer_->addEdge(id_from_, id_to_, transform_from_to_, information_);
     }
 
     static g2o_slim::SparseOptimizer* getOptimizer() {

@@ -100,7 +100,7 @@ namespace proslam {
 
     //ds optimize poses
 #ifdef SRRG_PROSLAM_USE_G3O
-    _optimizer->initialize(AMD);
+    _optimizer->initialize(g2o_slim::SolverOrderingType::SUITESPARSE_AMD_ORDERING);
     _optimizer->converge();
 #else
     _optimizer->initializeOptimization();
