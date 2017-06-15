@@ -24,11 +24,6 @@ int32_t main(int32_t argc_, char** argv_) {
     return 0;
   }
 
-  //ds manual for now
-  parameters->stereo_framepoint_generator_parameters->model_file = "100.caffemodel";
-  parameters->stereo_framepoint_generator_parameters->proto_file = "glnet_deploy.prototxt";
-  parameters->stereo_framepoint_generator_parameters->sliding_window_step_size = 5;
-
   //ds print loaded configuration
   parameters->command_line_parameters->print();
 

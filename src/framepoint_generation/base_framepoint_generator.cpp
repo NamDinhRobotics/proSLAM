@@ -83,46 +83,7 @@ namespace proslam {
   //ds detects keypoints and stores them in a vector (called within compute)
   void BaseFramePointGenerator::detectKeypoints(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_) {
     CHRONOMETER_START(feature_detection)
-
-    //ds detect new keypoints
     _keypoint_detector->detect(intensity_image_, keypoints_);
-
-//    //ds compute point delta
-//    const real delta = (static_cast<real>(keypoints_.size())-_target_number_of_keypoints)/keypoints_.size();
-//
-//    //ds check if there's a significant loss of target points
-//    if (delta < -_parameters->target_number_of_keypoints_tolerance) {
-//
-//      //ds compute new threshold
-//      _parameters->detector_threshold += std::max(std::ceil(delta*_parameters->detector_threshold_step_size), -_parameters->detector_threshold_step_size);
-//
-//      //ds cap the minimum value
-//      if (_parameters->detector_threshold < _parameters->detector_threshold_minimum) {
-//        _parameters->detector_threshold = _parameters->detector_threshold_minimum;
-//      }
-//      setDetectorThreshold(_parameters->detector_threshold);
-//
-//      //ds increase allowed matching distance if possible
-//      if (_parameters->matching_distance_tracking_threshold < _parameters->matching_distance_tracking_threshold_maximum) {
-//        _parameters->matching_distance_tracking_threshold += _parameters->matching_distance_tracking_step_size;
-//      }
-//    }
-//
-//    //ds or if there's a significant gain of target points
-//    else if (delta > _parameters->target_number_of_keypoints_tolerance) {
-//
-//      //ds compute new threshold
-//      _parameters->detector_threshold += std::min(std::ceil(delta*_parameters->detector_threshold_step_size), _parameters->detector_threshold_step_size);
-//
-//      //ds raise threshold (uncapped)
-//      setDetectorThreshold(_parameters->detector_threshold);
-//
-//      //ds lower allowed matching distance if possible
-//      if (_parameters->matching_distance_tracking_threshold > _parameters->matching_distance_tracking_threshold_minimum) {
-//        _parameters->matching_distance_tracking_threshold -= _parameters->matching_distance_tracking_step_size;
-//      }
-//    }
-
     CHRONOMETER_STOP(feature_detection)
   }
 

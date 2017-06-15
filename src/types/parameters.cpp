@@ -233,6 +233,11 @@ namespace proslam {
       parseFromFile(command_line_parameters->filename_configuration);
     }
 
+    //ds TODO merge into configuration file
+    std::string model_file = "model.caffemodel";
+    std::string proto_file = "glnet_deploy.prototxt";
+    uint32_t sliding_window_step_size = 5;
+
     //ds reset and check for other command line parameters, potentially overwritting the ones set in the configuration file
     number_of_checked_parameters = 1;
     while (number_of_checked_parameters < argc_) {
@@ -276,6 +281,15 @@ namespace proslam {
         command_line_parameters->option_use_odometry = true;
       } else if (!std::strcmp(argv_[number_of_checked_parameters], "-configuration") || !std::strcmp(argv_[number_of_checked_parameters], "-c")){
         number_of_checked_parameters++;
+      } else if (!std::strcmp(argv_[number_of_checked_parameters], "-model")){
+        number_of_checked_parameters++;
+        model_file = argv_[number_of_checked_parameters];
+      } else if (!std::strcmp(argv_[number_of_checked_parameters], "-proto")){
+        number_of_checked_parameters++;
+        proto_file = argv_[number_of_checked_parameters];
+      } else if (!std::strcmp(argv_[number_of_checked_parameters], "-sw")){
+        number_of_checked_parameters++;
+        sliding_window_step_size = std::stoi(argv_[number_of_checked_parameters]);
       } else {
         if (command_line_parameters->filename_dataset.length() == 0) {command_line_parameters->filename_dataset = argv_[number_of_checked_parameters];}
       }
@@ -284,6 +298,13 @@ namespace proslam {
 
     //ds generate tracker mode specific parameters (no effect if configuration file and tracker mode not overwritten)
     setMode(command_line_parameters->tracker_mode);
+
+    //ds TODO maybe move these parameters to the command line group
+    if (command_line_parameters->tracker_mode == CommandLineParameters::TrackerMode::RGB_STEREO) {
+      stereo_framepoint_generator_parameters->model_file = model_file;
+      stereo_framepoint_generator_parameters->proto_file = proto_file;
+      stereo_framepoint_generator_parameters->sliding_window_step_size = sliding_window_step_size;
+    }
 
     //ds validate input parameters and exit on failure
     validateParameters();
