@@ -52,15 +52,21 @@ namespace proslam {
     detectKeypoints(frame_->intensityImageLeft(), keypoints_left);
     detectKeypoints(frame_->intensityImageRight(), keypoints_right);
 
+    std::cerr << "detected keypoints L: " << keypoints_left.size() << " R: " << keypoints_right.size() << std::endl;
+
     //ds extract descriptors for detected features
     extractDescriptors(frame_->intensityImageLeft(), keypoints_left, descriptors_left);
     extractDescriptors(frame_->intensityImageRight(), keypoints_right, descriptors_right);
+
+    std::cerr << " - descriptors L: " << keypoints_left.size() << " R: " << keypoints_right.size() << std::endl;
 
     //ds prepare and execute stereo keypoint search
     CHRONOMETER_START(point_triangulation)
     initialize(keypoints_left, keypoints_right, descriptors_left, descriptors_right);
     findStereoKeypoints(frame_);
     CHRONOMETER_STOP(point_triangulation)
+
+    std::cerr << " - framepoints: " << _number_of_available_points << std::endl;
   }
 
   //ds initializes structures for the epipolar stereo keypoint search (called within compute)

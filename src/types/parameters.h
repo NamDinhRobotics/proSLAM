@@ -166,6 +166,10 @@ namespace proslam {
     int32_t matching_distance_tracking_threshold_maximum = 50;
     int32_t matching_distance_tracking_threshold_minimum = 15;
     int32_t matching_distance_tracking_step_size         = 1;
+
+    std::string proto_file            = "";
+    std::string model_file            = "";
+    uint32_t sliding_window_step_size = 10;
   };
 
   //! @class

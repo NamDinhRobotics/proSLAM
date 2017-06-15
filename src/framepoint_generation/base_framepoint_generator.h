@@ -1,5 +1,6 @@
 #pragma once
 #include "types/frame.h"
+#include "srrg_nnkd_types/keypoint_detector.h"
 
 namespace proslam {
 
@@ -46,15 +47,6 @@ namespace proslam {
 
   //ds getters/setters
   public:
-
-    //ds enable external access to keypoint detection
-#if CV_MAJOR_VERSION == 2
-    cv::FeatureDetector* keypointDetector() const {return _keypoint_detector;}
-#elif CV_MAJOR_VERSION == 3
-    cv::Ptr<cv::FastFeatureDetector> keypointDetector() const {return _keypoint_detector;}
-#else
-#error OpenCV version not supported
-#endif
 
     //ds enable external access to descriptor computation
 #if CV_MAJOR_VERSION == 2
@@ -104,14 +96,8 @@ namespace proslam {
     //ds currently triangulated framepoints stored in a image-like matrix (pixel access)
     FramePointMatrix _framepoints_in_image;
 
-    //ds feature detection
-#if CV_MAJOR_VERSION == 2
-    cv::FeatureDetector* _keypoint_detector;
-#elif CV_MAJOR_VERSION == 3
-    cv::Ptr<cv::FastFeatureDetector> _keypoint_detector;
-#else
-#error OpenCV version not supported
-#endif
+    //ds experimental - neural network based keypoint detection
+    nnkd::KeypointDetector* _keypoint_detector;
 
     //ds descriptor extraction
 #if CV_MAJOR_VERSION == 2

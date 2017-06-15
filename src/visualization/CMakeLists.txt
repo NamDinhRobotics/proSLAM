@@ -10,4 +10,5 @@ target_link_libraries(srrg_proslam_visualization_library
   ${OPENGL_glu_LIBRARY}
   ${QGLVIEWER_LIBRARY}
   ${SRRG_QT_LIBRARIES}
+  ${Caffe_LIBRARIES}
 )

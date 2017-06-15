@@ -45,8 +45,6 @@ namespace proslam {
     const Count& totalNumberOfLandmarksClose() const {return _total_number_of_landmarks_close;}
     const Count& totalNumberOfLandmarksFar() const {return _total_number_of_landmarks_far;}
     const Count& binSize() const {return _parameters->bin_size_pixels;}
-    const Count& numberOfColsBin() const {return _number_of_cols_bin;}
-    const Count& numberOfRowsBin() const {return _number_of_rows_bin;}
 
   //ds helpers
   protected:
@@ -113,12 +111,6 @@ namespace proslam {
 
     //ds buffers
     std::vector<ImageCoordinates> _projected_image_coordinates_left;
-
-    //ds feature density regularization
-    Count _number_of_rows_bin;
-    Count _number_of_cols_bin;
-    BaseFramePointGenerator::FramePointMatrix _bin_map_left;
-    bool _enable_keypoint_binning;
 
   private:
 

@@ -48,6 +48,7 @@ if("$ENV{ROS_DISTRO}" STREQUAL "kinetic" OR "$ENV{ROS_DISTRO}" STREQUAL "indigo"
     srrg_gl_helpers
     srrg_core_viewers
     srrg_hbst
+    srrg_nnkd
     roscpp
     sensor_msgs
     cv_bridge
@@ -121,6 +122,10 @@ endif()
 
 #ds load suite sparse for pose graph optimization
 find_package(SuiteSparse REQUIRED)
+
+#ds look for caffe
+find_package(Caffe REQUIRED)
+include_directories(${Caffe_INCLUDE_DIRS})
 
 #ds check flags for release build
 if("${CMAKE_BUILD_TYPE}" STREQUAL "Release" OR "${CMAKE_BUILD_TYPE}" STREQUAL "RELEASE")

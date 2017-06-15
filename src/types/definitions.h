@@ -21,7 +21,7 @@
 #include "srrg_hbst_types/binary_tree.hpp"
 #include "srrg_types/types.hpp"
 
-namespace proslam{
+namespace proslam {
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% //CONFIGURATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -31,7 +31,7 @@ namespace proslam{
 #endif
   #define DESCRIPTOR_SIZE_BYTES SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS/8
 #ifndef SRRG_PROSLAM_DESCRIPTOR_MAXIMUM_HAMMING_DISTANCE
-  #define SRRG_PROSLAM_DESCRIPTOR_MAXIMUM_HAMMING_DISTANCE 256
+  #define SRRG_PROSLAM_DESCRIPTOR_MAXIMUM_HAMMING_DISTANCE 25
 #endif
   #define DESCRIPTOR_NORM cv::NORM_HAMMING
 
