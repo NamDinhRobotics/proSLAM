@@ -143,7 +143,7 @@ namespace proslam {
         //zero disparity stop condition
         if (_keypoints_with_descriptors_right[idx_RS].col >= _keypoints_with_descriptors_left[idx_L].col) {break;}
         //compute descriptor distance
-        const real dist = cv::norm(_keypoints_with_descriptors_left[idx_L].descriptor, _keypoints_with_descriptors_right[idx_RS].descriptor, DESCRIPTOR_NORM);
+        const real dist = cv::norm(_keypoints_with_descriptors_left[idx_L].descriptor, _keypoints_with_descriptors_right[idx_RS].descriptor, SRRG_PROSLAM_DESCRIPTOR_NORM);
         if(dist < dist_best) {
           dist_best = dist;
           idx_best_R = idx_RS;

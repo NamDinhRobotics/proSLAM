@@ -143,8 +143,8 @@ namespace proslam {
       }
       keypoint_buffer_right[0].pt += corner_right;
 
-      if (cv::norm(point_previous->descriptorLeft(), descriptor_left, DESCRIPTOR_NORM) < _framepoint_generator->matchingDistanceTrackingThreshold()  &&
-          cv::norm(point_previous->descriptorRight(), descriptor_right, DESCRIPTOR_NORM) < _framepoint_generator->matchingDistanceTrackingThreshold()) {
+      if (cv::norm(point_previous->descriptorLeft(), descriptor_left, SRRG_PROSLAM_DESCRIPTOR_NORM) < _framepoint_generator->matchingDistanceTrackingThreshold()  &&
+          cv::norm(point_previous->descriptorRight(), descriptor_right, SRRG_PROSLAM_DESCRIPTOR_NORM) < _framepoint_generator->matchingDistanceTrackingThreshold()) {
         try {
 
           //ds triangulate point

@@ -244,7 +244,7 @@ namespace proslam {
   void SLAMAssembly::initializeGUI(QApplication* ui_server_) {
     if (_parameters->command_line_parameters->option_use_gui && _world_map) {
       _ui_server = ui_server_;
-      _viewer_input_images = new ViewerInputImages(_world_map);
+      _viewer_input_images = new ViewerInputImages("input: images");
       _context_viewer_bird = new ViewerOutputMap(_world_map, 0.1, "output: map (bird view)");
       _context_viewer_bird->setCameraLeftToRobot(_camera_left->cameraToRobot());
 
@@ -271,8 +271,6 @@ namespace proslam {
         _context_viewer_top->setWorldToRobotOrigin(orientation_correction*center_for_kitti_sequence_00);
         _context_viewer_top->show();
       }
-
-      _viewer_input_images->setTracker(_tracker);
       _is_gui_running = true;
     }
   }
@@ -286,7 +284,7 @@ namespace proslam {
           _context_viewer_top->setIsOpen(false);
         }
       }
-      _viewer_input_images->initDrawing();
+      _viewer_input_images->update(_world_map->currentFrame());
       _viewer_input_images->drawFeatureTracking();
       _viewer_input_images->drawFeatures();
       _is_gui_running = _context_viewer_bird->isVisible() && _viewer_input_images->updateGUI();
