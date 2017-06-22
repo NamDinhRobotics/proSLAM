@@ -21,6 +21,8 @@ namespace proslam {
     setRobotToWorld(robot_to_world_);
     _created_points.clear();
     _active_points.clear();
+    _keypoints_left.clear();
+    _keypoints_right.clear();
   }
 
   Frame::~Frame() {
@@ -104,6 +106,8 @@ namespace proslam {
     }
     _created_points.clear();
     _active_points.clear();
+    _keypoints_left.clear();
+    _keypoints_right.clear();
   }
 
   //ds update framepoint world coordinates

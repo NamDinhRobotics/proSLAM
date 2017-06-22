@@ -241,10 +241,12 @@ namespace proslam {
           assert(_context->currentlyTrackedLandmarks().size() <= _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
           assert(_number_of_tracked_points >= number_of_inliers);
 
-          //ds recover lost points based on updated pose
-          CHRONOMETER_START(point_recovery)
-          _recoverPoints(current_frame);
-          CHRONOMETER_STOP(point_recovery)
+          //ds recover lost points based on refined pose
+          if (_parameters->enable_landmark_recovery) {
+            CHRONOMETER_START(point_recovery)
+            _recoverPoints(current_frame);
+            CHRONOMETER_STOP(point_recovery)
+          }
 
           //ds update tracks
           _context->setRobotToWorld(current_frame->robotToWorld());

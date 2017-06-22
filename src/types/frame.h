@@ -51,6 +51,11 @@ namespace proslam {
     inline const Frame* next() const {return _next;}
     void setNext(Frame* next_) {_next = next_;}
 
+    inline std::vector<cv::KeyPoint>& keypointsLeft() {return _keypoints_left;}
+    inline std::vector<cv::KeyPoint>& keypointsRight() {return _keypoints_right;}
+    inline cv::Mat& descriptorsLeft() {return _descriptors_left;}
+    inline cv::Mat& descriptorsRight() {return _descriptors_right;}
+
     inline const Camera* cameraLeft() const {return _camera_left;}
     void setCameraLeft(const Camera* camera_) {_camera_left = camera_;}
 
@@ -120,6 +125,14 @@ namespace proslam {
     //ds links to preceding and subsequent instances
     Frame* _previous = 0;
     Frame* _next     = 0;
+
+    //! @brief detected keypoints at the time of creation of the Frame
+    std::vector<cv::KeyPoint> _keypoints_left;
+    std::vector<cv::KeyPoint> _keypoints_right;
+
+    //! @brief extracted descriptors associated to the keypoints at the time of creation of the Frame
+    cv::Mat _descriptors_left;
+    cv::Mat _descriptors_right;
 
     //! @brief bookkeeping: all created framepoints for this frame (create function)
     FramePointPointerVector _created_points;

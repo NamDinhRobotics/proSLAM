@@ -179,6 +179,8 @@ namespace proslam {
     int32_t maximum_matching_distance_triangulation = 50;
     real baseline_factor                            = 50;
     real minimum_disparity_pixels                   = 1;
+    uint32_t epipolar_line_thickness_pixels         = 0;
+
   };
 
   //! @class
@@ -228,6 +230,7 @@ namespace proslam {
     int32_t maximum_distance_tracking_pixels = 150*150;
 
     //! @brief framepoint track recovery
+    bool enable_landmark_recovery               = false;
     Count maximum_number_of_landmark_recoveries = 3;
 
     //! @brief feature density regularization

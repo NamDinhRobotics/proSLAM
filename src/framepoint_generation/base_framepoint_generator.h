@@ -13,8 +13,7 @@ namespace proslam {
     struct KeypointWithDescriptor {
       cv::KeyPoint keypoint;
       cv::Mat descriptor;
-      int32_t row; //ds keypoint v coordinate
-      int32_t col; //ds keypoint u coordinate
+      bool available;
     };
 
     //ds a 2d array of pointers to framepoints

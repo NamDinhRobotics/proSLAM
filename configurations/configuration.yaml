@@ -59,6 +59,7 @@ stereo_framepoint_generation:
   maximum_matching_distance_triangulation: 50
   baseline_factor:                         50
   minimum_disparity_pixels:                1
+  epipolar_line_thickness_pixels:          0
 
 depth_framepoint_generation:
 
@@ -81,6 +82,7 @@ base_tracking:
   range_point_tracking:                       2     #ds pixel search range width for point vicinity tracking
 
   #ds framepoint track recovery
+  enable_landmark_recovery:              false
   maximum_number_of_landmark_recoveries: 3
 
   #ds feature density regularization

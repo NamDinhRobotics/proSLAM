@@ -25,10 +25,7 @@ namespace proslam {
     virtual void compute(Frame* frame_);
 
     //ds initializes structures for the epipolar stereo keypoint search (called within compute)
-    void initialize(const std::vector<cv::KeyPoint>& keypoints_left_,
-                    const std::vector<cv::KeyPoint>& keypoints_right_,
-                    const cv::Mat& descriptors_left_,
-                    const cv::Mat& descriptors_right_);
+    void initialize(Frame* frame_);
 
     //ds computes all potential stereo keypoints (exhaustive in matching distance) and stores them as framepoints (called within compute)
     void findStereoKeypoints(Frame* frame_);
@@ -51,6 +48,9 @@ namespace proslam {
     //! @brief derived triangulation properties
     real _baseline_pixelsmeters;
     real _baseline_meters;
+
+    //! @brief parallel epipolar line offsets to search for stereo matches (based on Parameter: epipolar_line_thickness)
+    std::vector<int32_t> _epipolar_line_offsets_pixels;
 
     //! @brief inner memory buffers (operated on in compute, kept here for readability)
     std::vector<KeypointWithDescriptor> _keypoints_with_descriptors_right;

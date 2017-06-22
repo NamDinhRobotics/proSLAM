@@ -99,23 +99,19 @@ namespace proslam {
   void DepthFramePointGenerator::compute(Frame* frame_) {
     assert(frame_->intensityImageRight().type() == CV_16UC1);
 
-    //ds buffers in local scope to not confuse opencvs memory management
-    std::vector<cv::KeyPoint> keypoints_left;
-    cv::Mat descriptors_left;
-
     //ds detect new features
-    detectKeypoints(frame_->intensityImageLeft(), keypoints_left);
+    detectKeypoints(frame_->intensityImageLeft(), frame_->keypointsLeft());
 
     CHRONOMETER_START(depth_map_generation)
     _computeDepthMap(frame_->intensityImageRight());
     CHRONOMETER_STOP(depth_map_generation)
 
     //ds extract descriptors for detected features
-    extractDescriptors(frame_->intensityImageLeft(), keypoints_left, descriptors_left);
+    extractDescriptors(frame_->intensityImageLeft(), frame_->keypointsLeft(), frame_->descriptorsLeft());
 
     //ds prepare and execute stereo keypoint search
     CHRONOMETER_START(depth_assignment)
-    computeCoordinatesFromDepth(frame_, keypoints_left, descriptors_left);
+    computeCoordinatesFromDepth(frame_, frame_->keypointsLeft(), frame_->descriptorsLeft());
     CHRONOMETER_STOP(depth_assignment)
   }
 

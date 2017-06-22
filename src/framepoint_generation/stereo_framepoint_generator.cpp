@@ -26,10 +26,21 @@ namespace proslam {
     _keypoints_with_descriptors_left.clear();
     _keypoints_with_descriptors_right.clear();
 
+    //ds compute stereo matching configuration
+    _epipolar_line_offsets_pixels.clear();
+    _epipolar_line_offsets_pixels.push_back(0);
+    for (uint32_t thickness_level = 1; thickness_level <= _parameters->epipolar_line_thickness_pixels; ++thickness_level) {
+
+      //ds always check upper and lower line next to epipolar
+      _epipolar_line_offsets_pixels.push_back(thickness_level);
+      _epipolar_line_offsets_pixels.push_back(-thickness_level);
+    }
+
     //ds info
     LOG_INFO(std::cerr << "StereoFramePointGenerator::configure|baseline (m): " << _baseline_meters << std::endl)
     LOG_INFO(std::cerr << "StereoFramePointGenerator::configure|maximum depth tracking close (m): " << _maximum_depth_near_meters << std::endl)
     LOG_INFO(std::cerr << "StereoFramePointGenerator::configure|maximum depth tracking far (m): " << _maximum_depth_far_meters << std::endl)
+    LOG_INFO(std::cerr << "StereoFramePointGenerator::configure|epipolar offsets to check: " << _epipolar_line_offsets_pixels.size()-1 << std::endl)
     LOG_DEBUG(std::cerr << "StereoFramePointGenerator::configure|configured" << std::endl)
   }
 
@@ -42,69 +53,66 @@ namespace proslam {
   //ds computes framepoints stored in a image-like matrix (_framepoints_in_image) for provided stereo images
   void StereoFramePointGenerator::compute(Frame* frame_) {
 
-    //ds buffers in local scope to not confuse opencvs memory management
-    std::vector<cv::KeyPoint> keypoints_left;
-    std::vector<cv::KeyPoint> keypoints_right;
-    cv::Mat descriptors_left;
-    cv::Mat descriptors_right;
-
     //ds detect new features to generate frame points from
-    detectKeypoints(frame_->intensityImageLeft(), keypoints_left);
-    detectKeypoints(frame_->intensityImageRight(), keypoints_right);
+    detectKeypoints(frame_->intensityImageLeft(), frame_->keypointsLeft());
+    detectKeypoints(frame_->intensityImageRight(), frame_->keypointsRight());
 
     //ds extract descriptors for detected features
-    extractDescriptors(frame_->intensityImageLeft(), keypoints_left, descriptors_left);
-    extractDescriptors(frame_->intensityImageRight(), keypoints_right, descriptors_right);
+    extractDescriptors(frame_->intensityImageLeft(), frame_->keypointsLeft(), frame_->descriptorsLeft());
+    extractDescriptors(frame_->intensityImageRight(), frame_->keypointsRight(), frame_->descriptorsRight());
 
     //ds prepare and execute stereo keypoint search
     CHRONOMETER_START(point_triangulation)
-    initialize(keypoints_left, keypoints_right, descriptors_left, descriptors_right);
+    initialize(frame_);
     findStereoKeypoints(frame_);
     CHRONOMETER_STOP(point_triangulation)
   }
 
   //ds initializes structures for the epipolar stereo keypoint search (called within compute)
-  void StereoFramePointGenerator::initialize(const std::vector<cv::KeyPoint>& keypoints_left_,
-                                             const std::vector<cv::KeyPoint>& keypoints_right_,
-                                             const cv::Mat& descriptors_left_,
-                                             const cv::Mat& descriptors_right_) {
+  void StereoFramePointGenerator::initialize(Frame* frame_) {
 
     //ds prepare keypoint with descriptors vectors for stereo keypoint search
-    _keypoints_with_descriptors_left.resize(keypoints_left_.size());
-    _keypoints_with_descriptors_right.resize(keypoints_right_.size());
-    if (keypoints_left_.size() <= keypoints_right_.size()) {
-      for (Index u = 0; u < keypoints_left_.size(); ++u) {
-        _keypoints_with_descriptors_left[u].keypoint    = keypoints_left_[u];
-        _keypoints_with_descriptors_left[u].descriptor  = descriptors_left_.row(u);
-        _keypoints_with_descriptors_left[u].row         = keypoints_left_[u].pt.y;
-        _keypoints_with_descriptors_left[u].col         = keypoints_left_[u].pt.x;
-        _keypoints_with_descriptors_right[u].keypoint   = keypoints_right_[u];
-        _keypoints_with_descriptors_right[u].descriptor = descriptors_right_.row(u);
-        _keypoints_with_descriptors_right[u].row        = keypoints_right_[u].pt.y;
-        _keypoints_with_descriptors_right[u].col        = keypoints_right_[u].pt.x;
+    _keypoints_with_descriptors_left.resize(frame_->keypointsLeft().size());
+    _keypoints_with_descriptors_right.resize(frame_->keypointsRight().size());
+
+    //ds if we got more keypoints in the right image
+    if (frame_->keypointsLeft().size() <= frame_->keypointsRight().size()) {
+
+      //ds first add all left keypoints plus equally many from the right
+      for (Index u = 0; u < frame_->keypointsLeft().size(); ++u) {
+        _keypoints_with_descriptors_left[u].keypoint    = frame_->keypointsLeft()[u];
+        _keypoints_with_descriptors_left[u].descriptor  = frame_->descriptorsLeft().row(u);
+        _keypoints_with_descriptors_left[u].available   = true;
+        _keypoints_with_descriptors_right[u].keypoint   = frame_->keypointsRight()[u];
+        _keypoints_with_descriptors_right[u].descriptor = frame_->descriptorsRight().row(u);
+        _keypoints_with_descriptors_right[u].available  = true;
       }
-      for (Index u = keypoints_left_.size(); u < keypoints_right_.size(); ++u) {
-        _keypoints_with_descriptors_right[u].keypoint   = keypoints_right_[u];
-        _keypoints_with_descriptors_right[u].descriptor = descriptors_right_.row(u);
-        _keypoints_with_descriptors_right[u].row        = keypoints_right_[u].pt.y;
-        _keypoints_with_descriptors_right[u].col        = keypoints_right_[u].pt.x;
+
+      //ds add the remaining points from the right image
+      for (Index u = frame_->keypointsLeft().size(); u < frame_->keypointsRight().size(); ++u) {
+        _keypoints_with_descriptors_right[u].keypoint   = frame_->keypointsRight()[u];
+        _keypoints_with_descriptors_right[u].descriptor = frame_->descriptorsRight().row(u);
+        _keypoints_with_descriptors_right[u].available  = true;
       }
+
+    //ds if we got more keypoints in the left image
     } else {
-      for (Index u = 0; u < keypoints_right_.size(); ++u) {
-        _keypoints_with_descriptors_left[u].keypoint    = keypoints_left_[u];
-        _keypoints_with_descriptors_left[u].descriptor  = descriptors_left_.row(u);
-        _keypoints_with_descriptors_left[u].row         = keypoints_left_[u].pt.y;
-        _keypoints_with_descriptors_left[u].col         = keypoints_left_[u].pt.x;
-        _keypoints_with_descriptors_right[u].keypoint   = keypoints_right_[u];
-        _keypoints_with_descriptors_right[u].descriptor = descriptors_right_.row(u);
-        _keypoints_with_descriptors_right[u].row        = keypoints_right_[u].pt.y;
-        _keypoints_with_descriptors_right[u].col        = keypoints_right_[u].pt.x;
+
+      //ds first add all right keypoints plus equally many from the left
+      for (Index u = 0; u < frame_->keypointsRight().size(); ++u) {
+        _keypoints_with_descriptors_left[u].keypoint    = frame_->keypointsLeft()[u];
+        _keypoints_with_descriptors_left[u].descriptor  = frame_->descriptorsLeft().row(u);
+        _keypoints_with_descriptors_left[u].available   = true;
+        _keypoints_with_descriptors_right[u].keypoint   = frame_->keypointsRight()[u];
+        _keypoints_with_descriptors_right[u].descriptor = frame_->descriptorsRight().row(u);
+        _keypoints_with_descriptors_right[u].available  = true;
       }
-      for (Index u = keypoints_right_.size(); u < keypoints_left_.size(); ++u) {
-        _keypoints_with_descriptors_left[u].keypoint   = keypoints_left_[u];
-        _keypoints_with_descriptors_left[u].descriptor = descriptors_left_.row(u);
-        _keypoints_with_descriptors_left[u].row        = keypoints_left_[u].pt.y;
-        _keypoints_with_descriptors_left[u].col        = keypoints_left_[u].pt.x;
+
+      //ds add the remaining points from the left image
+      for (Index u = frame_->keypointsRight().size(); u < frame_->keypointsLeft().size(); ++u) {
+        _keypoints_with_descriptors_left[u].keypoint   = frame_->keypointsLeft()[u];
+        _keypoints_with_descriptors_left[u].descriptor = frame_->descriptorsLeft().row(u);
+        _keypoints_with_descriptors_left[u].available  = true;
       }
     }
   }
@@ -113,67 +121,92 @@ namespace proslam {
   void StereoFramePointGenerator::findStereoKeypoints(Frame* frame_) {
 
     //ds sort all input vectors by ascending row positions
-    std::sort(_keypoints_with_descriptors_left.begin(), _keypoints_with_descriptors_left.end(), [](const KeypointWithDescriptor& a_, const KeypointWithDescriptor& b_){return ((a_.row < b_.row) || (a_.row == b_.row && a_.col < b_.col));});
-    std::sort(_keypoints_with_descriptors_right.begin(), _keypoints_with_descriptors_right.end(), [](const KeypointWithDescriptor& a_, const KeypointWithDescriptor& b_){return ((a_.row < b_.row) || (a_.row == b_.row && a_.col < b_.col));});
+    std::sort(_keypoints_with_descriptors_left.begin(), _keypoints_with_descriptors_left.end(),
+              [](const KeypointWithDescriptor& a_, const KeypointWithDescriptor& b_){return ((a_.keypoint.pt.y < b_.keypoint.pt.y) ||
+                                                                                             (a_.keypoint.pt.y == b_.keypoint.pt.y && a_.keypoint.pt.x < b_.keypoint.pt.x));});
+    std::sort(_keypoints_with_descriptors_right.begin(), _keypoints_with_descriptors_right.end(),
+              [](const KeypointWithDescriptor& a_, const KeypointWithDescriptor& b_){return ((a_.keypoint.pt.y < b_.keypoint.pt.y) ||
+                                                                                             (a_.keypoint.pt.y == b_.keypoint.pt.y && a_.keypoint.pt.x < b_.keypoint.pt.x));});
 
-    //ds running variable
-    Index idx_R = 0;
-
-    //ds loop over all left keypoints
+    //ds number of stereo matches
     _number_of_available_points = 0;
-    for (Index idx_L = 0; idx_L < _keypoints_with_descriptors_left.size(); idx_L++) {
-      //stop condition
-      if (idx_R == _keypoints_with_descriptors_right.size()) {break;}
-      //the right keypoints are on an lower row - skip left
-      while (_keypoints_with_descriptors_left[idx_L].row < _keypoints_with_descriptors_right[idx_R].row) {
-        idx_L++; if (idx_L == _keypoints_with_descriptors_left.size()) {break;}
-      }
-      if (idx_L == _keypoints_with_descriptors_left.size()) {break;}
-      //the right keypoints are on an upper row - skip right
-      while (_keypoints_with_descriptors_left[idx_L].row > _keypoints_with_descriptors_right[idx_R].row) {
-        idx_R++; if (idx_R == _keypoints_with_descriptors_right.size()) {break;}
-      }
-      if (idx_R == _keypoints_with_descriptors_right.size()) {break;}
-      //search bookkeeping
-      Index idx_RS = idx_R;
-      real dist_best = _parameters->maximum_matching_distance_triangulation;
-      Index idx_best_R = 0;
-      //scan epipolar line for current keypoint at idx_L
-      while (_keypoints_with_descriptors_left[idx_L].row == _keypoints_with_descriptors_right[idx_RS].row) {
-        //zero disparity stop condition
-        if (_keypoints_with_descriptors_right[idx_RS].col >= _keypoints_with_descriptors_left[idx_L].col) {break;}
-        //compute descriptor distance
-        const real dist = cv::norm(_keypoints_with_descriptors_left[idx_L].descriptor, _keypoints_with_descriptors_right[idx_RS].descriptor, DESCRIPTOR_NORM);
-        if(dist < dist_best) {
-          dist_best = dist;
-          idx_best_R = idx_RS;
+
+    //ds for each offset (multi-line stereo matching)
+    for (const int32_t& offset_pixels: _epipolar_line_offsets_pixels) {
+
+      //ds running variable
+      Index index_R = 0;
+
+      //ds loop over all left keypoints
+      for (Index idx_L = 0; idx_L < _keypoints_with_descriptors_left.size(); idx_L++) {
+
+        //ds if the point is not yet matched
+        if (_keypoints_with_descriptors_left[idx_L].available) {
+
+          //ds if there are no more points on the right to match against - stop
+          if (index_R == _keypoints_with_descriptors_right.size()) {break;}
+          //the right keypoints are on an lower row - skip left
+          while (_keypoints_with_descriptors_left[idx_L].keypoint.pt.y < _keypoints_with_descriptors_right[index_R].keypoint.pt.y+offset_pixels) {
+            idx_L++; if (idx_L == _keypoints_with_descriptors_left.size()) {break;}
+          }
+          if (idx_L == _keypoints_with_descriptors_left.size()) {break;}
+          //the right keypoints are on an upper row - skip right
+          while (_keypoints_with_descriptors_left[idx_L].keypoint.pt.y > _keypoints_with_descriptors_right[index_R].keypoint.pt.y+offset_pixels) {
+            index_R++; if (index_R == _keypoints_with_descriptors_right.size()) {break;}
+          }
+          if (index_R == _keypoints_with_descriptors_right.size()) {break;}
+          //search bookkeeping
+          Index index_search_R = index_R;
+          real distance_best   = _parameters->maximum_matching_distance_triangulation;
+          Index index_best_R   = 0;
+          //scan epipolar line for current keypoint at idx_L
+          while (_keypoints_with_descriptors_left[idx_L].keypoint.pt.y == _keypoints_with_descriptors_right[index_search_R].keypoint.pt.y+offset_pixels) {
+            //zero disparity stop condition
+            if (_keypoints_with_descriptors_right[index_search_R].keypoint.pt.x >= _keypoints_with_descriptors_left[idx_L].keypoint.pt.x) {break;}
+
+            //ds if the point is not yet matched
+            if (_keypoints_with_descriptors_right[index_search_R].available) {
+
+              //ds compute descriptor distance for the stereo match candidates
+              const real distance_hamming = cv::norm(_keypoints_with_descriptors_left[idx_L].descriptor, _keypoints_with_descriptors_right[index_search_R].descriptor, DESCRIPTOR_NORM);
+              if(distance_hamming < distance_best) {
+                distance_best = distance_hamming;
+                index_best_R  = index_search_R;
+              }
+            }
+            index_search_R++; if (index_search_R == _keypoints_with_descriptors_right.size()) {break;}
+          }
+          //check if something was found
+          if (distance_best < _parameters->maximum_matching_distance_triangulation) {
+
+            //ds add triangulation map entry
+            try {
+
+              const Index& row       = _keypoints_with_descriptors_left[idx_L].keypoint.pt.y;
+              const Index& col_left  = _keypoints_with_descriptors_left[idx_L].keypoint.pt.x;
+              assert(_framepoints_in_image[row][col_left] == 0);
+
+              //ds attempt the triangulation - might throw on failure
+              const PointCoordinates camera_coordinates(getCoordinatesInCameraLeft(_keypoints_with_descriptors_left[idx_L].keypoint.pt,
+                                                                                   _keypoints_with_descriptors_right[index_best_R].keypoint.pt));
+
+              //ds add to framepoint map
+              _framepoints_in_image[row][col_left] = frame_->create(_keypoints_with_descriptors_left[idx_L].keypoint,
+                                                                    _keypoints_with_descriptors_left[idx_L].descriptor,
+                                                                    _keypoints_with_descriptors_right[index_best_R].keypoint,
+                                                                    _keypoints_with_descriptors_right[index_best_R].descriptor,
+                                                                    camera_coordinates);
+              ++_number_of_available_points;
+
+              //ds reduce search space
+              index_R = index_best_R+1;
+
+              //ds set as matched (required for multi-line stereo matching)
+              _keypoints_with_descriptors_left[idx_L].available         = false;
+              _keypoints_with_descriptors_right[index_best_R].available = false;
+            } catch (const ExceptionTriangulation& exception) {}
+          }
         }
-        idx_RS++; if (idx_RS == _keypoints_with_descriptors_right.size()) {break;}
-      }
-      //check if something was found
-      if (dist_best < _parameters->maximum_matching_distance_triangulation) {
-
-        //ds add triangulation map entry
-        try {
-
-          const Index& row       = _keypoints_with_descriptors_left[idx_L].row;
-          const Index& col_left  = _keypoints_with_descriptors_left[idx_L].col;
-          assert(_framepoints_in_image[row][col_left] == 0);
-
-          //ds attempt the triangulation - might throw on failure
-          const PointCoordinates camera_coordinates(getCoordinatesInCameraLeft(_keypoints_with_descriptors_left[idx_L].keypoint.pt, _keypoints_with_descriptors_right[idx_best_R].keypoint.pt));
-
-          //ds add to framepoint map
-          _framepoints_in_image[row][col_left] = frame_->create(_keypoints_with_descriptors_left[idx_L].keypoint,
-                                                                _keypoints_with_descriptors_left[idx_L].descriptor,
-                                                                _keypoints_with_descriptors_right[idx_best_R].keypoint,
-                                                                _keypoints_with_descriptors_right[idx_best_R].descriptor,
-                                                                camera_coordinates);
-          ++_number_of_available_points;
-
-          //ds reduce search space
-          idx_R = idx_best_R+1;
-        } catch (const ExceptionTriangulation& exception) {}
       }
     }
 

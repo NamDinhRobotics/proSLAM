@@ -6,7 +6,7 @@ namespace proslam {
   //ds statics
   Count Parameters::_number_of_instances = 0;
   std::string ParameterCollection::banner =
-  "-------------------------------------------------------------------------\n"
+  "\n=======================================================================================================================\n"
   "srrg_proslam_app: simple SLAM application\n"
   "usage: srrg_proslam_app [options] <dataset>\n"
   "\n"
@@ -26,7 +26,8 @@ namespace proslam {
   "-drop-framepoints (-df):                 deallocation of past framepoints at runtime (reduces memory demand)\n"
   "-equalize-histogram (-eh):               equalize stereo image histogram before processing\n"
   "-undistort-rectify (-ur):                undistorts and rectifies input images based on camera info\n"
-  "-------------------------------------------------------------------------";
+  "-landmark-recovery (-lr):                enables landmark track recovery\n"
+  "=======================================================================================================================";
 
   //! @brief macro wrapping the YAML node parsing for a single parameter
   //! @param YAML_NODE the target root YAML node
@@ -46,7 +47,7 @@ namespace proslam {
 
   //ds Command line
   void CommandLineParameters::print() const {
-    std::cerr << "-------------------------------------------------------------------------" << std::endl;
+    std::cerr << "=======================================================================================================================" << std::endl;
     std::cerr << "running with command line parameters:" << std::endl;
     if (filename_configuration.length() > 0) {
     std::cerr << "-configuration (-c)            '" << filename_configuration << "'" << std::endl;
@@ -70,7 +71,7 @@ namespace proslam {
     if (filename_dataset.length() > 0) {
     std::cerr << "-dataset                       '" << filename_dataset  << "'" << std::endl;
     }
-    std::cerr << "-------------------------------------------------------------------------" << std::endl;
+    std::cerr << "=======================================================================================================================" << std::endl;
   }
 
 
@@ -208,15 +209,8 @@ namespace proslam {
     }
 
     //ds if no configuration file was specified
-    if (command_line_parameters->filename_configuration.length() == 0) {
-
-      //ds check if a default configuration file is present
-      if (srrg_core::isAccessible("configuration.yaml")) {
-        command_line_parameters->filename_configuration = "configuration.yaml";
-        LOG_INFO(std::cerr << "ParameterCollection::parseParametersFromCommandLine|loading default configuration file: " << command_line_parameters->filename_configuration << std::endl)
-      } else {
-        LOG_WARNING(std::cerr << "ParameterCollection::parseParametersFromCommandLine|no configuration file found (running with internal settings)" << std::endl)
-      }
+    if (command_line_parameters->filename_configuration.empty()) {
+      LOG_WARNING(std::cerr << "ParameterCollection::parseParametersFromCommandLine|no configuration file found (running with internal settings)" << std::endl)
     } else {
 
       //ds check if specified configuration file is not accessible
@@ -227,7 +221,7 @@ namespace proslam {
     }
 
     //ds if a valid configuration file is set (otherwise the field must be empty)
-    if (command_line_parameters->filename_configuration.length()) {
+    if (!command_line_parameters->filename_configuration.empty()) {
 
       //ds parse parameters from configuration file
       parseFromFile(command_line_parameters->filename_configuration);
@@ -284,6 +278,16 @@ namespace proslam {
 
     //ds generate tracker mode specific parameters (no effect if configuration file and tracker mode not overwritten)
     setMode(command_line_parameters->tracker_mode);
+
+    //ds reset and check for mode specific command line parameters
+    number_of_checked_parameters = 1;
+    while (number_of_checked_parameters < argc_) {
+     if (!std::strcmp(argv_[number_of_checked_parameters], "-landmark-recovery") || !std::strcmp(argv_[number_of_checked_parameters], "-lr")) {
+        if (stereo_tracker_parameters) {stereo_tracker_parameters->enable_landmark_recovery = true;}
+        else if (depth_tracker_parameters) {depth_tracker_parameters->enable_landmark_recovery = true;}
+      }
+      number_of_checked_parameters++;
+    }
 
     //ds validate input parameters and exit on failure
     validateParameters();
@@ -347,6 +351,7 @@ namespace proslam {
           PARSE_PARAMETER(configuration, stereo_framepoint_generation, stereo_framepoint_generator_parameters, maximum_matching_distance_triangulation, int32_t)
           PARSE_PARAMETER(configuration, stereo_framepoint_generation, stereo_framepoint_generator_parameters, baseline_factor, real)
           PARSE_PARAMETER(configuration, stereo_framepoint_generation, stereo_framepoint_generator_parameters, minimum_disparity_pixels, real)
+          PARSE_PARAMETER(configuration, stereo_framepoint_generation, stereo_framepoint_generator_parameters, epipolar_line_thickness_pixels, int32_t)
 
           //MotionEstimation
           PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, minimum_track_length_for_landmark_creation, Count)
@@ -355,6 +360,7 @@ namespace proslam {
           PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, minimum_threshold_distance_tracking_pixels, int32_t)
           PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, range_point_tracking, int32_t)
           PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, maximum_distance_tracking_pixels, int32_t)
+          PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, enable_landmark_recovery, bool)
           PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, maximum_number_of_landmark_recoveries, Count)
           PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, bin_size_pixels, Count)
           PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, ratio_keypoints_to_bins, real)
@@ -389,6 +395,7 @@ namespace proslam {
           PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, minimum_threshold_distance_tracking_pixels, int32_t)
           PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, range_point_tracking, int32_t)
           PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, maximum_distance_tracking_pixels, int32_t)
+          PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, enable_landmark_recovery, bool)
           PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, maximum_number_of_landmark_recoveries, Count)
           PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, bin_size_pixels, Count)
           PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, ratio_keypoints_to_bins, real)
