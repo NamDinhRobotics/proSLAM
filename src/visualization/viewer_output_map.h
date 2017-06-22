@@ -4,7 +4,7 @@
 
 namespace proslam {
 
-  class ViewerOutputMap: public srrg_core_viewers::SimpleViewer{
+  class ViewerOutputMap: public srrg_core_viewers::SimpleViewer {
   public:
     ViewerOutputMap(WorldMap* context_ = 0,
                     const real& object_scale_ = 0.1,

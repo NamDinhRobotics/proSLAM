@@ -363,7 +363,7 @@ namespace proslam {
             const int32_t pixel_distance = std::fabs(row_projection-row_point)+std::fabs(col_projection-col_point);
             const real matching_distance = cv::norm(previous_point->descriptorLeft(),
                                                     _framepoint_generator->framepointsInImage()[row_point][col_point]->descriptorLeft(),
-                                                    DESCRIPTOR_NORM);
+                                                    SRRG_PROSLAM_DESCRIPTOR_NORM);
 
             if (pixel_distance < pixel_distance_best && matching_distance < _maximum_matching_distance_tracking_point) {
               pixel_distance_best = pixel_distance;
@@ -407,7 +407,7 @@ namespace proslam {
               const int32_t pixel_distance = std::fabs(row_projection-row_region)+std::fabs(col_projection-col_region);
               const real matching_distance = cv::norm(previous_point->descriptorLeft(),
                                                       _framepoint_generator->framepointsInImage()[row_region][col_region]->descriptorLeft(),
-                                                      DESCRIPTOR_NORM);
+                                                      SRRG_PROSLAM_DESCRIPTOR_NORM);
 
               if (pixel_distance < pixel_distance_best && matching_distance < _maximum_matching_distance_tracking_region) {
                 pixel_distance_best = pixel_distance;
@@ -492,6 +492,7 @@ namespace proslam {
       for (Index row = 0; row < _framepoint_generator->numberOfRowsImage(); ++row) {
         for (Index col = 0; col < _framepoint_generator->numberOfColsImage(); ++col) {
           if (_framepoint_generator->framepointsInImage()[row][col]) {
+            FramePoint* frame_point = _framepoint_generator->framepointsInImage()[row][col];
 
             //ds determine bin index of the current point
             const Index row_bin = std::floor(static_cast<real>(row)/_parameters->bin_size_pixels);
@@ -503,15 +504,14 @@ namespace proslam {
             if (!_bin_map_left[row_bin][col_bin]) {
 
               //ds set the current point
-              _bin_map_left[row_bin][col_bin] = _framepoint_generator->framepointsInImage()[row][col];
+              _bin_map_left[row_bin][col_bin] = frame_point;
             }
 
             //ds or if the bin is not occupied by a tracked point and we have a point with higher keypoint response
-            else if (!_bin_map_left[row_bin][col_bin]->previous() &&
-                     _framepoint_generator->framepointsInImage()[row][col]->keypointLeft().response > _bin_map_left[row_bin][col_bin]->keypointLeft().response) {
+            else if (!_bin_map_left[row_bin][col_bin]->previous() && frame_point->keypointLeft().response > _bin_map_left[row_bin][col_bin]->keypointLeft().response) {
 
               //ds set the current point
-              _bin_map_left[row_bin][col_bin] = _framepoint_generator->framepointsInImage()[row][col];
+              _bin_map_left[row_bin][col_bin] = frame_point;
             }
 
             //ds always free point from input grid

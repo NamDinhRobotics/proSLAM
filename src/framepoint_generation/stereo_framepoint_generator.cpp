@@ -168,7 +168,7 @@ namespace proslam {
             if (_keypoints_with_descriptors_right[index_search_R].available) {
 
               //ds compute descriptor distance for the stereo match candidates
-              const real distance_hamming = cv::norm(_keypoints_with_descriptors_left[idx_L].descriptor, _keypoints_with_descriptors_right[index_search_R].descriptor, DESCRIPTOR_NORM);
+              const real distance_hamming = cv::norm(_keypoints_with_descriptors_left[idx_L].descriptor, _keypoints_with_descriptors_right[index_search_R].descriptor, SRRG_PROSLAM_DESCRIPTOR_NORM);
               if(distance_hamming < distance_best) {
                 distance_best = distance_hamming;
                 index_best_R  = index_search_R;
