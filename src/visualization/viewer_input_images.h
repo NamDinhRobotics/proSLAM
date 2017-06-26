@@ -1,4 +1,5 @@
 #pragma once
+#include <mutex>
 #include "types/world_map.h"
 
 namespace proslam {
@@ -35,6 +36,10 @@ public:
 public:
 
   ViewerInputImages(const std::string& window_name_ = "input: images");
+  ~ViewerInputImages();
+
+public:
+
   void update(const Frame* frame_);
   void drawFeatures();
   void drawFeatureTracking();
@@ -43,9 +48,19 @@ public:
 
 protected:
 
-  const Frame* _current_frame;
-  cv::Mat _current_image;
+  //ds DEPRECATED
   Count _cv_wait_key_timeout_milliseconds;
+
+  //! @brief viewer window title
   const std::string _window_name;
+
+  //! @brief mutex for data exchange, owned by the viewer
+  std::mutex _mutex_data_exchange;
+
+  //! @brief active framepoint vector copy from tracker (updated with update method)
+  std::vector<const FramePoint*> _active_framepoints;
+
+  //! @brief currently displayed image
+  cv::Mat _current_image;
 };
 }

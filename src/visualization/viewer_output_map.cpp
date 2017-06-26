@@ -158,9 +158,9 @@ namespace proslam {
 
       //ds check if we have a keyframe and drawing is enabled
       if (frame_to_draw->isKeyframe() && _local_maps_drawn) {
-        drawFrame(frame_to_draw, Vector3(0.5, 0.5, 1));
+        drawFrame(frame_to_draw, Vector3(0, 0, 1));
       } else if (_frames_drawn) {
-        drawFrame(frame_to_draw, Vector3(0.75, 0.75, 1));
+        drawFrame(frame_to_draw, Vector3(0, 0, 1));
       }
       frame_to_draw = frame_to_draw->next();
     }

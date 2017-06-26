@@ -7,7 +7,7 @@ namespace proslam {
   class ViewerOutputMap: public srrg_core_viewers::SimpleViewer {
   public:
     ViewerOutputMap(WorldMap* context_ = 0,
-                    const real& object_scale_ = 0.1,
+                    const real& object_scale_ = 0.25,
                     const std::string& window_name_ = "output: map");
 
     inline bool landmarksDrawn() const {return _landmarks_drawn;}
@@ -41,13 +41,13 @@ namespace proslam {
 
     WorldMap* _context;
     TransformMatrix3D _camera_left_to_robot = TransformMatrix3D::Identity();
-    bool _frames_drawn       = true;
+    bool _frames_drawn       = false;
     bool _local_maps_drawn   = true;
     bool _landmarks_drawn    = true;
     bool _follow_robot       = true;
     bool _ground_truth_drawn = false;
     bool _is_open            = true;
-    real _object_scale = 0.1;
+    real _object_scale = 0.25;
     real _point_size   = 2;
     TransformMatrix3D _world_to_robot_origin = TransformMatrix3D::Identity();
     TransformMatrix3D _rotation_robot_view   = TransformMatrix3D::Identity();

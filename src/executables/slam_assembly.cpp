@@ -245,7 +245,7 @@ namespace proslam {
     if (_parameters->command_line_parameters->option_use_gui && _world_map) {
       _ui_server = ui_server_;
       _viewer_input_images = new ViewerInputImages("input: images");
-      _context_viewer_bird = new ViewerOutputMap(_world_map, 0.1, "output: map (bird view)");
+      _context_viewer_bird = new ViewerOutputMap(_world_map, 0.25, "output: map (bird view)");
       _context_viewer_bird->setCameraLeftToRobot(_camera_left->cameraToRobot());
 
       //ds orientation flip for proper camera following

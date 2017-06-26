@@ -16,9 +16,6 @@ namespace proslam {
         appearances.clear();
       }
       ~State() {
-        for (const HBSTNode::Matchable* matchable: appearances) {
-          delete matchable;
-        }
         appearances.clear();
       }
 

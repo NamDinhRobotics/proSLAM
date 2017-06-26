@@ -2,30 +2,39 @@
 
 namespace proslam {
 
-ViewerInputImages::ViewerInputImages(const std::string& window_name_): _current_frame(0),
-                                                                       _cv_wait_key_timeout_milliseconds(0),
+ViewerInputImages::ViewerInputImages(const std::string& window_name_): _cv_wait_key_timeout_milliseconds(0),
                                                                        _window_name(window_name_) {
+  _active_framepoints.clear();
   LOG_INFO(std::cerr << "switched to stepwise mode (press backspace for switch, press space for stepping)" << std::endl)
+}
+
+ViewerInputImages::~ViewerInputImages() {
+
+  //ds release framepoint copy handle
+  _active_framepoints.clear();
+
+  //ds release cv window
+  cv::destroyWindow(_window_name);
 }
 
 void ViewerInputImages::update(const Frame* frame_) {
 
-  //ds buffer and lock current frame
-  _current_frame = frame_;
+  //ds start data transfer (this will lock the calling thread if the GUI is busy) - released when the function is quit
+  std::lock_guard<std::mutex> lock(_mutex_data_exchange);
+
+  //ds buffer current framepoints to enable lockless display
+  _active_framepoints.clear();
+  _active_framepoints.reserve(frame_->activePoints().size());
+  _active_framepoints.insert(_active_framepoints.end(), frame_->activePoints().begin(), frame_->activePoints().end());
 
   //ds set current image
-  cv::cvtColor(_current_frame->intensityImageLeft(), _current_image, CV_GRAY2RGB);
+  cv::cvtColor(frame_->intensityImageLeft(), _current_image, CV_GRAY2RGB);
 }
 
 void ViewerInputImages::drawFeatures() {
 
-  //ds check if we have an active frame
-  if (! _current_frame) {
-    return;
-  }
-
   //ds for all points in the current frame
-  for (const FramePoint* point: _current_frame->activePoints()) {
+  for (const FramePoint* point: _active_framepoints) {
 
     //ds if the point is linked to a landmark
     if (point->landmark()) {
@@ -55,11 +64,7 @@ void ViewerInputImages::drawFeatures() {
       //ds draw reprojection circle - if valid
       if (point->reprojectionCoordinatesLeft().x() > 0 || point->reprojectionCoordinatesLeft().y() > 0) {
         cv::circle(_current_image, cv::Point(point->reprojectionCoordinatesLeft().x(), point->reprojectionCoordinatesLeft().y()), 4, color);
-        cv::circle(_current_image, cv::Point(point->reprojectionCoordinatesRight().x()+_current_frame->cameraLeft()->imageCols(), point->reprojectionCoordinatesRight().y()), 4, color);
-      } /*else {
-        cv::circle(_current_image, cv::Point(point->imageCoordinates().x(), point->imageCoordinates().y()), 4, CV_COLOR_CODE_RED);
-        cv::circle(_current_image, cv::Point(point->imageCoordinatesExtra().x()+current_frame->camera()->imageCols(), point->imageCoordinatesExtra().y()), 4, CV_COLOR_CODE_RED);
-      }*/
+      }
 
       //ds draw the point
       cv::circle(_current_image, cv::Point(point->imageCoordinatesLeft().x(), point->imageCoordinatesLeft().y()), 2, color, -1);
@@ -68,9 +73,9 @@ void ViewerInputImages::drawFeatures() {
 }
 
 void ViewerInputImages::drawFeatureTracking() {
-  if (! _current_frame)
-    return;
-  for (const FramePoint* frame_point: _current_frame->activePoints()) {
+
+  //ds for all points in the current frame
+  for (const FramePoint* frame_point: _active_framepoints) {
     if (frame_point->landmark()) {
 
       //ds compute intensity -> old landmarks appear brighter
