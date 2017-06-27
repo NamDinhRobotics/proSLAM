@@ -43,16 +43,44 @@ int32_t main(int32_t argc_, char** argv_) {
 
       //ds initialize GUI
       slam_system.initializeGUI(ui_server);
-    }
 
-    //ds start message playback - blocks until dataset is completed or aborted
-    slam_system.playbackMessageFile();
+      //ds start message playback in separate thread
+      std::thread* system_thread = slam_system.playbackMessageFileInThread();
+
+      //ds enter GUI loop
+      while (slam_system.isViewerOpen()) {
+
+        //ds breathe (maximum GUI speed: 100 fps)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+        //ds draw current state
+        slam_system.draw();
+      }
+
+      //ds close all windows
+      cv::destroyAllWindows();
+      ui_server->closeAllWindows();
+      ui_server->quit();
+
+      //ds signal termination request (no effect if processing has already terminated)
+      slam_system.requestTermination();
+
+      //ds join system thread
+      LOG_INFO(std::cerr << "main|joining thread: system" << std::endl)
+      system_thread->join();
+      delete system_thread;
+      LOG_INFO(std::cerr << "main|all threads successfully joined" << std::endl)
+    } else {
+
+      //ds plain full-speed message playback
+      slam_system.playbackMessageFile();
+    }
 
     //ds print full report
     slam_system.printReport();
 
     //ds save trajectory to disk
-    slam_system.worldMap()->writeTrajectory("trajectory.txt");
+    slam_system.writeTrajectory("trajectory.txt");
   } catch (const std::runtime_error& exception_) {
     LOG_ERROR(std::cerr << "main|caught exception '" << exception_.what() << "'" << std::endl)
     delete parameters;
@@ -62,6 +90,6 @@ int32_t main(int32_t argc_, char** argv_) {
   //ds clean up dynamic memory
   delete parameters;
 
-  //ds exit in GUI, keeping active viewers open (directly returns without GUI option)
-  return slam_system.closeGUI();
+  //ds done
+  return 0;
 }

@@ -1,6 +1,6 @@
 add_library(srrg_proslam_visualization_library
-  viewer_input_images.cpp
-  viewer_output_map.cpp
+  image_viewer.cpp
+  map_viewer.cpp
 )
 
 target_link_libraries(srrg_proslam_visualization_library

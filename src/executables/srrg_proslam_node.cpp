@@ -216,7 +216,6 @@ int32_t main(int32_t argc_, char** argv_) {
 
   //ds initialize gui
   slam_system.initializeGUI(ui_server);
-  if (slam_system.viewerInputImages()) slam_system.viewerInputImages()->switchMode();
 
   //ds set up subscribers
   message_filters::Subscriber<sensor_msgs::Image> subscriber_image_left(node, parameters->command_line_parameters->topic_image_left, 5);
@@ -245,7 +244,7 @@ int32_t main(int32_t argc_, char** argv_) {
 
     //ds start processing loop
     LOG_INFO(std::cerr << "main|starting processing loop" << std::endl)
-    while (ros::ok() && slam_system.isGUIRunning()) {
+    while (ros::ok()) {
 
       //ds trigger callbacks
       ros::spinOnce();
@@ -353,25 +352,6 @@ int32_t main(int32_t argc_, char** argv_) {
       if (total_duration_seconds_current > measurement_interval_seconds) {
 
         //ds runtime info - depending on set modes
-        if (parameters->command_line_parameters->option_use_relocalization) {
-          LOG_INFO(std::printf("main|processed frames: %5lu|landmarks: %6lu|local maps: %4lu (%3.2f)|closures: %3lu (%3.2f)|current fps: %5.2f (%3lu/%3.2fs)\n",
-                      slam_system.worldMap()->frames().size(),
-                      slam_system.worldMap()->landmarks().size(),
-                      slam_system.worldMap()->localMaps().size(),
-                      slam_system.worldMap()->localMaps().size()/static_cast<proslam::real>(slam_system.worldMap()->frames().size()),
-                      slam_system.worldMap()->numberOfClosures(),
-                      slam_system.worldMap()->numberOfClosures()/static_cast<proslam::real>(slam_system.worldMap()->localMaps().size()),
-                      number_of_frames_current_window/total_duration_seconds_current,
-                      number_of_frames_current_window,
-                      total_duration_seconds_current))
-        } else {
-          LOG_INFO(std::printf("main|processed frames: %5lu|landmarks: %6lu|current fps: %5.2f (%3lu/%3.2fs)\n",
-                      slam_system.worldMap()->frames().size(),
-                      slam_system.worldMap()->landmarks().size(),
-                      number_of_frames_current_window/total_duration_seconds_current,
-                      number_of_frames_current_window,
-                      total_duration_seconds_current))
-        }
 
   //      std::cerr << "fps: " << number_of_frames_current_window/total_duration_seconds_current << std::endl;
 
@@ -398,5 +378,5 @@ int32_t main(int32_t argc_, char** argv_) {
   delete parameters;
 
   //ds exit in GUI
-  return slam_system.closeGUI(ros::ok());
+  return ros::ok();
 }

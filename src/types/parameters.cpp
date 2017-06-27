@@ -6,7 +6,7 @@ namespace proslam {
   //ds statics
   Count Parameters::_number_of_instances = 0;
   std::string ParameterCollection::banner =
-  "\n=======================================================================================================================\n"
+  "\n" SUPERDUPER_BAR "\n"
   "srrg_proslam_app: simple SLAM application\n"
   "usage: srrg_proslam_app [options] <dataset>\n"
   "\n"
@@ -27,7 +27,7 @@ namespace proslam {
   "-equalize-histogram (-eh):               equalize stereo image histogram before processing\n"
   "-undistort-rectify (-ur):                undistorts and rectifies input images based on camera info\n"
   "-landmark-recovery (-lr):                enables landmark track recovery\n"
-  "=======================================================================================================================";
+  SUPERDUPER_BAR;
 
   //! @brief macro wrapping the YAML node parsing for a single parameter
   //! @param YAML_NODE the target root YAML node
@@ -47,7 +47,7 @@ namespace proslam {
 
   //ds Command line
   void CommandLineParameters::print() const {
-    std::cerr << "=======================================================================================================================" << std::endl;
+    std::cerr << SUPERDUPER_BAR << std::endl;
     std::cerr << "running with command line parameters:" << std::endl;
     if (filename_configuration.length() > 0) {
     std::cerr << "-configuration (-c)            '" << filename_configuration << "'" << std::endl;
@@ -71,7 +71,7 @@ namespace proslam {
     if (filename_dataset.length() > 0) {
     std::cerr << "-dataset                       '" << filename_dataset  << "'" << std::endl;
     }
-    std::cerr << "=======================================================================================================================" << std::endl;
+    std::cerr << SUPERDUPER_BAR << std::endl;
   }
 
 

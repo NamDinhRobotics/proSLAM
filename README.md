@@ -108,18 +108,18 @@ The folder should now contain 4 files (.txt) and 1 folder (.txt.d) plus the tarb
 ---
 3) run the system directly in the folder (`rosrun` is used for convenience only, the binary can also be launched normally with `./srrg_proslam_app`):
 
-    rosrun srrg_proslam srrg_proslam_app 00.txt -use-gui -show-top
+    rosrun srrg_proslam srrg_proslam_app 00.txt -use-gui
 
-Three windows will pop up - "input: images", "output: map (bird view)" and "output: map (top view)"
-
----
-4) press `[Backspace]` on the input window to toggle between automatic processing and stepwise (press `[Space]` for stepping) mode
+Two windows will pop up - "input: images" (OpenCV), "output: map" (OpenGL)
 
 ---
-5) press `[H]` to view the available commands for the output windows (Number keys `1`-`8`)
+4) press `[Space]` on the "output: map" window to toggle between automatic processing and stepwise (press `[ARROW_UP]` for stepping) mode
 
 ---
-6) press `[Esc]` to terminate the system prematurely` (in an input or output window)
+5) press `[H]` to view the available commands for the "output: map" viewer (Number keys `1`-`8`)
+
+---
+6) press `[Esc]` to terminate the system prematurely
 
 ---
 7) to see the raw system performance simply launch srrg_proslam without any parameters other than the input dataset:
@@ -157,10 +157,9 @@ The ROS node (`srrg_proslam_node`) is currently under development.
 
 ProSLAM supports classic YAML configuration files, enabling fine-grained adjustment of deep system parameters. <br/>
 Example configuration files can be found in the `configurations` folder. <br/>
-Upon launch the system scans the working directory for a default configuration file (`configuration.yaml`) and loads it (if none is present, internal default values apply). <br/>
 A custom configuration file can be specified as follows:
 
-    rosrun srrg_proslam srrg_proslam_app 00.txt -c my_configuration.yaml
+    rosrun srrg_proslam srrg_proslam_app 00.txt -c configuration.yaml
 
 ---
 ### It doesn't work? ###
