@@ -57,8 +57,7 @@ int32_t main(int32_t argc_, char** argv_) {
         slam_system.draw();
       }
 
-      //ds close all windows
-      cv::destroyAllWindows();
+      //ds close GL windows
       ui_server->closeAllWindows();
       ui_server->quit();
 
