@@ -7,28 +7,12 @@ namespace proslam {
 //! @class a simple 2D opencv input image viewer class for processing display
 class ImageViewer {
 
-//ds exports
-public:
-
-  //! @struct thread-safe, drawable container for a FramePoint object
-  struct DrawableFramePoint {
-    PointCoordinates image_coordinates;
-    PointCoordinates reprojection_coordinates;
-    bool has_landmark;
-    bool is_landmark_near;
-    bool is_valid;
-    bool has_previous;
-    PointCoordinates image_coordinates_previous;
-    bool is_merged;
-    real color_intensity;
-  };
-
 //ds object life
 public:
 
   //! @brief default constructor
   //! @brief param[in] window_name_ target window title of the OpenCV window
-  ImageViewer(const std::string& window_title_ = "input: images");
+  ImageViewer(const std::string& window_title_ = "input: images [OpenCV]");
 
   //! @brief default destructor
   ~ImageViewer();
@@ -36,11 +20,11 @@ public:
 //ds access
 public:
 
-  //! @brief GUI update function, copies framepoints from provided frame into thread-safe, drawable containers
+  //! @brief GUI update function, copies framepoints from provided frame into thread-safe, drawable containers  - LOCKING
   //! @param[in] frame_ the frame to display
   void update(const Frame* frame_);
 
-  //! @brief draw function
+  //! @brief draw function - LOCKING
   void draw();
 
 //ds helpers
@@ -61,8 +45,8 @@ protected:
   //! @brief mutex for data exchange, owned by the viewer
   std::mutex _mutex_data_exchange;
 
-  //! @brief active framepoint vector copy from tracker (updated with update method)
-  std::vector<DrawableFramePoint> _active_framepoints;
+  //! @brief current frame handle (drawn in draw function)
+  const Frame* _current_frame;
 
   //! @brief currently displayed image
   cv::Mat _current_image;

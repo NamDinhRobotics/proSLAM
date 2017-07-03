@@ -4,16 +4,13 @@
 
 namespace proslam {
 
-ImageViewer::ImageViewer(const std::string& window_title_): _window_title(window_title_) {
-  _active_framepoints.clear();
+ImageViewer::ImageViewer(const std::string& window_title_): _window_title(window_title_),
+                                                            _current_frame(0) {
   LOG_DEBUG(std::cerr << "ImageViewer::ImageViewer|constructed" << std::endl)
 }
 
 ImageViewer::~ImageViewer() {
   LOG_DEBUG(std::cerr << "ImageViewer::~ImageViewer|destroying" << std::endl)
-
-  //ds release framepoint copy handle
-  _active_framepoints.clear();
 
   //ds release cv window
   cv::destroyWindow(_window_title);
@@ -25,29 +22,8 @@ void ImageViewer::update(const Frame* frame_) {
   //ds start data transfer (this will lock the calling thread if the GUI is busy) - released when the function is quit
   std::lock_guard<std::mutex> lock(_mutex_data_exchange);
 
-  //ds buffer current framepoints to enable lockless display
-  _active_framepoints.resize(frame_->activePoints().size());
-  for (Index index = 0; index < frame_->activePoints().size(); ++index) {
-    const FramePoint* framepoint = frame_->activePoints()[index];
-    _active_framepoints[index].image_coordinates          = framepoint->imageCoordinatesLeft();
-    _active_framepoints[index].reprojection_coordinates   = framepoint->reprojectionCoordinatesLeft();
-    _active_framepoints[index].has_landmark               = framepoint->landmark();
-
-    if (framepoint->landmark()) {
-      _active_framepoints[index].is_landmark_near = framepoint->landmark()->isNear();
-      _active_framepoints[index].is_valid         = framepoint->landmark()->areCoordinatesValidated();
-      _active_framepoints[index].is_merged        = (framepoint->landmark()->isInLoopClosureQuery() || framepoint->landmark()->isInLoopClosureReference());
-    }
-    else {
-      _active_framepoints[index].is_valid  = false;
-      _active_framepoints[index].is_merged = false;
-    }
-
-    _active_framepoints[index].has_previous = framepoint->previous();
-    if (framepoint->previous()) {_active_framepoints[index].image_coordinates_previous = framepoint->previous()->imageCoordinatesLeft();}
-
-    _active_framepoints[index].color_intensity = std::min(static_cast<real>(1.0), framepoint->trackLength()/static_cast<real>(25));
-  }
+  //ds update handle
+  _current_frame = frame_;
 
   //ds set current image
   cv::cvtColor(frame_->intensityImageLeft(), _current_image, CV_GRAY2RGB);
@@ -55,11 +31,11 @@ void ImageViewer::update(const Frame* frame_) {
 
 void ImageViewer::draw() {
 
+  //ds lock data transfer while drawing
+  std::lock_guard<std::mutex> lock(_mutex_data_exchange);
+
   //ds if a valid image is set
   if (!_current_image.empty()) {
-
-    //ds lock data transfer while drawing
-    std::lock_guard<std::mutex> lock(_mutex_data_exchange);
 
     //ds draw framepoints
     _drawPoints();
@@ -74,56 +50,63 @@ void ImageViewer::draw() {
 }
 
 void ImageViewer::_drawPoints() {
+  if (_current_frame) {
 
-  //ds for all points in the current frame
-  for (const DrawableFramePoint& point: _active_framepoints) {
+    //ds for all points in the current frame
+    for (const FramePoint* point: _current_frame->activePoints()) {
 
-    //ds if the point is linked to a landmark
-    if (point.has_landmark) {
-      cv::Scalar color = CV_COLOR_CODE_WHITE;
+      //ds if the point is linked to a landmark
+      if (point->landmark()) {
+        cv::Scalar color = CV_COLOR_CODE_WHITE;
 
-      //ds check validity
-      if (point.is_valid) {
+        //ds check validity
+        if (point->landmark()->areCoordinatesValidated()) {
 
-        //ds check landmark kind: by vision or by depth
-        if (point.is_landmark_near) {
-          color = cv::Scalar(100+point.color_intensity*155, 0, 0);
+          //ds compute intensity
+          const real color_intensity = std::min(static_cast<real>(1.0), point->trackLength()/static_cast<real>(25));
+
+          //ds check landmark kind: by vision or by depth
+          if (point->landmark()->isNear()) {
+            color = cv::Scalar(100+color_intensity*155, 0, 0);
+          } else {
+            color = cv::Scalar(100+color_intensity*155, 0, 100+color_intensity*155);
+          }
         } else {
-          color = cv::Scalar(100+point.color_intensity*155, 0, 100+point.color_intensity*155);
+          color = CV_COLOR_CODE_RED;
         }
-      } else {
-        color = CV_COLOR_CODE_RED;
-      }
 
-      //ds check if the landmark is part of a loop closure
-      if (point.is_merged) {
-        color = CV_COLOR_CODE_DARKGREEN;
-      }
+        //ds check if the landmark is part of a loop closure
+        if (point->landmark()->isInLoopClosureQuery() || point->landmark()->isInLoopClosureReference()) {
+          color = CV_COLOR_CODE_DARKGREEN;
+        }
 
-      //ds draw reprojection circle - if valid
-      if (point.reprojection_coordinates.x() > 0 || point.reprojection_coordinates.y() > 0) {
-        cv::circle(_current_image, cv::Point(point.reprojection_coordinates.x(), point.reprojection_coordinates.y()), 4, color);
-      }
+        //ds draw reprojection circle - if valid
+        if (point->reprojectionCoordinatesLeft().x() > 0 || point->reprojectionCoordinatesLeft().y() > 0) {
+          cv::circle(_current_image, cv::Point(point->reprojectionCoordinatesLeft().x(), point->reprojectionCoordinatesLeft().y()), 4, color);
+        }
 
-      //ds draw the point
-      cv::circle(_current_image, cv::Point(point.image_coordinates.x(), point.image_coordinates.y()), 2, color, -1);
+        //ds draw the point
+        cv::circle(_current_image, cv::Point(point->imageCoordinatesLeft().x(), point->imageCoordinatesLeft().y()), 2, color, -1);
+      }
     }
   }
 }
 
 void ImageViewer::_drawTracking() {
+  if (_current_frame) {
 
-  //ds for all points in the current frame
-  for (const DrawableFramePoint& point: _active_framepoints) {
-    if (point.has_landmark) {
-      const cv::Point current_point(point.image_coordinates.x(), point.image_coordinates.y());
-      const cv::Point previous_point(point.image_coordinates_previous.x(), point.image_coordinates_previous.y());
-      cv::line(_current_image, current_point, previous_point, cv::Scalar(0, 100+point.color_intensity*155, 0));
-    } else if (point.has_previous) {
-      const cv::Point current_point(point.image_coordinates.x(), point.image_coordinates.y());
-      const cv::Point previous_point(point.image_coordinates_previous.x(), point.image_coordinates_previous.y());
-      cv::circle(_current_image, current_point, 1, CV_COLOR_CODE_GREEN, -1);
-      cv::line(_current_image, current_point, previous_point, CV_COLOR_CODE_GREEN);
+    //ds for all points in the current frame
+    for (const FramePoint* point: _current_frame->activePoints()) {
+      if (point->landmark()) {
+        const cv::Point current_point(point->imageCoordinatesLeft().x(), point->imageCoordinatesLeft().y());
+        const cv::Point previous_point(point->previous()->imageCoordinatesLeft().x(), point->previous()->imageCoordinatesLeft().y());
+        cv::line(_current_image, current_point, previous_point, CV_COLOR_CODE_GREEN);
+      } else if (point->previous()) {
+        const cv::Point current_point(point->imageCoordinatesLeft().x(), point->imageCoordinatesLeft().y());
+        const cv::Point previous_point(point->previous()->imageCoordinatesLeft().x(), point->previous()->imageCoordinatesLeft().y());
+        cv::circle(_current_image, current_point, 1, CV_COLOR_CODE_GREEN, -1);
+        cv::line(_current_image, current_point, previous_point, CV_COLOR_CODE_GREEN);
+      }
     }
   }
 }

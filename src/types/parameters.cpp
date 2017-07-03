@@ -3,10 +3,9 @@
 
 namespace proslam {
 
-  //ds statics
   Count Parameters::_number_of_instances = 0;
   std::string ParameterCollection::banner =
-  "\n" SUPERDUPER_BAR "\n"
+  "\n" DOUBLE_BAR "\n"
   "srrg_proslam_app: simple SLAM application\n"
   "usage: srrg_proslam_app [options] <dataset>\n"
   "\n"
@@ -26,8 +25,8 @@ namespace proslam {
   "-drop-framepoints (-df):                 deallocation of past framepoints at runtime (reduces memory demand)\n"
   "-equalize-histogram (-eh):               equalize stereo image histogram before processing\n"
   "-undistort-rectify (-ur):                undistorts and rectifies input images based on camera info\n"
-  "-landmark-recovery (-lr):                enables landmark track recovery\n"
-  SUPERDUPER_BAR;
+  "-recover-landmarks (-rl):                enables landmark track recovery\n"
+  DOUBLE_BAR;
 
   //! @brief macro wrapping the YAML node parsing for a single parameter
   //! @param YAML_NODE the target root YAML node
@@ -45,9 +44,8 @@ namespace proslam {
     LOG_WARNING(std::cerr << "unable to parse parameter: '" << #STRUCT_NAME << ": " << #PARAMETER_NAME << "' (exception: '" << exception_.what() << "')" << std::endl) \
   }
 
-  //ds Command line
   void CommandLineParameters::print() const {
-    std::cerr << SUPERDUPER_BAR << std::endl;
+    std::cerr << DOUBLE_BAR << std::endl;
     std::cerr << "running with command line parameters:" << std::endl;
     if (filename_configuration.length() > 0) {
     std::cerr << "-configuration (-c)            '" << filename_configuration << "'" << std::endl;
@@ -68,13 +66,12 @@ namespace proslam {
     std::cerr << "-drop-framepoints (-df)        " << option_drop_framepoints << std::endl;
     std::cerr << "-equalize-histogram (-eh)      " << option_equalize_histogram << std::endl;
     std::cerr << "-undistort-rectify (-ur)       " << option_undistort_and_rectify << std::endl;
+    std::cerr << "-recover-landmarks (-rl)       " << option_recover_landmarks << std::endl;
     if (filename_dataset.length() > 0) {
     std::cerr << "-dataset                       '" << filename_dataset  << "'" << std::endl;
     }
-    std::cerr << SUPERDUPER_BAR << std::endl;
+    std::cerr << DOUBLE_BAR << std::endl;
   }
-
-
 
   void AlignerParameters::print() const {
     std::cerr << "AlignerParameters::print|maximum_error_kernel: " << maximum_error_kernel << std::endl;
@@ -82,9 +79,6 @@ namespace proslam {
     std::cerr << "AlignerParameters::print|minimum_inlier_ratio: " << minimum_inlier_ratio << std::endl;
   }
 
-
-
-  //ds Types
   void LandmarkParameters::print() const {
     std::cerr << "LandmarkParameters::print|minimum_number_of_forced_updates: " << minimum_number_of_forced_updates << std::endl;
     std::cerr << "LandmarkParameters::print|maximum_translation_error_to_depth_ratio: " << maximum_translation_error_to_depth_ratio << std::endl;
@@ -102,9 +96,6 @@ namespace proslam {
     local_map->print();
   }
 
-
-
-  //ds Framepoint estimation
   void BaseFramepointGeneratorParameters::print() const {
     std::cerr << "BaseFramepointGeneratorParameters::print|target_number_of_keypoints_tolerance: " << target_number_of_keypoints_tolerance << std::endl;
     std::cerr << "BaseFramepointGeneratorParameters::print|detector_threshold: " << detector_threshold << std::endl;
@@ -127,9 +118,6 @@ namespace proslam {
     BaseFramepointGeneratorParameters::print();
   }
 
-
-
-  //ds Motion estimation
   BaseTrackerParameters::BaseTrackerParameters(): aligner(new AlignerParameters()) {
 
     //ds set specific default parameters
@@ -158,9 +146,6 @@ namespace proslam {
     BaseTrackerParameters::print();
   }
 
-
-
-  //ds Relocalization
   void RelocalizerParameters::print() const {
     std::cerr << "RelocalizerParameters::print|preliminary_minimum_interspace_queries: " << preliminary_minimum_interspace_queries << std::endl;
     std::cerr << "RelocalizerParameters::print|preliminary_minimum_matching_ratio: " << preliminary_minimum_matching_ratio << std::endl;
@@ -168,8 +153,6 @@ namespace proslam {
     std::cerr << "RelocalizerParameters::print|minimum_matches_per_correspondence: " << minimum_matches_per_correspondence << std::endl;
     aligner->print();
   }
-
-
 
   ParameterCollection::ParameterCollection(): number_of_parameters_detected(0), number_of_parameters_parsed(0) {
     LOG_DEBUG(std::cerr << "ParameterCollection::ParameterCollection|constructing" << std::endl)
@@ -210,7 +193,7 @@ namespace proslam {
 
     //ds if no configuration file was specified
     if (command_line_parameters->filename_configuration.empty()) {
-      LOG_WARNING(std::cerr << "ParameterCollection::parseParametersFromCommandLine|no configuration file found (running with internal settings)" << std::endl)
+      LOG_WARNING(std::cerr << "ParameterCollection::parseParametersFromCommandLine|no configuration file specified (running with internal settings)" << std::endl)
     } else {
 
       //ds check if specified configuration file is not accessible
@@ -227,7 +210,7 @@ namespace proslam {
       parseFromFile(command_line_parameters->filename_configuration);
     }
 
-    //ds reset and check for other command line parameters, potentially overwritting the ones set in the configuration file
+    //ds reset and check for other command line parameters, potentially OVERWRITING the ones set in the configuration file
     number_of_checked_parameters = 1;
     while (number_of_checked_parameters < argc_) {
       if (!std::strcmp(argv_[number_of_checked_parameters], "-topic-image-left") || !std::strcmp(argv_[number_of_checked_parameters], "-il")){
@@ -268,6 +251,8 @@ namespace proslam {
         command_line_parameters->tracker_mode = CommandLineParameters::TrackerMode::RGB_DEPTH;
       } else if (!std::strcmp(argv_[number_of_checked_parameters], "-use-odometry") || !std::strcmp(argv_[number_of_checked_parameters], "-uo")) {
         command_line_parameters->option_use_odometry = true;
+      } else if (!std::strcmp(argv_[number_of_checked_parameters], "-recover-landmarks") || !std::strcmp(argv_[number_of_checked_parameters], "-rl")) {
+        command_line_parameters->option_recover_landmarks = true;
       } else if (!std::strcmp(argv_[number_of_checked_parameters], "-configuration") || !std::strcmp(argv_[number_of_checked_parameters], "-c")){
         number_of_checked_parameters++;
       } else {
@@ -278,16 +263,6 @@ namespace proslam {
 
     //ds generate tracker mode specific parameters (no effect if configuration file and tracker mode not overwritten)
     setMode(command_line_parameters->tracker_mode);
-
-    //ds reset and check for mode specific command line parameters
-    number_of_checked_parameters = 1;
-    while (number_of_checked_parameters < argc_) {
-     if (!std::strcmp(argv_[number_of_checked_parameters], "-landmark-recovery") || !std::strcmp(argv_[number_of_checked_parameters], "-lr")) {
-        if (stereo_tracker_parameters) {stereo_tracker_parameters->enable_landmark_recovery = true;}
-        else if (depth_tracker_parameters) {depth_tracker_parameters->enable_landmark_recovery = true;}
-      }
-      number_of_checked_parameters++;
-    }
 
     //ds validate input parameters and exit on failure
     validateParameters();
@@ -326,6 +301,7 @@ namespace proslam {
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_drop_framepoints, bool)
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_equalize_histogram, bool)
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_undistort_and_rectify, bool)
+      PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_recover_landmarks, bool)
 
       //Types
       PARSE_PARAMETER(configuration, world_map, world_map_parameters, minimum_distance_traveled_for_local_map, real)
@@ -455,11 +431,13 @@ namespace proslam {
       case CommandLineParameters::TrackerMode::RGB_STEREO: {
         if (!stereo_framepoint_generator_parameters) {stereo_framepoint_generator_parameters = new StereoFramePointGeneratorParameters();}
         if (!stereo_tracker_parameters) {stereo_tracker_parameters = new StereoTrackerParameters();}
+        if (command_line_parameters->option_recover_landmarks) {stereo_tracker_parameters->enable_landmark_recovery = true;}
         break;
       }
       case CommandLineParameters::TrackerMode::RGB_DEPTH: {
         if (!depth_framepoint_generator_parameters) {depth_framepoint_generator_parameters = new DepthFramePointGeneratorParameters();}
         if (!depth_tracker_parameters) {depth_tracker_parameters = new DepthTrackerParameters();}
+        if (command_line_parameters->option_recover_landmarks) {depth_tracker_parameters->enable_landmark_recovery = true;}
         break;
       }
       default: {

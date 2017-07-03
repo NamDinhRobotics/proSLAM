@@ -1,7 +1,6 @@
 #include "map_viewer.h"
 
 #include "srrg_gl_helpers/opengl_primitives.h"
-#include "types/local_map.h"
 
 namespace proslam {
 
@@ -9,8 +8,12 @@ namespace proslam {
   using namespace srrg_core_viewers;
 
   MapViewer::MapViewer(const real& object_scale_,
-                       const std::string& window_title_): _iterator_permanent_frame_update(0),
-                                                          _iterator_permanent_landmark_update(0),
+                       const std::string& window_title_): _world_map(0),
+                                                          _current_frame(0),
+                                                          _frames_drawn(true),
+                                                          _landmarks_drawn(true),
+                                                          _follow_robot(true),
+                                                          _ground_truth_drawn(false),
                                                           _option_stepwise_playback(true),
                                                           _object_scale(object_scale_),
                                                           _point_size(2),
@@ -34,161 +37,32 @@ namespace proslam {
     setKeyDescription(Qt::Key_8, "Increases point size by factor 2");
     setKeyDescription(Qt::Key_Space, "Toggles stepwise/benchmark mode");
 
-    _frame_queue_for_local_map.clear();
-    _permanent_frames.clear();
-    _active_framepoints.clear();
-    _tracked_landmarks.clear();
-    _temporary_landmarks.clear();
-    _permanent_landmarks.clear();
-    std::cerr << SUPERDUPER_BAR << std::endl;
+    std::cerr << DOUBLE_BAR << std::endl;
     LOG_INFO(std::cerr << "MapViewer::MapViewer|switched to stepwise mode (press [Space] for switch, press [ARROW_UP] for stepping)" << std::endl)
-    std::cerr << SUPERDUPER_BAR << std::endl;
+    std::cerr << DOUBLE_BAR << std::endl;
     LOG_DEBUG(std::cerr << "MapViewer::MapViewer|constructed" << std::endl)
   }
 
   MapViewer::~MapViewer() {
     LOG_DEBUG(std::cerr << "MapViewer::~MapViewer|destroying" << std::endl)
-    _frame_queue_for_local_map.clear();
-    _permanent_frames.clear();
-    _active_framepoints.clear();
-    _tracked_landmarks.clear();
-    _temporary_landmarks.clear();
-    _permanent_landmarks.clear();
     LOG_DEBUG(std::cerr << "MapViewer::~MapViewer|destroyed" << std::endl)
   }
 
-  void MapViewer::update(const Frame* current_frame_,
-                         const FramePointerVector& frame_queue_for_local_map_,
-                         const FramePointerMap& permanent_frames_,
-                         const std::vector<Landmark*>& tracked_landmarks_,
-                         const LandmarkPointerMap& temporary_landmarks_,
-                         const LandmarkPointerMap& permanent_landmarks_,
-                         const bool& graph_optimized_) {
+  void MapViewer::update(const Frame* frame_) {
 
-    //ds start data transfer (this will lock the calling thread if the GUI is busy) - released when the function is quit
+    //ds start drawing - during that we cannot exchange the container content
     std::lock_guard<std::mutex> lock(_mutex_data_exchange);
 
-    //ds update robot position
-    _world_to_robot = current_frame_->worldToRobot();
-
-    //ds always update frame queue
-    _frame_queue_for_local_map.resize(frame_queue_for_local_map_.size());
-    for (Index index = 0; index < frame_queue_for_local_map_.size(); ++index) {
-      _frame_queue_for_local_map[index].robot_to_world              = frame_queue_for_local_map_[index]->robotToWorld();
-      _frame_queue_for_local_map[index].robot_to_world_ground_truth = frame_queue_for_local_map_[index]->robotToWorldGroundTruth();
-      _frame_queue_for_local_map[index].is_keyframe                 = frame_queue_for_local_map_[index]->isKeyframe();
-      _frame_queue_for_local_map[index].is_closed                   = false;
-    }
-
-    //ds buffer framepoints to draw
-    _active_framepoints.resize(current_frame_->activePoints().size());
-    for (Index index = 0; index < current_frame_->activePoints().size(); ++index) {
-      _active_framepoints[index] = current_frame_->activePoints()[index]->worldCoordinates();
-    }
-
-    //ds buffer tracked landmarks to draw
-    _tracked_landmarks.resize(tracked_landmarks_.size());
-    Count number_of_tracked_landmarks_added = 0;
-    for (Index index = 0; index < tracked_landmarks_.size(); ++index) {
-      if (tracked_landmarks_[index]->areCoordinatesValidated()) {
-        _tracked_landmarks[number_of_tracked_landmarks_added].world_coordinates = tracked_landmarks_[index]->coordinates();
-        _tracked_landmarks[number_of_tracked_landmarks_added].is_near           = tracked_landmarks_[index]->isNear();
-        ++number_of_tracked_landmarks_added;
-      }
-    }
-    _tracked_landmarks.resize(number_of_tracked_landmarks_added);
-
-    //ds buffer temporary landmarks to draw
-    _temporary_landmarks.resize(temporary_landmarks_.size());
-    Count number_of_temporary_landmarks_added = 0;
-    for (LandmarkPointerMap::const_iterator iterator = temporary_landmarks_.begin(); iterator != temporary_landmarks_.end(); iterator++) {
-      if (iterator->second->areCoordinatesValidated()) {
-        _temporary_landmarks[number_of_temporary_landmarks_added].world_coordinates            = iterator->second->coordinates();
-        _temporary_landmarks[number_of_temporary_landmarks_added].is_near                      = iterator->second->isNear();
-        _temporary_landmarks[number_of_temporary_landmarks_added].is_in_loop_closure_query     = iterator->second->isInLoopClosureQuery();
-        _temporary_landmarks[number_of_temporary_landmarks_added].is_in_loop_closure_reference = iterator->second->isInLoopClosureReference();
-        ++number_of_temporary_landmarks_added;
-      }
-    }
-    _temporary_landmarks.resize(number_of_temporary_landmarks_added);
-
-    //ds if the graph was recently optimized
-    if (graph_optimized_) {
-
-      //ds update all frames in the map
-      for (FramePointerMap::const_iterator iterator = permanent_frames_.begin(); iterator != permanent_frames_.end(); iterator++) {
-
-        //ds check if we got a closed frame (keyframe) at hand
-        const bool closed = (iterator->second->isKeyframe() && !iterator->second->localMap()->closures().empty());
-
-        try {
-          _permanent_frames.at(iterator->first).robot_to_world = iterator->second->robotToWorld();
-          _permanent_frames.at(iterator->first).is_closed      = closed;
-        } catch (const std::out_of_range& /*exception*/) {
-          _permanent_frames.insert(std::make_pair(iterator->first, DrawableFrame(iterator->second->robotToWorld(),
-                                                                                 iterator->second->robotToWorldGroundTruth(),
-                                                                                 iterator->second->isKeyframe(),
-                                                                                 closed)));
-        }
-      }
-
-      //ds update all landmarks in the map
-      for (LandmarkPointerMap::const_iterator iterator = permanent_landmarks_.begin(); iterator != permanent_landmarks_.end(); iterator++) {
-        if (iterator->second->areCoordinatesValidated()) {
-          try {
-            _permanent_landmarks.at(iterator->first).world_coordinates            = iterator->second->coordinates();
-            _permanent_landmarks.at(iterator->first).is_near                      = iterator->second->isNear();
-            _permanent_landmarks.at(iterator->first).is_in_loop_closure_query     = iterator->second->isInLoopClosureQuery();
-            _permanent_landmarks.at(iterator->first).is_in_loop_closure_reference = iterator->second->isInLoopClosureReference();
-          } catch (const std::out_of_range& /*exception*/) {
-            _permanent_landmarks.insert(std::make_pair(iterator->first, DrawableLandmark(iterator->second->coordinates(),
-                                                                                   iterator->second->isNear(),
-                                                                                   iterator->second->isInLoopClosureQuery(),
-                                                                                   iterator->second->isInLoopClosureReference())));
-          }
-        }
-      }
-    } else {
-
-      //ds check if we have to initialize the iterator
-      if (_permanent_frames.empty()) {
-        _iterator_permanent_frame_update = permanent_frames_.begin();
-      }
-
-      //ds only add new frames
-      for (FramePointerMap::const_iterator iterator = _iterator_permanent_frame_update; iterator != permanent_frames_.end(); iterator++) {
-
-        //ds check if we got a closed frame (keyframe) at hand
-        const bool closed = (iterator->second->isKeyframe() && !iterator->second->localMap()->closures().empty());
-        _permanent_frames.insert(std::make_pair(iterator->first, DrawableFrame(iterator->second->robotToWorld(),
-                                                                               iterator->second->robotToWorldGroundTruth(),
-                                                                               iterator->second->isKeyframe(),
-                                                                               closed)));
-      }
-
-      //ds check if we have to initialize the iterator
-      if (_permanent_landmarks.empty()) {
-        _iterator_permanent_landmark_update = permanent_landmarks_.begin();
-      }
-
-      //ds only add new landmarks
-      for (LandmarkPointerMap::const_iterator iterator = _iterator_permanent_landmark_update; iterator != permanent_landmarks_.end(); iterator++) {
-        if (iterator->second->areCoordinatesValidated()) {
-          _permanent_landmarks.insert(std::make_pair(iterator->first, DrawableLandmark(iterator->second->coordinates(),
-                                                                                       iterator->second->isNear(),
-                                                                                       iterator->second->isInLoopClosureQuery(),
-                                                                                       iterator->second->isInLoopClosureReference())));
-        }
-      }
-    }
+    //ds update the current frame
+    _current_frame = frame_;
   }
 
-  void MapViewer::_drawFrame(const DrawableFrame& frame_, const Vector3& color_rgb_) {
+  void MapViewer::_drawFrame(const Frame* frame_, const Vector3& color_rgb_) const {
     glPushMatrix();
-    glMultMatrixf((frame_.robot_to_world*_camera_left_to_robot).cast<float>().data());
+    glMultMatrixf((frame_->robotToWorld()*_camera_left_to_robot).cast<float>().data());
 
     //ds check if the frame is closed and if so highlight it accordingly
-    if (frame_.is_closed) {
+    if (frame_->isKeyframe() && !frame_->localMap()->closures().empty()) {
       glColor3f(0.0, 1.0, 0.0);
     } else {
       glColor3f(color_rgb_.x(), color_rgb_.y(), color_rgb_.z());
@@ -200,7 +74,7 @@ namespace proslam {
 
     //ds draw pure odometry pose in red
     if (_ground_truth_drawn) {
-      const TransformMatrix3D camera_to_world_ground_truth = frame_.robot_to_world_ground_truth*_camera_left_to_robot;
+      const TransformMatrix3D camera_to_world_ground_truth = frame_->robotToWorldGroundTruth()*_camera_left_to_robot;
       glPushMatrix();
       glMultMatrixf(camera_to_world_ground_truth.cast<float>().data());
       glColor3f(1, 0, 0);
@@ -209,55 +83,49 @@ namespace proslam {
     }
   }
 
-  void MapViewer::_drawLandmarks() {
+  void MapViewer::_drawLandmarks() const {
     glBegin(GL_POINTS);
 
     //ds highlight the currently seen landmarks
-    for (const DrawableLandmark& landmark: _tracked_landmarks) {
-      if (landmark.is_near) {
+    for (const Landmark* landmark: _world_map->currentlyTrackedLandmarks()) {
+      if (landmark->isNear()) {
         glColor3f(0, 0, 1);
       } else {
         glColor3f(1, 0, 1);
       }
-      glVertex3f(landmark.world_coordinates.x(), landmark.world_coordinates.y(), landmark.world_coordinates.z());
+      glVertex3f(landmark->coordinates().x(), landmark->coordinates().y(), landmark->coordinates().z());
     }
 
     //ds draw temporary landmarks
-    for (const DrawableLandmark& landmark: _temporary_landmarks) {
-
-      //ds specific coloring for closure landmarks
-      if (landmark.is_in_loop_closure_query) {
-        glColor3f(0, 1, 0);
-      } else if (landmark.is_in_loop_closure_reference) {
-        glColor3f(0, 0.5, 0);
-      } else {
-        glColor3f(0.5, 0.5, 0.5);
-      }
-      glVertex3f(landmark.world_coordinates.x(), landmark.world_coordinates.y(), landmark.world_coordinates.z());
+    for (const LandmarkPointerMapElement& landmark: _world_map->landmarksInWindowForLocalMap()) {
+      glColor3f(0.5, 0.5, 0.5);
+      glVertex3f(landmark.second->coordinates().x(), landmark.second->coordinates().y(), landmark.second->coordinates().z());
     }
 
     //ds draw permanent landmarks
-    for (const std::pair<Identifier, DrawableLandmark>& landmark: _permanent_landmarks) {
+    for (const LandmarkPointerMapElement& landmark: _world_map->landmarks()) {
 
       //ds specific coloring for closure landmarks
-      if (landmark.second.is_in_loop_closure_query) {
+      if (landmark.second->isInLoopClosureQuery()) {
         glColor3f(0, 1.0, 0);
-      } else if (landmark.second.is_in_loop_closure_reference) {
+      } else if (landmark.second->isInLoopClosureReference()) {
         glColor3f(0, 0.5, 0);
       } else {
         glColor3f(0.5, 0.5, 0.5);
       }
-      glVertex3f(landmark.second.world_coordinates.x(), landmark.second.world_coordinates.y(), landmark.second.world_coordinates.z());
+      glVertex3f(landmark.second->coordinates().x(), landmark.second->coordinates().y(), landmark.second->coordinates().z());
     }
     glEnd();
   }
 
-  void MapViewer::_drawFramepoints() {
+  void MapViewer::_drawFramepoints() const {
     glBegin(GL_POINTS);
-      for (const PointCoordinates& world_coordinates: _active_framepoints) {
+    if (_current_frame) {
+      for (const FramePoint* point: _current_frame->activePoints()) {
         glColor3f(0.75, 0.75, 0.75);
-        glVertex3f(world_coordinates.x(), world_coordinates.y(), world_coordinates.z());
+        glVertex3f(point->worldCoordinates().x(), point->worldCoordinates().y(), point->worldCoordinates().z());
       }
+    }
     glEnd();
   }
 
@@ -266,49 +134,57 @@ namespace proslam {
     //ds start drawing - during that we cannot exchange the container content
     std::lock_guard<std::mutex> lock(_mutex_data_exchange);
 
-    //ds no specific lighting
-    glDisable(GL_LIGHTING);
+    //ds if we got a valid handle
+    if (_world_map) {
 
-    //ds set viewpoint
-    TransformMatrix3D world_to_robot(_world_to_robot_origin);
-    if(_follow_robot) {
-      world_to_robot = _robot_viewpoint*_world_to_robot;
-    }
-    glPushMatrix();
-    glMultMatrixf(world_to_robot.cast<float>().data());
-    glPointSize(_point_size);
-    glLineWidth(_object_scale);
+      //ds no specific lighting
+      glDisable(GL_LIGHTING);
+      glDisable(GL_BLEND);
 
-    //ds draw the local map generating head
-    for (const DrawableFrame& frame_for_local_map: _frame_queue_for_local_map) {
-      _drawFrame(frame_for_local_map, Vector3(0, 0, 1));
-    }
+      //ds set viewpoint
+      TransformMatrix3D world_to_robot(_world_to_robot_origin);
+      if(_follow_robot) {
 
-    //ds for all frames in the map - obtain the current root
-    for (const std::pair<Identifier, DrawableFrame>& frame: _permanent_frames) {
+        //ds check if we can get a position update (previous frame is only touched in a map update phase - thread-safe otherwise)
+        if (_current_frame) {
+          _world_to_robot = _current_frame->worldToRobot();
+        }
 
-      //ds check if we have a keyframe and drawing is enabled - change to most visible color based on Qt version
-      if (frame.second.is_keyframe && _local_maps_drawn) {
-#if QT_VERSION >= 0x050000
-      _drawFrame(frame.second, Vector3(0, 0, 1));
-#else
-      _drawFrame(frame.second, Vector3(0.5, 0.5, 1));
-#endif
-      } else if (_frames_drawn) {
-#if QT_VERSION >= 0x050000
-      _drawFrame(frame.second, Vector3(0, 0, 1));
-#else
-      _drawFrame(frame.second, Vector3(0.75, 0.75, 1));
-#endif
+        //ds set ego perspective head
+        world_to_robot = _robot_viewpoint*_world_to_robot;
       }
-    }
+      glPushMatrix();
+      glMultMatrixf(world_to_robot.cast<float>().data());
+      glPointSize(_point_size);
+      glLineWidth(_object_scale);
 
-    //ds if desired, draw landmarks into map
-    if (_landmarks_drawn) {
-      _drawLandmarks();
-      _drawFramepoints();
+      //ds draw the local map generating head
+      for (const Frame* frame_for_local_map: _world_map->frameQueueForLocalMap()) {
+        _drawFrame(frame_for_local_map, Vector3(0, 0, 1));
+      }
+
+      //ds for all frames in the map - obtain the current root
+      const Frame* frame = _world_map->rootFrame();
+      while (frame) {
+
+        //ds check if we have a keyframe and drawing is enabled
+        if (frame->isKeyframe()) {
+          _drawFrame(frame, Vector3(0.5, 0.5, 1));
+        } else if (_frames_drawn) {
+          _drawFrame(frame, Vector3(0.75, 0.75, 1));
+        }
+        frame = frame->next();
+      }
+
+      //ds if desired, draw landmarks into map
+      if (_landmarks_drawn) {
+        _drawLandmarks();
+
+        //ds also draw the framepoints of the current frame
+        _drawFramepoints();
+      }
+      glPopMatrix();
     }
-    glPopMatrix();
   }
 
   void MapViewer::keyPressEvent(QKeyEvent* event_){

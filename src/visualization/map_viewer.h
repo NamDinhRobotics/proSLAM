@@ -3,63 +3,11 @@
 #include <atomic>
 #include <QtGlobal>
 #include "srrg_core_viewers/simple_viewer.h"
-#include "types/frame.h"
-#include "types/landmark.h"
+#include "types/world_map.h"
 
 namespace proslam {
 
 class MapViewer: public srrg_core_viewers::SimpleViewer {
-
-//ds exports
-public:
-
-  //! @struct thread-safe, drawable container for a Landmark object
-  struct DrawableLandmark {
-
-    //! @brief default constructor
-    DrawableLandmark(): world_coordinates(PointCoordinates::Zero()),
-                        is_near(false),
-                        is_in_loop_closure_query(false),
-                        is_in_loop_closure_reference(false) {}
-
-    //! @brief map insert constructor
-    DrawableLandmark(const PointCoordinates& world_coordinates_,
-                     const bool& is_near_,
-                     const bool& is_in_loop_closure_query_,
-                     const bool& is_in_loop_closure_reference_): world_coordinates(world_coordinates_),
-                                                                 is_near(is_near_),
-                                                                 is_in_loop_closure_query(is_in_loop_closure_query_),
-                                                                 is_in_loop_closure_reference(is_in_loop_closure_reference_) {}
-
-    PointCoordinates world_coordinates;
-    bool is_near;
-    bool is_in_loop_closure_query;
-    bool is_in_loop_closure_reference;
-  };
-
-  //! @struct thread-safe, drawable container for a Frame object
-  struct DrawableFrame {
-
-    //! @brief default constructor
-    DrawableFrame(): robot_to_world(TransformMatrix3D::Identity()),
-                     robot_to_world_ground_truth(TransformMatrix3D::Identity()),
-                     is_keyframe(false),
-                     is_closed(false) {}
-
-    //! @brief map insert constructor
-    DrawableFrame(const TransformMatrix3D& robot_to_world_,
-                  const TransformMatrix3D& robot_to_world_ground_truth_,
-                  const bool& is_keyframe_,
-                  const bool& is_closed_): robot_to_world(robot_to_world_),
-                                           robot_to_world_ground_truth(robot_to_world_ground_truth_),
-                                           is_keyframe(is_keyframe_),
-                                           is_closed(is_closed_) {}
-
-    TransformMatrix3D robot_to_world;
-    TransformMatrix3D robot_to_world_ground_truth;
-    bool is_keyframe;
-    bool is_closed;
-  };
 
 //ds object life
 public:
@@ -68,7 +16,7 @@ public:
   //! @brief param[in] object_scale_ global display scale of objects in the map
   //! @brief param[in] window_title_ the GL window title
   MapViewer(const real& object_scale_ = 0.25,
-            const std::string& window_title_ = "output: map");
+            const std::string& window_title_ = "output: map [OpenGL]");
 
   //! @brief default destructor
   ~MapViewer();
@@ -76,24 +24,20 @@ public:
 //ds access
 public:
 
-  //! @brief GUI update function, copies inner objects from provided frame into thread-safe, drawable containers - LOCKING
+  //! @brief GUI update function, copies framepoints from provided frame into thread-safe, drawable containers  - LOCKING
   //! @param[in] frame_ the frame to display
-  //! @param[in] frame_queue_for_local_map_
-  //! @param[in] permanent_frames_
-  //! @param[in] tracked_landmarks_ vector of currently tracked landmarks
-  //! @param[in] temporary_landmarks_
-  //! @param[in] permanent_landmarks_
-  //! @param[in] graph_optimized_
-  void update(const Frame* frame_,
-              const FramePointerVector& frame_queue_for_local_map_,
-              const FramePointerMap& permanent_frames_,
-              const std::vector<Landmark*>& tracked_landmarks_,
-              const LandmarkPointerMap& temporary_landmarks_,
-              const LandmarkPointerMap& permanent_landmarks_,
-              const bool& graph_optimized_ = false);
+  void update(const Frame* frame_);
+
+  //! @brief manual data transfer locking (generally used to block the GUI from drawing during critical operations e.g. global map updates)
+  void lock() {_mutex_data_exchange.lock();}
+
+  //! @brief manual data transfer unlocking (enables the GUI to freely draw again)
+  void unlock() {_mutex_data_exchange.unlock();}
 
 //ds setters/getters
 public:
+
+  void setWorldMap(const WorldMap* world_map_) {_world_map = world_map_;}
 
   inline bool landmarksDrawn() const {return _landmarks_drawn;}
   inline void setLandmarksDrawn(const bool& landmarks_drawn_) {_landmarks_drawn = landmarks_drawn_;}
@@ -125,13 +69,15 @@ protected:
   virtual QString helpString() const;
 
   //! @brief draws frame in the map, differentiating between local map anchors and regular frames
-  void _drawFrame(const DrawableFrame& frame_, const Vector3& color_rgb_);
+  //! @param[in] frame_
+  //! @param[in] color_rgb_
+  void _drawFrame(const Frame* frame_, const Vector3& color_rgb_) const;
 
   //! @brief draws landmark in different states in the map
-  void _drawLandmarks();
+  void _drawLandmarks() const;
 
-  //! @brief draws currently generated framepoints (set with update)
-  void _drawFramepoints();
+  //! @brief draws framepoints for the currently active frame
+  void _drawFramepoints() const;
 
 //ds attributes
 protected:
@@ -139,36 +85,17 @@ protected:
   //! @brief mutex for data exchange, owned by the viewer
   std::mutex _mutex_data_exchange;
 
-  //! @brief frames in current frame queue for local map generation (head)
-  std::vector<DrawableFrame> _frame_queue_for_local_map;
+  //! @brief map context (drawn with draw and updated with update method)
+  const WorldMap* _world_map;
 
-  //! @brief permanent frames in map
-  std::map<Identifier, DrawableFrame> _permanent_frames;
-
-  //! @brief frame iterator at last addition (update call) - assuming that the permanent frame map is consistently growing
-  FramePointerMap::const_iterator _iterator_permanent_frame_update;
-
-  //! @brief active framepoints to be drawn
-  std::vector<PointCoordinates> _active_framepoints;
-
-  //! @brief currently tracked landmarks to be drawn
-  std::vector<DrawableLandmark> _tracked_landmarks;
-
-  //! @brief landmarks in current window for local map creation (not permanent yet)
-  std::vector<DrawableLandmark> _temporary_landmarks;
-
-  //! @brief landmarks which are to remain in the map
-  std::map<Identifier, DrawableLandmark> _permanent_landmarks;
-
-  //! @brief landmark iterator at last addition (update call) - assuming that the permanent landmark map is consistently growing
-  LandmarkPointerMap::const_iterator _iterator_permanent_landmark_update;
+  //! @brief current frame handle (drawn in draw function)
+  const Frame* _current_frame;
 
   //! @brief display options
-  bool _frames_drawn             = false;
-  bool _local_maps_drawn         = true;
-  bool _landmarks_drawn          = true;
-  bool _follow_robot             = true;
-  bool _ground_truth_drawn       = false;
+  bool _frames_drawn;
+  bool _landmarks_drawn;
+  bool _follow_robot;
+  bool _ground_truth_drawn;
 
   //! @brief enable stepwise playback
   std::atomic<bool> _option_stepwise_playback;

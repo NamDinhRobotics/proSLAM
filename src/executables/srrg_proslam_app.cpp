@@ -2,10 +2,7 @@
 
 int32_t main(int32_t argc_, char** argv_) {
 
-  //ds lock opencv to really use only 1 thread
-  cv::setNumThreads(0);
-
-  //ds enable opencv2 optimization
+  //ds enable opencv2 optimizations
   cv::setUseOptimized(true);
 
   //ds allocate the complete parameter collection with default values (will be propagated through the complete SLAM system)
@@ -27,6 +24,10 @@ int32_t main(int32_t argc_, char** argv_) {
   //ds allocate SLAM system (has internal access to parameter server)
   proslam::SLAMAssembly slam_system(parameters);
 
+  //ds dynamic elements (in this scope for cleanup in case an exception occurs)
+  QApplication* gui_server    = 0;
+  std::thread* system_thread = 0;
+
   try {
 
     //ds initialize system for txt_io
@@ -38,28 +39,35 @@ int32_t main(int32_t argc_, char** argv_) {
     //ds if visualization is desired
     if (parameters->command_line_parameters->option_use_gui) {
 
+      //ds enable two opencv threads
+      cv::setNumThreads(2);
+
+      //ds target maximum GUI frequency; 50 fps
+      const proslam::real target_display_frequency  = 50;
+      const int64_t duration_gui_sleep_milliseconds = 1000/target_display_frequency;
+
       //ds allocate a qt UI server in the main scope (required)
-      QApplication* ui_server = new QApplication(argc_, argv_);
+      gui_server = new QApplication(argc_, argv_);
 
       //ds initialize GUI
-      slam_system.initializeGUI(ui_server);
+      slam_system.initializeGUI(gui_server);
 
       //ds start message playback in separate thread
-      std::thread* system_thread = slam_system.playbackMessageFileInThread();
+      system_thread = slam_system.playbackMessageFileInThread();
 
       //ds enter GUI loop
       while (slam_system.isViewerOpen()) {
 
-        //ds breathe (maximum GUI speed: 100 fps)
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        //ds breathe (maximum GUI speed: 50 fps)
+        std::this_thread::sleep_for(std::chrono::milliseconds(duration_gui_sleep_milliseconds));
 
         //ds draw current state
         slam_system.draw();
       }
 
-      //ds close GL windows
-      ui_server->closeAllWindows();
-      ui_server->quit();
+      //ds clean up GL
+      gui_server->closeAllWindows();
+      gui_server->quit();
 
       //ds signal termination request (no effect if processing has already terminated)
       slam_system.requestTermination();
@@ -71,7 +79,10 @@ int32_t main(int32_t argc_, char** argv_) {
       LOG_INFO(std::cerr << "main|all threads successfully joined" << std::endl)
     } else {
 
-      //ds plain full-speed message playback
+      //ds disable opencv multithreading
+      cv::setNumThreads(0);
+
+      //ds plain full-speed message playback in the main thread (blocking)
       slam_system.playbackMessageFile();
     }
 
@@ -81,8 +92,13 @@ int32_t main(int32_t argc_, char** argv_) {
     //ds save trajectory to disk
     slam_system.writeTrajectory("trajectory.txt");
   } catch (const std::runtime_error& exception_) {
-    LOG_ERROR(std::cerr << "main|caught exception '" << exception_.what() << "'" << std::endl)
-    delete parameters;
+    std::cerr << DOUBLE_BAR << std::endl;
+    LOG_ERROR(std::cerr << "main|caught runtime exception '" << exception_.what() << "'" << std::endl)
+    std::cerr << DOUBLE_BAR << std::endl;
+    //ds clean dynamic memory
+    if (parameters) {delete parameters;}
+    if (gui_server) {delete gui_server;}
+    if (system_thread) {delete system_thread;}
     return 0;
   }
 

@@ -62,6 +62,7 @@ namespace proslam {
     bool option_equalize_histogram    = false;
     bool option_undistort_and_rectify = false;
     bool option_use_odometry          = false;
+    bool option_recover_landmarks     = false;
   };
 
 

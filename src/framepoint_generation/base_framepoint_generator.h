@@ -130,7 +130,7 @@ namespace proslam {
     BaseFramepointGeneratorParameters* _parameters;
 
     //ds informative only
-    CREATE_CHRONOMETER(feature_detection)
+    CREATE_CHRONOMETER(keypoint_detection)
     CREATE_CHRONOMETER(descriptor_extraction)
   };
 

@@ -186,14 +186,14 @@ namespace proslam {
         const real percentage_landmarks = static_cast<real>(_number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close)/_number_of_tracked_points;
         if (percentage_landmarks < 0.1) {
           LOG_WARNING(std::cerr << "BaseTracker::compute|low percentage of tracked landmarks over framepoints: " << percentage_landmarks
-                    << " (" << _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close << "/" << _number_of_tracked_points << ")" << std::endl)
+                    << " (landmarks/framepoints: " << _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close << "/" << _number_of_tracked_points << ")" << std::endl)
         }
 
         //ds compute ratio between close and far landmarks
         const real percentage_of_close_landmarks = _number_of_tracked_landmarks_close/static_cast<real>(_number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
         if (percentage_of_close_landmarks < 0.1) {
           LOG_WARNING(std::cerr << "BaseTracker::compute|low percentage of close landmarks available: " << percentage_of_close_landmarks
-                    << " (" << _number_of_tracked_landmarks_far << "/" << _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close << ")" << std::endl)
+                    << " (close/total: " << _number_of_tracked_landmarks_close << "/" << _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close << ")" << std::endl)
         }
 
         //ds derive framepoint weight for current optimization

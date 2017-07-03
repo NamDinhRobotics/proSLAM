@@ -18,7 +18,7 @@ SLAMAssembly::SLAMAssembly(ParameterCollection* parameters_): _parameters(parame
                                                               _ui_server(0),
                                                               _image_viewer(0),
                                                               _map_viewer(0),
-                                                              _context_viewer_top(0),
+                                                              _minimap_viewer(0),
                                                               _is_termination_requested(false),
                                                               _is_viewer_open(false) {
   _relocalizer->configure(_parameters->relocalizer_parameters);
@@ -39,7 +39,7 @@ SLAMAssembly::~SLAMAssembly() {
   //ds free viewers if set
   if (_image_viewer) {delete _image_viewer;}
   if (_map_viewer) {delete _map_viewer;}
-  if (_context_viewer_top) {delete _context_viewer_top;}
+  if (_minimap_viewer) {delete _minimap_viewer;}
   if (_ui_server) {delete _ui_server;}
   _robot_to_world_ground_truth_poses.clear();
 }
@@ -239,8 +239,8 @@ void SLAMAssembly::loadCameras(Camera* camera_left_, Camera* camera_right_) {
 void SLAMAssembly::initializeGUI(QApplication* ui_server_) {
   if (_parameters->command_line_parameters->option_use_gui) {
     _ui_server = ui_server_;
-    _image_viewer = new ImageViewer("input: images");
-    _map_viewer = new MapViewer(0.25, "output: map");
+    _image_viewer = new ImageViewer("input: images [OpenCV]");
+    _map_viewer   = new MapViewer(0.25, "output: map [OpenGL]");
     _map_viewer->setCameraLeftToRobot(_camera_left->cameraToRobot());
 
     //ds orientation flip for proper camera following
@@ -250,21 +250,23 @@ void SLAMAssembly::initializeGUI(QApplication* ui_server_) {
                                        0, 0, -1, 0,
                                        0, 0, 0, 1;
     _map_viewer->setRotationRobotView(orientation_correction);
+    _map_viewer->setWorldMap(_world_map);
     _map_viewer->show();
 
     //ds configure custom top viewer if requested
     if (_parameters->command_line_parameters->option_show_top_viewer) {
-      _context_viewer_top = new MapViewer(1, "output: map (top view)");
-      _context_viewer_top->setCameraLeftToRobot(_camera_left->cameraToRobot());
+      _minimap_viewer = new MapViewer(1, "minimap [OpenGL]");
+      _minimap_viewer->setCameraLeftToRobot(_camera_left->cameraToRobot());
       TransformMatrix3D center_for_kitti_sequence_00;
       center_for_kitti_sequence_00.matrix() << 1, 0, 0, 0,
                                                0, 0, -1, 200,
                                                0, 1, 0, 800,
                                                0, 0, 0, 1;
-      _context_viewer_top->setWorldToRobotOrigin(center_for_kitti_sequence_00);
-      _context_viewer_top->setFollowRobot(false);
-      _context_viewer_top->setWorldToRobotOrigin(orientation_correction*center_for_kitti_sequence_00);
-      _context_viewer_top->show();
+      _minimap_viewer->setWorldToRobotOrigin(center_for_kitti_sequence_00);
+      _minimap_viewer->setFollowRobot(false);
+      _minimap_viewer->setWorldToRobotOrigin(orientation_correction*center_for_kitti_sequence_00);
+      _minimap_viewer->setWorldMap(_world_map);
+      _minimap_viewer->show();
     }
     _is_viewer_open = _map_viewer->isVisible();
   }
@@ -273,13 +275,7 @@ void SLAMAssembly::initializeGUI(QApplication* ui_server_) {
 void SLAMAssembly::updateGUI() {
   if (_parameters->command_line_parameters->option_use_gui) {
     _image_viewer->update(_world_map->currentFrame());
-    _map_viewer->update(_world_map->currentFrame(),
-                        _world_map->frameQueueForLocalMap(),
-                        _world_map->frames(),
-                        _world_map->currentlyTrackedLandmarks(),
-                        _world_map->landmarksInWindowForLocalMap(),
-                        _world_map->landmarks(),
-                        _world_map->relocalized());
+    _map_viewer->update(_world_map->currentFrame());
 
     //ds as long as stepwise playback is desired and no steps are set
     while (_map_viewer->optionStepwisePlayback() && _map_viewer->requestedPlaybackSteps() == 0) {
@@ -309,8 +305,8 @@ void SLAMAssembly::draw() {
   if (_is_viewer_open) {
     _image_viewer->draw();
     _map_viewer->updateGL();
-    if (_context_viewer_top) {
-      _context_viewer_top->updateGL();
+    if (_minimap_viewer) {
+      _minimap_viewer->updateGL();
     }
     _ui_server->processEvents();
   }
@@ -327,8 +323,9 @@ void SLAMAssembly::playbackMessageFile() {
   Count number_of_processed_frames_current = 0;
 
   //ds store start time
-  double time_start_seconds             = srrg_core::getTime();
-  const double time_start_seconds_first = srrg_core::getTime();
+  double time_start_seconds                          = srrg_core::getTime();
+  const double time_start_seconds_first              = srrg_core::getTime();
+  const double runtime_info_update_frequency_seconds = 5;
 
   //ds visualization/start point
   const TransformMatrix3D robot_to_camera_left(_camera_left->robotToCamera());
@@ -405,40 +402,28 @@ void SLAMAssembly::playbackMessageFile() {
       //ds runtime info
       ++number_of_processed_frames_total;
       ++number_of_processed_frames_current;
-      if (number_of_processed_frames_current%100 == 0) {
-
-        //ds compute durations
-        const double total_duration_seconds_current = srrg_core::getTime()-time_start_seconds;
+      const double total_duration_seconds_current = srrg_core::getTime()-time_start_seconds;
+      if (total_duration_seconds_current > runtime_info_update_frequency_seconds) {
 
         //ds runtime info - depending on set modes
         if (_parameters->command_line_parameters->option_use_relocalization) {
-          LOG_INFO(std::printf("SLAMAssembly::playbackMessageFile|processed frames: %5lu"
-                                                                "|landmarks: %6lu"
-                                                                "|local maps: %4lu (%3.2f)"
-                                                                "|closures: %3lu (%3.2f)"
-                                                                "|current fps: %5.2f (%3lu/%3.2fs)\n",
+          LOG_INFO(std::printf("SLAMAssembly::playbackMessageFile|frames: %5lu <FPS: %6.2f>|landmarks: %6lu|local maps: %4lu (%3.2f)|closures: %3lu (%3.2f)\n",
                       number_of_processed_frames_total,
+                      number_of_processed_frames_current/total_duration_seconds_current,
                       _world_map->landmarks().size(),
                       _world_map->localMaps().size(),
                       _world_map->localMaps().size()/static_cast<real>(number_of_processed_frames_total),
                       _world_map->numberOfClosures(),
-                      _world_map->numberOfClosures()/static_cast<real>(_world_map->localMaps().size()),
-                      number_of_processed_frames_current/total_duration_seconds_current,
-                      number_of_processed_frames_current,
-                      total_duration_seconds_current))
+                      _world_map->numberOfClosures()/static_cast<real>(_world_map->localMaps().size())))
         } else {
-          LOG_INFO(std::printf("SLAMAssembly::playbackMessageFile|processed frames: %5lu"
-                                                                "|landmarks: %6lu"
-                                                                "|current fps: %5.2f (%3lu/%3.2fs)\n",
+          LOG_INFO(std::printf("SLAMAssembly::playbackMessageFile|frames: %5lu <FPS: %6.2f>|landmarks: %6lu\n",
                       number_of_processed_frames_total,
-                      _world_map->landmarksInWindowForLocalMap().size(),
                       number_of_processed_frames_current/total_duration_seconds_current,
-                      number_of_processed_frames_current,
-                      total_duration_seconds_current))
+                      _world_map->landmarksInWindowForLocalMap().size()))
         }
 
-        //ds reset stats
-        time_start_seconds = srrg_core::getTime();
+        //ds reset stats for new measurement window
+        time_start_seconds                 = srrg_core::getTime();
         number_of_processed_frames_current = 0;
       }
 
@@ -535,8 +520,18 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
       //ds check if we closed a local map
       if (_world_map->relocalized()) {
 
+        //ds check if we're running with a GUI
+        if (_map_viewer) {
+
+          //ds lock the GUI before the critical phase
+          _map_viewer->lock();
+        }
+
         //ds optimize graph
         _optimizer->optimize(_world_map);
+
+        //ds reenable the GUI
+        if (_map_viewer) {_map_viewer->unlock();}
       }
     }
   } else {
@@ -552,18 +547,18 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
   }
 }
 
-void SLAMAssembly::printReport() {
+void SLAMAssembly::printReport() const {
 
   //ds header
   const Count number_of_processed_frames_total = _world_map->frames().size();
-  std::cerr << "-------------------------------------------------------------------------" << std::endl;
-  std::cerr << "dataset completed" << std::endl;
-  std::cerr << "-------------------------------------------------------------------------" << std::endl;
+  std::cerr << DOUBLE_BAR << std::endl;
+  std::cerr << "performance summary" << std::endl;
+  std::cerr << BAR << std::endl;
 
-  //ds if nothing was processed - exit right away
-  if (number_of_processed_frames_total == 0) {
+  //ds if not at least 2 frames were processed - exit right away
+  if (number_of_processed_frames_total <= 1) {
     std::cerr << "no frames processed" << std::endl;
-    std::cerr << "-------------------------------------------------------------------------" << std::endl;
+    std::cerr << DOUBLE_BAR << std::endl;
     return;
   }
 
@@ -605,30 +600,47 @@ void SLAMAssembly::printReport() {
     std::cerr << "    absolute translation RMSE (m): " << root_mean_squared_error_translation_absolute << std::endl;
     std::cerr << "    relative translation   ME (m): " << mean_error_translation_relative << std::endl;
     std::cerr << "    final translational error (m): " << (_world_map->currentFrame()->robotToWorld().translation()-odometry_robot_to_world_previous_ground_truth.translation()).norm() << std::endl;
+    std::cerr << BAR << std::endl;
   }
 
+  //ds compute trajectory length
+  double trajectory_length = 0;
+  for (FramePointerMapElement frame: _world_map->frames()) {
+    if (frame.second->previous()) {
+      trajectory_length += (frame.second->worldToRobot()*frame.second->previous()->robotToWorld()).translation().norm();
+    }
+  }
+
+  //ds general stats
+  std::cerr << "      total trajectory length (m): " << trajectory_length << std::endl;
   std::cerr << "                     total frames: " << number_of_processed_frames_total << std::endl;
-  std::cerr << "               total duration (s): " << _duration_total_seconds << std::endl;
-  std::cerr << "                      average fps: " << number_of_processed_frames_total/_duration_total_seconds << std::endl;
+  std::cerr << "    total processing duration (s): " << _duration_total_seconds << std::endl;
+  std::cerr << "                      average FPS: " << number_of_processed_frames_total/_duration_total_seconds << std::endl;
+  std::cerr << "          average velocity (km/h): " << 3.6*trajectory_length/_duration_total_seconds << std::endl;
   std::cerr << "average processing time (s/frame): " << _duration_total_seconds/number_of_processed_frames_total << std::endl;
   std::cerr << "average landmarks close per frame: " << _tracker->totalNumberOfLandmarksClose()/number_of_processed_frames_total << std::endl;
   std::cerr << "  average landmarks far per frame: " << _tracker->totalNumberOfLandmarksFar()/number_of_processed_frames_total << std::endl;
   std::cerr << "         average tracks per frame: " << _tracker->totalNumberOfTrackedPoints()/number_of_processed_frames_total << std::endl;
   std::cerr << "        average tracks per second: " << _tracker->totalNumberOfTrackedPoints()/_duration_total_seconds << std::endl;
-  std::cerr << "-------------------------------------------------------------------------" << std::endl;
-  std::cerr << "runtime" << std::endl;
-  std::cerr << "-------------------------------------------------------------------------" << std::endl;
-  std::cerr << "       feature detection: " << _tracker->framepointGenerator()->getTimeConsumptionSeconds_feature_detection()/_duration_total_seconds
-                                           << " (" << _tracker->framepointGenerator()->getTimeConsumptionSeconds_feature_detection() << "s)" << std::endl;
-  std::cerr << "   descriptor extraction: " << _tracker->framepointGenerator()->getTimeConsumptionSeconds_descriptor_extraction()/_duration_total_seconds
-                                           << " (" << _tracker->framepointGenerator()->getTimeConsumptionSeconds_descriptor_extraction() << "s)" << std::endl;
+  std::cerr << BAR << std::endl;
+
+  //ds computational costs
+  std::cerr << std::endl;
+  std::cerr << "time consumption overview - processing units" << std::endl;
+  std::cerr << BAR << std::endl;
+  std::cerr << "           module name | relative | absolute (s)" << std::endl;
+  std::cerr << BAR << std::endl;
+  std::printf("    keypoint detection | %f | %f\n", _tracker->framepointGenerator()->getTimeConsumptionSeconds_keypoint_detection()/_duration_total_seconds,
+                                                         _tracker->framepointGenerator()->getTimeConsumptionSeconds_keypoint_detection());
+  std::printf(" descriptor extraction | %f | %f\n", _tracker->framepointGenerator()->getTimeConsumptionSeconds_descriptor_extraction()/_duration_total_seconds,
+                                                         _tracker->framepointGenerator()->getTimeConsumptionSeconds_descriptor_extraction());
 
   //ds display further information depending on tracking mode
   switch (_parameters->command_line_parameters->tracker_mode){
     case CommandLineParameters::TrackerMode::RGB_STEREO: {
       StereoFramePointGenerator* stereo_framepoint_generator = dynamic_cast<StereoFramePointGenerator*>(_tracker->framepointGenerator());
-      std::cerr << "  stereo keypoint search: " << stereo_framepoint_generator->getTimeConsumptionSeconds_point_triangulation()/_duration_total_seconds
-                << " (" << stereo_framepoint_generator->getTimeConsumptionSeconds_point_triangulation() << "s)" << std::endl;
+      std::printf("stereo keypoint search | %f | %f\n", stereo_framepoint_generator->getTimeConsumptionSeconds_point_triangulation()/_duration_total_seconds,
+                                                             stereo_framepoint_generator->getTimeConsumptionSeconds_point_triangulation());
       break;
     }
     case CommandLineParameters::TrackerMode::RGB_DEPTH: {
@@ -639,19 +651,13 @@ void SLAMAssembly::printReport() {
     }
   }
 
-  std::cerr << "                tracking: " << _tracker->getTimeConsumptionSeconds_tracking()/_duration_total_seconds
-                                           << " (" << _tracker->getTimeConsumptionSeconds_tracking() << "s)" << std::endl;
-  std::cerr << "       pose optimization: " << _tracker->getTimeConsumptionSeconds_pose_optimization()/_duration_total_seconds
-                                           << " (" << _tracker->getTimeConsumptionSeconds_pose_optimization() << "s)" << std::endl;
-  std::cerr << "   landmark optimization: " << _tracker->getTimeConsumptionSeconds_landmark_optimization()/_duration_total_seconds
-                                           << " (" << _tracker->getTimeConsumptionSeconds_landmark_optimization() << "s)" << std::endl;
-  std::cerr << "     framepoint recovery: " << _tracker->getTimeConsumptionSeconds_point_recovery()/_duration_total_seconds
-                                           << " (" << _tracker->getTimeConsumptionSeconds_point_recovery() << "s)" << std::endl;
-  std::cerr << "          relocalization: " << _relocalizer->getTimeConsumptionSeconds_overall()/_duration_total_seconds
-                                           << " (" << _relocalizer->getTimeConsumptionSeconds_overall() << "s)" << std::endl;
-  std::cerr << "              map update: " << _optimizer->getTimeConsumptionSeconds_overall()/_duration_total_seconds
-                                           << " (" << _optimizer->getTimeConsumptionSeconds_overall() << "s)" << std::endl;
-  std::cerr << "-------------------------------------------------------------------------" << std::endl;
+  std::printf("              tracking | %f | %f\n", _tracker->getTimeConsumptionSeconds_tracking()/_duration_total_seconds, _tracker->getTimeConsumptionSeconds_tracking());
+  std::printf("     pose optimization | %f | %f\n", _tracker->getTimeConsumptionSeconds_pose_optimization()/_duration_total_seconds, _tracker->getTimeConsumptionSeconds_pose_optimization());
+  std::printf(" landmark optimization | %f | %f\n", _tracker->getTimeConsumptionSeconds_landmark_optimization()/_duration_total_seconds, _tracker->getTimeConsumptionSeconds_landmark_optimization());
+  std::printf("        point recovery | %f | %f\n", _tracker->getTimeConsumptionSeconds_point_recovery()/_duration_total_seconds, _tracker->getTimeConsumptionSeconds_point_recovery());
+  std::printf("        relocalization | %f | %f\n", _relocalizer->getTimeConsumptionSeconds_overall()/_duration_total_seconds, _relocalizer->getTimeConsumptionSeconds_overall());
+  std::printf("            map update | %f | %f\n", _optimizer->getTimeConsumptionSeconds_overall()/_duration_total_seconds, _optimizer->getTimeConsumptionSeconds_overall());
+  std::cerr << DOUBLE_BAR << std::endl;
 }
 
 void SLAMAssembly::reset() {

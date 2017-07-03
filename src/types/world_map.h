@@ -38,7 +38,7 @@ namespace proslam {
     //! @param[in] filename_ text file in which the poses are saved to
     void writeTrajectory(const std::string& filename_ = "") const;
 
-    //! @brief dump trajectory to file (in KITTI benchmark format: 4x4 isometries per line)
+    //! @brief save trajectory to a vector (in KITTI benchmark format: 4x4 isometries per line)
     //! @param[in,out] poses_ vector with poses, set in the function
     template<typename RealType>
     void writeTrajectory(std::vector<Eigen::Matrix<RealType, 4, 4>>& poses_) const {
@@ -73,7 +73,9 @@ namespace proslam {
 
     const LandmarkPointerMap& landmarksInWindowForLocalMap() const {return _landmarks_in_window_for_local_map;}
     LandmarkPointerMap& landmarks() {return _landmarks;}
+    const LandmarkPointerMap& landmarks() const {return _landmarks;}
     std::vector<Landmark*>& currentlyTrackedLandmarks() {return _currently_tracked_landmarks;}
+    const std::vector<Landmark*>& currentlyTrackedLandmarks() const {return _currently_tracked_landmarks;}
 
     LocalMap* currentLocalMap() {return _current_local_map;}
     const LocalMapPointerVector& localMaps() const {return _local_maps;}

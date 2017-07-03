@@ -65,10 +65,16 @@ public:
 
 
   //ds prints extensive run summary
-  void printReport();
+  void printReport() const;
 
-  //! @brief saves estimated robot pose trajectory to file
-  void writeTrajectory(const std::string& file_name_ = "") {if (_world_map) {_world_map->writeTrajectory(file_name_);}}
+  //! @brief dump trajectory to file (in KITTI benchmark format: 4x4 isometries per line)
+  //! @param[in] file_name_ text file path in which the poses are saved to
+  void writeTrajectory(const std::string& file_name_ = "") const {if (_world_map) {_world_map->writeTrajectory(file_name_);}}
+
+  //! @brief save trajectory to a vector (in KITTI benchmark format: 4x4 isometries per line)
+  //! @param[in,out] poses_ vector with poses, set in the function
+  template<typename RealType>
+  void writeTrajectory(std::vector<Eigen::Matrix<RealType, 4, 4>>& poses_) const {if (_world_map) {_world_map->writeTrajectory<RealType>(poses_);}}
 
   //! @brief resets the complete pipeline, releasing memory
   void reset();
@@ -119,7 +125,7 @@ protected:
 
   //ds 3D output viewers
   MapViewer* _map_viewer;
-  MapViewer* _context_viewer_top;
+  MapViewer* _minimap_viewer;
 
 //ds txt_io playback components
 protected:

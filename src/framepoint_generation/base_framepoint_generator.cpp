@@ -81,7 +81,7 @@ namespace proslam {
 
   //ds detects keypoints and stores them in a vector (called within compute)
   void BaseFramePointGenerator::detectKeypoints(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_) {
-    CHRONOMETER_START(feature_detection)
+    CHRONOMETER_START(keypoint_detection)
 
     //ds detect new keypoints
     _keypoint_detector->detect(intensity_image_, keypoints_);
@@ -122,7 +122,7 @@ namespace proslam {
       }
     }
 
-    CHRONOMETER_STOP(feature_detection)
+    CHRONOMETER_STOP(keypoint_detection)
   }
 
   //ds extracts the defined descriptors for the given keypoints (called within compute)
