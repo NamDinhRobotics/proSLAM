@@ -3,12 +3,14 @@ command_line:
   #ds processing mode (select one: RGB_STEREO, RGB_DEPTH)
   tracker_mode: RGB_STEREO
 
-  #ds files/topics
+  #ds topic names
   topic_image_left:        /camera_left/image_raw
   topic_image_right:       /camera_right/image_raw
   topic_camera_info_left:  /camera_left/camera_info
   topic_camera_info_right: /camera_right/camera_info
-  filename_dataset:
+  
+  #ds dataset file name
+  dataset_file_name:
 
   #ds options
   option_use_gui:               false

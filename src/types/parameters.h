@@ -51,8 +51,8 @@ namespace proslam {
     std::string topic_image_right       = "/camera_right/image_raw";
     std::string topic_camera_info_left  = "/camera_left/camera_info";
     std::string topic_camera_info_right = "/camera_right/camera_info";
-    std::string filename_dataset        = "";
-    std::string filename_configuration  = "";
+    std::string dataset_file_name       = "";
+    std::string configuration_file_name = "";
 
     //! @brief options
     bool option_use_gui               = false;

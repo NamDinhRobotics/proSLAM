@@ -47,8 +47,8 @@ namespace proslam {
   void CommandLineParameters::print() const {
     std::cerr << DOUBLE_BAR << std::endl;
     std::cerr << "running with command line parameters:" << std::endl;
-    if (filename_configuration.length() > 0) {
-    std::cerr << "-configuration (-c)            '" << filename_configuration << "'" << std::endl;
+    if (configuration_file_name.length() > 0) {
+    std::cerr << "-configuration (-c)            '" << configuration_file_name << "'" << std::endl;
     }
     std::cerr << "-topic-image-left (-il)        '" << topic_image_left << "'" << std::endl;
     std::cerr << "-topic-image-right (-ir)       '" << topic_image_right << "'" << std::endl;
@@ -67,8 +67,8 @@ namespace proslam {
     std::cerr << "-equalize-histogram (-eh)      " << option_equalize_histogram << std::endl;
     std::cerr << "-undistort-rectify (-ur)       " << option_undistort_and_rectify << std::endl;
     std::cerr << "-recover-landmarks (-rl)       " << option_recover_landmarks << std::endl;
-    if (filename_dataset.length() > 0) {
-    std::cerr << "-dataset                       '" << filename_dataset  << "'" << std::endl;
+    if (dataset_file_name.length() > 0) {
+    std::cerr << "-dataset                       '" << dataset_file_name  << "'" << std::endl;
     }
     std::cerr << DOUBLE_BAR << std::endl;
   }
@@ -185,47 +185,47 @@ namespace proslam {
       if (!std::strcmp(argv_[number_of_checked_parameters], "-configuration") || !std::strcmp(argv_[number_of_checked_parameters], "-c")){
         number_of_checked_parameters++;
         if (number_of_checked_parameters == argc_) {break;}
-        command_line_parameters->filename_configuration = argv_[number_of_checked_parameters];
+        command_line_parameters->configuration_file_name = argv_[number_of_checked_parameters];
         break;
       }
       number_of_checked_parameters++;
     }
 
     //ds if no configuration file was specified
-    if (command_line_parameters->filename_configuration.empty()) {
+    if (command_line_parameters->configuration_file_name.empty()) {
       LOG_WARNING(std::cerr << "ParameterCollection::parseParametersFromCommandLine|no configuration file specified (running with internal settings)" << std::endl)
     } else {
 
       //ds check if specified configuration file is not accessible
-      if (!srrg_core::isAccessible(command_line_parameters->filename_configuration)) {
-        LOG_ERROR(std::cerr << "ParameterCollection::parseParametersFromCommandLine|specified configuration file is not accessible: " << command_line_parameters->filename_configuration << std::endl)
+      if (!srrg_core::isAccessible(command_line_parameters->configuration_file_name)) {
+        LOG_ERROR(std::cerr << "ParameterCollection::parseParametersFromCommandLine|specified configuration file is not accessible: " << command_line_parameters->configuration_file_name << std::endl)
         throw std::runtime_error("specified configuration file is not accessible");
       }
     }
 
     //ds if a valid configuration file is set (otherwise the field must be empty)
-    if (!command_line_parameters->filename_configuration.empty()) {
+    if (!command_line_parameters->configuration_file_name.empty()) {
 
       //ds parse parameters from configuration file
-      parseFromFile(command_line_parameters->filename_configuration);
+      parseFromFile(command_line_parameters->configuration_file_name);
     }
 
     //ds reset and check for other command line parameters, potentially OVERWRITING the ones set in the configuration file
     number_of_checked_parameters = 1;
     while (number_of_checked_parameters < argc_) {
-      if (!std::strcmp(argv_[number_of_checked_parameters], "-topic-image-left") || !std::strcmp(argv_[number_of_checked_parameters], "-il")){
+      if (!std::strcmp(argv_[number_of_checked_parameters], "-topic-image-left") || !std::strcmp(argv_[number_of_checked_parameters], "-il")) {
         number_of_checked_parameters++;
         if (number_of_checked_parameters == argc_) {break;}
         command_line_parameters->topic_image_left = argv_[number_of_checked_parameters];
-      } else if (!std::strcmp(argv_[number_of_checked_parameters], "-topic-image-right") || !std::strcmp(argv_[number_of_checked_parameters], "-ir")){
+      } else if (!std::strcmp(argv_[number_of_checked_parameters], "-topic-image-right") || !std::strcmp(argv_[number_of_checked_parameters], "-ir")) {
         number_of_checked_parameters++;
         if (number_of_checked_parameters == argc_) {break;}
         command_line_parameters->topic_image_right = argv_[number_of_checked_parameters];
-      } else if (!std::strcmp(argv_[number_of_checked_parameters], "-topic-camera-info-left") || !std::strcmp(argv_[number_of_checked_parameters], "-cl")){
+      } else if (!std::strcmp(argv_[number_of_checked_parameters], "-topic-camera-info-left") || !std::strcmp(argv_[number_of_checked_parameters], "-cl")) {
         number_of_checked_parameters++;
         if (number_of_checked_parameters == argc_) {break;}
         command_line_parameters->topic_camera_info_left = argv_[number_of_checked_parameters];
-      } else if (!std::strcmp(argv_[number_of_checked_parameters], "-topic-camera-info-right") || !std::strcmp(argv_[number_of_checked_parameters], "-cr")){
+      } else if (!std::strcmp(argv_[number_of_checked_parameters], "-topic-camera-info-right") || !std::strcmp(argv_[number_of_checked_parameters], "-cr")) {
         number_of_checked_parameters++;
         if (number_of_checked_parameters == argc_) {break;}
         command_line_parameters->topic_camera_info_right = argv_[number_of_checked_parameters];
@@ -253,10 +253,10 @@ namespace proslam {
         command_line_parameters->option_use_odometry = true;
       } else if (!std::strcmp(argv_[number_of_checked_parameters], "-recover-landmarks") || !std::strcmp(argv_[number_of_checked_parameters], "-rl")) {
         command_line_parameters->option_recover_landmarks = true;
-      } else if (!std::strcmp(argv_[number_of_checked_parameters], "-configuration") || !std::strcmp(argv_[number_of_checked_parameters], "-c")){
+      } else if (!std::strcmp(argv_[number_of_checked_parameters], "-configuration") || !std::strcmp(argv_[number_of_checked_parameters], "-c")) {
         number_of_checked_parameters++;
       } else {
-        if (command_line_parameters->filename_dataset.length() == 0) {command_line_parameters->filename_dataset = argv_[number_of_checked_parameters];}
+        if (command_line_parameters->dataset_file_name.length() == 0) {command_line_parameters->dataset_file_name = argv_[number_of_checked_parameters];}
       }
       number_of_checked_parameters++;
     }
@@ -293,7 +293,7 @@ namespace proslam {
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, topic_image_right, std::string)
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, topic_camera_info_left, std::string)
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, topic_camera_info_right, std::string)
-      PARSE_PARAMETER(configuration, command_line, command_line_parameters, filename_dataset, std::string)
+      PARSE_PARAMETER(configuration, command_line, command_line_parameters, dataset_file_name, std::string)
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_use_gui, bool)
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_use_odometry, bool)
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_use_relocalization, bool)

@@ -47,13 +47,13 @@ SLAMAssembly::~SLAMAssembly() {
 void SLAMAssembly::initializeMessageFile() {
 
   //ds check dataset length
-  if (_parameters->command_line_parameters->filename_dataset.length() == 0) {
+  if (_parameters->command_line_parameters->dataset_file_name.length() == 0) {
     LOG_ERROR(std::cerr << "SLAMAssembly::initializeMessageFile|no dataset provided (enter -h for help)" << std::endl)
     throw std::runtime_error("no dataset provided");
   }
 
   //ds configure sensor message source
-  _message_reader.open(_parameters->command_line_parameters->filename_dataset);
+  _message_reader.open(_parameters->command_line_parameters->dataset_file_name);
 
   //ds terminate on failure
   if (!_message_reader.good()) {
@@ -315,7 +315,7 @@ void SLAMAssembly::draw() {
 void SLAMAssembly::playbackMessageFile() {
 
   //ds restart stream
-  _message_reader.open(_parameters->command_line_parameters->filename_dataset);
+  _message_reader.open(_parameters->command_line_parameters->dataset_file_name);
   _robot_to_world_ground_truth_poses.clear();
 
   //ds frame counts

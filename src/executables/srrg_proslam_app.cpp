@@ -25,7 +25,7 @@ int32_t main(int32_t argc_, char** argv_) {
   proslam::SLAMAssembly slam_system(parameters);
 
   //ds dynamic elements (in this scope for cleanup in case an exception occurs)
-  QApplication* gui_server    = 0;
+  QApplication* gui_server   = 0;
   std::thread* system_thread = 0;
 
   try {
