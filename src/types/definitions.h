@@ -80,7 +80,7 @@ namespace proslam{
 
   //ds HBST: readability
   typedef srrg_hbst::BinaryMatchable<SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS> HBSTMatchable;
-  typedef srrg_hbst::BinaryNode<HBSTMatchable, 50, real> HBSTNode;
+  typedef srrg_hbst::BinaryNode<HBSTMatchable, real> HBSTNode;
   typedef srrg_hbst::BinaryTree<HBSTNode, SRRG_PROSLAM_DESCRIPTOR_MAXIMUM_HAMMING_DISTANCE> HBSTTree;
 
   //ds cv colors
