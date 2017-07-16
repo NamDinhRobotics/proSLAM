@@ -30,9 +30,6 @@ namespace proslam{
   #define SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS 256
 #endif
   #define DESCRIPTOR_SIZE_BYTES SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS/8
-#ifndef SRRG_PROSLAM_DESCRIPTOR_MAXIMUM_HAMMING_DISTANCE
-  #define SRRG_PROSLAM_DESCRIPTOR_MAXIMUM_HAMMING_DISTANCE 25
-#endif
   #define SRRG_PROSLAM_DESCRIPTOR_NORM cv::NORM_HAMMING
 
   //ds adjust floating point precision
@@ -81,7 +78,7 @@ namespace proslam{
   //ds HBST: readability
   typedef srrg_hbst::BinaryMatchable<SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS> HBSTMatchable;
   typedef srrg_hbst::BinaryNode<HBSTMatchable, real> HBSTNode;
-  typedef srrg_hbst::BinaryTree<HBSTNode, SRRG_PROSLAM_DESCRIPTOR_MAXIMUM_HAMMING_DISTANCE> HBSTTree;
+  typedef srrg_hbst::BinaryTree<HBSTNode> HBSTTree;
 
   //ds cv colors
   #define CV_COLOR_CODE_GREEN cv::Scalar(0, 200, 0)
