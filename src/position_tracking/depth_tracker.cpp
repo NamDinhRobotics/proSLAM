@@ -1,4 +1,4 @@
-#include "depth_tracker.h"
+#include "../position_tracking/depth_tracker.h"
 
 namespace proslam {
   using namespace srrg_core;

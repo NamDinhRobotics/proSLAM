@@ -1,39 +1,40 @@
 #pragma once
-#include "base_tracker.h"
-#include "framepoint_generation/depth_framepoint_generator.h"
+#include "../position_tracking/base_tracker.h"
+#include "framepoint_generation/stereo_framepoint_generator.h"
 
 namespace proslam {
 
   //ds this class processes two subsequent Frames and establishes Framepoint correspondences (tracks) based on the corresponding images
-  class DepthTracker: public BaseTracker {
+  class StereoTracker: public BaseTracker {
 
-  //ds object handling
+	//ds object handling
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds the tracker assumes a constant stereo camera configuration
-    DepthTracker();
+    StereoTracker();
 
-    //gg
+    //ds configuration function
     virtual void configure(BaseTrackerParameters* parameters_);
 
     //ds dynamic cleanup
-    virtual ~DepthTracker();
-    
+    virtual ~StereoTracker();
+
   //ds functionality
   public:
 
+    //ds magic
     virtual void compute();
-
+    
   //ds setters/getters
   public:
 
-    void setDepthCamera(const Camera* depth_camera_) {_depth_camera = depth_camera_;}
-    void setDepthImageRight(const cv::Mat* depth_image_) {_depth_image = depth_image_;}
+    void setCameraRight(const Camera* camera_right_) {_camera_right = camera_right_;}
+    void setIntensityImageRight(const cv::Mat* intensity_image_right_) {_intensity_image_right = intensity_image_right_;}
 
   //ds helpers
   protected:
 
-    //gg
+    //ds creates a frame, which is filled by calling the framepoint generator
     virtual Frame* _createFrame();
 
     //ds attempts to recover framepoints in the current image using the more precise pose estimate, retrieved after pose optimization
@@ -43,17 +44,17 @@ namespace proslam {
   protected:
 
     //ds configuration
-    const Camera* _depth_camera;
+    const Camera* _camera_right;
 
     //ds processing
-    const cv::Mat* _depth_image;
+    const cv::Mat* _intensity_image_right;
 
     //ds specified generator instance
-    DepthFramePointGenerator* _depth_framepoint_generator;
+    StereoFramePointGenerator* _stereo_framepoint_generator;
 
   private:
 
     //! @brief configurable parameters
-    DepthTrackerParameters* _parameters;
+    StereoTrackerParameters* _parameters;
   };
 }

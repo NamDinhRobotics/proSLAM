@@ -1,4 +1,4 @@
-#include "stereo_tracker.h"
+#include "../position_tracking/stereo_tracker.h"
 
 namespace proslam {
   using namespace srrg_core;

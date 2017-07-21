@@ -1,7 +1,7 @@
 add_subdirectory(aligners)
 add_subdirectory(executables)
 add_subdirectory(map_optimization)
-add_subdirectory(motion_estimation)
+add_subdirectory(position_tracking)
 add_subdirectory(relocalization)
 add_subdirectory(framepoint_generation)
 add_subdirectory(types)
