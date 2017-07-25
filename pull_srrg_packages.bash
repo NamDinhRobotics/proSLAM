@@ -17,6 +17,15 @@ else
     echo "- installing srrg_cmake_modules:"
     git clone https://gitlab.com/srrg-software/srrg_cmake_modules
 fi
+if [ -d "${DIR_CATKIN_SOURCE}/srrg_boss" ]; then
+    echo "- srrg_boss already installed - updating code"
+    cd "${DIR_CATKIN_SOURCE}/srrg_boss"
+    git pull
+else
+    cd "${DIR_CATKIN_SOURCE}"
+    echo "- installing srrg_boss:"
+    git clone https://gitlab.com/srrg-software/srrg_boss
+fi
 if [ -d "${DIR_CATKIN_SOURCE}/srrg_core" ]; then
     echo "- srrg_core already installed - updating code"
     cd "${DIR_CATKIN_SOURCE}/srrg_core"
