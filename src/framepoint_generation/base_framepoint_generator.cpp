@@ -26,8 +26,8 @@ namespace proslam {
     _parameters = parameters_;
     assert(_camera_left);
 
-    _number_of_rows_image            = _camera_left->imageRows();
-    _number_of_cols_image            = _camera_left->imageCols();
+    _number_of_rows_image            = _camera_left->numberOfImageRows();
+    _number_of_cols_image            = _camera_left->numberOfImageCols();
     _focal_length_pixels             = _camera_left->cameraMatrix()(0,0);
     _principal_point_offset_u_pixels = _camera_left->cameraMatrix()(0,2);
     _principal_point_offset_v_pixels = _camera_left->cameraMatrix()(1,2);

@@ -175,11 +175,11 @@ void SLAMAssembly::loadCamerasFromMessageFile() {
     LOG_ERROR(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|right camera not set" << std::endl)
     throw std::runtime_error("right camera not set");
   }
-  if (_camera_left->imageCols() == 0 || _camera_left->imageRows() == 0) {
+  if (_camera_left->numberOfImageCols() == 0 || _camera_left->numberOfImageRows() == 0) {
     LOG_ERROR(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|left camera images not set" << std::endl)
     throw std::runtime_error("left camera images not set");
   }
-  if (_camera_right->imageCols() == 0 || _camera_right->imageRows() == 0) {
+  if (_camera_right->numberOfImageCols() == 0 || _camera_right->numberOfImageRows() == 0) {
     LOG_ERROR(std::cerr << "SLAMAssembly::loadCamerasFromMessageFile|right camera images not set" << std::endl)
     throw std::runtime_error("right camera images not set");
   }
@@ -231,10 +231,10 @@ void SLAMAssembly::loadCameras(Camera* camera_left_, Camera* camera_right_) {
   }
 
   LOG_INFO(std::cerr << "SLAMAssembly::loadCameras|loaded cameras: " << 2 << std::endl)
-  LOG_INFO(std::cerr << "SLAMAssembly::loadCameras|LEFT resolution: " << camera_left_->imageCols() << " x " << camera_left_->imageRows()
-            << ", aspect ratio: " << static_cast<real>(camera_left_->imageCols())/camera_left_->imageRows() << std::endl)
-  LOG_INFO(std::cerr << "SLAMAssembly::loadCameras|RIGHT resolution: " << camera_right_->imageCols() << " x " << camera_right_->imageRows()
-            << ", aspect ratio: " << static_cast<real>(camera_right_->imageCols())/camera_right_->imageRows() << std::endl)
+  LOG_INFO(std::cerr << "SLAMAssembly::loadCameras|LEFT resolution: " << camera_left_->numberOfImageCols() << " x " << camera_left_->numberOfImageRows()
+            << ", aspect ratio: " << static_cast<real>(camera_left_->numberOfImageCols())/camera_left_->numberOfImageRows() << std::endl)
+  LOG_INFO(std::cerr << "SLAMAssembly::loadCameras|RIGHT resolution: " << camera_right_->numberOfImageCols() << " x " << camera_right_->numberOfImageRows()
+            << ", aspect ratio: " << static_cast<real>(camera_right_->numberOfImageCols())/camera_right_->numberOfImageRows() << std::endl)
 }
 
 void SLAMAssembly::initializeGUI(QApplication* ui_server_) {

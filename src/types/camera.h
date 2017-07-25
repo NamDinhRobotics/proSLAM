@@ -3,27 +3,43 @@
 
 namespace proslam {
 
-  //ds pinhole camera object
+  //! @class single pinhole model based camera object
   class Camera {
-
-  //ds object handling
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-    //ds a camera can be constructed based on image dimensions and a camera matrix
-    Camera(const Count& image_rows_,
-           const Count& image_cols_,
+  //ds object handling
+  public:
+
+    //! @constructor  a camera can be constructed based on image dimensions and a camera matrix
+    //! @param[in] number_of_image_rows_ number of rows of the image (pixel height)
+    //! @param[in] number_of_image_cols_ number of columns of the image (pixel width)
+    //! @param[in] camera_matrix_ pinhole model camera matrix
+    //! @param[in] camera_to_robot_ camera to robot transform (usually constant during operation)
+    Camera(const Count& number_of_image_rows_,
+           const Count& number_of_image_cols_,
            const CameraMatrix& camera_matrix_,
            const TransformMatrix3D& camera_to_robot_ = TransformMatrix3D::Identity());
+
+    //! @brief prohibit default construction
+    Camera() = delete;
+
+    //! @brief default destructor
+    ~Camera() {};
 
   //ds getters/setters
   public:
 
     inline const Identifier identifier() const {return _identifier;}
-    inline const Count imageRows() const {return _image_rows;}
-    inline const Count imageCols() const {return _image_cols;}
-    const bool isInFieldOfView(const PointCoordinates& image_coordinates_) const;
-    void setImageRows(const Count& image_rows_) {_image_rows = image_rows_;}
-    void setImageCols(const Count& image_cols_) {_image_cols = image_cols_;}
+    inline const Count numberOfImageRows() const {return _number_of_image_rows;}
+    inline const Count numberOfImageCols() const {return _number_of_image_cols;}
+
+    //! @brief check whether an image point is contained in the current image dimensions or not
+    //! @param[in] image_coordinates_ 2D pixel coordinates of the point to evaluate
+    //! @return true: if image_coordinates_ lies in the image plane, false: otherwise
+    const bool isInFieldOfView(const ImageCoordinates& image_coordinates_) const;
+
+    void setNumberOfImageRows(const Count& number_of_image_rows_) {_number_of_image_rows = number_of_image_rows_;}
+    void setNumberOfImageCols(const Count& number_of_image_cols_) {_number_of_image_cols = number_of_image_cols_;}
     inline const CameraMatrix& cameraMatrix() const {return _camera_matrix;}
     void setCameraMatrix(const CameraMatrix& camera_matrix_);
     inline const ProjectionMatrix& projectionMatrix() const {return _projection_matrix;}
@@ -31,36 +47,48 @@ namespace proslam {
     inline const TransformMatrix3D& cameraToRobot() const {return _camera_to_robot;}
     inline const TransformMatrix3D& robotToCamera() const {return _robot_to_camera;}
     void setCameraToRobot(const TransformMatrix3D& camera_to_robot_);
-    inline const Matrix3 rectificationMatrix() const {return _rectification_matrix;}
+    inline const Matrix3& rectificationMatrix() const {return _rectification_matrix;}
     void setRectificationMatrix(const Matrix3& rectification_matrix_) {_rectification_matrix = rectification_matrix_;}
-    inline const Vector5 distortionCoefficients() const {return _distortion_coefficients;}
+    inline const Vector5& distortionCoefficients() const {return _distortion_coefficients;}
     void setDistortionCoefficients(const Vector5& distortion_coefficients_) {_distortion_coefficients = distortion_coefficients_;}
 
   //ds attributes
   protected:
 
+    //! @brief numerical identifier
     Identifier _identifier;
-    Count _image_rows;
-    Count _image_cols;
-    CameraMatrix  _camera_matrix        = CameraMatrix::Zero();
-    CameraMatrix _inverse_camera_matrix = CameraMatrix::Zero();
-    ProjectionMatrix _projection_matrix = ProjectionMatrix::Zero();
-    Matrix3 _rectification_matrix       = Matrix3::Zero();
-    Vector5 _distortion_coefficients    = Vector5::Zero();
 
-    //ds configuration on robot
-    TransformMatrix3D _camera_to_robot = TransformMatrix3D::Identity();
-    TransformMatrix3D _robot_to_camera = TransformMatrix3D::Identity();
+    //! @brief number of rows of the image (pixel height)
+    Count _number_of_image_rows;
+
+    //! @brief number of columns of the image (pixel width)
+    Count _number_of_image_cols;
+
+    //! @brief pinhole model camera matrix
+    CameraMatrix _camera_matrix;
+
+    //! @brief inverse of the pinhole model camera matrix
+    CameraMatrix _inverse_camera_matrix;
+
+    //! @brief stereo projection matrix (must be set manually with setProjectionMatrix)
+    ProjectionMatrix _projection_matrix = ProjectionMatrix::Zero();
+
+    //! @brief rectification matrix
+    Matrix3 _rectification_matrix = Matrix3::Zero();
+
+    //! @brief distortion coefficients
+    Vector5 _distortion_coefficients = Vector5::Zero();
+
+    //! @brief camera to robot transform (usually constant during operation)
+    TransformMatrix3D _camera_to_robot;
+
+    //! @brief robot to camera transform (usually constant during operation)
+    TransformMatrix3D _robot_to_camera;
 
   //ds class specific
   private:
 
-    //ds inner instance count
+    //! @brief object instance count (used for identifier generation)
     static Count _instances;
-
   };
-
-  typedef std::vector<Camera*> CameraPointerVector;
-  typedef std::map<std::string, Camera*> CameraMap;
-  typedef std::pair<std::string, Camera*> CameraMapElement;
 }

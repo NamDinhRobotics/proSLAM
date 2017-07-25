@@ -188,7 +188,7 @@ int32_t main(int32_t argc_, char** argv_) {
                               srrg_core::toCv(camera_left->distortionCoefficients()),
                               srrg_core::toCv(camera_left->rectificationMatrix()),
                               srrg_core::toCv(camera_left->projectionMatrix()),
-                              cv::Size(camera_left->imageCols(), camera_left->imageRows()),
+                              cv::Size(camera_left->numberOfImageCols(), camera_left->numberOfImageRows()),
                               CV_16SC2,
                               undistort_rectify_maps_left[0],
                               undistort_rectify_maps_left[1]);
@@ -196,7 +196,7 @@ int32_t main(int32_t argc_, char** argv_) {
                               srrg_core::toCv(camera_right->distortionCoefficients()),
                               srrg_core::toCv(camera_right->rectificationMatrix()),
                               srrg_core::toCv(camera_right->projectionMatrix()),
-                              cv::Size(camera_right->imageCols(), camera_right->imageRows()),
+                              cv::Size(camera_right->numberOfImageCols(), camera_right->numberOfImageRows()),
                               CV_16SC2,
                               undistort_rectify_maps_right[0],
                               undistort_rectify_maps_right[1]);

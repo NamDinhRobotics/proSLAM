@@ -25,8 +25,8 @@ namespace proslam {
     _parameters = parameters_;
     assert(_camera_left);
     assert(_pose_optimizer);
-    _number_of_rows_image = _camera_left->imageRows();
-    _number_of_cols_image = _camera_left->imageCols();
+    _number_of_rows_image = _camera_left->numberOfImageRows();
+    _number_of_cols_image = _camera_left->numberOfImageCols();
     _motion_previous_to_current_robot.setIdentity();
     _pose_optimizer->setMaximumDepthNearMeters(_framepoint_generator->maximumDepthNearMeters());
     _pose_optimizer->setMaximumDepthFarMeters(_framepoint_generator->maximumDepthFarMeters());

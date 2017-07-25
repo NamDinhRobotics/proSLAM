@@ -18,8 +18,8 @@ namespace proslam {
     _world_to_camera = _camera_to_world.inverse();
     _projection_matrix_left  = _frame->cameraLeft()->projectionMatrix();
     _projection_matrix_right = _frame->cameraRight()->projectionMatrix();
-    _number_of_rows_image    = _frame->cameraLeft()->imageRows();
-    _number_of_cols_image    = _frame->cameraLeft()->imageCols();
+    _number_of_rows_image    = _frame->cameraLeft()->numberOfImageRows();
+    _number_of_cols_image    = _frame->cameraLeft()->numberOfImageCols();
   }
 
   //ds linearize the system: to be called inside oneRound

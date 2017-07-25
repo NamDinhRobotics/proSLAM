@@ -17,8 +17,8 @@ namespace proslam {
     _camera_to_world = _robot_to_world*_frame->cameraLeft()->cameraToRobot();
     _world_to_camera = _camera_to_world.inverse();
     _camera_matrix  = _frame->cameraLeft()->cameraMatrix();
-    _number_of_rows_image = _frame->cameraLeft()->imageRows();
-    _number_of_cols_image = _frame->cameraLeft()->imageCols();
+    _number_of_rows_image = _frame->cameraLeft()->numberOfImageRows();
+    _number_of_cols_image = _frame->cameraLeft()->numberOfImageCols();
   }
 
   //ds linearize the system: to be called inside oneRound
