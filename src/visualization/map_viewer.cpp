@@ -121,7 +121,7 @@ namespace proslam {
   void MapViewer::_drawFramepoints() const {
     glBegin(GL_POINTS);
     if (_current_frame) {
-      for (const FramePoint* point: _current_frame->activePoints()) {
+      for (const FramePoint* point: _current_frame->points()) {
         glColor3f(0.75, 0.75, 0.75);
         glVertex3f(point->worldCoordinates().x(), point->worldCoordinates().y(), point->worldCoordinates().z());
       }

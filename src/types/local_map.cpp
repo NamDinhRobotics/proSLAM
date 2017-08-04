@@ -43,7 +43,7 @@ namespace proslam {
       const TransformMatrix3D& frame_to_local_map = world_to_local_map*frame->robotToWorld();
       frame->setLocalMap(this);
       frame->setFrameToLocalMap(frame_to_local_map);
-      for (FramePoint* frame_point: frame->activePoints()) {
+      for (FramePoint* frame_point: frame->points()) {
 
         //ds buffer current landmark
         Landmark* landmark = frame_point->landmark();

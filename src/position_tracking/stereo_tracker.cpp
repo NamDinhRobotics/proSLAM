@@ -58,7 +58,7 @@ namespace proslam {
 
     //ds recover lost landmarks
     Index index_lost_point_recovered = _number_of_tracked_points;
-    current_frame_->activePoints().resize(_number_of_tracked_points+_number_of_lost_points);
+    current_frame_->points().resize(_number_of_tracked_points+_number_of_lost_points);
     for (FramePoint* point_previous: _lost_points) {
 
       //ds get point into current camera - based on last track
@@ -151,7 +151,7 @@ namespace proslam {
           const PointCoordinates camera_coordinates(_stereo_framepoint_generator->getCoordinatesInCameraLeft(keypoint_buffer_left[0].pt, keypoint_buffer_right[0].pt));
 
           //ds allocate a new point connected to the previous one
-          FramePoint* current_point = current_frame_->create(keypoint_buffer_left[0],
+          FramePoint* current_point = current_frame_->createFramepoint(keypoint_buffer_left[0],
                                                              descriptor_left,
                                                              keypoint_buffer_right[0],
                                                              descriptor_right,
@@ -159,14 +159,14 @@ namespace proslam {
                                                              point_previous);
 
           //ds set the point to the control structure
-          current_frame_->activePoints()[index_lost_point_recovered] = current_point;
+          current_frame_->points()[index_lost_point_recovered] = current_point;
           ++index_lost_point_recovered;
         } catch (const ExceptionTriangulation& /*exception_*/) {}
       }
     }
     _number_of_lost_points_recovered = index_lost_point_recovered-_number_of_tracked_points;
     _number_of_tracked_points = index_lost_point_recovered;
-    current_frame_->activePoints().resize(_number_of_tracked_points);
+    current_frame_->points().resize(_number_of_tracked_points);
 //    LOG_DEBUG(std::cerr << "StereoTracker::_recoverPoints|recovered points: " << _number_of_lost_points_recovered << "/" << _number_of_lost_points << std::endl)
   }
 }

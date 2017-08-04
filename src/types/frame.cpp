@@ -33,7 +33,7 @@ namespace proslam {
   const Count Frame::countPoints(const Count& min_track_length_,
                                  const ThreeValued& has_landmark_) const {
     Count count = 0;
-    for (const FramePoint* frame_point: activePoints()){
+    for (const FramePoint* frame_point: points()){
       if(frame_point->trackLength() < min_track_length_) {
         continue;
       }
@@ -59,12 +59,12 @@ namespace proslam {
   }
 
   //ds request new framepoint with optional link to a previous point (track)
-  FramePoint* Frame::create(const cv::KeyPoint& keypoint_left_,
-                            const cv::Mat& descriptor_left_,
-                            const cv::KeyPoint& keypoint_right_,
-                            const cv::Mat& descriptor_right_,
-                            const PointCoordinates& camera_coordinates_left_,
-                            FramePoint* previous_point_) {
+  FramePoint* Frame::createFramepoint(const cv::KeyPoint& keypoint_left_,
+                                      const cv::Mat& descriptor_left_,
+                                      const cv::KeyPoint& keypoint_right_,
+                                      const cv::Mat& descriptor_right_,
+                                      const PointCoordinates& camera_coordinates_left_,
+                                      FramePoint* previous_point_) {
     assert(_camera_left != 0);
 
     //ds allocate a new point connected to the previous one

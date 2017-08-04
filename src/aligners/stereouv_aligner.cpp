@@ -8,8 +8,8 @@ namespace proslam {
   //ds initialize aligner with minimal entity
   void StereoUVAligner::initialize(Frame* frame_, const TransformMatrix3D& robot_to_world_) {
     _frame = frame_;
-    _errors.resize(_frame->activePoints().size());
-    _inliers.resize(_frame->activePoints().size());
+    _errors.resize(_frame->points().size());
+    _inliers.resize(_frame->points().size());
     _robot_to_world = robot_to_world_;
     _world_to_robot = _robot_to_world.inverse();
 
@@ -33,13 +33,13 @@ namespace proslam {
     _total_error        = 0;
 
     //ds loop over all points (assumed to have previous points)
-    for (Index index_point = 0; index_point < _frame->activePoints().size(); index_point++) {
+    for (Index index_point = 0; index_point < _frame->points().size(); index_point++) {
       _errors[index_point]  = -1;
       _inliers[index_point] = false;
       _omega.setIdentity();
 
       //ds buffer framepoint
-      FramePoint* frame_point = _frame->activePoints()[index_point];
+      FramePoint* frame_point = _frame->points()[index_point];
       assert(_frame->cameraLeft()->isInFieldOfView(frame_point->imageCoordinatesLeft()));
       assert(_frame->cameraRight()->isInFieldOfView(frame_point->imageCoordinatesRight()));
       assert(frame_point->previous());

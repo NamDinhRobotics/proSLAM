@@ -306,7 +306,7 @@ namespace proslam {
     _enable_keypoint_binning = true;
 
     //ds control variables
-    current_frame_->activePoints().resize(_number_of_potential_points);
+    current_frame_->points().resize(_number_of_potential_points);
     _number_of_tracked_points          = 0;
     _number_of_tracked_landmarks_close = 0;
     _number_of_tracked_landmarks_far   = 0;
@@ -316,7 +316,7 @@ namespace proslam {
     _getImageCoordinates(_projected_image_coordinates_left, previous_frame_, current_frame_);
 
     //ds prepare lost buffer
-    _lost_points.resize(previous_frame_->activePoints().size());
+    _lost_points.resize(previous_frame_->points().size());
 
     //ds check state
     if (_status_previous == Frame::Localizing) {
@@ -332,10 +332,10 @@ namespace proslam {
     const real _maximum_matching_distance_tracking_region = _framepoint_generator->matchingDistanceTrackingThreshold();
 
     //ds loop over all past points
-    for (Index index_point_previous = 0; index_point_previous < previous_frame_->activePoints().size(); ++index_point_previous) {
+    for (Index index_point_previous = 0; index_point_previous < previous_frame_->points().size(); ++index_point_previous) {
 
       //ds compute current projection points
-      FramePoint* previous_point = previous_frame_->activePoints()[index_point_previous];
+      FramePoint* previous_point = previous_frame_->points()[index_point_previous];
       const ImageCoordinates& projection_left(_projected_image_coordinates_left[index_point_previous]);
 
       //ds prior grid location
@@ -435,7 +435,7 @@ namespace proslam {
         ++_number_of_lost_points;
       }
     }
-    current_frame_->activePoints().resize(_number_of_tracked_points);
+    current_frame_->points().resize(_number_of_tracked_points);
     _lost_points.resize(_number_of_lost_points);
 
     //    //ds info
@@ -454,7 +454,7 @@ namespace proslam {
     current_point->setPrevious(framepoint_previous_);
 
     //ds set the point to the control structure
-    current_frame_->activePoints()[_number_of_tracked_points] = current_point;
+    current_frame_->points()[_number_of_tracked_points] = current_point;
     if (current_point->landmark()) {
       if (current_point->isNear()) {
         ++_number_of_tracked_landmarks_close;
@@ -479,7 +479,7 @@ namespace proslam {
   void BaseTracker::_addNewFramepoints(Frame* frame_) {
 
     //ds make space for all remaining points
-    frame_->activePoints().resize(_number_of_potential_points+_number_of_lost_points_recovered);
+    frame_->points().resize(_number_of_potential_points+_number_of_lost_points_recovered);
     Index index_point_new = _number_of_tracked_points;
 
     //ds buffer current pose
@@ -529,10 +529,10 @@ namespace proslam {
             if (!_bin_map_left[row_bin][col_bin]->previous()) {
 
               //ds assign the new point
-              frame_->activePoints()[index_point_new] = _bin_map_left[row_bin][col_bin];
+              frame_->points()[index_point_new] = _bin_map_left[row_bin][col_bin];
 
               //ds update framepoint world position using the current pose estimate
-              frame_->activePoints()[index_point_new]->setWorldCoordinates(frame_to_world*frame_->activePoints()[index_point_new]->robotCoordinates());
+              frame_->points()[index_point_new]->setWorldCoordinates(frame_to_world*frame_->points()[index_point_new]->robotCoordinates());
               ++index_point_new;
             }
 
@@ -549,10 +549,10 @@ namespace proslam {
           if (_framepoint_generator->framepointsInImage()[row][col]) {
 
             //ds assign the new point
-            frame_->activePoints()[index_point_new] = _framepoint_generator->framepointsInImage()[row][col];
+            frame_->points()[index_point_new] = _framepoint_generator->framepointsInImage()[row][col];
 
             //ds update framepoint world position using the current pose estimate
-            frame_->activePoints()[index_point_new]->setWorldCoordinates(frame_to_world*frame_->activePoints()[index_point_new]->robotCoordinates());
+            frame_->points()[index_point_new]->setWorldCoordinates(frame_to_world*frame_->points()[index_point_new]->robotCoordinates());
             ++index_point_new;
 
             //ds free point from input grid
@@ -561,7 +561,7 @@ namespace proslam {
         }
       }
     }
-    frame_->activePoints().resize(index_point_new);
+    frame_->points().resize(index_point_new);
 //    std::cerr << "BaseTracker::extractFeatures|new points: " << index_point_new-_number_of_tracked_points << " (tracked: " << _number_of_tracked_points << ")" << std::endl;
   }
 
@@ -571,12 +571,12 @@ namespace proslam {
     assert(current_frame_ != 0);
 
     //ds preallocation
-    projected_image_coordinates_left_.resize(previous_frame_->activePoints().size());
+    projected_image_coordinates_left_.resize(previous_frame_->points().size());
     const TransformMatrix3D world_to_camera = current_frame_->cameraLeft()->robotToCamera()*current_frame_->worldToRobot();
 
     //ds compute predictions for all previous frame points
     Count number_of_visible_points = 0;
-    for (FramePoint* previous_frame_point: previous_frame_->activePoints()) {
+    for (FramePoint* previous_frame_point: previous_frame_->points()) {
       assert(previous_frame_point->imageCoordinatesLeft().x() >= 0);
       assert(previous_frame_point->imageCoordinatesLeft().x() <= _number_of_cols_image);
       assert(previous_frame_point->imageCoordinatesLeft().y() >= 0);
@@ -612,10 +612,10 @@ namespace proslam {
 
       //ds update predictions
       projected_image_coordinates_left_[number_of_visible_points] = point_in_image_left;
-      previous_frame_->activePoints()[number_of_visible_points] = previous_frame_point;
+      previous_frame_->points()[number_of_visible_points] = previous_frame_point;
       ++number_of_visible_points;
     }
-    previous_frame_->activePoints().resize(number_of_visible_points);
+    previous_frame_->points().resize(number_of_visible_points);
     projected_image_coordinates_left_.resize(number_of_visible_points);
   }
 
@@ -624,15 +624,15 @@ namespace proslam {
 
     //ds update current frame points
     _number_of_tracked_points = 0;
-    for (Index index_point = 0; index_point < frame_->activePoints().size(); index_point++) {
-      assert(frame_->activePoints()[index_point]->previous());
+    for (Index index_point = 0; index_point < frame_->points().size(); index_point++) {
+      assert(frame_->points()[index_point]->previous());
 
       //ds buffer current landmark
-      Landmark* landmark = frame_->activePoints()[index_point]->landmark();
+      Landmark* landmark = frame_->points()[index_point]->landmark();
 
       //ds points without landmarks are always kept
       if (landmark == 0) {
-        frame_->activePoints()[_number_of_tracked_points] = frame_->activePoints()[index_point];
+        frame_->points()[_number_of_tracked_points] = frame_->points()[index_point];
         ++_number_of_tracked_points;
       }
 
@@ -643,11 +643,11 @@ namespace proslam {
         landmark->setNumberOfRecoveries(0);
 
         //ds add the point
-        frame_->activePoints()[_number_of_tracked_points] = frame_->activePoints()[index_point];
+        frame_->points()[_number_of_tracked_points] = frame_->points()[index_point];
         ++_number_of_tracked_points;
       }
     }
-    frame_->activePoints().resize(_number_of_tracked_points);
+    frame_->points().resize(_number_of_tracked_points);
   }
 
   //ds updates existing or creates new landmarks for framepoints of the provided frame
@@ -657,7 +657,7 @@ namespace proslam {
     const TransformMatrix3D& frame_to_world = frame_->robotToWorld();
 
     //ds start landmark generation/update
-    for (FramePoint* point: frame_->activePoints()) {
+    for (FramePoint* point: frame_->points()) {
       point->setWorldCoordinates(frame_to_world*point->robotCoordinates());
 
       //ds skip point if tracking and not mature enough to be a landmark - for localizing state this is skipped

@@ -28,9 +28,6 @@ public:
 //ds functionality
 public:
 
-  //ds initializes txt_io playback modules
-  void initializeMessageFile();
-
   //ds attempts to load the camera configuration based on the current input setting
   void loadCamerasFromMessageFile();
 

@@ -191,7 +191,7 @@ namespace proslam {
                                                                                    _keypoints_with_descriptors_right[index_best_R].keypoint.pt));
 
               //ds add to framepoint map
-              _framepoints_in_image[row][col_left] = frame_->create(_keypoints_with_descriptors_left[idx_L].keypoint,
+              _framepoints_in_image[row][col_left] = frame_->createFramepoint(_keypoints_with_descriptors_left[idx_L].keypoint,
                                                                     _keypoints_with_descriptors_left[idx_L].descriptor,
                                                                     _keypoints_with_descriptors_right[index_best_R].keypoint,
                                                                     _keypoints_with_descriptors_right[index_best_R].descriptor,

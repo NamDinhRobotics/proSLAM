@@ -136,7 +136,7 @@ namespace proslam {
 
       const PointCoordinates camera_coordinates=PointCoordinates(p[0], p[1], p[2]); // compute 
       //ds add to framepoint map
-      _framepoints_in_image[r_left][c_left] = frame_->create(keypoint_left,
+      _framepoints_in_image[r_left][c_left] = frame_->createFramepoint(keypoint_left,
                                                              descriptor_left,
                                                              keypoint_right,
                                                              descriptor_left,

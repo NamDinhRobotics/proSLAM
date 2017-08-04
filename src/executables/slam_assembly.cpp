@@ -34,33 +34,16 @@ SLAMAssembly::~SLAMAssembly() {
   delete _world_map;
 
   //ds free cameras
-  if (_camera_left) {delete _camera_left;}
-  if (_camera_right) {delete _camera_right;}
+  delete _camera_left;
+  delete _camera_right;
 
   //ds free viewers if set
-  if (_image_viewer) {delete _image_viewer;}
-  if (_map_viewer) {delete _map_viewer;}
-  if (_minimap_viewer) {delete _minimap_viewer;}
-  if (_ui_server) {delete _ui_server;}
+  delete _image_viewer;
+  delete _map_viewer;
+  delete _minimap_viewer;
+  delete _ui_server;
   _robot_to_world_ground_truth_poses.clear();
-}
-
-void SLAMAssembly::initializeMessageFile() {
-
-  //ds check dataset length
-  if (_parameters->command_line_parameters->dataset_file_name.length() == 0) {
-    LOG_ERROR(std::cerr << "SLAMAssembly::initializeMessageFile|no dataset provided (enter -h for help)" << std::endl)
-    throw std::runtime_error("no dataset provided");
-  }
-
-  //ds configure sensor message source
-  _message_reader.open(_parameters->command_line_parameters->dataset_file_name);
-
-  //ds terminate on failure
-  if (!_message_reader.good()) {
-    LOG_INFO(std::cerr << _parameters->banner << std::endl)
-    throw std::runtime_error("unable to open dataset");
-  }
+  _synchronizer.reset();
 }
 
 void SLAMAssembly::_createStereoTracker(Camera* camera_left_, Camera* camera_right_){
@@ -125,6 +108,15 @@ void SLAMAssembly::_createDepthTracker(const Camera* camera_left_, const Camera*
 
 void SLAMAssembly::loadCamerasFromMessageFile() {
 
+  //ds configure sensor message source
+  _message_reader.open(_parameters->command_line_parameters->dataset_file_name);
+
+  //ds terminate on failure
+  if (!_message_reader.good()) {
+    LOG_INFO(std::cerr << _parameters->banner << std::endl)
+    throw std::runtime_error("unable to open dataset");
+  }
+
   //ds configure message synchronizer
   std::vector<std::string> camera_topics_synchronized(0);
   camera_topics_synchronized.push_back(_parameters->command_line_parameters->topic_image_left);
@@ -136,28 +128,29 @@ void SLAMAssembly::loadCamerasFromMessageFile() {
   srrg_core::BaseMessage* message = 0;
   while ((message = _message_reader.readMessage())) {
     srrg_core::BaseSensorMessage* sensor_message = dynamic_cast<srrg_core::BaseSensorMessage*>(message);
-    assert(sensor_message != 0);
-    sensor_message->untaint();
+    if (sensor_message) {
 
-    //ds check for the two set topics
-    if (sensor_message->topic() == _parameters->command_line_parameters->topic_image_left) {
-      srrg_core::PinholeImageMessage* message_image_left  = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_message);
+      //ds check for the two set topics to set the camera objects
+      if (_camera_left == 0 && sensor_message->topic().compare(_parameters->command_line_parameters->topic_image_left) == 0) {
+        srrg_core::PinholeImageMessage* message_image_left = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_message);
 
-      //ds allocate a new camera
-      _camera_left = new Camera(message_image_left->image().rows,
-                                message_image_left->image().cols,
-                                message_image_left->cameraMatrix().cast<real>(),
-                                message_image_left->offset().cast<real>());
-    } else if (sensor_message->topic() == _parameters->command_line_parameters->topic_image_right) {
-      srrg_core::PinholeImageMessage* message_image_right  = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_message);
+        //ds allocate a new camera
+        _camera_left = new Camera(message_image_left->image().rows,
+                                  message_image_left->image().cols,
+                                  message_image_left->cameraMatrix().cast<real>(),
+                                  message_image_left->offset().cast<real>());
+      } else if (_camera_right == 0 && sensor_message->topic().compare(_parameters->command_line_parameters->topic_image_right) == 0) {
+        srrg_core::PinholeImageMessage* message_image_right = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_message);
 
-      //ds allocate a new camera
-      _camera_right = new Camera(message_image_right->image().rows,
-                                 message_image_right->image().cols,
-                                 message_image_right->cameraMatrix().cast<real>(),
-                                 message_image_right->offset().cast<real>());
+        //ds allocate a new camera
+        _camera_right = new Camera(message_image_right->image().rows,
+                                   message_image_right->image().cols,
+                                   message_image_right->cameraMatrix().cast<real>(),
+                                   message_image_right->offset().cast<real>());
+      }
     }
-    delete sensor_message;
+    message->untaint();
+    delete message;
 
     //ds if we got all the information we need
     if (_camera_left && _camera_right) {
@@ -184,7 +177,7 @@ void SLAMAssembly::loadCamerasFromMessageFile() {
     throw std::runtime_error("right camera images not set");
   }
 
-  //ds check if we have to modify the cameras - if stereo from txt_io
+  //ds check if we have to modify the cameras to compute the projection matrices - if stereo from txt_io
   if (_parameters->command_line_parameters->tracker_mode == CommandLineParameters::TrackerMode::RGB_STEREO) {
 
     //ds reconstruct projection matrix from camera matrices (encoded in txt_io)

@@ -73,11 +73,11 @@ namespace proslam {
     void setRobotToWorldGroundTruth(const TransformMatrix3D& robot_to_world_ground_truth_) {_robot_to_world_ground_truth = robot_to_world_ground_truth_;}
     const TransformMatrix3D& robotToWorldGroundTruth() const {return _robot_to_world_ground_truth;}
 
-    inline const FramePointPointerVector& activePoints() const {return _active_points;}
-    inline FramePointPointerVector& activePoints() {return _active_points;}
+    inline const FramePointPointerVector& points() const {return _active_points;}
+    inline FramePointPointerVector& points() {return _active_points;}
 
     //ds request a new framepoint instance with an optional link to a previous point (track)
-    FramePoint* create(const cv::KeyPoint& keypoint_left_,
+    FramePoint* createFramepoint(const cv::KeyPoint& keypoint_left_,
                        const cv::Mat& descriptor_left_,
                        const cv::KeyPoint& keypoint_right_,
                        const cv::Mat& descriptor_right_,

@@ -30,9 +30,6 @@ int32_t main(int32_t argc_, char** argv_) {
 
   try {
 
-    //ds initialize system for txt_io
-    slam_system.initializeMessageFile();
-
     //ds load cameras
     slam_system.loadCamerasFromMessageFile();
 

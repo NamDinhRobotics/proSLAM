@@ -53,7 +53,7 @@ void ImageViewer::_drawPoints() {
   if (_current_frame) {
 
     //ds for all points in the current frame
-    for (const FramePoint* point: _current_frame->activePoints()) {
+    for (const FramePoint* point: _current_frame->points()) {
 
       //ds if the point is linked to a landmark
       if (point->landmark()) {
@@ -96,7 +96,7 @@ void ImageViewer::_drawTracking() {
   if (_current_frame) {
 
     //ds for all points in the current frame
-    for (const FramePoint* point: _current_frame->activePoints()) {
+    for (const FramePoint* point: _current_frame->points()) {
       if (point->landmark()) {
         const cv::Point current_point(point->imageCoordinatesLeft().x(), point->imageCoordinatesLeft().y());
         const cv::Point previous_point(point->previous()->imageCoordinatesLeft().x(), point->previous()->imageCoordinatesLeft().y());
