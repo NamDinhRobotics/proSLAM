@@ -167,7 +167,7 @@ catkin_package(
   srrg_proslam_aligners_library 
   srrg_proslam_framepoint_generation_library 
   srrg_proslam_map_optimization_library 
-  srrg_proslam_motion_estimation_library 
+  srrg_proslam_position_tracking_library 
   srrg_proslam_relocalization_library 
   srrg_proslam_types_library 
   srrg_proslam_visualization_library 
