@@ -53,16 +53,18 @@ namespace proslam {
     std::string topic_camera_info_right = "/camera_right/camera_info";
     std::string dataset_file_name       = "";
     std::string configuration_file_name = "";
+    Count number_of_frames_per_bundle_adjustment = 100;
 
     //! @brief options
     bool option_use_gui               = false;
-    bool option_use_relocalization    = true;
+    bool option_use_relocalization    = false;
     bool option_show_top_viewer       = false;
     bool option_drop_framepoints      = false;
     bool option_equalize_histogram    = false;
     bool option_undistort_and_rectify = false;
     bool option_use_odometry          = false;
     bool option_recover_landmarks     = false;
+    bool option_use_bundle_adjustment = true;
   };
 
 

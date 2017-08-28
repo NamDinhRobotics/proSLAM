@@ -52,7 +52,7 @@ namespace proslam {
     inline void setCoordinates(const PointCoordinates& coordinates_) {_coordinates = coordinates_;}
 
     //ds reset landmark coordinates to a certain position (loss of past measurements!)
-    void resetCoordinates(const PointCoordinates& coordinates_);
+    void resetCoordinates(const PointCoordinates& coordinates_, const real& weight_ = 0);
 
     //ds landmark state - locked inside a local map and refreshed afterwards
     inline State* state() {return _state;}
