@@ -3,7 +3,7 @@
 
 namespace proslam {
 
-GraphOptimizer::GraphOptimizer() {
+GraphOptimizer::GraphOptimizer(): _parameters(0) {
   LOG_DEBUG(std::cerr << "GraphOptimizer::GraphOptimizer|constructed" << std::endl)
 
   //ds allocate an optimizable graph
@@ -64,7 +64,7 @@ void GraphOptimizer::addFrame(Frame* frame_) {
         //ds allocate a new point vertex and add it to the graph
         vertex_landmark = new g2o::VertexPointXYZ( );
         vertex_landmark->setEstimate(landmark->coordinates().cast<double>());
-        vertex_landmark->setId(landmark->identifier()+_identifier_space);
+        vertex_landmark->setId(landmark->identifier()+_parameters->identifier_space);
         _optimizer->addVertex(vertex_landmark);
 
         //ds bookkeep the landmark
@@ -93,7 +93,7 @@ void GraphOptimizer::addFrame(Frame* frame_) {
                 vertex_frame_current,
                 _vertex_frame_last_added,
                 frame_->previous()->worldToRobot()*frame_->robotToWorld(),
-                base_information_frame+number_of_measurements);
+                _parameters->base_information_frame+number_of_measurements);
   }
 
   //ds bookkeep the added frame
@@ -153,7 +153,7 @@ void GraphOptimizer::_setPointEdge(g2o::SparseOptimizer* optimizer_,
   landmark_edge->setMeasurement(framepoint_robot_coordinates);
   landmark_edge->setInformation(information_factor_*Eigen::Matrix<double, 3, 3>::Identity());
   landmark_edge->setParameterId(0, G2oParameter::WORLD_OFFSET);
-  if (enable_robust_kernel_for_landmark_measurements) {landmark_edge->setRobustKernel(new g2o::RobustKernelCauchy());}
+  if (_parameters->enable_robust_kernel_for_landmark_measurements) {landmark_edge->setRobustKernel(new g2o::RobustKernelCauchy());}
   optimizer_->addEdge(landmark_edge);
 }
 }

@@ -34,6 +34,7 @@ public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 public:
 
   GraphOptimizer();
+  void configure(GraphOptimizerParameters* parameters_) {_parameters = parameters_;}
   ~GraphOptimizer();
 
 //ds interface
@@ -72,9 +73,6 @@ protected:
   //! @brief g2o optimizer (holding the pose graph)
   g2o::SparseOptimizer* _optimizer;
 
-  //! @brief identifier space between frames and landmarks (1mio frames)
-  Count _identifier_space = 1000000;
-
   //! @brief last frame vertex added (to be locked for optimization)
   g2o::VertexSE3* _vertex_frame_last_added;
 
@@ -84,15 +82,14 @@ protected:
   //! @brief bookkeeping: added landmarks
   std::map<Landmark*, g2o::VertexPointXYZ*> _landmarks_in_pose_graph;
 
-  //! @brief base frame weight in graph TODO move to params
-  const real base_information_frame = 1e5;
-
-  //! @brief enable robust kernel for landmark measurements TODO move to params
-  bool enable_robust_kernel_for_landmark_measurements = false;
-
   //ds informative only
   CREATE_CHRONOMETER(addition)
   CREATE_CHRONOMETER(optimization)
   Count _number_of_optimizations = 0;
+
+private:
+
+  //! @brief configurable parameters
+  GraphOptimizerParameters* _parameters;
 };
 }

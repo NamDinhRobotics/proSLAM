@@ -96,12 +96,6 @@ namespace proslam {
       glVertex3f(landmark->coordinates().x(), landmark->coordinates().y(), landmark->coordinates().z());
     }
 
-    //ds draw temporary landmarks
-    for (const LandmarkPointerMapElement& landmark: _world_map->landmarksInWindowForLocalMap()) {
-      glColor3f(0.5, 0.5, 0.5);
-      glVertex3f(landmark.second->coordinates().x(), landmark.second->coordinates().y(), landmark.second->coordinates().z());
-    }
-
     //ds draw permanent landmarks
     for (const LandmarkPointerMapElement& landmark: _world_map->landmarks()) {
 

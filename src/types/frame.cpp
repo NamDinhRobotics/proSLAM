@@ -116,15 +116,4 @@ namespace proslam {
       point->setWorldCoordinates(_robot_to_world*point->robotCoordinates());
     }
   }
-
-  Frame* FramePointerMap::get(const Identifier& identifier_) {
-    FramePointerMap::iterator it = find(identifier_);
-    assert(it != end());
-    return it->second;
-  }
-
-  void FramePointerMap::put(Frame* frame_) {
-    assert(find(frame_->identifier()) == end());
-    insert(std::make_pair(frame_->identifier(), frame_));
-  }
 }

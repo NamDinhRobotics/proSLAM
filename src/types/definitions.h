@@ -21,7 +21,7 @@
 #include "srrg_hbst_types/binary_tree.hpp"
 #include "srrg_types/types.hpp"
 
-namespace proslam{
+namespace proslam {
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% //CONFIGURATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

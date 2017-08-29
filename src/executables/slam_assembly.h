@@ -81,6 +81,7 @@ public:
 
   void requestTermination() {_is_termination_requested = true;}
   const bool isViewerOpen() const {return _is_viewer_open;}
+  const double currentFPS() const {return _current_fps;}
 
 //ds helpers:
 protected:
@@ -99,7 +100,7 @@ protected:
   WorldMap* _world_map;
 
   //ds pose graph optimization handler
-  GraphOptimizer* _optimizer;
+  GraphOptimizer* _graph_optimizer;
 
   //ds relocalization module
   Relocalizer* _relocalizer;
@@ -142,10 +143,16 @@ protected:
 //ds informative only
 protected:
 
-  //ds recorded ground truth input
+  //! @brief recorded ground truth input
   std::vector<TransformMatrix3D> _robot_to_world_ground_truth_poses;
 
-  //ds total system runtime
-  double _duration_total_seconds = 0;
+  //! @brief total system processing runtime
+  double _processing_time_total_seconds = 0;
+
+  //! @brief total number of processed frames
+  Count _number_of_processed_frames = 0;
+
+  //! @brief current average fps
+  double _current_fps = 0;
 };
 }

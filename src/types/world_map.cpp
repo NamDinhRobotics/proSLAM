@@ -25,11 +25,6 @@ namespace proslam {
       delete it->second;
     }
 
-    //ds free landmarks in window
-    for(LandmarkPointerMap::iterator it = _landmarks_in_window_for_local_map.begin(); it != _landmarks_in_window_for_local_map.end(); ++it) {
-      delete it->second;
-    }
-
     //ds free all frames
     for(FramePointerMap::iterator it = _frames.begin(); it != _frames.end(); ++it) {
       delete it->second;
@@ -42,7 +37,6 @@ namespace proslam {
 
     //ds clear containers
     _frame_queue_for_local_map.clear();
-    _landmarks_in_window_for_local_map.clear();
     _landmarks.clear();
     _frames.clear();
     _local_maps.clear();
@@ -67,7 +61,7 @@ namespace proslam {
     }
 
     //ds bookkeeping
-    _frames.put(_current_frame);
+    _frames.insert(std::make_pair(_current_frame->identifier(), _current_frame));
     _frame_queue_for_local_map.push_back(_current_frame);
 
     //ds done
@@ -77,7 +71,7 @@ namespace proslam {
   //ds creates a new landmark living in this instance, using the provided framepoint as origin
   Landmark* WorldMap::createLandmark(const FramePoint* origin_){
     Landmark* landmark = new Landmark(origin_, _parameters->landmark);
-    _landmarks_in_window_for_local_map.put(landmark);
+    _landmarks.insert(std::make_pair(landmark->identifier(), landmark));
     return landmark;
   }
 
@@ -144,37 +138,6 @@ namespace proslam {
       }
     }
     _frame_queue_for_local_map.clear();
-
-    //ds temporary buffer
-    LandmarkPointerMap landmarks_in_window_tracked;
-    landmarks_in_window_tracked.clear();
-
-    //ds loop over the landmarks in the current window - either delete them, keep them or add them to the final landmarks map if theyre part of a local map
-    for(LandmarkPointerMap::iterator it = _landmarks_in_window_for_local_map.begin(); it != _landmarks_in_window_for_local_map.end(); ++it) {
-
-      //ds if the landmark is not part of a local map
-      if (it->second->localMap() == 0) {
-
-        //ds if the landmark is currently tracked - it might still become part of a local map
-        if (it->second->isCurrentlyTracked()) {
-
-          //ds we want to keep it
-          landmarks_in_window_tracked.put(it->second);
-        } else {
-
-          //ds free the landmark
-          delete it->second;
-        }
-      } else {
-
-        //ds add the landmark permanently
-        _landmarks.put(it->second);
-      }
-    }
-
-    //ds update current window
-    _landmarks_in_window_for_local_map.clear();
-    _landmarks_in_window_for_local_map.swap(landmarks_in_window_tracked);
   }
 
   //ds adds a loop closure constraint between 2 local maps

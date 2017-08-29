@@ -27,9 +27,6 @@ namespace proslam {
   //ds getters/setters
   public:
 
-    //ds unique identifier for a particular FramePoint instance
-    inline const Identifier identifier() const {return _identifier;}
-
     //ds FramePoint in the previous image
     inline const FramePoint* previous() const {return _previous;}
     void setPrevious(FramePoint* previous_);
@@ -85,9 +82,6 @@ namespace proslam {
   //ds attributes
   protected:
 
-    //ds unique identifier for a particular FramePoint instance
-    const Identifier _identifier;
-
     //ds connections to temporal and ownership elements
     FramePoint* _previous = 0; //ds FramePoint in the previous image
     FramePoint* _origin   = 0; //ds FramePoint in the image where it was first detected (track start)
@@ -122,12 +116,6 @@ namespace proslam {
     //ds visualization only
     PointCoordinates _reprojection_coordinates_left  = PointCoordinates::Zero();
     PointCoordinates _reprojection_coordinates_right = PointCoordinates::Zero();
-
-  //ds class specific
-  private:
-
-    //ds inner instance count - incremented upon constructor call (also unsuccessful calls)
-    static Count _instances;
   };
 
   typedef std::vector<FramePoint*> FramePointPointerVector;

@@ -8,27 +8,16 @@ namespace proslam {
   public:
 
     //! @brief constructor
-    Parameters(): indentifier(_number_of_instances) {++_number_of_instances;}
+    Parameters() {}
 
     //! @brief destructor
     virtual ~Parameters() {}
 
     //! @brief parameter printing function
     virtual void print() const = 0;
-
-    //! @brief unique parameter instance identifier
-    Identifier indentifier;
-
-  private:
-
-    //! @brief parameter instance count
-    static Count _number_of_instances;
   };
 
-
-
-  //ds Command line
-  //! @class
+  //! @class command line parameters
   class CommandLineParameters: public Parameters {
 
   //ds exported types
@@ -53,21 +42,18 @@ namespace proslam {
     std::string topic_camera_info_right = "/camera_right/camera_info";
     std::string dataset_file_name       = "";
     std::string configuration_file_name = "";
-    Count number_of_frames_per_bundle_adjustment = 100;
 
     //! @brief options
-    bool option_use_gui               = false;
-    bool option_use_relocalization    = false;
-    bool option_show_top_viewer       = false;
-    bool option_drop_framepoints      = false;
-    bool option_equalize_histogram    = false;
-    bool option_undistort_and_rectify = false;
-    bool option_use_odometry          = false;
-    bool option_recover_landmarks     = false;
-    bool option_use_bundle_adjustment = true;
+    bool option_use_gui                   = false;
+    bool option_use_relocalization        = false;
+    bool option_show_top_viewer           = false;
+    bool option_drop_framepoints          = false;
+    bool option_equalize_histogram        = false;
+    bool option_undistort_and_rectify     = false;
+    bool option_use_odometry              = false;
+    bool option_recover_landmarks         = false;
+    bool option_disable_bundle_adjustment = false;
   };
-
-
 
   //! @class generic aligner parameters, present in modules with aligner units
   class AlignerParameters: public Parameters {
@@ -95,10 +81,7 @@ namespace proslam {
     real minimum_inlier_ratio          = 0.25;
   };
 
-
-
-  //ds Types
-  //! @class
+  //! @class landmark parameters
   class LandmarkParameters: public Parameters {
   public:
 
@@ -112,7 +95,7 @@ namespace proslam {
     real maximum_translation_error_to_depth_ratio = 1;
   };
 
-  //! @class
+  //! @class local map parameters
   class LocalMapParameters: public Parameters {
   public:
 
@@ -123,7 +106,7 @@ namespace proslam {
     Count minimum_number_of_landmarks = 50;
   };
 
-  //! @class
+  //! @class world map parameters
   class WorldMapParameters: public Parameters {
   public:
 
@@ -142,16 +125,13 @@ namespace proslam {
     Count minimum_number_of_frames_for_local_map = 4;
 
     //! @brief landmark generation parameters
-    LandmarkParameters* landmark  = 0;
+    LandmarkParameters* landmark;
 
     //! @brief local map generation parameters
-    LocalMapParameters* local_map = 0;
+    LocalMapParameters* local_map;
   };
 
-
-
-  //ds Framepoint estimation
-  //! @class
+  //! @class framepoint generation parameters
   class BaseFramepointGeneratorParameters: public Parameters {
   public:
 
@@ -171,7 +151,7 @@ namespace proslam {
     int32_t matching_distance_tracking_step_size         = 1;
   };
 
-  //! @class
+  //! @class framepoint generation parameters for a stereo camera setup
   class StereoFramePointGeneratorParameters: public BaseFramepointGeneratorParameters {
   public:
 
@@ -183,10 +163,9 @@ namespace proslam {
     real baseline_factor                            = 50;
     real minimum_disparity_pixels                   = 1;
     uint32_t epipolar_line_thickness_pixels         = 0;
-
   };
 
-  //! @class
+  //! @class framepoint generation parameters for a rgbd camera setup
   class DepthFramePointGeneratorParameters: public BaseFramepointGeneratorParameters {
   public:
 
@@ -198,14 +177,11 @@ namespace proslam {
     real maximum_depth_far_meters  = 20;
   };
 
-
-
-  //ds Motion estimation
-  //! @class
+  //! @class base tracker parameters
   class BaseTrackerParameters: public Parameters {
   protected:
 
-    //! @brief prohibit direct construction (only by subclasses)
+    //! @brief default construction (only by subclasses)
     BaseTrackerParameters();
 
     //! @brief destructor: clean inner parameters
@@ -248,7 +224,7 @@ namespace proslam {
     AlignerParameters* aligner;
   };
 
-  //! @class
+  //! @class stereo tracker parameters
   class StereoTrackerParameters: public BaseTrackerParameters {
   public:
 
@@ -256,7 +232,7 @@ namespace proslam {
     virtual void print() const;
   };
 
-  //! @class
+  //! @class depth tracker parameters
   class DepthTrackerParameters: public BaseTrackerParameters {
   public:
 
@@ -264,10 +240,7 @@ namespace proslam {
     virtual void print() const;
   };
 
-
-
-  //ds Relocalization
-  //! @class
+  //! @class relocalization parameters
   class RelocalizerParameters: public Parameters {
   public:
 
@@ -296,9 +269,33 @@ namespace proslam {
     AlignerParameters* aligner;
   };
 
+  //! @class pose graph optimizer parameters
+  class GraphOptimizerParameters: public Parameters {
+  public:
 
+    //! @brief default constructor
+    GraphOptimizerParameters() {}
 
-  //! @class object holding all system parameters
+    //! @brief destructor: clean inner parameters
+    ~GraphOptimizerParameters() {}
+
+    //! @brief parameter printing function
+    virtual void print() const;
+
+    //! @brief g2o identifier space between frames and landmark vertices
+    Count identifier_space = 1000000;
+
+    //! @brief determines window size for bundle adjustment
+    Count number_of_frames_per_bundle_adjustment = 100;
+
+    //! @brief base frame weight in pose graph (assuming 1 for landmarks)
+    real base_information_frame = 1e5;
+
+    //! @brief enable robust kernel for landmark measurements
+    bool enable_robust_kernel_for_landmark_measurements = false;
+  };
+
+  //! @class object holding all parameters
   class ParameterCollection {
 
   //ds object management
@@ -351,6 +348,8 @@ namespace proslam {
     DepthTrackerParameters* depth_tracker_parameters   = 0;
 
     RelocalizerParameters* relocalizer_parameters = 0;
+
+    GraphOptimizerParameters* graph_optimizer_parameters = 0;
 
   //ds inner attributes
   protected:

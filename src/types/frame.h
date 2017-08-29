@@ -163,7 +163,6 @@ namespace proslam {
 
     //ds access
     friend class WorldMap;
-    friend class FramePointerMap;
 
     //ds visualization only
     TransformMatrix3D _robot_to_world_ground_truth = TransformMatrix3D::Identity();
@@ -177,11 +176,6 @@ namespace proslam {
   };
 
   typedef std::vector<Frame*> FramePointerVector;
+  typedef std::map<Identifier, Frame*> FramePointerMap;
   typedef std::pair<Identifier, Frame*> FramePointerMapElement;
-
-  class FramePointerMap: public std::map<Identifier, Frame*>{
-  public:
-    Frame* get(const Identifier& identifier_);
-    void put(Frame* frame_);
-  };
 }

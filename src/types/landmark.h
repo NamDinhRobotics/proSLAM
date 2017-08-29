@@ -12,7 +12,10 @@ namespace proslam {
 
     //ds container describing the landmark at the time of local map construction
     struct State {
-      State(Landmark* landmark_): landmark(landmark_), coordinates_in_local_map(Vector3::Zero()), world_coordinates(Vector3::Zero()), local_map(0) {
+      State(Landmark* landmark_, const PointCoordinates& world_coordinates_): landmark(landmark_),
+                                                                              coordinates_in_local_map(Vector3::Zero()),
+                                                                              world_coordinates(world_coordinates_),
+                                                                              local_map(0) {
         appearances.clear();
       }
       ~State() {
@@ -48,15 +51,15 @@ namespace proslam {
     //ds framepoint in an image at the time when the landmark was created
     inline const FramePoint* origin() const {return _origin;}
 
-    inline const PointCoordinates& coordinates() const { return _coordinates; }
-    inline void setCoordinates(const PointCoordinates& coordinates_) {_coordinates = coordinates_;}
+    inline const PointCoordinates& coordinates() const {return _state->world_coordinates;}
+    inline void setCoordinates(const PointCoordinates& coordinates_) {_state->world_coordinates = coordinates_;}
 
     //ds reset landmark coordinates to a certain position (loss of past measurements!)
     void resetCoordinates(const PointCoordinates& coordinates_, const real& weight_ = 0);
 
     //ds landmark state - locked inside a local map and refreshed afterwards
     inline State* state() {return _state;}
-    inline void refreshState() {_state = new State(this);}
+    inline void refreshState() {_state = new State(this, _state->world_coordinates);}
     inline const LocalMap* localMap() const {return _local_map;}
     inline void setLocalMap(const LocalMap* local_map_) {_local_map = local_map_;}
 
@@ -95,9 +98,6 @@ namespace proslam {
     //ds linked FramePoint in an image at the time of creation of this instance
     const FramePoint* _origin;
 
-    //ds the 3D point coordinates of the landmark expressed in the WorldMap coordinate frame
-    PointCoordinates _coordinates;
-
     //ds the current connected state handle (links the landmark to the local map)
     State* _state;
     const LocalMap* _local_map = 0;
@@ -130,11 +130,6 @@ namespace proslam {
   };
   
   typedef std::vector<Landmark*> LandmarkPointerVector;
+  typedef std::map<Identifier, Landmark*> LandmarkPointerMap;
   typedef std::pair<Identifier, Landmark*> LandmarkPointerMapElement;
-
-  class LandmarkPointerMap: public std::map<Identifier, Landmark*> {
-  public:
-    Landmark* get(const Identifier& identifier_);
-    void put(Landmark* landmark);
-  };
 }

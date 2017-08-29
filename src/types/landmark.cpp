@@ -8,12 +8,11 @@ namespace proslam {
   //ds initial landmark coordinates must be provided
   Landmark::Landmark(const FramePoint* origin_, const LandmarkParameters* parameters_): _identifier(_instances),
                                                                                         _origin(origin_),
-                                                                                        _coordinates(origin_->worldCoordinates()),
                                                                                         _parameters(parameters_) {
     ++_instances;
 
     //ds allocate fresh state (trading construction correctness for enclosed generation)
-    _state = new State(this);
+    _state = new State(this, origin_->worldCoordinates());
   }
 
   //ds cleanup of dynamic structures
@@ -39,9 +38,11 @@ namespace proslam {
 
   //ds landmark coordinates update - no visual information (e.g. map optimization)
   void Landmark::update(const PointCoordinates& coordinates_in_world_, const real& depth_meters_) {
+    assert(_state);
+    assert(_parameters);
 
     //ds compute relative delta to the current coordinate estimate
-    const real relative_delta = (_coordinates-coordinates_in_world_).norm()/depth_meters_;
+    const real relative_delta = (_state->world_coordinates-coordinates_in_world_).norm()/depth_meters_;
 
     //ds check if inlier measurement or less than 2 updates yet
     if (relative_delta < _parameters->maximum_translation_error_to_depth_ratio || _number_of_updates < _parameters->minimum_number_of_forced_updates) {
@@ -53,20 +54,17 @@ namespace proslam {
       _total_weight += weight_new_measurement;
 
       //ds update coordinates (http://people.ds.cam.ac.uk/fanf2/hermes/doc/antiforgery/stats.pdf)
-      _coordinates += weight_new_measurement/_total_weight*(coordinates_in_world_-_coordinates);
+      _state->world_coordinates += weight_new_measurement/_total_weight*(coordinates_in_world_-_state->world_coordinates);
       _are_coordinates_validated = true;
       ++_number_of_updates;
-
-      //ds update state
-      _state->world_coordinates = _coordinates;
     } else {
 
       //ds discard measurement completely
       _are_coordinates_validated = false;
     }
-    assert(!std::isnan(_coordinates.x()));
-    assert(!std::isnan(_coordinates.y()));
-    assert(!std::isnan(_coordinates.z()));
+    assert(!std::isnan(_state->world_coordinates.x()));
+    assert(!std::isnan(_state->world_coordinates.y()));
+    assert(!std::isnan(_state->world_coordinates.z()));
   }
 
   //ds landmark coordinates update with visual information (tracking)
@@ -78,19 +76,5 @@ namespace proslam {
 
     //ds update position
     update(point_->worldCoordinates(), point_->depthMeters());
-  }
-
-  Landmark* LandmarkPointerMap::get(const Identifier& identifier_) {
-    LandmarkPointerMap::iterator iterator = find(identifier_);
-    if (iterator == end()) {
-      return 0;
-    } else {
-      return iterator->second;
-    }
-  }
-
-  void LandmarkPointerMap::put(Landmark* landmark) {
-    assert(find(landmark->identifier()) == end());
-    insert(std::make_pair(landmark->identifier(), landmark));
   }
 }

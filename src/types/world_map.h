@@ -71,7 +71,6 @@ namespace proslam {
     const Frame* previousFrame() const {return _previous_frame;}
     void setPreviousFrame(Frame* previous_frame_) {_previous_frame = previous_frame_;}
 
-    const LandmarkPointerMap& landmarksInWindowForLocalMap() const {return _landmarks_in_window_for_local_map;}
     LandmarkPointerMap& landmarks() {return _landmarks;}
     const LandmarkPointerMap& landmarks() const {return _landmarks;}
     std::vector<Landmark*>& currentlyTrackedLandmarks() {return _currently_tracked_landmarks;}
@@ -107,9 +106,6 @@ namespace proslam {
     const Frame* _root_frame = 0;
     Frame* _current_frame    = 0;
     Frame* _previous_frame   = 0;
-
-    //ds potential landmarks, to be moved into the permanent holder once validated
-    LandmarkPointerMap _landmarks_in_window_for_local_map;
 
     //ds all permanent landmarks in the map
     LandmarkPointerMap _landmarks;

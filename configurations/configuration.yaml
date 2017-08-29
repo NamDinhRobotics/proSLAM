@@ -13,14 +13,15 @@ command_line:
   dataset_file_name:
 
   #ds options
-  option_use_gui:               false
-  option_use_odometry:          false
-  option_use_relocalization:    true
-  option_show_top_viewer:       false
-  option_drop_framepoints:      false
-  option_equalize_histogram:    false
-  option_undistort_and_rectify: false
-  option_recover_landmarks:     false
+  option_use_gui:                   false
+  option_use_odometry:              false
+  option_use_relocalization:        true
+  option_show_top_viewer:           false
+  option_drop_framepoints:          false
+  option_equalize_histogram:        false
+  option_undistort_and_rectify:     false
+  option_recover_landmarks:         false
+  option_disable_bundle_adjustment: false
 
 landmark:
 
@@ -126,6 +127,18 @@ relocalization:
   aligner->minimum_number_of_inliers:    25
   aligner->minimum_inlier_ratio:         0.25
 
-map_optimization:
+graph_optimization:
+
+  #g2o identifier space between frames and landmark vertices
+  identifier_space: 1000000
+
+  #determines window size for bundle adjustment
+  number_of_frames_per_bundle_adjustment: 100
+
+  #base frame weight in pose graph (assuming 1 for landmarks)
+  base_information_frame: 1e5
+
+  #enable robust kernel for landmark measurements
+  bool enable_robust_kernel_for_landmark_measurements: false
 
 visualization:

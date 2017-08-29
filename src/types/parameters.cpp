@@ -3,7 +3,6 @@
 
 namespace proslam {
 
-  Count Parameters::_number_of_instances = 0;
   std::string ParameterCollection::banner =
   "\n" DOUBLE_BAR "\n"
   "srrg_proslam_app: simple SLAM application\n"
@@ -154,26 +153,35 @@ namespace proslam {
     aligner->print();
   }
 
+  void GraphOptimizerParameters::print() const {
+    std::cerr << "GraphOptimizerParameters::print|identifier_space: " << identifier_space << std::endl;
+    std::cerr << "GraphOptimizerParameters::print|number_of_frames_per_bundle_adjustment: " << number_of_frames_per_bundle_adjustment << std::endl;
+    std::cerr << "GraphOptimizerParameters::print|base_information_frame: " << base_information_frame << std::endl;
+    std::cerr << "GraphOptimizerParameters::print|enable_robust_kernel_for_landmark_measurements: " << enable_robust_kernel_for_landmark_measurements << std::endl;
+  }
+
   ParameterCollection::ParameterCollection(): number_of_parameters_detected(0), number_of_parameters_parsed(0) {
     LOG_DEBUG(std::cerr << "ParameterCollection::ParameterCollection|constructing" << std::endl)
 
     //ds allocate minimal set of parameters
-    command_line_parameters = new CommandLineParameters();
-    world_map_parameters    = new WorldMapParameters();
-    relocalizer_parameters  = new RelocalizerParameters();
+    command_line_parameters    = new CommandLineParameters();
+    world_map_parameters       = new WorldMapParameters();
+    relocalizer_parameters     = new RelocalizerParameters();
+    graph_optimizer_parameters = new GraphOptimizerParameters();
 
     LOG_DEBUG(std::cerr << "ParameterCollection::ParameterCollection|constructed" << std::endl)
   }
 
   ParameterCollection::~ParameterCollection() {
     LOG_DEBUG(std::cerr << "ParameterCollection::~ParameterCollection|destroying" << std::endl)
-    if (command_line_parameters) {delete command_line_parameters;}
-    if (world_map_parameters) {delete world_map_parameters;}
-    if (stereo_framepoint_generator_parameters) {delete stereo_framepoint_generator_parameters;}
-    if (depth_framepoint_generator_parameters) {delete depth_framepoint_generator_parameters;}
-    if (stereo_tracker_parameters) {delete stereo_tracker_parameters;}
-    if (depth_tracker_parameters) {delete depth_tracker_parameters;}
-    if (relocalizer_parameters) {delete relocalizer_parameters;}
+    delete command_line_parameters;
+    delete world_map_parameters;
+    delete stereo_framepoint_generator_parameters;
+    delete depth_framepoint_generator_parameters;
+    delete stereo_tracker_parameters;
+    delete depth_tracker_parameters;
+    delete relocalizer_parameters;
+    delete graph_optimizer_parameters;
     LOG_DEBUG(std::cerr << "ParameterCollection::~ParameterCollection|destroyed" << std::endl)
   }
 
@@ -403,6 +411,12 @@ namespace proslam {
       PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, aligner->minimum_number_of_inliers, Count)
       PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, aligner->minimum_inlier_ratio, real)
 
+      //Pose Graph Optimization
+      PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, identifier_space, Count)
+      PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, number_of_frames_per_bundle_adjustment, Count)
+      PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, base_information_frame, real)
+      PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, enable_robust_kernel_for_landmark_measurements, bool)
+
       //ds done
       LOG_INFO(std::cerr << "ParameterCollection::parseFromFile|successfully loaded configuration from file: " << filename_ << std::endl)
       LOG_INFO(std::cerr << "ParameterCollection::parseFromFile|number of imported parameters: " << number_of_parameters_parsed << "/" << number_of_parameters_detected << std::endl)
@@ -455,5 +469,6 @@ namespace proslam {
     if (stereo_tracker_parameters) {stereo_tracker_parameters->print();}
     if (depth_tracker_parameters) {depth_tracker_parameters->print();}
     if (relocalizer_parameters) {relocalizer_parameters->print();}
+    if (graph_optimizer_parameters) {graph_optimizer_parameters->print();}
   }
 }
