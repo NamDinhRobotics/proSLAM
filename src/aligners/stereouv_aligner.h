@@ -9,7 +9,7 @@ namespace proslam {
   //ds object handling
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-    StereoUVAligner() {}
+    StereoUVAligner(AlignerParameters* parameters_): BaseFrameAligner(parameters_) {}
     ~StereoUVAligner() {}
 
   //ds functionality

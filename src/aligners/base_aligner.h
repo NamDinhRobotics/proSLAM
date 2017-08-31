@@ -10,11 +10,11 @@ namespace proslam {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //! @brief default constructor
-    BaseAligner() {};
+    //! @param[in] parameters_ target parameters handle
+    BaseAligner(AlignerParameters* parameters_): _parameters(parameters_) {};
 
     //! @brief configuration method, called once all construction parameters are set
-    //! @param[in] parameters_ target parameters
-    virtual void configure(AlignerParameters* parameters_) {_parameters = parameters_;}
+    virtual void configure() {}
 
     //! @brief default destructor
     virtual ~BaseAligner() {};

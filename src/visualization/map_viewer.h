@@ -13,9 +13,11 @@ class MapViewer: public srrg_core_viewers::SimpleViewer {
 public:
 
   //! @brief default constructor
+  //! @brief param[in] parameters_ viewer parameters
   //! @brief param[in] object_scale_ global display scale of objects in the map
   //! @brief param[in] window_title_ the GL window title
-  MapViewer(const real& object_scale_ = 0.25,
+  MapViewer(const MapViewerParameters* parameters_,
+            const real& object_scale_ = 0.25,
             const std::string& window_title_ = "output: map [OpenGL]");
 
   //! @brief default destructor
@@ -121,5 +123,11 @@ protected:
 
   //! @brief current robot position
   TransformMatrix3D _world_to_robot;
+
+//ds class specific
+private:
+
+  //! @brief configurable parameters
+  const MapViewerParameters* _parameters;
 };
 }

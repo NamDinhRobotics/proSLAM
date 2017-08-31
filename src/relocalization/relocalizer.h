@@ -1,7 +1,7 @@
 #pragma once
 #include <queue>
 #include "aligners/xyz_aligner.h"
-#include "types/local_map.h"
+#include "relocalization/local_map_correspondence.h"
 
 namespace proslam {
 
@@ -27,8 +27,8 @@ namespace proslam {
   //ds object management
   public:
 
-    Relocalizer();
-    virtual void configure(RelocalizerParameters* parameters_);
+    Relocalizer(RelocalizerParameters* parameters_);
+    void configure();
     virtual ~Relocalizer();
 
   //ds functionality

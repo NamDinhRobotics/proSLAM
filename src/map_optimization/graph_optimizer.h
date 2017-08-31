@@ -5,11 +5,10 @@
 #include "g2o/core/block_solver.h"
 #include "g2o/core/factory.h"
 #include "g2o/core/optimization_algorithm_factory.h"
-#include "g2o/core/optimization_algorithm_gauss_newton.h"
 #include "g2o/solvers/csparse/linear_solver_csparse.h"
-#include "g2o/solvers/cholmod/linear_solver_cholmod.h"
 #include "g2o/types/slam3d/types_slam3d.h"
 #include "types/world_map.h"
+#include "relocalization/local_map_correspondence.h"
 
 namespace proslam {
 
@@ -19,7 +18,7 @@ class GraphOptimizer {
 //ds exported data types
 public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  typedef g2o::BlockSolver< g2o::BlockSolverTraits<-1, -1> >  SlamBlockSolver;
+  typedef g2o::BlockSolver<g2o::BlockSolverTraits<-1, -1> >  SlamBlockSolver;
   typedef g2o::LinearSolverCSparse<SlamBlockSolver::PoseMatrixType> SlamLinearSolver;
 
   //! @brief g2o parameter identifiers
@@ -33,8 +32,8 @@ public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 //ds object management
 public:
 
-  GraphOptimizer();
-  void configure(GraphOptimizerParameters* parameters_) {_parameters = parameters_;}
+  GraphOptimizer(GraphOptimizerParameters* parameters_);
+  void configure() {}
   ~GraphOptimizer();
 
 //ds interface
@@ -42,7 +41,13 @@ public:
 
   //! @brief adds a new frame to the pose graph with all connected landmarks
   //! @param[in] frame_ the frame to add
-  void addFrame(Frame* frame_);
+  void addFrameWithLandmarks(Frame* frame_);
+
+  //! @brief adds a loop closure constraint to the pose graph
+  //! @param[in] loop_closure_ closure constraint containing query frame (usually current) and reference frame (fixed)
+  void addLoopClosure(LocalMapCorrespondence* loop_closure_) {
+
+  }
 
   //! @brief triggers a full bundle adjustment optimization of the current pose graph
   void optimize();

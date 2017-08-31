@@ -27,13 +27,16 @@ namespace proslam {
   //ds reset landmark coordinates to a certain position (loss of past measurements!)
   void Landmark::resetCoordinates(const PointCoordinates& coordinates_, const real& weight_) {
 
-    //ds clear past measurements
-    _total_weight         = weight_;
-    _number_of_updates    = 0;
-    _number_of_recoveries = 0;
+    //ds update state
+    _state->world_coordinates = coordinates_;
 
-    //ds add fresh measurement
-    update(coordinates_);
+//    //ds clear past measurements
+//    _total_weight         = weight_;
+//    _number_of_updates    = 0;
+//    _number_of_recoveries = 0;
+//
+//    //ds add fresh measurement
+//    update(coordinates_);
   }
 
   //ds landmark coordinates update - no visual information (e.g. map optimization)

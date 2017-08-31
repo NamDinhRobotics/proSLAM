@@ -11,10 +11,10 @@ namespace proslam {
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //ds the tracker assumes a constant stereo camera configuration
-    DepthTracker();
+    DepthTracker(DepthTrackerParameters* parameters_);
 
     //gg
-    virtual void configure(BaseTrackerParameters* parameters_);
+    virtual void configure();
 
     //ds dynamic cleanup
     virtual ~DepthTracker();

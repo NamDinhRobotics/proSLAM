@@ -3,27 +3,26 @@
 namespace proslam {
 
   //ds the stereo camera setup must be provided
-  BaseFramePointGenerator::BaseFramePointGenerator(): _camera_left(0),
-                                                      _number_of_rows_image(0),
-                                                      _number_of_cols_image(0),
-                                                      _target_number_of_keypoints(1000),
-                                                      _number_of_available_points(0),
-                                                      _focal_length_pixels(0),
-                                                      _principal_point_offset_u_pixels(0),
-                                                      _principal_point_offset_v_pixels(0),
-                                                      _maximum_depth_near_meters(0),
-                                                      _maximum_depth_far_meters(0),
-                                                      _framepoints_in_image(0),
+  BaseFramePointGenerator::BaseFramePointGenerator(BaseFramepointGeneratorParameters* parameters_): _camera_left(0),
+                                                                                                    _number_of_rows_image(0),
+                                                                                                    _number_of_cols_image(0),
+                                                                                                    _target_number_of_keypoints(1000),
+                                                                                                    _number_of_available_points(0),
+                                                                                                    _focal_length_pixels(0),
+                                                                                                    _principal_point_offset_u_pixels(0),
+                                                                                                    _principal_point_offset_v_pixels(0),
+                                                                                                    _maximum_depth_near_meters(0),
+                                                                                                    _maximum_depth_far_meters(0),
+                                                                                                    _framepoints_in_image(0),
 #if CV_MAJOR_VERSION == 2
-                                                      _keypoint_detector(0), _descriptor_extractor(0),
+                                                                                                    _keypoint_detector(0), _descriptor_extractor(0),
 #endif
-                                                      _parameters(0) {
+                                                                                                    _parameters(parameters_) {
     LOG_DEBUG(std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|constructed" << std::endl)
   }
 
-  void  BaseFramePointGenerator::configure(BaseFramepointGeneratorParameters* parameters_){
+  void  BaseFramePointGenerator::configure(){
     LOG_DEBUG(std::cerr << "BaseFramePointGenerator::configure|configuring" << std::endl)
-    _parameters = parameters_;
     assert(_camera_left);
 
     _number_of_rows_image            = _camera_left->numberOfImageRows();

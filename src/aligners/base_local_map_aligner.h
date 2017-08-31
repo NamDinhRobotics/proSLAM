@@ -10,7 +10,7 @@ namespace proslam {
   //ds object handling
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-    BaseLocalMapAligner() {}
+    BaseLocalMapAligner(AlignerParameters* parameters_): BaseAligner(parameters_) {}
     virtual ~BaseLocalMapAligner() {};
 
   //ds functionality

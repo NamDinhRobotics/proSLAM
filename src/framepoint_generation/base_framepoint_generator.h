@@ -23,10 +23,10 @@ namespace proslam {
   public:
 
     //ds the stereo camera setup must be provided
-    BaseFramePointGenerator();
+    BaseFramePointGenerator(BaseFramepointGeneratorParameters* parameters_);
 
     //gg to be called after constructor and parameters are set
-    virtual void configure(BaseFramepointGeneratorParameters* parameters_);
+    virtual void configure();
 
     //ds cleanup of dynamic structures
     virtual ~BaseFramePointGenerator();

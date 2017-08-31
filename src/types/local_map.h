@@ -32,7 +32,10 @@ namespace proslam {
     //! @param[in] local_map_root_ the first local map in the same track
     //! @param[in] local_map_previous_ the preceding local map in the same track
     //! @param[in] minimum_number_of_landmarks_ target minimum number of landmarks to contain in local map
-    LocalMap(FramePointerVector& frames_, LocalMap* local_map_root_ = 0, LocalMap* local_map_previous_ = 0, const Count& minimum_number_of_landmarks_ = 50);
+    LocalMap(FramePointerVector& frames_,
+             const LocalMapParameters* parameters_,
+             LocalMap* local_map_root_ = 0,
+             LocalMap* local_map_previous_ = 0);
 
     //ds cleanup of dynamic structures
     ~LocalMap();
@@ -118,6 +121,9 @@ namespace proslam {
 
   //ds class specific
   private:
+
+    //! @brief configurable parameters
+    const LocalMapParameters* _parameters;
 
     //! @brief inner instance count - incremented upon constructor call (also unsuccessful calls)
     static Count _instances;

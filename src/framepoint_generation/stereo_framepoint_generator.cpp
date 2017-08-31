@@ -2,21 +2,21 @@
 
 namespace proslam {
 
-  StereoFramePointGenerator::StereoFramePointGenerator(): _camera_right(0),
-                                                          _baseline_pixelsmeters(0),
-                                                          _baseline_meters(0),
-                                                          _parameters(0) {
+  StereoFramePointGenerator::StereoFramePointGenerator(StereoFramePointGeneratorParameters* parameters_): BaseFramePointGenerator(parameters_),
+                                                                                                          _camera_right(0),
+                                                                                                          _baseline_pixelsmeters(0),
+                                                                                                          _baseline_meters(0),
+                                                                                                          _parameters(parameters_) {
     LOG_DEBUG(std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|construced" << std::endl)
   }
 
   //ds the stereo camera setup must be provided
-  void StereoFramePointGenerator::configure(BaseFramepointGeneratorParameters* parameters_){
+  void StereoFramePointGenerator::configure(){
     LOG_DEBUG(std::cerr << "StereoFramePointGenerator::configure|configuring" << std::endl)
-    _parameters = dynamic_cast<StereoFramePointGeneratorParameters*>(parameters_);
     assert(_camera_right);
 
     //ds integrate configuration
-    BaseFramePointGenerator::configure(parameters_);
+    BaseFramePointGenerator::configure();
 
     //ds configure current
     _baseline_pixelsmeters     = _camera_right->projectionMatrix()(0,3);

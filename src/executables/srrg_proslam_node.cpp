@@ -76,7 +76,7 @@ void callbackStereoImage(const sensor_msgs::ImageConstPtr& image_left_, const se
     image_left = image_pointer->image;
   }
   catch (const cv_bridge::Exception& exception_) {
-    LOG_WARNING(std::cerr << "callbackStereoImage|exception: " << exception_.what() << " (image left)" << std::endl)
+    std::cerr << "callbackStereoImage|exception: " << exception_.what() << " (image left)" << std::endl;
     return;
   }
 
@@ -87,7 +87,7 @@ void callbackStereoImage(const sensor_msgs::ImageConstPtr& image_left_, const se
     image_right = image_pointer->image;
   }
   catch (const cv_bridge::Exception& exception_) {
-    LOG_WARNING(std::cerr << "callbackStereoImage|exception: " << exception_.what() << " (image right)" << std::endl)
+    std::cerr << "callbackStereoImage|exception: " << exception_.what() << " (image right)" << std::endl;
     return;
   }
 
@@ -120,26 +120,26 @@ int32_t main(int32_t argc_, char** argv_) {
   cv::setUseOptimized(true);
 
   //ds allocate the complete parameter collection with default values
-  proslam::ParameterCollection* parameters = new proslam::ParameterCollection();
+  proslam::ParameterCollection* parameters = new proslam::ParameterCollection(proslam::LoggingLevel::Debug);
 
   try {
 
     //ds obtain configuration
     parameters->parseFromCommandLine(argc_, argv_);
   } catch (const std::runtime_error& exception_) {
-    LOG_ERROR(std::cerr << "main|caught exception '" << exception_.what() << "'" << std::endl)
+    std::cerr << "main|caught exception '" << exception_.what() << "'" << std::endl;
     delete parameters;
     return 0;
   }
 
   //ds check camera info topics - required for the node
   if (parameters->command_line_parameters->topic_camera_info_left.length() == 0) {
-    LOG_ERROR(std::cerr << "main|empty value entered for parameter: -topic-camera-info-left (-cl) (enter -h for help)" << std::endl)
+    std::cerr << "main|empty value entered for parameter: -topic-camera-info-left (-cl) (enter -h for help)" << std::endl;
     delete parameters;
     return 0;
   }
   if (parameters->command_line_parameters->topic_camera_info_right.length() == 0) {
-    LOG_ERROR(std::cerr << "main|empty value entered for parameter: -topic-camera-info-right (-cr) (enter -h for help)" << std::endl)
+    std::cerr << "main|empty value entered for parameter: -topic-camera-info-right (-cr) (enter -h for help)" << std::endl;
     delete parameters;
     return 0;
   }
@@ -158,7 +158,7 @@ int32_t main(int32_t argc_, char** argv_) {
   ros::Subscriber subscriber_camera_info_right = node.subscribe(parameters->command_line_parameters->topic_camera_info_right, 1, callbackCameraInfoRight);
 
   //ds buffer camera info
-  LOG_INFO(std::cerr << "main|acquiring stereo camera configuration from ROS topics" << std::endl)
+  std::cerr << "main|acquiring stereo camera configuration from ROS topics" << std::endl;
   while (ros::ok()) {
 
     //ds trigger callbacks
@@ -173,8 +173,8 @@ int32_t main(int32_t argc_, char** argv_) {
 
   //ds validate if cameras are set (rose node might be interrupted)
   if (camera_left == 0 || camera_right == 0) {
-    LOG_ERROR(std::cerr << std::endl)
-    LOG_ERROR(std::cerr << "main|cameras not set" << std::endl)
+    std::cerr << std::endl;
+    std::cerr << "main|cameras not set" << std::endl;
     delete parameters;
     return 0;
   }
@@ -243,7 +243,7 @@ int32_t main(int32_t argc_, char** argv_) {
   try {
 
     //ds start processing loop
-    LOG_INFO(std::cerr << "main|starting processing loop" << std::endl)
+    std::cerr << "main|starting processing loop" << std::endl;
     while (ros::ok()) {
 
       //ds trigger callbacks
@@ -363,7 +363,7 @@ int32_t main(int32_t argc_, char** argv_) {
       slam_system.updateGUI();
     }
   } catch (const std::runtime_error& exception_) {
-    LOG_ERROR(std::cerr << "main|caught exception '" << exception_.what() << "'" << std::endl)
+    std::cerr << "main|caught exception '" << exception_.what() << "'" << std::endl;
     delete parameters;
     return 0;
   }

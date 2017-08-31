@@ -4,8 +4,10 @@
 
 namespace proslam {
 
-ImageViewer::ImageViewer(const std::string& window_title_): _window_title(window_title_),
-                                                            _current_frame(0) {
+ImageViewer::ImageViewer(const ImageViewerParameters* parameters_,
+                         const std::string& window_title_): _window_title(window_title_),
+                                                            _current_frame(0),
+                                                            _parameters(parameters_) {
   LOG_DEBUG(std::cerr << "ImageViewer::ImageViewer|constructed" << std::endl)
 }
 

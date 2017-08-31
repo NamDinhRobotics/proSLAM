@@ -10,9 +10,6 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 message("build type: '${CMAKE_BUILD_TYPE}'")
 
-#ds specify logging level, 0(or not defined): DEBUG, 1: INFO, 2: WARNING, 3: ERROR)
-add_definitions(-DSRRG_PROSLAM_LOG_LEVEL=0)
-
 #ds specify target binary descriptor bit size (256 if not defined)
 add_definitions(-DSRRG_PROSLAM_DESCRIPTOR_SIZE_BITS=256)
 
@@ -62,58 +59,44 @@ else()
   )
 endif()
 
-#ds attempt to find g2o_slim in catkin stack
-find_package(g2o_slim_edu QUIET)
-if(g2o_slim_edu_FOUND)
+#ds attempt to locate a g2o package through cmake modules
+find_package(G2O QUIET)
 
-  #ds configure cmake for custom g2o usage
-  message("using g2o_slim_edu: '${g2o_slim_edu_INCLUDE_DIRS}'")
-  add_definitions(-DSRRG_PROSLAM_USE_G3O)
-  set(g2o_catkin_INCLUDE_DIRS ${g2o_slim_edu_INCLUDE_DIRS})
-  set(g2o_catkin_LIBRARIES ${g2o_slim_edu_LIBRARIES})
+#ds check if a custom g2o library is installed
+set(SRRG_PROSLAM_HAS_OWN_G2O false)
+
+#ds if theres no SRRG g2o installation
+if("${G2O_SRRG_DIR}" STREQUAL "")
+
+  #ds check if theres also no srrg g2o installation
+  if("$ENV{G2O_ROOT}" STREQUAL "")
   
-#ds look for an official g2o version
-else()
-
-  #ds attempt to locate a g2o package
-  find_package(G2O QUIET)
-    
-  #ds check if a custom g2o library is installed
-  set(SRRG_PROSLAM_HAS_OWN_G2O false)
-    
-  #ds if theres no SRRG g2o installation
-  if("${G2O_SRRG_DIR}" STREQUAL "")
-    
-    #ds check if theres also no srrg g2o installation
-    if("$ENV{G2O_ROOT}" STREQUAL "")
-      
-      #ds no custom g2o installation found, fallback to catkin g2o
-      message("using catkin g2o")
-    else()
-      
-      #ds use custom g2o
-      message("using custom g2o: '$ENV{G2O_ROOT}'")
-      set(SRRG_PROSLAM_HAS_OWN_G2O true)
-    endif()
+    #ds no custom g2o installation found, fallback to catkin g2o
+    message("using catkin g2o")
   else()
-    
-    #ds use srrg g2o
-    message("using SRRG g2o: '${G2O_SRRG_DIR}'")
+  
+    #ds use custom g2o
+    message("using custom g2o: '$ENV{G2O_ROOT}'")
     set(SRRG_PROSLAM_HAS_OWN_G2O true)
   endif()
-    
-  #ds if a custom g2o package was found
-  if(SRRG_PROSLAM_HAS_OWN_G2O)
-      
-    #ds add it to the catkin variables - this way we can support also g2o catkin without changing variable names
-    set(g2o_catkin_INCLUDE_DIRS ${G2O_INCLUDE_DIR})
-      
-    #ds link against the libraries we require
-    set(g2o_catkin_LIBRARIES ${G2O_SOLVER_CSPARSE_EXTENSION} ${G2O_TYPES_SLAM3D} ${G2O_CORE_LIBRARY})
-      
-  else()
-    find_package(g2o_catkin REQUIRED)
-  endif()
+else()
+
+  #ds use srrg g2o
+  message("using SRRG g2o: '${G2O_SRRG_DIR}'")
+  set(SRRG_PROSLAM_HAS_OWN_G2O true)
+endif()
+
+#ds if a custom g2o package was found
+if(SRRG_PROSLAM_HAS_OWN_G2O)
+
+  #ds add it to the catkin variables - this way we can support also g2o catkin without changing variable names
+  set(g2o_catkin_INCLUDE_DIRS ${G2O_INCLUDE_DIR})
+
+  #ds link against the libraries we require
+  set(g2o_catkin_LIBRARIES ${G2O_SOLVER_CSPARSE_EXTENSION} ${G2O_TYPES_SLAM3D} ${G2O_CORE_LIBRARY})
+
+else()
+  find_package(g2o_catkin REQUIRED)
 endif()
 
 #ds load suite sparse for pose graph optimization

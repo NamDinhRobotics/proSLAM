@@ -3,26 +3,25 @@
 namespace proslam {
   using namespace srrg_core;
 
-  BaseTracker::BaseTracker(): _camera_left(0),
-                              _number_of_rows_image(0),
-                              _number_of_cols_image(0),
-                              _intensity_image_left(0),
-                              _context(0),
-                              _pose_optimizer(0),
-                              _framepoint_generator(0),
-                              _pixel_distance_tracking_threshold(4*4),
-                              _number_of_rows_bin(0),
-                              _number_of_cols_bin(0),
-                              _bin_map_left(0),
-                              _enable_keypoint_binning(false),
-                              _parameters(0),
-                              _has_odometry(false) {
+  BaseTracker::BaseTracker(BaseTrackerParameters* parameters_): _camera_left(0),
+                                                                _number_of_rows_image(0),
+                                                                _number_of_cols_image(0),
+                                                                _intensity_image_left(0),
+                                                                _context(0),
+                                                                _pose_optimizer(0),
+                                                                _framepoint_generator(0),
+                                                                _pixel_distance_tracking_threshold(4*4),
+                                                                _number_of_rows_bin(0),
+                                                                _number_of_cols_bin(0),
+                                                                _bin_map_left(0),
+                                                                _enable_keypoint_binning(false),
+                                                                _parameters(parameters_),
+                                                                _has_odometry(false) {
     LOG_DEBUG(std::cerr << "BaseTracker::BaseTracker|constructed" << std::endl)
   }
 
-  void BaseTracker::configure(BaseTrackerParameters* parameters_) {
+  void BaseTracker::configure() {
     LOG_DEBUG(std::cerr << "BaseTracker::configure|configuring" << std::endl)
-    _parameters = parameters_;
     assert(_camera_left);
     assert(_pose_optimizer);
     _number_of_rows_image = _camera_left->numberOfImageRows();

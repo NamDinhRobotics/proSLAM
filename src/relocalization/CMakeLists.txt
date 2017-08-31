@@ -1,5 +1,4 @@
 add_library(srrg_proslam_relocalization_library
-  local_map_correspondence.cpp
   relocalizer.cpp
 )
 

@@ -10,7 +10,7 @@ namespace proslam {
   //ds object handling
   public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-    BaseFrameAligner() {}
+    BaseFrameAligner(AlignerParameters* parameters_): BaseAligner(parameters_) {}
     virtual ~BaseFrameAligner() {};
 
   //ds functionality

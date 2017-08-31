@@ -6,14 +6,14 @@ int32_t main(int32_t argc_, char** argv_) {
   cv::setUseOptimized(true);
 
   //ds allocate the complete parameter collection with default values (will be propagated through the complete SLAM system)
-  proslam::ParameterCollection* parameters = new proslam::ParameterCollection();
+  proslam::ParameterCollection* parameters = new proslam::ParameterCollection(proslam::LoggingLevel::Debug);
 
   try {
 
     //ds parse parameters from command line (optionally setting the parameter values)
     parameters->parseFromCommandLine(argc_, argv_);
   } catch (const std::runtime_error& exception_) {
-    LOG_ERROR(std::cerr << "main|caught exception '" << exception_.what() << "'" << std::endl)
+    std::cerr << "main|caught exception '" << exception_.what() << "'" << std::endl;
     delete parameters;
     return 0;
   }
@@ -70,10 +70,10 @@ int32_t main(int32_t argc_, char** argv_) {
       slam_system.requestTermination();
 
       //ds join system thread
-      LOG_INFO(std::cerr << "main|joining thread: system" << std::endl)
+      std::cerr << "main|joining thread: system" << std::endl;
       system_thread->join();
       delete system_thread;
-      LOG_INFO(std::cerr << "main|all threads successfully joined" << std::endl)
+      std::cerr << "main|all threads successfully joined" << std::endl;
     } else {
 
       //ds disable opencv multithreading
@@ -90,7 +90,7 @@ int32_t main(int32_t argc_, char** argv_) {
     slam_system.writeTrajectory("trajectory.txt");
   } catch (const std::runtime_error& exception_) {
     std::cerr << DOUBLE_BAR << std::endl;
-    LOG_ERROR(std::cerr << "main|caught runtime exception '" << exception_.what() << "'" << std::endl)
+    std::cerr << "main|caught runtime exception '" << exception_.what() << "'" << std::endl;
     std::cerr << DOUBLE_BAR << std::endl;
     //ds clean dynamic memory
     if (parameters) {delete parameters;}

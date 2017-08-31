@@ -11,8 +11,10 @@ class ImageViewer {
 public:
 
   //! @brief default constructor
+  //! @brief param[in] parameters_ viewer parameters
   //! @brief param[in] window_name_ target window title of the OpenCV window
-  ImageViewer(const std::string& window_title_ = "input: images [OpenCV]");
+  ImageViewer(const ImageViewerParameters* parameters_,
+              const std::string& window_title_ = "input: images [OpenCV]");
 
   //! @brief default destructor
   ~ImageViewer();
@@ -50,5 +52,11 @@ protected:
 
   //! @brief currently displayed image
   cv::Mat _current_image;
+
+//ds class specific
+private:
+
+  //! @brief configurable parameters
+  const ImageViewerParameters* _parameters;
 };
 }

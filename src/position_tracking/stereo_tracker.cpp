@@ -4,18 +4,18 @@ namespace proslam {
   using namespace srrg_core;
 
   //ds the tracker assumes a constant stereo camera configuration
-  StereoTracker::StereoTracker(): _camera_right(0),
-                                  _intensity_image_right(0),
-                                  _stereo_framepoint_generator(0),
-                                  _parameters(0) {
+  StereoTracker::StereoTracker(StereoTrackerParameters* parameters_): BaseTracker(parameters_),
+                                                                      _camera_right(0),
+                                                                      _intensity_image_right(0),
+                                                                      _stereo_framepoint_generator(0),
+                                                                      _parameters(parameters_) {
     LOG_DEBUG(std::cerr << "StereoTracker::StereoTracker|constructed" << std::endl)
   }
 
-  void StereoTracker::configure(BaseTrackerParameters* parameters_) {
+  void StereoTracker::configure() {
     LOG_DEBUG(std::cerr << "StereoTracker::configure|configuring" << std::endl)
-    _parameters = dynamic_cast<StereoTrackerParameters*>(parameters_);
     assert(_camera_right);
-    BaseTracker::configure(parameters_);
+    BaseTracker::configure();
     _stereo_framepoint_generator = dynamic_cast<StereoFramePointGenerator*>(_framepoint_generator);
     assert(_stereo_framepoint_generator);
     LOG_DEBUG(std::cerr << "StereoTracker::configure|configured" << std::endl)

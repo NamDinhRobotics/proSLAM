@@ -1,18 +1,20 @@
 #include "graph_optimizer.h"
+#include "g2o/core/optimization_algorithm_gauss_newton.h"
+#include "g2o/core/optimization_algorithm_levenberg.h"
 #include "g2o/core/robust_kernel_impl.h"
 
 namespace proslam {
 
-GraphOptimizer::GraphOptimizer(): _parameters(0) {
+GraphOptimizer::GraphOptimizer(GraphOptimizerParameters* parameters_): _parameters(parameters_) {
   LOG_DEBUG(std::cerr << "GraphOptimizer::GraphOptimizer|constructed" << std::endl)
 
   //ds allocate an optimizable graph
   SlamLinearSolver* linearSolver = new SlamLinearSolver();
   linearSolver->setBlockOrdering(true);
   SlamBlockSolver* blockSolver = new SlamBlockSolver(linearSolver);
-  g2o::OptimizationAlgorithmGaussNewton* solverGauss = new g2o::OptimizationAlgorithmGaussNewton(blockSolver);
+  g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(blockSolver);
   _optimizer = new g2o::SparseOptimizer();
-  _optimizer->setAlgorithm(solverGauss);
+  _optimizer->setAlgorithm(solver);
 
   //ds clean bookkeeping
   _vertex_frame_last_added = 0;
@@ -38,7 +40,7 @@ GraphOptimizer::~GraphOptimizer(){
   LOG_DEBUG(std::cerr << "GraphOptimizer::~GraphOptimizer|destroyed" << std::endl)
 }
 
-void GraphOptimizer::addFrame(Frame* frame_) {
+void GraphOptimizer::addFrameWithLandmarks(Frame* frame_) {
   CHRONOMETER_START(addition)
 
   //ds get the frames pose to g2o representation
@@ -50,50 +52,81 @@ void GraphOptimizer::addFrame(Frame* frame_) {
   //ds frame information weight depends on related measurements: the more the higher
   Count number_of_measurements = 0;
 
-  //ds add landmark measurements contained in the frame by scanning its framepoints
-  for (FramePoint* framepoint: frame_->points()) {
-
-    //ds if the framepoint is linked to a landmark
-    Landmark* landmark = framepoint->landmark();
-    if (landmark) {
-      g2o::VertexPointXYZ* vertex_landmark = 0;
-
-      //ds check if the landmark not yet present in the graph
-      if (_landmarks_in_pose_graph.find(landmark) == _landmarks_in_pose_graph.end()) {
-
-        //ds allocate a new point vertex and add it to the graph
-        vertex_landmark = new g2o::VertexPointXYZ( );
-        vertex_landmark->setEstimate(landmark->coordinates().cast<double>());
-        vertex_landmark->setId(landmark->identifier()+_parameters->identifier_space);
-        _optimizer->addVertex(vertex_landmark);
-
-        //ds bookkeep the landmark
-        _landmarks_in_pose_graph.insert(std::make_pair(landmark, vertex_landmark));
-      } else {
-
-        //ds retrieve existing vertex using our bookkeeping container
-        vertex_landmark = _landmarks_in_pose_graph[landmark];
-      }
-
-      //ds add framepoint position as measurement for the landmark
-      _setPointEdge(_optimizer, vertex_frame_current, vertex_landmark, framepoint->robotCoordinates(), 1/framepoint->depthMeters());
-      ++number_of_measurements;
-    }
-  }
-
   //ds if its the first frame to be added (start or recently cleared pose graph)
   if (!_vertex_frame_last_added) {
+
+    //ds add landmark measurements contained in the frame by scanning its framepoints - porting weights from previous optimization
+    for (FramePoint* framepoint: frame_->points()) {
+
+      //ds if the framepoint is linked to a landmark
+      Landmark* landmark = framepoint->landmark();
+      if (landmark) {
+        g2o::VertexPointXYZ* vertex_landmark = 0;
+
+        //ds check if the landmark not yet present in the graph
+        if (_landmarks_in_pose_graph.find(landmark) == _landmarks_in_pose_graph.end()) {
+
+          //ds allocate a new point vertex and add it to the graph
+          vertex_landmark = new g2o::VertexPointXYZ( );
+          vertex_landmark->setEstimate(landmark->coordinates().cast<double>());
+          vertex_landmark->setId(landmark->identifier()+_parameters->identifier_space);
+          _optimizer->addVertex(vertex_landmark);
+
+          //ds bookkeep the landmark
+          _landmarks_in_pose_graph.insert(std::make_pair(landmark, vertex_landmark));
+        } else {
+
+          //ds retrieve existing vertex using our bookkeeping container
+          vertex_landmark = _landmarks_in_pose_graph[landmark];
+        }
+
+        //ds add framepoint position as measurement for the landmark - porting weight from previous optimization
+        _setPointEdge(_optimizer, vertex_frame_current, vertex_landmark, framepoint->robotCoordinates(), landmark->numberOfUpdates()/framepoint->depthMeters());
+        ++number_of_measurements;
+      }
+    }
 
     //ds fix the initial vertex - no measurement to add
     vertex_frame_current->setFixed(true);
   } else {
+
+    //ds add landmark measurements contained in the frame by scanning its framepoints
+    for (FramePoint* framepoint: frame_->points()) {
+
+      //ds if the framepoint is linked to a landmark
+      Landmark* landmark = framepoint->landmark();
+      if (landmark) {
+        g2o::VertexPointXYZ* vertex_landmark = 0;
+
+        //ds check if the landmark not yet present in the graph
+        if (_landmarks_in_pose_graph.find(landmark) == _landmarks_in_pose_graph.end()) {
+
+          //ds allocate a new point vertex and add it to the graph
+          vertex_landmark = new g2o::VertexPointXYZ( );
+          vertex_landmark->setEstimate(landmark->coordinates().cast<double>());
+          vertex_landmark->setId(landmark->identifier()+_parameters->identifier_space);
+          _optimizer->addVertex(vertex_landmark);
+
+          //ds bookkeep the landmark
+          _landmarks_in_pose_graph.insert(std::make_pair(landmark, vertex_landmark));
+        } else {
+
+          //ds retrieve existing vertex using our bookkeeping container
+          vertex_landmark = _landmarks_in_pose_graph[landmark];
+        }
+
+        //ds add framepoint position as measurement for the landmark
+        _setPointEdge(_optimizer, vertex_frame_current, vertex_landmark, framepoint->robotCoordinates(), 1/framepoint->depthMeters());
+        ++number_of_measurements;
+      }
+    }
 
     //ds we can connect it to the preceeding frame by adding the odometry measurement
     _setPoseEdge(_optimizer,
                 vertex_frame_current,
                 _vertex_frame_last_added,
                 frame_->previous()->worldToRobot()*frame_->robotToWorld(),
-                _parameters->base_information_frame+number_of_measurements);
+                _parameters->base_information_frame*(1+number_of_measurements));
   }
 
   //ds bookkeep the added frame
@@ -106,6 +139,8 @@ void GraphOptimizer::optimize() {
   CHRONOMETER_START(optimization)
 
   //ds optimize existing graph
+//  const std::string file_name = "pose_graph_"+std::to_string((*_frames_in_pose_graph.begin()).first->identifier())+".g2o";
+//  _optimizer->save(file_name.c_str());
   _optimizer->initializeOptimization();
   _optimizer->setVerbose(false);
   _optimizer->optimize(10);

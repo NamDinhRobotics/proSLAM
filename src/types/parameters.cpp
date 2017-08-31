@@ -117,7 +117,8 @@ namespace proslam {
     BaseFramepointGeneratorParameters::print();
   }
 
-  BaseTrackerParameters::BaseTrackerParameters(): aligner(new AlignerParameters()) {
+  BaseTrackerParameters::BaseTrackerParameters(const LoggingLevel& logging_level_): Parameters(logging_level_),
+                                                                                    aligner(new AlignerParameters(logging_level_)) {
 
     //ds set specific default parameters
     aligner->error_delta_for_convergence  = 1e-3;
@@ -160,14 +161,28 @@ namespace proslam {
     std::cerr << "GraphOptimizerParameters::print|enable_robust_kernel_for_landmark_measurements: " << enable_robust_kernel_for_landmark_measurements << std::endl;
   }
 
-  ParameterCollection::ParameterCollection(): number_of_parameters_detected(0), number_of_parameters_parsed(0) {
+  void ImageViewerParameters::print() const {
+
+  }
+
+  void MapViewerParameters::print() const {
+
+  }
+
+  ParameterCollection::ParameterCollection(const LoggingLevel& logging_level_): Parameters(logging_level_),
+                                                                                _parameters(this),
+                                                                                number_of_parameters_detected(0),
+                                                                                number_of_parameters_parsed(0) {
     LOG_DEBUG(std::cerr << "ParameterCollection::ParameterCollection|constructing" << std::endl)
 
     //ds allocate minimal set of parameters
-    command_line_parameters    = new CommandLineParameters();
-    world_map_parameters       = new WorldMapParameters();
-    relocalizer_parameters     = new RelocalizerParameters();
-    graph_optimizer_parameters = new GraphOptimizerParameters();
+    command_line_parameters    = new CommandLineParameters(logging_level_);
+    world_map_parameters       = new WorldMapParameters(logging_level_);
+    relocalizer_parameters     = new RelocalizerParameters(logging_level_);
+    graph_optimizer_parameters = new GraphOptimizerParameters(logging_level_);
+
+    image_viewer_parameters = new ImageViewerParameters(logging_level_);
+    map_viewer_parameters   = new MapViewerParameters(logging_level_);
 
     LOG_DEBUG(std::cerr << "ParameterCollection::ParameterCollection|constructed" << std::endl)
   }
@@ -176,12 +191,16 @@ namespace proslam {
     LOG_DEBUG(std::cerr << "ParameterCollection::~ParameterCollection|destroying" << std::endl)
     delete command_line_parameters;
     delete world_map_parameters;
+    delete relocalizer_parameters;
+    delete graph_optimizer_parameters;
+
+    delete image_viewer_parameters;
+    delete map_viewer_parameters;
+
     delete stereo_framepoint_generator_parameters;
     delete depth_framepoint_generator_parameters;
     delete stereo_tracker_parameters;
     delete depth_tracker_parameters;
-    delete relocalizer_parameters;
-    delete graph_optimizer_parameters;
     LOG_DEBUG(std::cerr << "ParameterCollection::~ParameterCollection|destroyed" << std::endl)
   }
 
@@ -443,14 +462,14 @@ namespace proslam {
     //ds generate tracker mode specific parameters
     switch (mode_) {
       case CommandLineParameters::TrackerMode::RGB_STEREO: {
-        if (!stereo_framepoint_generator_parameters) {stereo_framepoint_generator_parameters = new StereoFramePointGeneratorParameters();}
-        if (!stereo_tracker_parameters) {stereo_tracker_parameters = new StereoTrackerParameters();}
+        if (!stereo_framepoint_generator_parameters) {stereo_framepoint_generator_parameters = new StereoFramePointGeneratorParameters(command_line_parameters->logging_level);}
+        if (!stereo_tracker_parameters) {stereo_tracker_parameters = new StereoTrackerParameters(command_line_parameters->logging_level);}
         if (command_line_parameters->option_recover_landmarks) {stereo_tracker_parameters->enable_landmark_recovery = true;}
         break;
       }
       case CommandLineParameters::TrackerMode::RGB_DEPTH: {
-        if (!depth_framepoint_generator_parameters) {depth_framepoint_generator_parameters = new DepthFramePointGeneratorParameters();}
-        if (!depth_tracker_parameters) {depth_tracker_parameters = new DepthTrackerParameters();}
+        if (!depth_framepoint_generator_parameters) {depth_framepoint_generator_parameters = new DepthFramePointGeneratorParameters(command_line_parameters->logging_level);}
+        if (!depth_tracker_parameters) {depth_tracker_parameters = new DepthTrackerParameters(command_line_parameters->logging_level);}
         if (command_line_parameters->option_recover_landmarks) {depth_tracker_parameters->enable_landmark_recovery = true;}
         break;
       }

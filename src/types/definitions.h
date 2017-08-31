@@ -95,7 +95,15 @@ namespace proslam {
   #define CV_COLOR_CODE_DARKVIOLETT cv::Scalar(150, 0, 150)
 
   //ds extended boolean
-  enum ThreeValued{False, True, Unknown};
+  enum ThreeValued {False,
+                    True,
+                    Unknown};
+
+  //ds log levels
+  enum LoggingLevel {Debug   = 0,
+                     Info    = 1,
+                     Warning = 2,
+                     Error   = 3};
 
   //ds timing
   #define CREATE_CHRONOMETER(NAME) \
@@ -110,59 +118,22 @@ namespace proslam {
       throw std::runtime_error("flying polar buffalo error"); \
     }
 
+  //ds print functions
+  #define        BAR "---------------------------------------------------------------------------------------------------------------------------------"
+  #define DOUBLE_BAR "================================================================================================================================="
+
   //ds generic logging macro - called by each implemented logging function
-  #define LOG_GENERIC(LOG_LEVEL, EXPRESSION) \
-      std::cerr << srrg_core::getTimestamp() << "|" << LOG_LEVEL << "|"; \
-      EXPRESSION;
-
-#define        BAR "---------------------------------------------------------------------------------------------------------------------------------"
-#define DOUBLE_BAR "================================================================================================================================="
-
-//ds conditional log levels, 1: INFO
-#if SRRG_PROSLAM_LOG_LEVEL == 1
-
-  //ds display all available logging except debug
-  #define LOG_DEBUG(EXPRESSION)
-  #define LOG_INFO(EXPRESSION) \
-    LOG_GENERIC("INFO   ", EXPRESSION)
-  #define LOG_WARNING(EXPRESSION) \
-    LOG_GENERIC("WARNING", EXPRESSION)
-  #define LOG_ERROR(EXPRESSION) \
-    LOG_GENERIC("ERROR  ", EXPRESSION)
-
-//ds 2: WARNING
-#elif SRRG_PROSLAM_LOG_LEVEL == 2
-
-  //ds display warnings and errors but no info and no debug
-  #define LOG_DEBUG(EXPRESSION)
-  #define LOG_INFO(EXPRESSION)
-  #define LOG_WARNING(EXPRESSION) \
-    LOG_GENERIC("WARNING", EXPRESSION)
-  #define LOG_ERROR(EXPRESSION) \
-    LOG_GENERIC("ERROR  ", EXPRESSION)
-
-//ds 3: ERROR
-#elif SRRG_PROSLAM_LOG_LEVEL == 3
-
-  //ds display only errors
-  #define LOG_DEBUG(EXPRESSION)
-  #define LOG_INFO(EXPRESSION)
-  #define LOG_WARNING(EXPRESSION)
-  #define LOG_ERROR(EXPRESSION) \
-    LOG_GENERIC("ERROR  ", EXPRESSION)
-
-//ds default or 0: DEBUG
-#else
-
-  //ds default = 0, all logging active
+  #define LOG_GENERIC(LOGGING_LEVEL, LOGGING_LEVEL_DESCRIPTION, EXPRESSION) \
+    if (LOGGING_LEVEL >= _parameters->logging_level) { \
+      std::cerr << srrg_core::getTimestamp() << "|" << LOGGING_LEVEL_DESCRIPTION << "|"; \
+      EXPRESSION; \
+    }
   #define LOG_DEBUG(EXPRESSION) \
-    LOG_GENERIC("DEBUG  ", EXPRESSION)
+    LOG_GENERIC(LoggingLevel::Debug, "DEBUG  ", EXPRESSION)
   #define LOG_INFO(EXPRESSION) \
-    LOG_GENERIC("INFO   ", EXPRESSION)
+    LOG_GENERIC(LoggingLevel::Info, "INFO   ", EXPRESSION)
   #define LOG_WARNING(EXPRESSION) \
-    LOG_GENERIC("WARNING", EXPRESSION)
+    LOG_GENERIC(LoggingLevel::Warning, "WARNING", EXPRESSION)
   #define LOG_ERROR(EXPRESSION) \
-    LOG_GENERIC("ERROR  ", EXPRESSION)
-
-#endif
+    LOG_GENERIC(LoggingLevel::Error, "ERROR  ", EXPRESSION)
 };

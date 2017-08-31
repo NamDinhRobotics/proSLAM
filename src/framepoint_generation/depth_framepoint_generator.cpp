@@ -2,21 +2,21 @@
 
 namespace proslam {
 
-  DepthFramePointGenerator::DepthFramePointGenerator(): _camera_right(0),
-                                                        _parameters(0) {
+  DepthFramePointGenerator::DepthFramePointGenerator(DepthFramePointGeneratorParameters* parameters_): BaseFramePointGenerator(parameters_),
+                                                                                                       _camera_right(0),
+                                                                                                       _parameters(parameters_) {
     LOG_DEBUG(std::cerr << "DepthFramePointGenerator::DepthFramePointGenerator|constructed" << std::endl)
   }
 
   //ds the stereo camera setup must be provided
-  void DepthFramePointGenerator::configure(BaseFramepointGeneratorParameters* parameters_){
+  void DepthFramePointGenerator::configure(){
     LOG_DEBUG(std::cerr << "DepthFramePointGenerator::configure|configuring" << std::endl)
     assert(_camera_right);
-    _parameters = dynamic_cast<DepthFramePointGeneratorParameters*>(parameters_);
 
     //ds update base
     _maximum_depth_near_meters = _parameters->maximum_depth_near_meters;
     _maximum_depth_far_meters  = _parameters->maximum_depth_far_meters;
-    BaseFramePointGenerator::configure(parameters_);
+    BaseFramePointGenerator::configure();
 
     //ds info
     LOG_DEBUG(std::cerr << "DepthFramePointGenerator::configure|configured" << std::endl)

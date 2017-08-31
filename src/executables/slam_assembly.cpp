@@ -11,8 +11,8 @@ namespace proslam {
 
 SLAMAssembly::SLAMAssembly(ParameterCollection* parameters_): _parameters(parameters_),
                                                               _world_map(new WorldMap(_parameters->world_map_parameters)),
-                                                              _graph_optimizer(new GraphOptimizer()),
-                                                              _relocalizer(new Relocalizer()),
+                                                              _graph_optimizer(new GraphOptimizer(_parameters->graph_optimizer_parameters)),
+                                                              _relocalizer(new Relocalizer(_parameters->relocalizer_parameters)),
                                                               _tracker(0),
                                                               _camera_left(0),
                                                               _camera_right(0),
@@ -22,8 +22,8 @@ SLAMAssembly::SLAMAssembly(ParameterCollection* parameters_): _parameters(parame
                                                               _minimap_viewer(0),
                                                               _is_termination_requested(false),
                                                               _is_viewer_open(false) {
-  _relocalizer->configure(_parameters->relocalizer_parameters);
-  _graph_optimizer->configure(_parameters->graph_optimizer_parameters);
+  _graph_optimizer->configure();
+  _relocalizer->configure();
   _synchronizer.reset();
   _robot_to_world_ground_truth_poses.clear();
 }
@@ -64,22 +64,22 @@ void SLAMAssembly::_createStereoTracker(Camera* camera_left_, Camera* camera_rig
   }
 
   //ds allocate and configure the framepoint generator
-  StereoFramePointGenerator* framepoint_generator = new StereoFramePointGenerator();
+  StereoFramePointGenerator* framepoint_generator = new StereoFramePointGenerator(_parameters->stereo_framepoint_generator_parameters);
   framepoint_generator->setCameraLeft(camera_left_);
   framepoint_generator->setCameraRight(camera_right_);
-  framepoint_generator->configure(_parameters->stereo_framepoint_generator_parameters);
+  framepoint_generator->configure();
 
   //ds allocate and configure the aligner for motion estimation
-  StereoUVAligner* pose_optimizer = new StereoUVAligner();
-  pose_optimizer->configure(_parameters->stereo_tracker_parameters->aligner);
+  StereoUVAligner* pose_optimizer = new StereoUVAligner(_parameters->stereo_tracker_parameters->aligner);
+  pose_optimizer->configure();
 
   //ds allocate and configure the tracker
-  StereoTracker* tracker = new StereoTracker();
+  StereoTracker* tracker = new StereoTracker(_parameters->stereo_tracker_parameters);
   tracker->setCameraLeft(camera_left_);
   tracker->setCameraRight(camera_right_);
   tracker->setFramePointGenerator(framepoint_generator);
   tracker->setAligner(pose_optimizer);
-  tracker->configure(_parameters->stereo_tracker_parameters);
+  tracker->configure();
   _tracker = tracker;
   _tracker->setWorldMap(_world_map);
 }
@@ -87,22 +87,22 @@ void SLAMAssembly::_createStereoTracker(Camera* camera_left_, Camera* camera_rig
 void SLAMAssembly::_createDepthTracker(const Camera* camera_left_, const Camera* camera_right_){
 
   //ds allocate and configure the framepoint generator
-  DepthFramePointGenerator* framepoint_generator = new DepthFramePointGenerator();
+  DepthFramePointGenerator* framepoint_generator = new DepthFramePointGenerator(_parameters->depth_framepoint_generator_parameters);
   framepoint_generator->setCameraLeft(camera_left_);
   framepoint_generator->setCameraRight(camera_right_);
-  framepoint_generator->configure(_parameters->depth_framepoint_generator_parameters);
+  framepoint_generator->configure();
 
   //ds allocate and configure the aligner for motion estimation
-  UVDAligner* pose_optimizer = new UVDAligner();
-  pose_optimizer->configure(_parameters->depth_tracker_parameters->aligner);
+  UVDAligner* pose_optimizer = new UVDAligner(_parameters->depth_tracker_parameters->aligner);
+  pose_optimizer->configure();
 
   //ds allocate and configure the tracker
-  DepthTracker* tracker = new DepthTracker();
+  DepthTracker* tracker = new DepthTracker(_parameters->depth_tracker_parameters);
   tracker->setCameraLeft(camera_left_);
   tracker->setDepthCamera(camera_right_);
   tracker->setFramePointGenerator(framepoint_generator);
   tracker->setAligner(pose_optimizer);
-  tracker->configure(_parameters->depth_tracker_parameters);
+  tracker->configure();
   _tracker = tracker;
   _tracker->setWorldMap(_world_map);
 }
@@ -234,8 +234,8 @@ void SLAMAssembly::loadCameras(Camera* camera_left_, Camera* camera_right_) {
 void SLAMAssembly::initializeGUI(QApplication* ui_server_) {
   if (_parameters->command_line_parameters->option_use_gui) {
     _ui_server = ui_server_;
-    _image_viewer = new ImageViewer("input: images [OpenCV]");
-    _map_viewer   = new MapViewer(0.25, "output: map [OpenGL]");
+    _image_viewer = new ImageViewer(_parameters->image_viewer_parameters, "input: images [OpenCV]");
+    _map_viewer   = new MapViewer(_parameters->map_viewer_parameters, 0.25, "output: map [OpenGL]");
     _map_viewer->setCameraLeftToRobot(_camera_left->cameraToRobot());
 
     //ds orientation flip for proper camera following
@@ -250,7 +250,7 @@ void SLAMAssembly::initializeGUI(QApplication* ui_server_) {
 
     //ds configure custom top viewer if requested
     if (_parameters->command_line_parameters->option_show_top_viewer) {
-      _minimap_viewer = new MapViewer(1, "minimap [OpenGL]");
+      _minimap_viewer = new MapViewer(_parameters->map_viewer_parameters, 1, "minimap [OpenGL]");
       _minimap_viewer->setCameraLeftToRobot(_camera_left->cameraToRobot());
       TransformMatrix3D center_for_kitti_sequence_00;
       center_for_kitti_sequence_00.matrix() << 1, 0, 0, 0,
@@ -490,8 +490,8 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
     //ds if bundle adjustment is desired
     if (!_parameters->command_line_parameters->option_disable_bundle_adjustment) {
 
-      //ds add frame to pose graph
-      _graph_optimizer->addFrame(_world_map->currentFrame());
+      //ds add frame and its landmarks to the pose graph
+      _graph_optimizer->addFrameWithLandmarks(_world_map->currentFrame());
 
       //ds check if bundle-adjustment is required
       if (_world_map->frames().size() % _parameters->graph_optimizer_parameters->number_of_frames_per_bundle_adjustment == 0) {

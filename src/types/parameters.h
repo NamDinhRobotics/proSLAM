@@ -8,13 +8,19 @@ namespace proslam {
   public:
 
     //! @brief constructor
-    Parameters() {}
+    Parameters(const LoggingLevel& logging_level_): logging_level(logging_level_) {}
+
+    //! @brief disable default construction
+    Parameters() = delete;
 
     //! @brief destructor
     virtual ~Parameters() {}
 
     //! @brief parameter printing function
     virtual void print() const = 0;
+
+    //! @brief log level (for all components)
+    LoggingLevel logging_level;
   };
 
   //! @class command line parameters
@@ -28,6 +34,9 @@ namespace proslam {
                       RGB_DEPTH}; //ds rgb + depth image processing
 
   public:
+
+    //! @brief constructor
+    CommandLineParameters(const LoggingLevel& logging_level_): Parameters(logging_level_) {}
 
     //! @brief parameter printing function
     virtual void print() const;
@@ -59,6 +68,9 @@ namespace proslam {
   class AlignerParameters: public Parameters {
   public:
 
+    //! @brief constructor
+    AlignerParameters(const LoggingLevel& logging_level_): Parameters(logging_level_) {}
+
     //! @brief parameter printing function
     virtual void print() const;
 
@@ -85,6 +97,9 @@ namespace proslam {
   class LandmarkParameters: public Parameters {
   public:
 
+    //! @brief constructor
+    LandmarkParameters(const LoggingLevel& logging_level_): Parameters(logging_level_) {}
+
     //! @brief parameter printing function
     virtual void print() const;
 
@@ -99,6 +114,9 @@ namespace proslam {
   class LocalMapParameters: public Parameters {
   public:
 
+    //! @brief constructor
+    LocalMapParameters(const LoggingLevel& logging_level_): Parameters(logging_level_) {}
+
     //! @brief parameter printing function
     virtual void print() const;
 
@@ -111,7 +129,9 @@ namespace proslam {
   public:
 
     //! @brief default constructor
-    WorldMapParameters(): landmark(new LandmarkParameters()), local_map(new LocalMapParameters()) {};
+    WorldMapParameters(const LoggingLevel& logging_level_): Parameters(logging_level_),
+                                                            landmark(new LandmarkParameters(logging_level_)),
+                                                            local_map(new LocalMapParameters(logging_level_)) {};
 
     //! @brief destructor: clean inner parameters
     ~WorldMapParameters() {delete landmark; delete local_map;}
@@ -135,6 +155,9 @@ namespace proslam {
   class BaseFramepointGeneratorParameters: public Parameters {
   public:
 
+    //! @brief constructor
+    BaseFramepointGeneratorParameters(const LoggingLevel& logging_level_): Parameters(logging_level_) {}
+
     //! @brief parameter printing function
     virtual void print() const;
 
@@ -155,6 +178,9 @@ namespace proslam {
   class StereoFramePointGeneratorParameters: public BaseFramepointGeneratorParameters {
   public:
 
+    //! @brief constructor
+    StereoFramePointGeneratorParameters(const LoggingLevel& logging_level_): BaseFramepointGeneratorParameters(logging_level_) {}
+
     //! @brief parameter printing function
     virtual void print() const;
 
@@ -169,6 +195,9 @@ namespace proslam {
   class DepthFramePointGeneratorParameters: public BaseFramepointGeneratorParameters {
   public:
 
+    //! @brief constructor
+    DepthFramePointGeneratorParameters(const LoggingLevel& logging_level_): BaseFramepointGeneratorParameters(logging_level_) {}
+
     //! @brief parameter printing function
     virtual void print() const;
 
@@ -182,7 +211,7 @@ namespace proslam {
   protected:
 
     //! @brief default construction (only by subclasses)
-    BaseTrackerParameters();
+    BaseTrackerParameters(const LoggingLevel& logging_level_);
 
     //! @brief destructor: clean inner parameters
     ~BaseTrackerParameters() {delete aligner;}
@@ -228,6 +257,9 @@ namespace proslam {
   class StereoTrackerParameters: public BaseTrackerParameters {
   public:
 
+    //! @brief constructor
+    StereoTrackerParameters(const LoggingLevel& logging_level_): BaseTrackerParameters(logging_level_) {}
+
     //! @brief parameter printing function
     virtual void print() const;
   };
@@ -235,6 +267,9 @@ namespace proslam {
   //! @class depth tracker parameters
   class DepthTrackerParameters: public BaseTrackerParameters {
   public:
+
+    //! @brief constructor
+    DepthTrackerParameters(const LoggingLevel& logging_level_): BaseTrackerParameters(logging_level_) {}
 
     //! @brief parameter printing function
     virtual void print() const;
@@ -245,7 +280,8 @@ namespace proslam {
   public:
 
     //! @brief default constructor
-    RelocalizerParameters(): aligner(new AlignerParameters()) {}
+    RelocalizerParameters(const LoggingLevel& logging_level_): Parameters(logging_level_),
+                                                               aligner(new AlignerParameters(logging_level_)) {}
 
     //! @brief destructor: clean inner parameters
     ~RelocalizerParameters() {delete aligner;}
@@ -274,7 +310,7 @@ namespace proslam {
   public:
 
     //! @brief default constructor
-    GraphOptimizerParameters() {}
+    GraphOptimizerParameters(const LoggingLevel& logging_level_): Parameters(logging_level_) {}
 
     //! @brief destructor: clean inner parameters
     ~GraphOptimizerParameters() {}
@@ -295,8 +331,30 @@ namespace proslam {
     bool enable_robust_kernel_for_landmark_measurements = false;
   };
 
+  //! @class image viewer parameters
+  class ImageViewerParameters: public Parameters {
+  public:
+
+    //! @brief default constructor
+    ImageViewerParameters(const LoggingLevel& logging_level_): Parameters(logging_level_) {}
+
+    //! @brief parameter printing function
+    virtual void print() const;
+  };
+
+  //! @class map viewer parameters
+  class MapViewerParameters: public Parameters {
+  public:
+
+    //! @brief default constructor
+    MapViewerParameters(const LoggingLevel& logging_level_): Parameters(logging_level_) {}
+
+    //! @brief parameter printing function
+    virtual void print() const;
+  };
+
   //! @class object holding all parameters
-  class ParameterCollection {
+  class ParameterCollection: public Parameters {
 
   //ds object management
   public:
@@ -304,7 +362,8 @@ namespace proslam {
     //! @brief default constructor
     //! allocates the minimal set of parameters
     //! specific parameter sets are allocated automatically after parsing the command line
-    ParameterCollection();
+    //! @param[in] logging_level_ desired logging level for contained parameters
+    ParameterCollection(const LoggingLevel& logging_level_);
 
     //! @brief default destructor
     ~ParameterCollection();
@@ -329,7 +388,7 @@ namespace proslam {
     void setMode(const CommandLineParameters::TrackerMode& mode_);
 
     //! @brief triggers all inner print methods of set parameters
-    void print() const;
+    virtual void print() const;
 
   //ds parameter bundles
   public:
@@ -337,19 +396,20 @@ namespace proslam {
     //! @brief program banner
     static std::string banner;
 
-    CommandLineParameters* command_line_parameters = 0;
+    //! @brief inner parameters (required for logging inside parameter collection)
+    Parameters* _parameters = 0;
 
-    WorldMapParameters* world_map_parameters = 0;
-
+    CommandLineParameters* command_line_parameters                              = 0;
+    WorldMapParameters* world_map_parameters                                    = 0;
     StereoFramePointGeneratorParameters* stereo_framepoint_generator_parameters = 0;
     DepthFramePointGeneratorParameters* depth_framepoint_generator_parameters   = 0;
+    StereoTrackerParameters* stereo_tracker_parameters                          = 0;
+    DepthTrackerParameters* depth_tracker_parameters                            = 0;
+    RelocalizerParameters* relocalizer_parameters                               = 0;
+    GraphOptimizerParameters* graph_optimizer_parameters                        = 0;
 
-    StereoTrackerParameters* stereo_tracker_parameters = 0;
-    DepthTrackerParameters* depth_tracker_parameters   = 0;
-
-    RelocalizerParameters* relocalizer_parameters = 0;
-
-    GraphOptimizerParameters* graph_optimizer_parameters = 0;
+    ImageViewerParameters* image_viewer_parameters = 0;
+    MapViewerParameters* map_viewer_parameters     = 0;
 
   //ds inner attributes
   protected:

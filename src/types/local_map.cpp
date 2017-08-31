@@ -5,14 +5,15 @@ namespace proslam {
   Count LocalMap::_instances = 0;
 
   LocalMap::LocalMap(FramePointerVector& frames_,
+                     const LocalMapParameters* parameters_,
                      LocalMap* local_map_root_,
-                     LocalMap* local_map_previous_,
-                     const Count& minimum_number_of_landmarks_): _identifier(_instances),
-                                                                 _local_map_to_world(TransformMatrix3D::Identity()),
-                                                                 _world_to_local_map(TransformMatrix3D::Identity()),
-                                                                 _root(local_map_root_),
-                                                                 _previous(local_map_previous_),
-                                                                 _next(0) {
+                     LocalMap* local_map_previous_): _identifier(_instances),
+                                                     _local_map_to_world(TransformMatrix3D::Identity()),
+                                                     _world_to_local_map(TransformMatrix3D::Identity()),
+                                                     _root(local_map_root_),
+                                                     _previous(local_map_previous_),
+                                                     _next(0),
+                                                     _parameters(parameters_) {
     assert(frames_.size() > 0);
     ++_instances;
 
@@ -73,7 +74,7 @@ namespace proslam {
     }
 
     //ds check for low item counts
-    if (minimum_number_of_landmarks_ > landmarks_added_to_context.size()) {
+    if (_parameters->minimum_number_of_landmarks > landmarks_added_to_context.size()) {
       LOG_WARNING(std::cerr << "LocalMap::LocalMap|creating local map with low landmark number: " << landmarks_added_to_context.size() << std::endl)
     }
 

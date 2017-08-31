@@ -95,7 +95,10 @@ namespace proslam {
         (_frame_queue_for_local_map.size() > _parameters->minimum_number_of_frames_for_local_map && _local_maps.size() < 5)) {
 
       //ds create the new keyframe and add it to the keyframe database
-      _current_local_map = new LocalMap(_frame_queue_for_local_map, _root_local_map, _current_local_map, _parameters->local_map->minimum_number_of_landmarks);
+      _current_local_map = new LocalMap(_frame_queue_for_local_map,
+                                        _parameters->local_map,
+                                        _root_local_map,
+                                        _current_local_map);
       _local_maps.push_back(_current_local_map);
       assert(_current_frame->isKeyframe());
       assert(_current_frame->localMap() == _current_local_map);

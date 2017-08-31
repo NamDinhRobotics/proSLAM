@@ -7,7 +7,8 @@ namespace proslam {
   using namespace srrg_gl_helpers;
   using namespace srrg_core_viewers;
 
-  MapViewer::MapViewer(const real& object_scale_,
+  MapViewer::MapViewer(const MapViewerParameters* parameters_,
+                       const real& object_scale_,
                        const std::string& window_title_): _world_map(0),
                                                           _current_frame(0),
                                                           _frames_drawn(true),
@@ -22,7 +23,8 @@ namespace proslam {
                                                           _camera_left_to_robot(TransformMatrix3D::Identity()),
                                                           _world_to_robot_origin(TransformMatrix3D::Identity()),
                                                           _robot_viewpoint(TransformMatrix3D::Identity()),
-                                                          _world_to_robot(TransformMatrix3D::Identity()) {
+                                                          _world_to_robot(TransformMatrix3D::Identity()),
+                                                          _parameters(parameters_) {
     setWindowTitle(_window_title.c_str());
     setFPSIsDisplayed(true);
 
@@ -37,9 +39,9 @@ namespace proslam {
     setKeyDescription(Qt::Key_8, "Increases point size by factor 2");
     setKeyDescription(Qt::Key_Space, "Toggles stepwise/benchmark mode");
 
-    std::cerr << DOUBLE_BAR << std::endl;
+    LOG_INFO(std::cerr << DOUBLE_BAR << std::endl)
     LOG_INFO(std::cerr << "MapViewer::MapViewer|switched to stepwise mode (press [Space] for switch, press [ARROW_UP] for stepping)" << std::endl)
-    std::cerr << DOUBLE_BAR << std::endl;
+    LOG_INFO(std::cerr << DOUBLE_BAR << std::endl)
     LOG_DEBUG(std::cerr << "MapViewer::MapViewer|constructed" << std::endl)
   }
 
