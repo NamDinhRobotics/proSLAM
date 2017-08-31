@@ -20,6 +20,11 @@ namespace proslam {
 
     //ds if the current state is not connected to a local map yet - the landmark has to clean it up
     if (!_state->local_map) {
+
+      //ds clear the states appearances! (as they are not owned by an HBST tree)
+      for (const HBSTNode::Matchable* matchable: _state->appearances) {
+        delete matchable;
+      }
       delete _state;
     }
   }

@@ -426,7 +426,7 @@ void SLAMAssembly::playbackMessageFile() {
         }
 
         //ds reset stats for new measurement window
-        processing_time_seconds_current     = 0;
+        processing_time_seconds_current    = 0;
         number_of_processed_frames_current = 0;
       }
 
