@@ -58,7 +58,7 @@ namespace proslam {
     std::cerr << "-topic-camera-right-info (-cr) '" << topic_camera_info_right << "'" << std::endl;
     }
     std::cerr << "-use-gui (-ug)                 " << option_use_gui << std::endl;
-    std::cerr << "-open-loop (-ol)               " << !option_use_relocalization << std::endl;
+    std::cerr << "-open-loop (-ol)               " << option_disable_relocalization << std::endl;
     std::cerr << "-show-top (-st)                " << option_show_top_viewer << std::endl;
     std::cerr << "-use-odometry (-uo)            " << option_use_odometry << std::endl;
     std::cerr << "-depth-mode (-dm)              " << (tracker_mode == TrackerMode::RGB_DEPTH) << std::endl;
@@ -265,7 +265,7 @@ namespace proslam {
       } else if (!std::strcmp(argv_[number_of_checked_parameters], "-use-gui") || !std::strcmp(argv_[number_of_checked_parameters], "-ug")) {
         command_line_parameters->option_use_gui = true;
       } else if (!std::strcmp(argv_[number_of_checked_parameters], "-open-loop") || !std::strcmp(argv_[number_of_checked_parameters], "-ol")) {
-        command_line_parameters->option_use_relocalization = false;
+        command_line_parameters->option_disable_relocalization = true;
       } else if (!std::strcmp(argv_[number_of_checked_parameters], "-show-top") || !std::strcmp(argv_[number_of_checked_parameters], "-st")) {
         command_line_parameters->option_show_top_viewer = true;
       } else if (!std::strcmp(argv_[number_of_checked_parameters], "-drop-framepoints") || !std::strcmp(argv_[number_of_checked_parameters], "-df")) {
@@ -323,7 +323,7 @@ namespace proslam {
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, dataset_file_name, std::string)
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_use_gui, bool)
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_use_odometry, bool)
-      PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_use_relocalization, bool)
+      PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_disable_relocalization, bool)
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_show_top_viewer, bool)
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_drop_framepoints, bool)
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_equalize_histogram, bool)
@@ -455,6 +455,9 @@ namespace proslam {
       LOG_ERROR(std::cerr << "ParameterCollection::validateParameters|empty value entered for parameter: -topic-image-right (-ir) (enter -h for help)" << std::endl)
       throw std::runtime_error("empty value entered for parameter: -topic-image-right");
     }
+
+    //ds synchronize values for multiplicated fields
+    world_map_parameters->landmark->option_disable_relocalization = command_line_parameters->option_disable_relocalization;
   }
 
   void ParameterCollection::setMode(const CommandLineParameters::TrackerMode& mode_) {

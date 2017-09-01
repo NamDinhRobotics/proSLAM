@@ -408,7 +408,7 @@ void SLAMAssembly::playbackMessageFile() {
       if (processing_time_seconds_current > runtime_info_update_frequency_seconds) {
 
         //ds runtime info - depending on set modes
-        if (_parameters->command_line_parameters->option_use_relocalization) {
+        if (!_parameters->command_line_parameters->option_disable_relocalization) {
           LOG_INFO(std::printf("SLAMAssembly::playbackMessageFile|frames: %5lu <FPS: %6.2f>|landmarks: %6lu|local maps: %4lu (%3.2f)|closures: %3lu (%3.2f)\n",
                       _number_of_processed_frames,
                       number_of_processed_frames_current/processing_time_seconds_current,

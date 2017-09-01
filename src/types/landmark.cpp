@@ -2,10 +2,8 @@
 
 namespace proslam {
 
-  //ds inner instance count - incremented upon constructor call (also unsuccessful calls)
   Count Landmark::_instances = 0;
 
-  //ds initial landmark coordinates must be provided
   Landmark::Landmark(const FramePoint* origin_, const LandmarkParameters* parameters_): _identifier(_instances),
                                                                                         _origin(origin_),
                                                                                         _parameters(parameters_) {
@@ -15,36 +13,20 @@ namespace proslam {
     _state = new State(this, origin_->worldCoordinates());
   }
 
-  //ds cleanup of dynamic structures
   Landmark::~Landmark() {
 
-    //ds if the current state is not connected to a local map yet - the landmark has to clean it up
+    //ds if the current state is not connected to a local map yet free it
     if (!_state->local_map) {
-
-      //ds clear the states appearances! (as they are not owned by an HBST tree)
-      for (const HBSTNode::Matchable* matchable: _state->appearances) {
-        delete matchable;
-      }
       delete _state;
     }
   }
 
-  //ds reset landmark coordinates to a certain position (loss of past measurements!)
-  void Landmark::resetCoordinates(const PointCoordinates& coordinates_, const real& weight_) {
+  void Landmark::resetCoordinates(const PointCoordinates& coordinates_) {
 
     //ds update state
     _state->world_coordinates = coordinates_;
-
-//    //ds clear past measurements
-//    _total_weight         = weight_;
-//    _number_of_updates    = 0;
-//    _number_of_recoveries = 0;
-//
-//    //ds add fresh measurement
-//    update(coordinates_);
   }
 
-  //ds landmark coordinates update - no visual information (e.g. map optimization)
   void Landmark::update(const PointCoordinates& coordinates_in_world_, const real& depth_meters_) {
     assert(_state);
     assert(_parameters);
@@ -75,14 +57,15 @@ namespace proslam {
     assert(!std::isnan(_state->world_coordinates.z()));
   }
 
-  //ds landmark coordinates update with visual information (tracking)
   void Landmark::update(const FramePoint* point_) {
 
-    //ds always update descriptors
-    _state->appearances.push_back(new HBSTMatchable(reinterpret_cast<const void*>(_state), point_->descriptorLeft()));
-    _state->appearances.push_back(new HBSTMatchable(reinterpret_cast<const void*>(_state), point_->descriptorRight()));
+    //ds accumulate descriptors if relocalization is desired
+    if (!_parameters->option_disable_relocalization) {
+      _state->appearances.push_back(new HBSTMatchable(reinterpret_cast<const void*>(_state), point_->descriptorLeft()));
+      _state->appearances.push_back(new HBSTMatchable(reinterpret_cast<const void*>(_state), point_->descriptorRight()));
+    }
 
-    //ds update position
+    //ds always update position
     update(point_->worldCoordinates(), point_->depthMeters());
   }
 }

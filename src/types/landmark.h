@@ -19,6 +19,13 @@ namespace proslam {
         appearances.clear();
       }
       ~State() {
+
+        //ds if theres no local map attached free the states appearances! (as they are not owned by an HBST tree)
+        if (!local_map) {
+          for (const HBSTNode::Matchable* appearance: appearances) {
+            delete appearance;
+          }
+        }
         appearances.clear();
       }
 
@@ -54,12 +61,12 @@ namespace proslam {
     inline const PointCoordinates& coordinates() const {return _state->world_coordinates;}
     inline void setCoordinates(const PointCoordinates& coordinates_) {_state->world_coordinates = coordinates_;}
 
-    //ds reset landmark coordinates to a certain position (loss of past measurements!)
-    void resetCoordinates(const PointCoordinates& coordinates_, const real& weight_ = 0);
+    //ds set landmark coordinates to a certain position (usually called after a map update)
+    void resetCoordinates(const PointCoordinates& coordinates_);
 
     //ds landmark state - locked inside a local map and refreshed afterwards
     inline State* state() {return _state;}
-    inline void refreshState() {_state = new State(this, _state->world_coordinates);}
+    inline void renewState() {_state = new State(this, _state->world_coordinates);}
     inline const LocalMap* localMap() const {return _local_map;}
     inline void setLocalMap(const LocalMap* local_map_) {_local_map = local_map_;}
 

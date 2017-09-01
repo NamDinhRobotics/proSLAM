@@ -54,7 +54,7 @@ namespace proslam {
 
     //! @brief options
     bool option_use_gui                   = false;
-    bool option_use_relocalization        = false;
+    bool option_disable_relocalization    = false;
     bool option_show_top_viewer           = false;
     bool option_drop_framepoints          = false;
     bool option_equalize_histogram        = false;
@@ -108,6 +108,9 @@ namespace proslam {
 
     //! @brief maximum allowed measurement divergence
     real maximum_translation_error_to_depth_ratio = 1;
+
+    //! @brief disable relocalization (prevents descriptor accumulation in landmark)
+    bool option_disable_relocalization = false;
   };
 
   //! @class local map parameters

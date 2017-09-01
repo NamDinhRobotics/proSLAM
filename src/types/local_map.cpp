@@ -67,7 +67,7 @@ namespace proslam {
           landmarks_added_to_context.insert(landmark);
 
           //ds take ownership from landmark view: forces the landmark to generate a new, decoupled view
-          landmark->refreshState();
+          landmark->renewState();
           landmark->setLocalMap(this);
         }
       }
