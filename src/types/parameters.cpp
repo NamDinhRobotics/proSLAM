@@ -25,6 +25,7 @@ namespace proslam {
   "-equalize-histogram (-eh):               equalize stereo image histogram before processing\n"
   "-undistort-rectify (-ur):                undistorts and rectifies input images based on camera info\n"
   "-recover-landmarks (-rl):                enables landmark track recovery\n"
+  "-disable-bundle-adjustment (-dba):       disables periodic bundle adjustment for landmarks and frames\n"
   DOUBLE_BAR;
 
   //! @brief macro wrapping the YAML node parsing for a single parameter
@@ -47,27 +48,28 @@ namespace proslam {
     std::cerr << DOUBLE_BAR << std::endl;
     std::cerr << "running with command line parameters:" << std::endl;
     if (configuration_file_name.length() > 0) {
-    std::cerr << "-configuration (-c)            '" << configuration_file_name << "'" << std::endl;
+    std::cerr << "-configuration (-c)               '" << configuration_file_name << "'" << std::endl;
     }
-    std::cerr << "-topic-image-left (-il)        '" << topic_image_left << "'" << std::endl;
-    std::cerr << "-topic-image-right (-ir)       '" << topic_image_right << "'" << std::endl;
+    std::cerr << "-topic-image-left (-il)           '" << topic_image_left << "'" << std::endl;
+    std::cerr << "-topic-image-right (-ir)          '" << topic_image_right << "'" << std::endl;
     if (topic_camera_info_left.length() > 0) {
-    std::cerr << "-topic-camera-left-info  (-cl) '" << topic_camera_info_left << "'" << std::endl;
+    std::cerr << "-topic-camera-left-info  (-cl)    '" << topic_camera_info_left << "'" << std::endl;
     }
     if (topic_camera_info_right.length() > 0) {
-    std::cerr << "-topic-camera-right-info (-cr) '" << topic_camera_info_right << "'" << std::endl;
+    std::cerr << "-topic-camera-right-info (-cr)    '" << topic_camera_info_right << "'" << std::endl;
     }
-    std::cerr << "-use-gui (-ug)                 " << option_use_gui << std::endl;
-    std::cerr << "-open-loop (-ol)               " << option_disable_relocalization << std::endl;
-    std::cerr << "-show-top (-st)                " << option_show_top_viewer << std::endl;
-    std::cerr << "-use-odometry (-uo)            " << option_use_odometry << std::endl;
-    std::cerr << "-depth-mode (-dm)              " << (tracker_mode == TrackerMode::RGB_DEPTH) << std::endl;
-    std::cerr << "-drop-framepoints (-df)        " << option_drop_framepoints << std::endl;
-    std::cerr << "-equalize-histogram (-eh)      " << option_equalize_histogram << std::endl;
-    std::cerr << "-undistort-rectify (-ur)       " << option_undistort_and_rectify << std::endl;
-    std::cerr << "-recover-landmarks (-rl)       " << option_recover_landmarks << std::endl;
+    std::cerr << "-use-gui (-ug)                     " << option_use_gui << std::endl;
+    std::cerr << "-open-loop (-ol)                   " << option_disable_relocalization << std::endl;
+    std::cerr << "-show-top (-st)                    " << option_show_top_viewer << std::endl;
+    std::cerr << "-use-odometry (-uo)                " << option_use_odometry << std::endl;
+    std::cerr << "-depth-mode (-dm)                  " << (tracker_mode == TrackerMode::RGB_DEPTH) << std::endl;
+    std::cerr << "-drop-framepoints (-df)            " << option_drop_framepoints << std::endl;
+    std::cerr << "-equalize-histogram (-eh)          " << option_equalize_histogram << std::endl;
+    std::cerr << "-undistort-rectify (-ur)           " << option_undistort_and_rectify << std::endl;
+    std::cerr << "-recover-landmarks (-rl)           " << option_recover_landmarks << std::endl;
+    std::cerr << "-disable-bundle-adjustment (-dba)  " << option_disable_bundle_adjustment << std::endl;
     if (dataset_file_name.length() > 0) {
-    std::cerr << "-dataset                       '" << dataset_file_name  << "'" << std::endl;
+    std::cerr << "-dataset                          '" << dataset_file_name  << "'" << std::endl;
     }
     std::cerr << DOUBLE_BAR << std::endl;
   }

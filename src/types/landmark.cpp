@@ -21,12 +21,6 @@ namespace proslam {
     }
   }
 
-  void Landmark::resetCoordinates(const PointCoordinates& coordinates_) {
-
-    //ds update state
-    _state->world_coordinates = coordinates_;
-  }
-
   void Landmark::update(const PointCoordinates& coordinates_in_world_, const real& depth_meters_) {
     assert(_state);
     assert(_parameters);

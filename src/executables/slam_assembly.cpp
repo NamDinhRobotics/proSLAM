@@ -307,6 +307,12 @@ void SLAMAssembly::draw() {
   }
 }
 
+void SLAMAssembly::writePoseGraphToFile(const std::string& file_name_) const {
+  if (_graph_optimizer && _world_map) {
+    _graph_optimizer->writePoseGraphToFile(_world_map, file_name_);
+  }
+}
+
 void SLAMAssembly::playbackMessageFile() {
 
   //ds restart stream
@@ -487,82 +493,82 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
   //ds if we have a valid frame (not the case after the track is lost) TODO handle properly with exceptions
   if (_world_map->currentFrame()) {
 
-    //ds if bundle adjustment is desired
-    if (!_parameters->command_line_parameters->option_disable_bundle_adjustment) {
+    //ds if relocalization is desired
+    if (!_parameters->command_line_parameters->option_disable_relocalization) {
 
-      //ds add frame and its landmarks to the pose graph
-      _graph_optimizer->addFrameWithLandmarks(_world_map->currentFrame());
+      //ds local map generation - regardless of tracker state
+      if (_world_map->createLocalMap(_parameters->command_line_parameters->option_drop_framepoints)) {
 
-      //ds check if bundle-adjustment is required
-      if (_world_map->frames().size() % _parameters->graph_optimizer_parameters->number_of_frames_per_bundle_adjustment == 0) {
-        _graph_optimizer->optimize();
+        //ds trigger relocalization
+        _relocalizer->initialize(_world_map->currentLocalMap());
+        _relocalizer->detect();
+        _relocalizer->compute();
+
+        //ds check the closures
+        for(LocalMapCorrespondence* closure: _relocalizer->closures()) {
+          if (closure->is_valid) {
+            assert(_world_map->currentLocalMap() == closure->local_map_query);
+
+            //ds add loop closure constraint (also detects if local maps from two different tracks are connected)
+            _world_map->addCorrespondence(_world_map->currentLocalMap(),
+                                          closure->local_map_reference,
+                                          closure->query_to_reference,
+                                          closure->icp_inlier_ratio);
+            if (_parameters->command_line_parameters->option_use_gui) {
+              for (const LandmarkCorrespondence* match: closure->correspondences) {
+                _world_map->landmarks().at(match->query->landmark->identifier())->setIsInLoopClosureQuery(true);
+                _world_map->landmarks().at(match->reference->landmark->identifier())->setIsInLoopClosureReference(true);
+              }
+            }
+          }
+        }
+        _relocalizer->train();
+      }
+
+      //ds if bundle-adjustment is desired
+      if (!_parameters->command_line_parameters->option_disable_bundle_adjustment) {
+
+        //ds add frame and its landmarks to the pose graph
+        _graph_optimizer->addFrameWithLandmarks(_world_map->currentFrame());
+
+        //ds check if a periodic bundle adjustment is required
+        if (_world_map->frames().size() % _parameters->graph_optimizer_parameters->number_of_frames_per_bundle_adjustment == 0) {
+
+          //ds check if we're running with a GUI and lock the GUI before the critical phase
+          if (_map_viewer) {_map_viewer->lock();}
+
+          //ds optimize graph
+          _graph_optimizer->optimizeFramesWithLandmarks(_world_map);
+
+          //ds reenable the GUI
+          if (_map_viewer) {_map_viewer->unlock();}
+        }
+      } else {
+
+        //ds just add the frame to the pose graph
+        _graph_optimizer->addFrame(_world_map->currentFrame());
+
+        //ds if we closed a local map
+        if (_world_map->relocalized()) {
+
+          //ds check if we're running with a GUI and lock the GUI before the critical phase
+          if (_map_viewer) {_map_viewer->lock();}
+
+          //ds optimize graph
+          _graph_optimizer->optimizeFrames(_world_map);
+
+          //ds reenable the GUI
+          if (_map_viewer) {_map_viewer->unlock();}
+        }
+      }
+    } else if (_parameters->command_line_parameters->option_drop_framepoints) {
+
+      //ds free framepoints if available (previous is still required to draw the optical flow from current to previous point in the gui)
+      if (_world_map->currentFrame()->previous() && _world_map->currentFrame()->previous()->previous()) {
+        _world_map->currentFrame()->previous()->previous()->clear();
       }
     }
   }
-
-//  //ds check if relocalization is desired
-//  if (_parameters->command_line_parameters->option_use_relocalization) {
-//
-//    //ds if we have a valid frame (not the case after the track is lost)
-//    if (_world_map->currentFrame()) {
-//
-//      //ds local map generation - regardless of tracker state
-//      if (_world_map->createLocalMap(_parameters->command_line_parameters->option_drop_framepoints)) {
-//
-//        //ds trigger relocalization
-//        _relocalizer->initialize(_world_map->currentLocalMap());
-//        _relocalizer->detect();
-//        _relocalizer->compute();
-//
-//        //ds check the closures
-//        for(LocalMapCorrespondence* closure: _relocalizer->closures()) {
-//          if (closure->is_valid) {
-//            assert(_world_map->currentLocalMap() == closure->local_map_query);
-//
-//            //ds add loop closure constraint (also detects if local maps from two different tracks are connected)
-//            _world_map->addCorrespondence(_world_map->currentLocalMap(),
-//                                          closure->local_map_reference,
-//                                          closure->query_to_reference,
-//                                          closure->icp_inlier_ratio);
-//            if (_parameters->command_line_parameters->option_use_gui) {
-//              for (const LandmarkCorrespondence* match: closure->correspondences) {
-//                _world_map->landmarks().get(match->query->landmark->identifier())->setIsInLoopClosureQuery(true);
-//                _world_map->landmarks().get(match->reference->landmark->identifier())->setIsInLoopClosureReference(true);
-//              }
-//            }
-//          }
-//        }
-//        _relocalizer->train();
-//      }
-//
-//      //ds check if we closed a local map
-//      if (_world_map->relocalized()) {
-//
-//        //ds check if we're running with a GUI
-//        if (_map_viewer) {
-//
-//          //ds lock the GUI before the critical phase
-//          _map_viewer->lock();
-//        }
-//
-//        //ds optimize graph
-//        _optimizer->optimize(_world_map);
-//
-//        //ds reenable the GUI
-//        if (_map_viewer) {_map_viewer->unlock();}
-//      }
-//    }
-//  } else {
-//
-//    //ds open loop options: save memory
-//    if (_parameters->command_line_parameters->option_drop_framepoints) {
-//
-//      //ds free framepoints if available (previous is still required to draw the optical flow from current to previous point)
-//      if (_world_map->currentFrame()->previous() && _world_map->currentFrame()->previous()->previous()) {
-//        _world_map->currentFrame()->previous()->previous()->clear();
-//      }
-//    }
-//  }
 }
 
 void SLAMAssembly::printReport() const {

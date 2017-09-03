@@ -60,8 +60,8 @@ namespace proslam {
     bool option_equalize_histogram        = false;
     bool option_undistort_and_rectify     = false;
     bool option_use_odometry              = false;
-    bool option_recover_landmarks         = false;
-    bool option_disable_bundle_adjustment = false;
+    bool option_recover_landmarks         = true;
+    bool option_disable_bundle_adjustment = true;
   };
 
   //! @class generic aligner parameters, present in modules with aligner units
@@ -322,13 +322,13 @@ namespace proslam {
     virtual void print() const;
 
     //! @brief g2o identifier space between frames and landmark vertices
-    Count identifier_space = 1000000;
+    Count identifier_space = 1e6;
 
     //! @brief determines window size for bundle adjustment
     Count number_of_frames_per_bundle_adjustment = 100;
 
     //! @brief base frame weight in pose graph (assuming 1 for landmarks)
-    real base_information_frame = 1e5;
+    real base_information_frame = 1e6;
 
     //! @brief enable robust kernel for landmark measurements
     bool enable_robust_kernel_for_landmark_measurements = false;

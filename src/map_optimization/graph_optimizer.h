@@ -39,18 +39,26 @@ public:
 //ds interface
 public:
 
-  //! @brief adds a new frame to the pose graph with all connected landmarks
+  //! @brief saves a g2o graph of the provided world map to a file
+  //! @param[in] world_map_ world map for which the pose graph is constructed
+  //! @param[in] file_name_ desired file name for the g2o outfile
+  void writePoseGraphToFile(const WorldMap* world_map_, const std::string& file_name_) const;
+
+  //! @brief adds a new frame to the pose graph
   //! @param[in] frame_ the frame to add
+  void addFrame(Frame* frame_);
+
+  //! @brief adds a new frame to the pose graph with all connected landmarks
+  //! @param[in] frame_ the frame to add including its captured landmarks
   void addFrameWithLandmarks(Frame* frame_);
 
-  //! @brief adds a loop closure constraint to the pose graph
-  //! @param[in] loop_closure_ closure constraint containing query frame (usually current) and reference frame (fixed)
-  void addLoopClosure(LocalMapCorrespondence* loop_closure_) {
-
-  }
+  //! @brief triggers an adjustment of poses only
+  //! @param[in] world_map_ map in which the optimization takes place
+  void optimizeFrames(WorldMap* world_map_);
 
   //! @brief triggers a full bundle adjustment optimization of the current pose graph
-  void optimize();
+  //! @param[in] world_map_ map in which the optimization takes place
+  void optimizeFramesWithLandmarks(WorldMap* world_map_);
 
 //ds getters/setters
 public:
@@ -60,17 +68,18 @@ public:
 //ds g2o wrapper functions
 protected:
 
-  void _setPoseEdge(g2o::SparseOptimizer* optimizer_,
+  void _setPoseEdge(g2o::OptimizableGraph* optimizer_,
                     g2o::OptimizableGraph::Vertex* vertex_from_,
                     g2o::OptimizableGraph::Vertex* vertex_to_,
                     const TransformMatrix3D& transform_from_to_,
-                    const real& information_factor_);
+                    const real& information_factor_,
+                    const bool& free_translation_ = true) const;
 
-  void _setPointEdge(g2o::SparseOptimizer* optimizer_,
+  void _setPointEdge(g2o::OptimizableGraph* optimizer_,
                      g2o::VertexSE3* vertex_frame_,
                      g2o::VertexPointXYZ* vertex_landmark_,
                      const PointCoordinates& framepoint_robot_coordinates,
-                     const real& information_factor_);
+                     const real& information_factor_) const;
 
 //ds attributes
 protected:

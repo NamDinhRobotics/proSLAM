@@ -54,6 +54,14 @@ namespace proslam {
     _robot_to_world = robot_to_world_;
     _world_to_robot = _robot_to_world.inverse();
 
+    //ds if the frame is a keyframe
+    if (_is_keyframe) {
+      assert(_local_map);
+
+      //ds update the local map position
+      _local_map->setLocalMapToWorld(_robot_to_world);
+    }
+
     //ds update framepoint world coordinates
     updateActivePoints();
   }

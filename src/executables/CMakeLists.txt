@@ -11,7 +11,9 @@ target_link_libraries(srrg_proslam_slam_assembly_library
 
 #ds main executable
 add_executable(srrg_proslam_app srrg_proslam_app.cpp)
-target_link_libraries(srrg_proslam_app srrg_proslam_slam_assembly_library boost_system -pthread)
+target_link_libraries(srrg_proslam_app srrg_proslam_slam_assembly_library -pthread)
+add_executable(app srrg_proslam_app.cpp)
+target_link_libraries(app srrg_proslam_slam_assembly_library -pthread)
 
 #ds ROS related - only build it if ROS is present (blindly link against the whole catkin library collection)
 if(${SRRG_PROSLAM_HAS_ROS})
@@ -21,3 +23,6 @@ endif()
 
 #ds add kitti benchmark evaluation (snippet)
 add_executable(kitti_evaluate_odometry kitti_evaluate_odometry.cpp)
+
+#ds g2o to kitti trajectory converter (offline bundle adjustment testing)
+add_executable(trajectory_converter trajectory_converter.cpp)

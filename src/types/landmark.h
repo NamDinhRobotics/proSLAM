@@ -61,9 +61,6 @@ namespace proslam {
     inline const PointCoordinates& coordinates() const {return _state->world_coordinates;}
     inline void setCoordinates(const PointCoordinates& coordinates_) {_state->world_coordinates = coordinates_;}
 
-    //ds set landmark coordinates to a certain position (usually called after a map update)
-    void resetCoordinates(const PointCoordinates& coordinates_);
-
     //ds landmark state - locked inside a local map and refreshed afterwards
     inline State* state() {return _state;}
     inline void renewState() {_state = new State(this, _state->world_coordinates);}

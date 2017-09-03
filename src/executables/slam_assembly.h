@@ -43,6 +43,10 @@ public:
   //! @brief triggers draw functions of all connected viewers
   void draw();
 
+  //! @brief saves current pose graph to disk
+  //! @param[in] file_name_ desired file name for the g2o outfile
+  void writePoseGraphToFile(const std::string& file_name_ = "pose_graph.g2o") const;
+
   //! @brief playback txt_io message file
   void playbackMessageFile();
 
