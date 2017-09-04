@@ -228,7 +228,7 @@ namespace proslam {
     Count minimum_track_length_for_landmark_creation = 3;
 
     //! @brief track lost criteria
-    Count minimum_number_of_landmarks_to_track = 5;
+    Count minimum_number_of_landmarks_to_track = 10;
 
     //! @brief point tracking thresholds
     int32_t minimum_threshold_distance_tracking_pixels = 4*4;

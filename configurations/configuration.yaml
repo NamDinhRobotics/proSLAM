@@ -34,7 +34,7 @@ landmark:
 local_map:
 
   #ds target minimum number of landmarks for local map creation
-  minimum_number_of_landmarks: 5
+  minimum_number_of_landmarks: 10
   
 world_map:
 
@@ -77,7 +77,7 @@ base_tracking:
   minimum_track_length_for_landmark_creation: 3
 
   #ds track lost criteria
-  minimum_number_of_landmarks_to_track: 5
+  minimum_number_of_landmarks_to_track: 10
 
   #ds point tracking thresholds
   minimum_threshold_distance_tracking_pixels: 16    #ds 4x4
