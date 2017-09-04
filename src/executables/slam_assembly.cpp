@@ -409,7 +409,7 @@ void SLAMAssembly::playbackMessageFile() {
 
       //ds record ground truth history for error computation
       if (image_message_left->hasOdom()) {
-        addGroundTruthMeasurement(image_message_left->odometry().cast<real>()*robot_to_camera_left);
+        _world_map->setRobotToWorldGroundTruth(image_message_left->odometry().cast<real>()*robot_to_camera_left);
       }
 
       //ds runtime info
@@ -452,11 +452,6 @@ void SLAMAssembly::playbackMessageFile() {
   }
   _message_reader.close();
   LOG_INFO(std::cerr << "SLAMAssembly::playbackMessageFile|dataset completed" << std::endl)
-}
-
-void SLAMAssembly::addGroundTruthMeasurement(const TransformMatrix3D& robot_to_world_ground_truth_) {
-  _robot_to_world_ground_truth_poses.push_back(robot_to_world_ground_truth_);
-  _world_map->setRobotToWorldGroundTruth(robot_to_world_ground_truth_);
 }
 
 void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
@@ -573,6 +568,57 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
   }
 }
 
+//ds computes absolute translation RMSE
+const real SLAMAssembly::getAbsoluteTranslationRootMeanSquaredError() const {
+
+  //ds compute absolute squared errors
+  std::vector<real> squared_errors_translation_absolute(0);
+  for (const FramePointerMapElement& frame: _world_map->frames()) {
+
+    //ds compute squared errors between frames
+    squared_errors_translation_absolute.push_back((frame.second->robotToWorld().translation()-frame.second->robotToWorldGroundTruth().translation()).squaredNorm());
+  }
+
+  //ds compute RMSE
+  real root_mean_squared_error_translation_absolute = 0;
+  for (const real squared_error: squared_errors_translation_absolute) {
+    root_mean_squared_error_translation_absolute += squared_error;
+  }
+  root_mean_squared_error_translation_absolute /= squared_errors_translation_absolute.size();
+  root_mean_squared_error_translation_absolute = std::sqrt(root_mean_squared_error_translation_absolute);
+  squared_errors_translation_absolute.clear();
+
+  //ds done
+  return root_mean_squared_error_translation_absolute;
+}
+
+//ds computes relative translation ME
+const real SLAMAssembly::getRelativeTranslationMeanError() const {
+
+  //ds compute relative errors
+  std::vector<real> errors_translation_relative(0);
+  for (const FramePointerMapElement& frame: _world_map->frames()) {
+    Frame* previous_frame = frame.second->previous();
+
+    //ds compute squared errors between frames
+    if (previous_frame) {
+      const TransformMatrix3D world_previous_to_current_ground_truth = frame.second->robotToWorldGroundTruth()*previous_frame->robotToWorldGroundTruth().inverse();
+      errors_translation_relative.push_back(((frame.second->robotToWorld()*previous_frame->robotToWorld().inverse()).translation()-world_previous_to_current_ground_truth.translation()).norm());
+    }
+  }
+
+  //ds compute error
+  real mean_error_translation_relative = 0;
+  for (const real error: errors_translation_relative) {
+    mean_error_translation_relative += error;
+  }
+  mean_error_translation_relative /= errors_translation_relative.size();
+  errors_translation_relative.clear();
+
+  //ds done
+  return mean_error_translation_relative;
+}
+
 void SLAMAssembly::printReport() const {
 
   //ds header
@@ -587,46 +633,11 @@ void SLAMAssembly::printReport() const {
     return;
   }
 
-  //ds if we got consistent ground truth data
-  if (_robot_to_world_ground_truth_poses.size() == _number_of_processed_frames) {
-
-    //ds compute squared errors
-    std::vector<real> errors_translation_relative(0);
-    std::vector<real> squared_errors_translation_absolute(0);
-    TransformMatrix3D odometry_robot_to_world_previous_ground_truth = TransformMatrix3D::Identity();
-    Index index_frame     = 0;
-    Frame* previous_frame = 0;
-    for (FramePointerMapElement frame: _world_map->frames()) {
-
-      //ds compute squared errors between frames
-      if (index_frame > 0) {
-        const TransformMatrix3D world_previous_to_current_ground_truth = _robot_to_world_ground_truth_poses[index_frame]*odometry_robot_to_world_previous_ground_truth.inverse();
-        errors_translation_relative.push_back(((frame.second->robotToWorld()*previous_frame->robotToWorld().inverse()).translation()-world_previous_to_current_ground_truth.translation()).norm());
-      }
-      squared_errors_translation_absolute.push_back((frame.second->robotToWorld().translation()-_robot_to_world_ground_truth_poses[index_frame].translation()).squaredNorm());
-      odometry_robot_to_world_previous_ground_truth = _robot_to_world_ground_truth_poses[index_frame];
-      previous_frame = frame.second;
-      index_frame++;
-    }
-
-    //ds compute RMSEs
-    real root_mean_squared_error_translation_absolute = 0;
-    for (const real squared_error: squared_errors_translation_absolute) {
-      root_mean_squared_error_translation_absolute += squared_error;
-    }
-    root_mean_squared_error_translation_absolute /= squared_errors_translation_absolute.size();
-    root_mean_squared_error_translation_absolute = std::sqrt(root_mean_squared_error_translation_absolute);
-    real mean_error_translation_relative = 0;
-    for (const real error: errors_translation_relative) {
-      mean_error_translation_relative += error;
-    }
-    mean_error_translation_relative /= errors_translation_relative.size();
-
-    std::cerr << "    absolute translation RMSE (m): " << root_mean_squared_error_translation_absolute << std::endl;
-    std::cerr << "    relative translation   ME (m): " << mean_error_translation_relative << std::endl;
-    std::cerr << "    final translational error (m): " << (_world_map->currentFrame()->robotToWorld().translation()-odometry_robot_to_world_previous_ground_truth.translation()).norm() << std::endl;
-    std::cerr << BAR << std::endl;
-  }
+  //ds print standard errors
+  std::cerr << "    absolute translation RMSE (m): " << getAbsoluteTranslationRootMeanSquaredError() << std::endl;
+  std::cerr << "    relative translation   ME (m): " << getRelativeTranslationMeanError() << std::endl;
+  std::cerr << "    final translational error (m): " << (_world_map->currentFrame()->robotToWorld().translation()-_world_map->currentFrame()->robotToWorldGroundTruth().translation()).norm() << std::endl;
+  std::cerr << BAR << std::endl;
 
   //ds compute trajectory length
   double trajectory_length = 0;

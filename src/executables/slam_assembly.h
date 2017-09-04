@@ -55,15 +55,17 @@ public:
     return new std::thread([=] {playbackMessageFile();});
   }
 
-  //ds sets ground truth to current frame
-  void addGroundTruthMeasurement(const TransformMatrix3D& robot_to_world_ground_truth_);
-
   //ds process a pair of rectified and undistorted stereo images
   void process(const cv::Mat& intensity_image_left_,
                const cv::Mat& intensity_image_right_,
                const bool& use_odometry_ = false,
                const TransformMatrix3D& odometry_ = TransformMatrix3D::Identity());
 
+  //ds computes absolute translation RMSE
+  const real getAbsoluteTranslationRootMeanSquaredError() const;
+
+  //ds computes relative translation ME
+  const real getRelativeTranslationMeanError() const;
 
   //ds prints extensive run summary
   void printReport() const;
