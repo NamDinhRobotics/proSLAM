@@ -9,11 +9,11 @@ target_link_libraries(srrg_proslam_slam_assembly_library
   srrg_system_utils_library
 )
 
-#ds main executable
+#ds main executable (pthread is used for the GUI thread)
 add_executable(srrg_proslam_app srrg_proslam_app.cpp)
-target_link_libraries(srrg_proslam_app srrg_proslam_slam_assembly_library -pthread)
+target_link_libraries(srrg_proslam_app srrg_proslam_slam_assembly_library -pthread boost_system)
 add_executable(app srrg_proslam_app.cpp)
-target_link_libraries(app srrg_proslam_slam_assembly_library -pthread)
+target_link_libraries(app srrg_proslam_slam_assembly_library -pthread boost_system)
 
 #ds ROS related - only build it if ROS is present (blindly link against the whole catkin library collection)
 if(${SRRG_PROSLAM_HAS_ROS})
