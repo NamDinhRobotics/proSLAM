@@ -5,9 +5,9 @@
 namespace proslam {
   using namespace srrg_core;
 
-  Relocalizer::Relocalizer(RelocalizerParameters* parameters_): _query(0),
-                                                                _aligner(new XYZAligner(parameters_->aligner)),
-                                                                _parameters(parameters_) {
+  Relocalizer::Relocalizer(RelocalizerParameters* parameters_): _parameters(parameters_),
+                                                                _query(0),
+                                                                _aligner(new XYZAligner(parameters_->aligner)) {
     LOG_DEBUG(std::cerr << "Relocalizer::Relocalizer|constructed" << std::endl)
   }
 

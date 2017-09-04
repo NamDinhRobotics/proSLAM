@@ -2,8 +2,8 @@
 
 namespace proslam {
 
-  //ds the stereo camera setup must be provided
-  BaseFramePointGenerator::BaseFramePointGenerator(BaseFramepointGeneratorParameters* parameters_): _camera_left(0),
+  BaseFramePointGenerator::BaseFramePointGenerator(BaseFramePointGeneratorParameters* parameters_): _parameters(parameters_),
+                                                                                                    _camera_left(0),
                                                                                                     _number_of_rows_image(0),
                                                                                                     _number_of_cols_image(0),
                                                                                                     _target_number_of_keypoints(1000),
@@ -13,11 +13,12 @@ namespace proslam {
                                                                                                     _principal_point_offset_v_pixels(0),
                                                                                                     _maximum_depth_near_meters(0),
                                                                                                     _maximum_depth_far_meters(0),
-                                                                                                    _framepoints_in_image(0),
+                                                                                                    _framepoints_in_image(0)
 #if CV_MAJOR_VERSION == 2
-                                                                                                    _keypoint_detector(0), _descriptor_extractor(0),
+                                                                                                    ,_keypoint_detector(0), _descriptor_extractor(0) {
+#else
+                                                                                                    {
 #endif
-                                                                                                    _parameters(parameters_) {
     LOG_DEBUG(std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|constructed" << std::endl)
   }
 
@@ -58,7 +59,6 @@ namespace proslam {
     LOG_DEBUG(std::cerr << "BaseFramePointGenerator::configure|configured" << std::endl)
   }
 
-  //ds cleanup of dynamic structures
   BaseFramePointGenerator::~BaseFramePointGenerator() {
     LOG_DEBUG(std::cerr << "BaseFramePointGenerator::~BaseFramePointGenerator|destroying" << std::endl)
 
@@ -77,8 +77,6 @@ namespace proslam {
     LOG_DEBUG(std::cerr << "BaseFramePointGenerator::~BaseFramePointGenerator|destroyed" << std::endl)
   }
 
-
-  //ds detects keypoints and stores them in a vector (called within compute)
   void BaseFramePointGenerator::detectKeypoints(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_) {
     CHRONOMETER_START(keypoint_detection)
 
@@ -124,7 +122,6 @@ namespace proslam {
     CHRONOMETER_STOP(keypoint_detection)
   }
 
-  //ds extracts the defined descriptors for the given keypoints (called within compute)
   void BaseFramePointGenerator::extractDescriptors(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_, cv::Mat& descriptors_) {
     CHRONOMETER_START(descriptor_extraction)
     _descriptor_extractor->compute(intensity_image_, keypoints_, descriptors_);

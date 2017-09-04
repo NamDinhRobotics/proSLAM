@@ -15,13 +15,13 @@ command_line:
   #ds options
   option_use_gui:                   false
   option_use_odometry:              false
-  option_use_relocalization:        true
+  option_disable_relocalization:    false
   option_show_top_viewer:           false
   option_drop_framepoints:          false
   option_equalize_histogram:        false
   option_undistort_and_rectify:     false
-  option_recover_landmarks:         false
-  option_disable_bundle_adjustment: false
+  option_recover_landmarks:         true
+  option_disable_bundle_adjustment: true
 
 landmark:
 

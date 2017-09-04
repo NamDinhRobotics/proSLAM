@@ -16,7 +16,7 @@ namespace proslam {
 class GraphOptimizer {
 
 //ds exported data types
-public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+public:
 
   typedef g2o::BlockSolver<g2o::BlockSolverTraits<-1, -1> >  SlamBlockSolver;
   typedef g2o::LinearSolverCSparse<SlamBlockSolver::PoseMatrixType> SlamLinearSolver;
@@ -30,11 +30,7 @@ public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   };
 
 //ds object management
-public:
-
-  GraphOptimizer(GraphOptimizerParameters* parameters_);
-  void configure() {}
-  ~GraphOptimizer();
+PROSLAM_MAKE_PROCESSING_CLASS(GraphOptimizer)
 
 //ds interface
 public:
@@ -100,10 +96,5 @@ protected:
   CREATE_CHRONOMETER(addition)
   CREATE_CHRONOMETER(optimization)
   Count _number_of_optimizations = 0;
-
-private:
-
-  //! @brief configurable parameters
-  GraphOptimizerParameters* _parameters;
 };
 }

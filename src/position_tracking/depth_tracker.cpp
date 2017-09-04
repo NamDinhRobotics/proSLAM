@@ -3,12 +3,11 @@
 namespace proslam {
   using namespace srrg_core;
 
-  //ds the tracker assumes a constant stereo camera configuration
   DepthTracker::DepthTracker(DepthTrackerParameters* parameters_): BaseTracker(parameters_),
+                                                                   _parameters(parameters_),
                                                                    _depth_camera(0),
                                                                    _depth_image(0),
-                                                                   _depth_framepoint_generator(0),
-                                                                   _parameters(parameters_) {
+                                                                   _depth_framepoint_generator(0) {
     LOG_DEBUG(std::cerr << "DepthTracker::DepthTracker|constructed" << std::endl)
   }
 
@@ -21,7 +20,6 @@ namespace proslam {
     LOG_DEBUG(std::cerr << "DepthTracker::configure|configured" << std::endl)
   }
 
-  //ds dynamic cleanup
   DepthTracker::~DepthTracker() {
     LOG_DEBUG(std::cerr << "DepthTracker::~DepthTracker|destroying" << std::endl)
     LOG_DEBUG(std::cerr << "DepthTracker::~DepthTracker|destroyed" << std::endl)
@@ -36,13 +34,11 @@ namespace proslam {
     return current_frame;
   }
   
-  //ds creates a new Frame for the given images, retrieves the correspondences relative to the previous Frame, optimizes the current frame pose and updates landmarks
   void DepthTracker::compute() {
     assert(_depth_image);
     BaseTracker::compute();
   }
 
-  //ds attempts to recover framepoints in the current image using the more precise pose estimate, retrieved after pose optimization
   void DepthTracker::_recoverPoints(Frame* current_frame_) {
     return;
   }

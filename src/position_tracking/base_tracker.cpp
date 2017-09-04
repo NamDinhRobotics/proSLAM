@@ -3,7 +3,8 @@
 namespace proslam {
   using namespace srrg_core;
 
-  BaseTracker::BaseTracker(BaseTrackerParameters* parameters_): _camera_left(0),
+  BaseTracker::BaseTracker(BaseTrackerParameters* parameters_): _parameters(parameters_),
+                                                                _camera_left(0),
                                                                 _number_of_rows_image(0),
                                                                 _number_of_cols_image(0),
                                                                 _intensity_image_left(0),
@@ -15,7 +16,6 @@ namespace proslam {
                                                                 _number_of_cols_bin(0),
                                                                 _bin_map_left(0),
                                                                 _enable_keypoint_binning(false),
-                                                                _parameters(parameters_),
                                                                 _has_odometry(false) {
     LOG_DEBUG(std::cerr << "BaseTracker::BaseTracker|constructed" << std::endl)
   }
@@ -72,7 +72,6 @@ namespace proslam {
     LOG_DEBUG(std::cerr << "BaseTracker::~BaseTracker|destroyed" << std::endl)
   }
 
-  //ds creates a new Frame for the given images, retrieves the correspondences relative to the previous Frame, optimizes the current frame pose and updates landmarks
   void BaseTracker::compute() {
     assert(_camera_left);
     assert(_context);

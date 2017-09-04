@@ -4,56 +4,42 @@
 
 namespace proslam {
 
-  //ds this class processes two subsequent Frames and establishes Framepoint correspondences (tracks) based on the corresponding images
-  class DepthTracker: public BaseTracker {
+//ds this class processes two subsequent Frames and establishes Framepoint correspondences (tracks) based on the corresponding images
+class DepthTracker: public BaseTracker {
 
-  //ds object handling
-  public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+//ds object management
+PROSLAM_MAKE_PROCESSING_CLASS(DepthTracker)
 
-    //ds the tracker assumes a constant stereo camera configuration
-    DepthTracker(DepthTrackerParameters* parameters_);
+//ds functionality
+public:
 
-    //gg
-    virtual void configure();
+  virtual void compute();
 
-    //ds dynamic cleanup
-    virtual ~DepthTracker();
-    
-  //ds functionality
-  public:
+//ds setters/getters
+public:
 
-    virtual void compute();
+  void setDepthCamera(const Camera* depth_camera_) {_depth_camera = depth_camera_;}
+  void setDepthImageRight(const cv::Mat* depth_image_) {_depth_image = depth_image_;}
 
-  //ds setters/getters
-  public:
+//ds helpers
+protected:
 
-    void setDepthCamera(const Camera* depth_camera_) {_depth_camera = depth_camera_;}
-    void setDepthImageRight(const cv::Mat* depth_image_) {_depth_image = depth_image_;}
+  //gg
+  virtual Frame* _createFrame();
 
-  //ds helpers
-  protected:
+  //ds attempts to recover framepoints in the current image using the more precise pose estimate, retrieved after pose optimization
+  virtual void _recoverPoints(Frame* current_frame_);
 
-    //gg
-    virtual Frame* _createFrame();
+//ds attributes
+protected:
 
-    //ds attempts to recover framepoints in the current image using the more precise pose estimate, retrieved after pose optimization
-    virtual void _recoverPoints(Frame* current_frame_);
+  //ds configuration
+  const Camera* _depth_camera;
 
-  //ds attributes
-  protected:
+  //ds processing
+  const cv::Mat* _depth_image;
 
-    //ds configuration
-    const Camera* _depth_camera;
-
-    //ds processing
-    const cv::Mat* _depth_image;
-
-    //ds specified generator instance
-    DepthFramePointGenerator* _depth_framepoint_generator;
-
-  private:
-
-    //! @brief configurable parameters
-    DepthTrackerParameters* _parameters;
-  };
+  //ds specified generator instance
+  DepthFramePointGenerator* _depth_framepoint_generator;
+};
 }

@@ -8,16 +8,7 @@ namespace proslam {
 class ImageViewer {
 
 //ds object life
-public:
-
-  //! @brief default constructor
-  //! @brief param[in] parameters_ viewer parameters
-  //! @brief param[in] window_name_ target window title of the OpenCV window
-  ImageViewer(const ImageViewerParameters* parameters_,
-              const std::string& window_title_ = "input: images [OpenCV]");
-
-  //! @brief default destructor
-  ~ImageViewer();
+PROSLAM_MAKE_PROCESSING_CLASS(ImageViewer)
 
 //ds access
 public:
@@ -41,9 +32,6 @@ protected:
 //ds attributes
 protected:
 
-  //! @brief viewer window title
-  const std::string _window_title;
-
   //! @brief mutex for data exchange, owned by the viewer
   std::mutex _mutex_data_exchange;
 
@@ -52,11 +40,5 @@ protected:
 
   //! @brief currently displayed image
   cv::Mat _current_image;
-
-//ds class specific
-private:
-
-  //! @brief configurable parameters
-  const ImageViewerParameters* _parameters;
 };
 }

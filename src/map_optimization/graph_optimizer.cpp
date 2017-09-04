@@ -32,6 +32,10 @@ GraphOptimizer::GraphOptimizer(GraphOptimizerParameters* parameters_): _paramete
   _optimizer->addParameter(parameter_world_offset);
 }
 
+void GraphOptimizer::configure() {
+  //ds nothing to do
+}
+
 GraphOptimizer::~GraphOptimizer(){
   LOG_DEBUG(std::cerr << "GraphOptimizer::~GraphOptimizer|destroying" << std::endl)
   _frames_in_pose_graph.clear();

@@ -3,10 +3,10 @@
 namespace proslam {
 
   StereoFramePointGenerator::StereoFramePointGenerator(StereoFramePointGeneratorParameters* parameters_): BaseFramePointGenerator(parameters_),
+                                                                                                          _parameters(parameters_),
                                                                                                           _camera_right(0),
                                                                                                           _baseline_pixelsmeters(0),
-                                                                                                          _baseline_meters(0),
-                                                                                                          _parameters(parameters_) {
+                                                                                                          _baseline_meters(0) {
     LOG_DEBUG(std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|construced" << std::endl)
   }
 

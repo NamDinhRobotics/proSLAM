@@ -234,8 +234,8 @@ void SLAMAssembly::loadCameras(Camera* camera_left_, Camera* camera_right_) {
 void SLAMAssembly::initializeGUI(QApplication* ui_server_) {
   if (_parameters->command_line_parameters->option_use_gui) {
     _ui_server = ui_server_;
-    _image_viewer = new ImageViewer(_parameters->image_viewer_parameters, "input: images [OpenCV]");
-    _map_viewer   = new MapViewer(_parameters->map_viewer_parameters, 0.25, "output: map [OpenGL]");
+    _image_viewer = new ImageViewer(_parameters->image_viewer_parameters);
+    _map_viewer   = new MapViewer(_parameters->map_viewer_parameters);
     _map_viewer->setCameraLeftToRobot(_camera_left->cameraToRobot());
 
     //ds orientation flip for proper camera following
@@ -250,7 +250,9 @@ void SLAMAssembly::initializeGUI(QApplication* ui_server_) {
 
     //ds configure custom top viewer if requested
     if (_parameters->command_line_parameters->option_show_top_viewer) {
-      _minimap_viewer = new MapViewer(_parameters->map_viewer_parameters, 1, "minimap [OpenGL]");
+      _parameters->top_map_viewer_parameters->object_scale = 1;
+      _parameters->top_map_viewer_parameters->window_title = "minimap [OpenGL]";
+      _minimap_viewer = new MapViewer(_parameters->top_map_viewer_parameters);
       _minimap_viewer->setCameraLeftToRobot(_camera_left->cameraToRobot());
       TransformMatrix3D center_for_kitti_sequence_00;
       center_for_kitti_sequence_00.matrix() << 1, 0, 0, 0,

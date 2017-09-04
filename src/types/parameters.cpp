@@ -97,7 +97,7 @@ namespace proslam {
     local_map->print();
   }
 
-  void BaseFramepointGeneratorParameters::print() const {
+  void BaseFramePointGeneratorParameters::print() const {
     std::cerr << "BaseFramepointGeneratorParameters::print|target_number_of_keypoints_tolerance: " << target_number_of_keypoints_tolerance << std::endl;
     std::cerr << "BaseFramepointGeneratorParameters::print|detector_threshold: " << detector_threshold << std::endl;
     std::cerr << "BaseFramepointGeneratorParameters::print|detector_threshold_minimum: " << detector_threshold_minimum << std::endl;
@@ -112,11 +112,11 @@ namespace proslam {
     std::cerr << "StereoFramepointGeneratorParameters::print|maximum_matching_distance_triangulation: " << maximum_matching_distance_triangulation << std::endl;
     std::cerr << "StereoFramepointGeneratorParameters::print|baseline_factor: " << baseline_factor << std::endl;
     std::cerr << "StereoFramepointGeneratorParameters::print|minimum_disparity_pixels: " << minimum_disparity_pixels << std::endl;
-    BaseFramepointGeneratorParameters::print();
+    BaseFramePointGeneratorParameters::print();
   }
 
   void DepthFramePointGeneratorParameters::print() const {
-    BaseFramepointGeneratorParameters::print();
+    BaseFramePointGeneratorParameters::print();
   }
 
   BaseTrackerParameters::BaseTrackerParameters(const LoggingLevel& logging_level_): Parameters(logging_level_),
@@ -183,8 +183,9 @@ namespace proslam {
     relocalizer_parameters     = new RelocalizerParameters(logging_level_);
     graph_optimizer_parameters = new GraphOptimizerParameters(logging_level_);
 
-    image_viewer_parameters = new ImageViewerParameters(logging_level_);
-    map_viewer_parameters   = new MapViewerParameters(logging_level_);
+    image_viewer_parameters   = new ImageViewerParameters(logging_level_);
+    map_viewer_parameters     = new MapViewerParameters(logging_level_);
+    top_map_viewer_parameters = new MapViewerParameters(logging_level_);
 
     LOG_DEBUG(std::cerr << "ParameterCollection::ParameterCollection|constructed" << std::endl)
   }
@@ -198,6 +199,7 @@ namespace proslam {
 
     delete image_viewer_parameters;
     delete map_viewer_parameters;
+    delete top_map_viewer_parameters;
 
     delete stereo_framepoint_generator_parameters;
     delete depth_framepoint_generator_parameters;
@@ -331,6 +333,7 @@ namespace proslam {
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_equalize_histogram, bool)
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_undistort_and_rectify, bool)
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_recover_landmarks, bool)
+      PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_disable_bundle_adjustment, bool)
 
       //Types
       PARSE_PARAMETER(configuration, world_map, world_map_parameters, minimum_distance_traveled_for_local_map, real)

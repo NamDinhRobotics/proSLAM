@@ -155,11 +155,11 @@ namespace proslam {
   };
 
   //! @class framepoint generation parameters
-  class BaseFramepointGeneratorParameters: public Parameters {
+  class BaseFramePointGeneratorParameters: public Parameters {
   public:
 
     //! @brief constructor
-    BaseFramepointGeneratorParameters(const LoggingLevel& logging_level_): Parameters(logging_level_) {}
+    BaseFramePointGeneratorParameters(const LoggingLevel& logging_level_): Parameters(logging_level_) {}
 
     //! @brief parameter printing function
     virtual void print() const;
@@ -178,11 +178,11 @@ namespace proslam {
   };
 
   //! @class framepoint generation parameters for a stereo camera setup
-  class StereoFramePointGeneratorParameters: public BaseFramepointGeneratorParameters {
+  class StereoFramePointGeneratorParameters: public BaseFramePointGeneratorParameters {
   public:
 
     //! @brief constructor
-    StereoFramePointGeneratorParameters(const LoggingLevel& logging_level_): BaseFramepointGeneratorParameters(logging_level_) {}
+    StereoFramePointGeneratorParameters(const LoggingLevel& logging_level_): BaseFramePointGeneratorParameters(logging_level_) {}
 
     //! @brief parameter printing function
     virtual void print() const;
@@ -195,11 +195,11 @@ namespace proslam {
   };
 
   //! @class framepoint generation parameters for a rgbd camera setup
-  class DepthFramePointGeneratorParameters: public BaseFramepointGeneratorParameters {
+  class DepthFramePointGeneratorParameters: public BaseFramePointGeneratorParameters {
   public:
 
     //! @brief constructor
-    DepthFramePointGeneratorParameters(const LoggingLevel& logging_level_): BaseFramepointGeneratorParameters(logging_level_) {}
+    DepthFramePointGeneratorParameters(const LoggingLevel& logging_level_): BaseFramePointGeneratorParameters(logging_level_) {}
 
     //! @brief parameter printing function
     virtual void print() const;
@@ -343,6 +343,9 @@ namespace proslam {
 
     //! @brief parameter printing function
     virtual void print() const;
+
+    //! @brief viewer window title
+    std::string window_title = "input: images [OpenCV]";
   };
 
   //! @class map viewer parameters
@@ -354,6 +357,19 @@ namespace proslam {
 
     //! @brief parameter printing function
     virtual void print() const;
+
+    //! @brief display options
+    bool frames_drawn       = true;
+    bool landmarks_drawn    = true;
+    bool follow_robot       = true;
+    bool ground_truth_drawn = false;
+
+    //! @brief default sizes
+    real object_scale = 0.25;
+    real point_size   = 2;
+
+    //! @brief viewer window title
+    std::string window_title = "output: map [OpenGL]";
   };
 
   //! @class object holding all parameters
@@ -413,6 +429,7 @@ namespace proslam {
 
     ImageViewerParameters* image_viewer_parameters = 0;
     MapViewerParameters* map_viewer_parameters     = 0;
+    MapViewerParameters* top_map_viewer_parameters = 0;
 
   //ds inner attributes
   protected:

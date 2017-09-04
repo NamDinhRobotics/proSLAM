@@ -4,10 +4,8 @@
 
 namespace proslam {
 
-ImageViewer::ImageViewer(const ImageViewerParameters* parameters_,
-                         const std::string& window_title_): _window_title(window_title_),
-                                                            _current_frame(0),
-                                                            _parameters(parameters_) {
+ImageViewer::ImageViewer(ImageViewerParameters* parameters_): _parameters(parameters_),
+                                                              _current_frame(0) {
   LOG_DEBUG(std::cerr << "ImageViewer::ImageViewer|constructed" << std::endl)
 }
 
@@ -15,8 +13,12 @@ ImageViewer::~ImageViewer() {
   LOG_DEBUG(std::cerr << "ImageViewer::~ImageViewer|destroying" << std::endl)
 
   //ds release cv window
-  cv::destroyWindow(_window_title);
+  cv::destroyWindow(_parameters->window_title);
   LOG_DEBUG(std::cerr << "ImageViewer::~ImageViewer|destroyed" << std::endl)
+}
+
+void ImageViewer::configure() {
+  //ds nothing to do
 }
 
 void ImageViewer::update(const Frame* frame_) {
@@ -46,7 +48,7 @@ void ImageViewer::draw() {
     _drawTracking();
 
     //ds display the image
-    cv::imshow(_window_title.c_str(), _current_image);
+    cv::imshow(_parameters->window_title.c_str(), _current_image);
     cv::waitKey(1);
   }
 }

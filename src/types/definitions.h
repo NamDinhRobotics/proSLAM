@@ -23,7 +23,16 @@
 
 namespace proslam {
 
-  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% //CONFIGURATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  //ds pattern helper macros
+  #define PROSLAM_CONCATENATE(A, B) A ## B
+
+  //ds pattern macros
+  #define PROSLAM_MAKE_PROCESSING_CLASS(CLASS_NAME) \
+    public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW \
+      CLASS_NAME(PROSLAM_CONCATENATE(CLASS_NAME, Parameters)* parameters_); \
+      virtual void configure(); \
+      virtual ~CLASS_NAME(); \
+    private: PROSLAM_CONCATENATE(CLASS_NAME, Parameters)* _parameters;
 
   //ds descriptor bit width
 #ifndef SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS
@@ -34,8 +43,6 @@ namespace proslam {
 
   //ds adjust floating point precision
   typedef double real;
-
-  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% CONFIGURATION// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   //ds existential types
   typedef Eigen::Matrix<real, 3, 1> PointCoordinates;

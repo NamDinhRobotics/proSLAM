@@ -5,10 +5,10 @@ namespace proslam {
 
   //ds the tracker assumes a constant stereo camera configuration
   StereoTracker::StereoTracker(StereoTrackerParameters* parameters_): BaseTracker(parameters_),
+                                                                      _parameters(parameters_),
                                                                       _camera_right(0),
                                                                       _intensity_image_right(0),
-                                                                      _stereo_framepoint_generator(0),
-                                                                      _parameters(parameters_) {
+                                                                      _stereo_framepoint_generator(0) {
     LOG_DEBUG(std::cerr << "StereoTracker::StereoTracker|constructed" << std::endl)
   }
 

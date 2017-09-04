@@ -3,8 +3,8 @@
 namespace proslam {
 
   DepthFramePointGenerator::DepthFramePointGenerator(DepthFramePointGeneratorParameters* parameters_): BaseFramePointGenerator(parameters_),
-                                                                                                       _camera_right(0),
-                                                                                                       _parameters(parameters_) {
+                                                                                                       _parameters(parameters_),
+                                                                                                       _camera_right(0) {
     LOG_DEBUG(std::cerr << "DepthFramePointGenerator::DepthFramePointGenerator|constructed" << std::endl)
   }
 
