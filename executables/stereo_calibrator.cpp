@@ -82,7 +82,7 @@ int32_t main (int32_t argc, char** argv) {
   //ds info
   uint64_t number_of_processed_stereo_images  = 0;
   uint64_t number_of_measurements_stereo      = 0;
-  const uint32_t measurement_image_interspace = 10;
+  const uint32_t measurement_image_interspace = 1;
 
   //ds start playback
   srrg_core::BaseMessage* message = 0;
@@ -167,8 +167,8 @@ int32_t main (int32_t argc, char** argv) {
   //ds objectives
   cv::Mat camera_calibration_matrix_left(cv::Mat::eye(3, 3, CV_64F));
   cv::Mat camera_calibration_matrix_right(cv::Mat::eye(3, 3, CV_64F));
-  cv::Mat distortion_coefficients_left(cv::Mat::zeros(4, 1, CV_64F));
-  cv::Mat distortion_coefficients_right(cv::Mat::zeros(4, 1, CV_64F));
+  cv::Mat distortion_coefficients_left(cv::Mat::zeros(8, 1, CV_64F));
+  cv::Mat distortion_coefficients_right(cv::Mat::zeros(8, 1, CV_64F));
 
   //ds set camera calibration matrix estimates (eth)
   camera_calibration_matrix_left.at<double>(0,0)  = 458.654;
@@ -547,6 +547,9 @@ const bool measure(const cv::Mat& image_,
     return false;
   }
 
+  //ds refine corner locations
+  cv::cornerSubPix(image_, image_points, cv::Size(11, 11), cv::Size(-1, -1), cv::TermCriteria(cv::TermCriteria::EPS+cv::TermCriteria::COUNT, 30, 0.1));
+
   //ds visual info
   for (cv::Point2f point: image_points) {
     cv::circle(image_display_, point, 5, cv::Scalar(0, 255, 0), 1);
@@ -578,7 +581,7 @@ const double calibrate(const cv::Size image_size_,
                                                                distortion_coefficients_,
                                                                rotations_per_image,
                                                                translations_per_image,
-                                                               CV_CALIB_USE_INTRINSIC_GUESS);
+                                                               CV_CALIB_USE_INTRINSIC_GUESS | CV_CALIB_RATIONAL_MODEL);
 
   //ds done
   return reprojection_error_pixels;
