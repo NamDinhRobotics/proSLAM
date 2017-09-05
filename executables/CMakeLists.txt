@@ -1,18 +1,7 @@
-#ds export assembly as library
-add_library(srrg_proslam_slam_assembly_library slam_assembly.cpp)
-target_link_libraries(srrg_proslam_slam_assembly_library
-  srrg_proslam_map_optimization_library
-  srrg_proslam_position_tracking_library
-  srrg_proslam_relocalization_library
-  srrg_proslam_visualization_library
-  srrg_messages_library
-  srrg_system_utils_library
-)
-
 #ds main executable (pthread is used for the GUI thread)
-add_executable(srrg_proslam_app srrg_proslam_app.cpp)
+add_executable(srrg_proslam_app app.cpp)
 target_link_libraries(srrg_proslam_app srrg_proslam_slam_assembly_library -pthread boost_system)
-add_executable(app srrg_proslam_app.cpp)
+add_executable(app app.cpp)
 target_link_libraries(app srrg_proslam_slam_assembly_library -pthread boost_system)
 
 #ds ROS related - only build it if ROS is present (blindly link against the whole catkin library collection)

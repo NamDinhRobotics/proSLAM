@@ -9,7 +9,7 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/subscriber.h>
 
-#include "slam_assembly.h"
+#include "system/slam_assembly.h"
 
 //ds lazy globals
 proslam::Camera* camera_left  = 0;

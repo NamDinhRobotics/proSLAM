@@ -159,3 +159,4 @@ catkin_package(
 
 #ds set sources
 add_subdirectory(src)
+add_subdirectory(executables)

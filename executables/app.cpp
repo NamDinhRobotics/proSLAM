@@ -1,4 +1,4 @@
-#include "slam_assembly.h"
+#include "system/slam_assembly.h"
 
 int32_t main(int32_t argc_, char** argv_) {
 

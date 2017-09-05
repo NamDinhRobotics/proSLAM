@@ -5,7 +5,7 @@
 #include "srrg_messages/message_reader.h"
 #include "srrg_messages/message_timestamp_synchronizer.h"
 
-#include "../position_tracking/base_tracker.h"
+#include "position_tracking/base_tracker.h"
 #include "map_optimization/graph_optimizer.h"
 #include "relocalization/relocalizer.h"
 #include "visualization/image_viewer.h"
