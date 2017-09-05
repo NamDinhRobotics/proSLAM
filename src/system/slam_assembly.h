@@ -134,7 +134,7 @@ protected:
 //ds txt_io playback components
 protected:
 
-  //ds txt_io message parser
+  //ds message parser
   srrg_core::MessageReader _message_reader;
 
   //ds txt_io message synchronizer

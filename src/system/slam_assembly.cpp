@@ -335,7 +335,7 @@ void SLAMAssembly::playbackMessageFile() {
   srrg_core::BaseMessage* message = 0;
   while ((message = _message_reader.readMessage())) {
     srrg_core::BaseSensorMessage* sensor_message = dynamic_cast<srrg_core::BaseSensorMessage*>(message);
-    assert(sensor_message != 0);
+    assert(sensor_message);
     sensor_message->untaint();
 
     //ds add to synchronizer

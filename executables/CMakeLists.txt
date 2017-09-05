@@ -15,3 +15,7 @@ add_executable(kitti_evaluate_odometry kitti_evaluate_odometry.cpp)
 
 #ds g2o to kitti trajectory converter (offline bundle adjustment testing)
 add_executable(trajectory_converter trajectory_converter.cpp)
+
+#ds minimal stereo calibration suite
+add_executable(stereo_calibrator stereo_calibrator.cpp)
+target_link_libraries(stereo_calibrator ${OpenCV_LIBS} srrg_messages_library boost_system)
