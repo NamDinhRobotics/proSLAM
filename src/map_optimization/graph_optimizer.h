@@ -69,7 +69,8 @@ protected:
                     g2o::OptimizableGraph::Vertex* vertex_to_,
                     const TransformMatrix3D& transform_from_to_,
                     const real& information_factor_,
-                    const bool& free_translation_ = true) const;
+                    const bool& free_translation_ = true,
+                    const bool& enable_robust_kernel_ = false) const;
 
   void _setPointEdge(g2o::OptimizableGraph* optimizer_,
                      g2o::VertexSE3* vertex_frame_,

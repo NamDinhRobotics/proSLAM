@@ -47,6 +47,7 @@ GraphOptimizer::~GraphOptimizer(){
 }
 
 void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std::string& file_name_) const {
+  LOG_INFO(std::cerr << "GraphOptimizer::writePoseGraphToFile|saving final pose graph to file: " << file_name_ << std::endl)
 
   //ds get a graph handle
   g2o::OptimizableGraph* pose_graph = new g2o::OptimizableGraph();
@@ -59,7 +60,7 @@ void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std:
   parameter_world_offset->setId(G2oParameter::WORLD_OFFSET);
   pose_graph->addParameter(parameter_world_offset);
 
-  //ds loop over all frames
+  //ds loop over all frames - adding frames and landmarks
   for (const FramePointerMapElement& frame: world_map_->frames()) {
 
     //ds get the frames pose to g2o representation
@@ -80,22 +81,8 @@ void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std:
                   vertex_frame_current,
                   vertex_frame_last_added,
                   frame.second->previous()->worldToRobot()*frame.second->robotToWorld(),
-                  _parameters->base_information_frame);
-
-      //ds if the frame carries loop closures
-      if (frame.second->localMap() && frame.second->localMap()->closures().size() > 0) {
-
-        //ds for all linked loop closures
-        for (const LocalMap::Closure& closure: frame.second->localMap()->closures()) {
-
-          //ds retrieve closure edge
-          _setPoseEdge(_optimizer,
-                       _optimizer->vertex(frame.second->localMap()->keyframe()->identifier()),
-                       _optimizer->vertex(closure.local_map->keyframe()->identifier()),
-                       closure.relation,
-                       _parameters->base_information_frame);
-        }
-      }
+                  _parameters->base_information_frame,
+                  _parameters->free_translation_for_pose_measurements);
     }
 
     //ds add landmark measurements contained in the frame by scanning its framepoints
@@ -132,11 +119,54 @@ void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std:
     vertex_frame_last_added = vertex_frame_current;
   }
 
+  //ds loop over all frames - adding loop closures
+  for (const FramePointerMapElement& frame: world_map_->frames()) {
+
+    //ds if the frame carries loop closures
+    if (frame.second->localMap() && frame.second->localMap()->closures().size() > 0) {
+
+      //ds for all linked loop closures
+      for (const LocalMap::Closure& closure: frame.second->localMap()->closures()) {
+
+        //ds retrieve closure edge
+        _setPoseEdge(pose_graph,
+                     pose_graph->vertex(frame.second->localMap()->keyframe()->identifier()),
+                     pose_graph->vertex(closure.local_map->keyframe()->identifier()),
+                     closure.relation,
+                     _parameters->base_information_frame,
+                     _parameters->free_translation_for_pose_measurements,
+                     _parameters->enable_robust_kernel_for_loop_closure_measurements);
+
+        //ds merge landmarks
+        for (const LandmarkCorrespondence* landmark_correspondence: closure.landmark_correspondences) {
+          try {
+
+            //ds retrieve query and reference vertices
+            g2o::VertexPointXYZ* vertex_query     = landmarks_in_pose_graph.at(landmark_correspondence->query->landmark);
+            g2o::VertexPointXYZ* vertex_reference = landmarks_in_pose_graph.at(landmark_correspondence->reference->landmark);
+
+            //ds if not already merged
+            if (vertex_query != vertex_reference) {
+
+              //ds merge query into reference
+              pose_graph->mergeVertices(vertex_reference, vertex_query, true);
+
+              //ds update bookkeeping
+              landmarks_in_pose_graph.at(landmark_correspondence->query->landmark) = vertex_reference;
+            }
+          }
+          catch (const std::out_of_range& /*exception*/) {}
+        }
+      }
+    }
+  }
+
   //ds save the graph to disk
   pose_graph->save(file_name_.c_str());
   pose_graph->clear();
   landmarks_in_pose_graph.clear();
   delete pose_graph;
+  LOG_INFO(std::cerr << "GraphOptimizer::writePoseGraphToFile|pose graph saved" << std::endl)
 }
 
 void GraphOptimizer::addFrame(Frame* frame_) {
@@ -160,7 +190,8 @@ void GraphOptimizer::addFrame(Frame* frame_) {
                 vertex_frame_current,
                 _vertex_frame_last_added,
                 frame_->previous()->worldToRobot()*frame_->robotToWorld(),
-                _parameters->base_information_frame);
+                _parameters->base_information_frame,
+                _parameters->free_translation_for_pose_measurements);
   }
 
   //ds if the frame carries loop closures
@@ -169,15 +200,33 @@ void GraphOptimizer::addFrame(Frame* frame_) {
     //ds for all linked loop closures
     for (const LocalMap::Closure& closure: frame_->localMap()->closures()) {
 
-      //ds fix reference vertex
-      _optimizer->vertex(closure.local_map->keyframe()->identifier())->setFixed(true);
+      //ds reference frame
+      Frame* reference_frame = closure.local_map->keyframe();
+
+      //ds check if the reference frame is not contained in the current graph
+      if (_frames_in_pose_graph.find(reference_frame) == _frames_in_pose_graph.end()) {
+
+        //ds the vertex was not found - we have to add it to the graph again and fix it
+        g2o::VertexSE3* vertex_reference = new g2o::VertexSE3();
+        vertex_reference->setId(reference_frame->identifier());
+        vertex_reference->setEstimate(reference_frame->robotToWorld().cast<double>());
+        vertex_reference->setFixed(true);
+        _optimizer->addVertex(vertex_reference);
+        _frames_in_pose_graph.insert(std::make_pair(reference_frame, vertex_reference));
+      } else {
+
+        //ds fix reference vertex
+        _optimizer->vertex(reference_frame->identifier())->setFixed(true);
+      }
 
       //ds retrieve closure edge
       _setPoseEdge(_optimizer,
                    _optimizer->vertex(frame_->localMap()->keyframe()->identifier()),
-                   _optimizer->vertex(closure.local_map->keyframe()->identifier()),
+                   _optimizer->vertex(reference_frame->identifier()),
                    closure.relation,
-                   _parameters->base_information_frame);
+                   _parameters->base_information_frame,
+                   _parameters->free_translation_for_pose_measurements,
+                   _parameters->enable_robust_kernel_for_loop_closure_measurements);
     }
   }
 
@@ -268,7 +317,8 @@ void GraphOptimizer::addFrameWithLandmarks(Frame* frame_) {
                 vertex_frame_current,
                 _vertex_frame_last_added,
                 frame_->previous()->worldToRobot()*frame_->robotToWorld(),
-                _parameters->base_information_frame);
+                _parameters->base_information_frame,
+                _parameters->free_translation_for_pose_measurements);
   }
 
   //ds bookkeep the added frame
@@ -284,7 +334,7 @@ void GraphOptimizer::optimizeFrames(WorldMap* world_map_) {
 //  const std::string file_name = "pose_graph_"+std::to_string(_frames_in_pose_graph.size())+".g2o";
 //  _optimizer->save(file_name.c_str());
   _optimizer->initializeOptimization();
-  _optimizer->optimize(10);
+  _optimizer->optimize(_parameters->maximum_number_of_iterations);
 
   //ds directly backpropagate solution to frames
   for(std::pair<Frame*, g2o::VertexSE3*> frame_in_pose_graph: _frames_in_pose_graph) {
@@ -293,14 +343,20 @@ void GraphOptimizer::optimizeFrames(WorldMap* world_map_) {
 
   //ds update all active landmark positions based on their last local map presence
   for (const LocalMap* local_map: world_map_->localMaps()) {
-    for (Landmark::State* landmark_state: local_map->landmarks()) {
 
-      //ds update landmark position
+    //ds update landmark position rigidly
+    for (Landmark::State* landmark_state: local_map->landmarks()) {
       landmark_state->landmark->setCoordinates(local_map->localMapToWorld()*landmark_state->coordinates_in_local_map);
     }
   }
   world_map_->setRobotToWorld(world_map_->currentFrame()->robotToWorld());
   ++_number_of_optimizations;
+
+  //ds reset graph for next optimization
+  _optimizer->clear();
+  _vertex_frame_last_added = 0;
+  _frames_in_pose_graph.clear();
+  _landmarks_in_pose_graph.clear();
   CHRONOMETER_STOP(optimization)
 }
 
@@ -311,7 +367,7 @@ void GraphOptimizer::optimizeFramesWithLandmarks(WorldMap* world_map_) {
 //  const std::string file_name = "pose_graph_"+std::to_string((*_frames_in_pose_graph.begin()).first->identifier())+".g2o";
 //  _optimizer->save(file_name.c_str());
   _optimizer->initializeOptimization();
-  _optimizer->optimize(10);
+  _optimizer->optimize(_parameters->maximum_number_of_iterations);
 
   //ds directly backpropagate solution to frames and landmarks
   for(std::pair<Frame*, g2o::VertexSE3*> frame_in_pose_graph: _frames_in_pose_graph) {
@@ -336,7 +392,8 @@ void GraphOptimizer::_setPoseEdge(g2o::OptimizableGraph* optimizer_,
                                   g2o::OptimizableGraph::Vertex* vertex_to_,
                                   const TransformMatrix3D& transform_from_to_,
                                   const real& information_factor_,
-                                  const bool& free_translation_) const {
+                                  const bool& free_translation_,
+                                  const bool& enable_robust_kernel_) const {
   g2o::EdgeSE3* edge_pose = new g2o::EdgeSE3();
   edge_pose->setVertex(1, vertex_from_);
   edge_pose->setVertex(0, vertex_to_);
@@ -345,9 +402,10 @@ void GraphOptimizer::_setPoseEdge(g2o::OptimizableGraph* optimizer_,
   //ds information value
   Eigen::Matrix<double, 6, 6> information(information_factor_*Eigen::Matrix<double, 6, 6>::Identity());
   if (free_translation_) {
-    information.block<3,3>(0,0) *= 1e-3;
+    information.block<3,3>(0,0) *= _parameters->base_information_frame_factor_for_translation;
   }
   edge_pose->setInformation(information);
+  if (enable_robust_kernel_) {edge_pose->setRobustKernel(new g2o::RobustKernelCauchy());}
   optimizer_->addEdge(edge_pose);
 }
 

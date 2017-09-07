@@ -1,5 +1,5 @@
 #pragma once
-#include "landmark.h"
+#include "relocalization/landmark_correspondence.h"
 
 namespace proslam {
 
@@ -14,12 +14,15 @@ namespace proslam {
       EIGEN_MAKE_ALIGNED_OPERATOR_NEW
         Closure(const LocalMap* local_map_,
                 const TransformMatrix3D& relation_,
+                const CorrespondencePointerVector& landmark_correspondences_,
                 const real& omega_ = 1): local_map(local_map_),
                                          relation(relation_),
+                                         landmark_correspondences(landmark_correspondences_),
                                          omega(omega_){}
 
         const LocalMap* local_map;
         const TransformMatrix3D relation;
+        const CorrespondencePointerVector landmark_correspondences;
         const real omega;
       };
       typedef std::vector<Closure> ClosureVector;
@@ -56,10 +59,12 @@ namespace proslam {
     //! @brief adds a loop closure constraint between this local map and a reference map
     //! @param[in] local_map_reference_ the corresponding reference local map
     //! @param[in] transform_query_to_reference_ the spatial relation between query and reference (from query to reference)
+    //! @param[in] landmark_correspondences_ underlying landmark correspondences
     //! @param[in] omega_ 1D information value of the correspondence
     void addCorrespondence(const LocalMap* local_map_reference_,
                            const TransformMatrix3D& query_to_reference_,
-                           const real& omega_ = 1) {_closures.push_back(Closure(local_map_reference_, query_to_reference_, omega_));}
+                           const CorrespondencePointerVector& landmark_correspondences_,
+                           const real& omega_ = 1) {_closures.push_back(Closure(local_map_reference_, query_to_reference_, landmark_correspondences_, omega_));}
 
   //ds getters/setters
   public:
@@ -77,7 +82,7 @@ namespace proslam {
     void setPrevious(LocalMap* local_map_) {_previous = local_map_;}
     inline LocalMap* next() {return _next;}
     void setNext(LocalMap* local_map_) {_next = local_map_;}
-    inline const Frame* keyframe() const {return _keyframe;}
+    inline Frame* keyframe() const {return _keyframe;}
 
     inline const HBSTNode::MatchableVector& appearances() const {return _appearances;}
     inline const Landmark::StatePointerVector& landmarks() const {return _landmarks;}

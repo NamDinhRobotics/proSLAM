@@ -8,9 +8,7 @@
 const bool measure(const cv::Mat& image_,
                    const cv::Size& board_size_,
                    const double& square_width_meters_,
-                   std::vector<cv::Point3f>& object_points_,
-                   std::vector<std::vector<cv::Point3f>>& object_points_per_image_,
-                   std::vector<std::vector<cv::Point2f>>& image_points_per_image_,
+                   std::vector<cv::Point2f>& image_points_,
                    cv::Mat& image_display_);
 
 const double calibrate(const cv::Size image_size_,
@@ -21,15 +19,17 @@ const double calibrate(const cv::Size image_size_,
 
 int32_t main (int32_t argc, char** argv) {
   if (argc < 2) {
-    std::cerr << "use: ./stereo_calibrator <BOSS/TXTIO_message_file> [-use-gui]" << std::endl;
+    std::cerr << "use: ./stereo_calibrator <BOSS/TXTIO_message_file> [-use-gui -interspace <integer>]" << std::endl;
     return 0;
   }
 
   //ds configuration
-  std::string file_name_messages = argv[1];
-  std::string topic_image_left   = "/camera_left/image_raw";
-  std::string topic_image_right  = "/camera_right/image_raw";
-  bool option_use_gui            = false;
+  std::string file_name_messages        = argv[1];
+  std::string topic_image_left          = "/camera_left/image_raw";
+  std::string topic_image_right         = "/camera_right/image_raw";
+  bool option_use_gui                   = false;
+  uint32_t measurement_image_interspace = 2;
+  bool option_use_eth_estimates         = true;
 
   //ds parse parameters
   if (argc == 3 && !std::strcmp(argv[2], "-use-gui")) {
@@ -74,15 +74,12 @@ int32_t main (int32_t argc, char** argv) {
   }
 
   //ds calibration data
-  std::vector<std::vector<cv::Point3f>> object_points_per_image_left(0);
-  std::vector<std::vector<cv::Point3f>> object_points_per_image_right(0);
+  std::vector<std::vector<cv::Point3f>> object_points_per_image(0);
   std::vector<std::vector<cv::Point2f>> image_points_per_image_left(0);
   std::vector<std::vector<cv::Point2f>> image_points_per_image_right(0);
 
   //ds info
-  uint64_t number_of_processed_stereo_images  = 0;
-  uint64_t number_of_measurements_stereo      = 0;
-  const uint32_t measurement_image_interspace = 1;
+  uint64_t number_of_processed_stereo_images = 0;
 
   //ds start playback
   srrg_core::BaseMessage* message = 0;
@@ -119,14 +116,18 @@ int32_t main (int32_t argc, char** argv) {
       if (number_of_processed_stereo_images % measurement_image_interspace == 0) {
 
         //ds locate chessboard in the left and right image
-        const bool measured_left  = measure(image_left, board_size, square_width_meters, object_points,
-                                            object_points_per_image_left, image_points_per_image_left, image_display_left);
-        const bool measured_right = measure(image_right, board_size, square_width_meters, object_points,
-                                            object_points_per_image_right, image_points_per_image_right, image_display_right);
+        std::vector<cv::Point2f> image_points_left;
+        std::vector<cv::Point2f> image_points_right;
+        const bool measured_left  = measure(image_left, board_size, square_width_meters, image_points_left, image_display_left);
+        const bool measured_right = measure(image_right, board_size, square_width_meters, image_points_right, image_display_right);
 
         //ds if both images contained the pattern
         if (measured_left && measured_right) {
-          ++number_of_measurements_stereo;
+
+          //ds update object and image points
+          object_points_per_image.push_back(object_points);
+          image_points_per_image_left.push_back(image_points_left);
+          image_points_per_image_right.push_back(image_points_right);
         }
 
         //ds visual info
@@ -138,11 +139,10 @@ int32_t main (int32_t argc, char** argv) {
         }
 
         //ds status
-        std::printf("%06lu|L: %f|R: %f|CL: %i CR: %i|"
-                    "L: %6lu R: %6lu S: %6lu\n", number_of_processed_stereo_images,
-                                                 image_message_left->timestamp(), image_message_right->timestamp(),
-                                                 measured_left, measured_right,
-                                                 object_points_per_image_left.size(), object_points_per_image_right.size(), number_of_measurements_stereo);
+        std::printf("%06lu|L: %f|R: %f|CL: %i CR: %i|measurements: %6lu\n", number_of_processed_stereo_images,
+                                                                            image_message_left->timestamp(), image_message_right->timestamp(),
+                                                                            measured_left, measured_right,
+                                                                            object_points_per_image.size());
       }
 
       //ds release processed data
@@ -160,45 +160,76 @@ int32_t main (int32_t argc, char** argv) {
   synchronizer.reset();
 
   //ds info
-  std::cerr << "obtained measurements   LEFT: " << object_points_per_image_left.size() << std::endl;
-  std::cerr << "obtained measurements  RIGHT: " << object_points_per_image_right.size() << std::endl;
-  std::cerr << "obtained measurements STEREO: " << number_of_measurements_stereo << std::endl;
+  std::cerr << "obtained measurements: " << object_points_per_image.size() << std::endl;
 
   //ds objectives
   cv::Mat camera_calibration_matrix_left(cv::Mat::eye(3, 3, CV_64F));
   cv::Mat camera_calibration_matrix_right(cv::Mat::eye(3, 3, CV_64F));
-  cv::Mat distortion_coefficients_left(cv::Mat::zeros(8, 1, CV_64F));
-  cv::Mat distortion_coefficients_right(cv::Mat::zeros(8, 1, CV_64F));
+  cv::Mat distortion_coefficients_left(cv::Mat::zeros(4, 1, CV_64F));
+  cv::Mat distortion_coefficients_right(cv::Mat::zeros(4, 1, CV_64F));
 
-  //ds set camera calibration matrix estimates (eth)
-  camera_calibration_matrix_left.at<double>(0,0)  = 458.654;
-  camera_calibration_matrix_left.at<double>(0,2)  = 367.215;
-  camera_calibration_matrix_left.at<double>(1,1)  = 457.296;
-  camera_calibration_matrix_left.at<double>(1,2)  = 248.375;
-  camera_calibration_matrix_right.at<double>(0,0) = 457.587;
-  camera_calibration_matrix_right.at<double>(0,2) = 379.999;
-  camera_calibration_matrix_right.at<double>(1,1) = 456.134;
-  camera_calibration_matrix_right.at<double>(1,2) = 255.238;
+  //ds check estimate initialization
+  if (option_use_eth_estimates) {
+    std::cerr << "using ETH estimates for camera calibration matrices and distortion coefficients" << std::endl;
 
-  //ds set distortion estimates (eth)
-  distortion_coefficients_left.at<double>(0)  = -0.28340811;
-  distortion_coefficients_left.at<double>(1)  = 0.07395907;
-  distortion_coefficients_left.at<double>(2)  = 0.00019359;
-  distortion_coefficients_left.at<double>(3)  = 1.76187114e-05;
-  distortion_coefficients_right.at<double>(0) = -0.28368365;
-  distortion_coefficients_right.at<double>(1) = 0.07451284;
-  distortion_coefficients_right.at<double>(2) = -0.00010473;
-  distortion_coefficients_right.at<double>(3) = -3.55590700e-05;
+    //ds set camera calibration matrix estimates
+    camera_calibration_matrix_left.at<double>(0,0)  = 458.654;
+    camera_calibration_matrix_left.at<double>(0,2)  = 367.215;
+    camera_calibration_matrix_left.at<double>(1,1)  = 457.296;
+    camera_calibration_matrix_left.at<double>(1,2)  = 248.375;
+    camera_calibration_matrix_right.at<double>(0,0) = 457.587;
+    camera_calibration_matrix_right.at<double>(0,2) = 379.999;
+    camera_calibration_matrix_right.at<double>(1,1) = 456.134;
+    camera_calibration_matrix_right.at<double>(1,2) = 255.238;
 
-  //ds calibrate on all measurements
-  std::cerr << "calibrating  LEFT .. ";
-  const double reprojection_error_left  = calibrate(image_size, object_points_per_image_left, image_points_per_image_left,
-                                                    camera_calibration_matrix_left, distortion_coefficients_left);
-  std::cerr << " reprojection error: " << reprojection_error_left << std::endl;
-  std::cerr << "calibrating RIGHT .. ";
-  const double reprojection_error_right = calibrate(image_size, object_points_per_image_right, image_points_per_image_right,
-                                                    camera_calibration_matrix_right, distortion_coefficients_right);
-  std::cerr << " reprojection error: " << reprojection_error_right << std::endl;
+    //ds set distortion estimates
+    distortion_coefficients_left.at<double>(0)  = -0.28340811;
+    distortion_coefficients_left.at<double>(1)  = 0.07395907;
+    distortion_coefficients_left.at<double>(2)  = 0.00019359;
+    distortion_coefficients_left.at<double>(3)  = 1.76187114e-05;
+    distortion_coefficients_right.at<double>(0) = -0.28368365;
+    distortion_coefficients_right.at<double>(1) = 0.07451284;
+    distortion_coefficients_right.at<double>(2) = -0.00010473;
+    distortion_coefficients_right.at<double>(3) = -3.55590700e-05;
+  } else {
+    std::cerr << "calibrating camera LEFT .. ";
+    camera_calibration_matrix_left  = cv::initCameraMatrix2D(object_points_per_image, image_points_per_image_left, image_size, 0);
+    std::cerr << "done" << std::endl;
+    std::cerr << "calibrating camera RIGHT .. ";
+    camera_calibration_matrix_right = cv::initCameraMatrix2D(object_points_per_image, image_points_per_image_right, image_size, 0);
+    std::cerr << "done" << std::endl;
+  }
+
+  //ds rectification configuration
+  cv::Mat rotation_camera_left_to_right(3, 3, CV_64F, cv::Scalar(0));
+  cv::Mat translation_camera_left_to_right(3, 1, CV_64F, cv::Scalar(0));
+  cv::Mat depth_mapping(4, 4, CV_64F, cv::Scalar(0));
+  cv::Mat projection_matrix_left(3, 4, CV_64F, cv::Scalar(0));
+  cv::Mat projection_matrix_right(3, 4, CV_64F, cv::Scalar(0));
+  cv::Mat rectification_matrix_left(3, 3, CV_64F, cv::Scalar(0));
+  cv::Mat rectification_matrix_right(3, 3, CV_64F, cv::Scalar(0));
+  cv::Mat essential_matrix;
+  cv::Mat fundamental_matrix;
+
+  std::cerr << "\ncalibrating stereo camera .. ";
+  const double reprojection_error_pixels = cv::stereoCalibrate(object_points_per_image,
+                                                               image_points_per_image_left,
+                                                               image_points_per_image_right,
+                                                               camera_calibration_matrix_left,
+                                                               distortion_coefficients_left,
+                                                               camera_calibration_matrix_right,
+                                                               distortion_coefficients_right,
+                                                               image_size,
+                                                               rotation_camera_left_to_right,
+                                                               translation_camera_left_to_right,
+                                                               essential_matrix,
+                                                               fundamental_matrix,
+                                                               CV_CALIB_USE_INTRINSIC_GUESS);
+  std::cerr << "reprojection error (Pixels): " << reprojection_error_pixels << std::endl;
+  std::cerr << "\nrotation camera LEFT to RIGHT: \n" << std::endl;
+  std::cerr << rotation_camera_left_to_right << std::endl;
+  std::cerr << "\ntranslation camera LEFT to RIGHT: \n" << std::endl;
+  std::cerr << translation_camera_left_to_right << std::endl;
 
   //ds display the obtained camera calibration matrices and distortion coefficients
   std::cerr << "\ncamera matrices: \n" << std::endl;
@@ -223,49 +254,16 @@ int32_t main (int32_t argc, char** argv) {
                                                              camera_calibration_matrix_right.at<double>(2,2));
 
   std::cerr << "\ndistortion coefficients: \n" << std::endl;
-  std::printf(" LEFT: %8.3f, %8.3f, %8.3f, %8.3f\n",
+  std::printf(" LEFT: %9.6f, %9.6f, %9.6f, %9.6f\n",
               distortion_coefficients_left.at<double>(0),
               distortion_coefficients_left.at<double>(1),
               distortion_coefficients_left.at<double>(2),
               distortion_coefficients_left.at<double>(3));
-  std::printf("RIGHT: %8.3f, %8.3f, %8.3f, %8.3f\n",
+  std::printf("RIGHT: %9.6f, %9.6f, %9.6f, %9.6f\n",
               distortion_coefficients_right.at<double>(0),
               distortion_coefficients_right.at<double>(1),
               distortion_coefficients_right.at<double>(2),
               distortion_coefficients_right.at<double>(3));
-
-  //ds rectification configuration
-  cv::Mat rotation_camera_left_to_right(3, 3, CV_64F, cv::Scalar(0));
-  cv::Mat translation_camera_left_to_right(3, 1, CV_64F, cv::Scalar(0));
-  cv::Mat depth_mapping(4, 4, CV_64F, cv::Scalar(0));
-  cv::Mat projection_matrix_left(3, 4, CV_64F, cv::Scalar(0));
-  cv::Mat projection_matrix_right(3, 4, CV_64F, cv::Scalar(0));
-  cv::Mat rectification_matrix_left(3, 3, CV_64F, cv::Scalar(0));
-  cv::Mat rectification_matrix_right(3, 3, CV_64F, cv::Scalar(0));
-
-  //ds set transforms (eth)
-  Eigen::Isometry3d transform_camera_left_to_body(Eigen::Isometry3d::Identity());
-  transform_camera_left_to_body.matrix() << 0.0148655429818, -0.999880929698, 0.00414029679422, -0.0216401454975,
-                                            0.999557249008, 0.0149672133247, 0.025715529948, -0.064676986768,
-                                           -0.0257744366974, 0.00375618835797, 0.999660727178, 0.00981073058949,
-                                            0.0, 0.0, 0.0, 1.0;
-  Eigen::Isometry3d transform_camera_right_to_body(Eigen::Isometry3d::Identity());
-  transform_camera_right_to_body.matrix() << 0.0125552670891, -0.999755099723, 0.0182237714554, -0.0198435579556,
-                                             0.999598781151, 0.0130119051815, 0.0251588363115, 0.0453689425024,
-                                            -0.0253898008918, 0.0179005838253, 0.999517347078, 0.00786212447038,
-                                             0.0, 0.0, 0.0, 1.0;
-
-  //ds compute relative transform between cameras and convert it to opencv
-  const Eigen::Isometry3d transform_camera_left_to_right = transform_camera_right_to_body.inverse()*transform_camera_left_to_body;
-  for (int32_t u = 0; u < 3; ++u) {
-    for (int32_t v = 0; v < 3; ++v) {
-      rotation_camera_left_to_right.at<double>(u, v) = transform_camera_left_to_right.linear()(u,v);
-    }
-    translation_camera_left_to_right.at<double>(u) = transform_camera_left_to_right.translation()(u);
-  }
-
-  std::cerr << "\ntransform LEFT to RIGHT: \n" << std::endl;
-  std::cerr << transform_camera_left_to_right.matrix() << std::endl;
 
   //ds compute rectification parameters
   cv::stereoRectify(camera_calibration_matrix_left,
@@ -285,7 +283,7 @@ int32_t main (int32_t argc, char** argv) {
 
   //ds display the obtained projection matrices
   std::cerr << "\nprojection matrices: \n" << std::endl;
-  std::cerr << "               LEFT               -               RIGHT" << std::endl;
+  std::cerr << "                 LEFT                 -                 RIGHT" << std::endl;
   std::printf("%8.3f %8.3f %8.3f %8.3f   |   %8.3f %8.3f %8.3f %8.3f\n", projection_matrix_left.at<double>(0,0),
                                                                          projection_matrix_left.at<double>(0,1),
                                                                          projection_matrix_left.at<double>(0,2),
@@ -497,8 +495,14 @@ int32_t main (int32_t argc, char** argv) {
 
         cv::Mat image_stereo;
         cv::hconcat(image_display_left, image_display_right, image_stereo);
+
+        //ds draw some horizontal lines for qualtiative analysis of the rectification
+        for (uint32_t u = 0; u < 10; ++u) {
+          const int32_t row = u*image_size.height/10.0;
+          cv::line(image_stereo, cv::Point2f(0, row), cv::Point2f(2*image_size.width, row), cv::Scalar(0, 0, 255), 1);
+        }
         cv::imshow(topic_image_left + ", " + topic_image_right, image_stereo);
-        cv::waitKey(1);
+        cv::waitKey(0);
       }
 //
 //      //ds status
@@ -530,16 +534,11 @@ int32_t main (int32_t argc, char** argv) {
 const bool measure(const cv::Mat& image_,
                    const cv::Size& board_size_,
                    const double& square_width_meters_,
-                   std::vector<cv::Point3f>& object_points_,
-                   std::vector<std::vector<cv::Point3f>>& object_points_per_image_,
-                   std::vector<std::vector<cv::Point2f>>& image_points_per_image_,
+                   std::vector<cv::Point2f>& image_points_,
                    cv::Mat& image_display_) {
 
-  //ds inner corners
-  std::vector<cv::Point2f> image_points(0);
-
   //ds locate chessboard
-  bool found_chessboard = cv::findChessboardCorners(image_, board_size_, image_points,
+  bool found_chessboard = cv::findChessboardCorners(image_, board_size_, image_points_,
                                                     cv::CALIB_CB_ADAPTIVE_THRESH | cv::CALIB_CB_NORMALIZE_IMAGE | cv::CALIB_CB_FAST_CHECK);
 
   //ds return on failure
@@ -548,16 +547,12 @@ const bool measure(const cv::Mat& image_,
   }
 
   //ds refine corner locations
-  cv::cornerSubPix(image_, image_points, cv::Size(11, 11), cv::Size(-1, -1), cv::TermCriteria(cv::TermCriteria::EPS+cv::TermCriteria::COUNT, 30, 0.1));
+  cv::cornerSubPix(image_, image_points_, cv::Size(11, 11), cv::Size(-1, -1), cv::TermCriteria(cv::TermCriteria::EPS+cv::TermCriteria::COUNT, 30, 0.1));
 
   //ds visual info
-  for (cv::Point2f point: image_points) {
-    cv::circle(image_display_, point, 5, cv::Scalar(0, 255, 0), 1);
+  for (const cv::Point2f& point: image_points_) {
+    cv::circle(image_display_, point, 5, cv::Scalar(0, 255, 0), 2);
   }
-
-  //ds update object and image points
-  object_points_per_image_.push_back(object_points_);
-  image_points_per_image_.push_back(image_points);
 
   //ds success
   return true;

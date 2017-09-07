@@ -16,9 +16,13 @@ namespace proslam {
     setFrame(frame_);
   }
 
-  //ds connect current FramePoint to a previous one
   void FramePoint::setPrevious(FramePoint* previous_) {
+
+    //ds update linked list
+    previous_->_next = this;
     _previous = previous_;
+
+    //ds update current
     setLandmark(previous_->landmark());
     setTrackLength(previous_->trackLength()+1);
     setOrigin(previous_->origin());

@@ -142,7 +142,7 @@ namespace proslam {
     //! @brief parameter printing function
     virtual void print() const;
 
-    //! @brief key frame generation properties
+    //! @brief local frame generation properties
     real minimum_distance_traveled_for_local_map = 0.5;
     real minimum_degrees_rotated_for_local_map   = 0.5;
     Count minimum_number_of_frames_for_local_map = 4;
@@ -152,6 +152,9 @@ namespace proslam {
 
     //! @brief local map generation parameters
     LocalMapParameters* local_map;
+
+    //! @brief enable identical landmarks (determined e.g. by relocalization)
+    bool merge_landmarks = false;
   };
 
   //! @class framepoint generation parameters
@@ -227,7 +230,7 @@ namespace proslam {
     //! @brief this criteria is used for the decision of whether creating a landmark or not from a track of framepoints
     Count minimum_track_length_for_landmark_creation = 3;
 
-    //! @brief track lost criteria
+    //! @brief tracking criteria for landmarks
     Count minimum_number_of_landmarks_to_track = 10;
 
     //! @brief point tracking thresholds
@@ -321,14 +324,26 @@ namespace proslam {
     //! @brief parameter printing function
     virtual void print() const;
 
+    //! @brief maximum number of iterations graph optimization
+    Count maximum_number_of_iterations = 100;
+
     //! @brief g2o identifier space between frames and landmark vertices
-    Count identifier_space = 1e6;
+    Count identifier_space = 1e5;
 
     //! @brief determines window size for bundle adjustment
     Count number_of_frames_per_bundle_adjustment = 100;
 
     //! @brief base frame weight in pose graph (assuming 1 for landmarks)
     real base_information_frame = 1e6;
+
+    //! @brief free translation for pose to pose measurements
+    bool free_translation_for_pose_measurements = true;
+
+    //! @brief translational frame weight reduction in pose graph
+    real base_information_frame_factor_for_translation = 1e-5;
+
+    //! @brief enable robust kernel for loop closure measurements
+    bool enable_robust_kernel_for_loop_closure_measurements = true;
 
     //! @brief enable robust kernel for landmark measurements
     bool enable_robust_kernel_for_landmark_measurements = false;

@@ -12,10 +12,12 @@ namespace proslam {
 
     //ds container describing the landmark at the time of local map construction
     struct State {
-      State(Landmark* landmark_, const PointCoordinates& world_coordinates_): landmark(landmark_),
-                                                                              coordinates_in_local_map(Vector3::Zero()),
-                                                                              world_coordinates(world_coordinates_),
-                                                                              local_map(0) {
+      State(Landmark* landmark_,
+            const PointCoordinates& world_coordinates_,
+            LocalMap* local_map_ = 0): landmark(landmark_),
+                                       coordinates_in_local_map(Vector3::Zero()),
+                                       world_coordinates(world_coordinates_),
+                                       local_map(local_map_) {
         appearances.clear();
       }
       ~State() {
@@ -33,7 +35,7 @@ namespace proslam {
       HBSTNode::MatchableVector appearances;
       PointCoordinates coordinates_in_local_map;
       PointCoordinates world_coordinates;
-      const LocalMap* local_map;
+      LocalMap* local_map;
     };
     typedef std::vector<State*> StatePointerVector;
 
@@ -41,7 +43,7 @@ namespace proslam {
   protected:
 
     //ds initial landmark coordinates must be provided
-    Landmark(const FramePoint* origin_, const LandmarkParameters* parameters_);
+    Landmark(FramePoint* origin_, const LandmarkParameters* parameters_);
 
     //ds cleanup of dynamic structures
     ~Landmark();
@@ -56,16 +58,14 @@ namespace proslam {
     inline const Index identifier() const {return _identifier;}
 
     //ds framepoint in an image at the time when the landmark was created
-    inline const FramePoint* origin() const {return _origin;}
+    inline FramePoint* origin() const {return _origin;}
 
     inline const PointCoordinates& coordinates() const {return _state->world_coordinates;}
     inline void setCoordinates(const PointCoordinates& coordinates_) {_state->world_coordinates = coordinates_;}
 
     //ds landmark state - locked inside a local map and refreshed afterwards
     inline State* state() {return _state;}
-    inline void renewState() {_state = new State(this, _state->world_coordinates);}
-    inline const LocalMap* localMap() const {return _local_map;}
-    inline void setLocalMap(const LocalMap* local_map_) {_local_map = local_map_;}
+    void renewState();
 
     //ds position related
     inline const bool areCoordinatesValidated() const {return _are_coordinates_validated;}
@@ -85,6 +85,10 @@ namespace proslam {
     void incrementNumberOfRecoveries() {++_number_of_recoveries;}
     void setNumberOfRecoveries(const Count& number_of_recoveries_) {_number_of_recoveries = number_of_recoveries_;}
 
+    //! @brief incorporates another landmark into this (e.g. used when relocalizing)
+    //! @param[in] landmark_ the landmark to absorbed, landmark_ will be freed and its memory location will point to this
+    void merge(Landmark* landmark_);
+
     //ds visualization only
     inline const bool isNear() const {return _is_near;}
     inline void setIsNear(const bool& is_near_) {_is_near = is_near_;}
@@ -100,11 +104,13 @@ namespace proslam {
     const Identifier _identifier;
 
     //ds linked FramePoint in an image at the time of creation of this instance
-    const FramePoint* _origin;
+    FramePoint* _origin;
 
     //ds the current connected state handle (links the landmark to the local map)
     State* _state;
-    const LocalMap* _local_map = 0;
+
+    //! @brief history of states (enables access to local maps)
+    std::vector<State*> _states;
 
     //ds flags
     bool _are_coordinates_validated = false; //ds 3D coordinates have been updated successfully with new measurements (updates)
@@ -112,8 +118,8 @@ namespace proslam {
     bool _is_near                   = false; //ds set if the landmark coordinates are within a certain threshold (close to the camera)
 
     //ds landmark coordinates optimization
-    real _total_weight = 0;
-    Count _number_of_updates = 0;
+    real _total_weight          = 0;
+    Count _number_of_updates    = 0;
     Count _number_of_recoveries = 0;
 
     //ds grant access to landmark factory

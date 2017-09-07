@@ -28,8 +28,9 @@ namespace proslam {
   public:
 
     //ds FramePoint in the previous image
-    inline const FramePoint* previous() const {return _previous;}
+    inline FramePoint* previous() const {return _previous;}
     void setPrevious(FramePoint* previous_);
+    inline FramePoint* next() const {return _next;}
 
     //ds FramePoint in the image where it was first detected (track start)
     inline const FramePoint* origin() const {return _origin;}
@@ -84,6 +85,7 @@ namespace proslam {
 
     //ds connections to temporal and ownership elements
     FramePoint* _previous = 0; //ds FramePoint in the previous image
+    FramePoint* _next     = 0; //ds FramePoint in the next image (updated as soon as previous is called)
     FramePoint* _origin   = 0; //ds FramePoint in the image where it was first detected (track start)
     Frame* _frame         = 0; //ds Frame to which the point belongs
 

@@ -68,7 +68,6 @@ namespace proslam {
 
           //ds take ownership from landmark view: forces the landmark to generate a new, decoupled view
           landmark->renewState();
-          landmark->setLocalMap(this);
         }
       }
     }
@@ -92,6 +91,11 @@ namespace proslam {
   void LocalMap::clear() {
     for (const Landmark::State* landmark_state: _landmarks) {
       delete landmark_state;
+    }
+    for (const Closure& closure: _closures) {
+      for (const LandmarkCorrespondence* landmark_correspondence: closure.landmark_correspondences) {
+        delete landmark_correspondence;
+      }
     }
     _landmarks.clear();
     _appearances.clear();

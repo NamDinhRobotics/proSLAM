@@ -436,9 +436,13 @@ namespace proslam {
       PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, aligner->minimum_inlier_ratio, real)
 
       //Pose Graph Optimization
+      PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, maximum_number_of_iterations, Count)
       PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, identifier_space, Count)
       PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, number_of_frames_per_bundle_adjustment, Count)
       PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, base_information_frame, real)
+      PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, free_translation_for_pose_measurements, bool)
+      PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, base_information_frame_factor_for_translation, real)
+      PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, enable_robust_kernel_for_loop_closure_measurements, bool)
       PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, enable_robust_kernel_for_landmark_measurements, bool)
 
       //ds done

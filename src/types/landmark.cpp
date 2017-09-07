@@ -4,13 +4,14 @@ namespace proslam {
 
   Count Landmark::_instances = 0;
 
-  Landmark::Landmark(const FramePoint* origin_, const LandmarkParameters* parameters_): _identifier(_instances),
-                                                                                        _origin(origin_),
-                                                                                        _parameters(parameters_) {
+  Landmark::Landmark(FramePoint* origin_, const LandmarkParameters* parameters_): _identifier(_instances),
+                                                                                  _origin(origin_),
+                                                                                  _parameters(parameters_) {
     ++_instances;
 
     //ds allocate fresh state (trading construction correctness for enclosed generation)
     _state = new State(this, origin_->worldCoordinates());
+    _states.clear();
   }
 
   Landmark::~Landmark() {
@@ -19,6 +20,16 @@ namespace proslam {
     if (!_state->local_map) {
       delete _state;
     }
+    _states.clear();
+  }
+
+  void Landmark::renewState() {
+
+    //ds bookkeep the old state
+    _states.push_back(_state);
+
+    //ds allocate a new state
+    _state = new State(this, _state->world_coordinates);
   }
 
   void Landmark::update(const PointCoordinates& coordinates_in_world_, const real& depth_meters_) {
@@ -61,5 +72,36 @@ namespace proslam {
 
     //ds always update position
     update(point_->worldCoordinates(), point_->depthMeters());
+  }
+
+  void Landmark::merge(Landmark* landmark_) {
+
+    //ds update active state
+    _state->appearances.insert(_state->appearances.end(), landmark_->_state->appearances.begin(), landmark_->_state->appearances.end());
+    _state->coordinates_in_local_map = landmark_->_state->coordinates_in_local_map;
+    _state->world_coordinates        = (_number_of_updates*_state->world_coordinates+
+                                        landmark_->_number_of_updates*landmark_->_state->world_coordinates)
+                                       /(_number_of_updates+landmark_->_number_of_updates);
+
+    //ds update information filter
+    _total_weight         += landmark_->_total_weight;
+    _number_of_updates    += landmark_->_number_of_updates;
+    _number_of_recoveries += landmark_->_number_of_recoveries;
+
+    //ds update framepoint pointers
+    FramePoint* framepoint = landmark_->_origin;
+    while (framepoint) {
+      framepoint->setLandmark(this);
+      framepoint = framepoint->next();
+    }
+
+    //ds update pointer in the linked local maps
+    landmark_->_state->landmark = this;
+    for (State* state: landmark_->_states) {
+      state->landmark = this;
+    }
+
+    //ds merge states from input landmark
+    _states.insert(_states.end(), landmark_->_states.begin(), landmark_->_states.end());
   }
 }

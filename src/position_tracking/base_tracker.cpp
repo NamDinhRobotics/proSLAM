@@ -180,27 +180,26 @@ namespace proslam {
       //ds on the track
       case Frame::Tracking: {
 
+        //ds current number of tracked landmarks
+        const Count number_of_tracked_landmarks = _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close;
+
         //ds compute ratio between landmarks and tracked points
-        const real percentage_landmarks = static_cast<real>(_number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close)/_number_of_tracked_points;
+        const real percentage_landmarks = static_cast<real>(number_of_tracked_landmarks)/_number_of_tracked_points;
         if (percentage_landmarks < 0.1) {
           LOG_WARNING(std::cerr << "BaseTracker::compute|low percentage of tracked landmarks over framepoints: " << percentage_landmarks
-                    << " (landmarks/framepoints: " << _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close << "/" << _number_of_tracked_points << ")" << std::endl)
+                    << " (landmarks/framepoints: " << number_of_tracked_landmarks << "/" << _number_of_tracked_points << ")" << std::endl)
         }
 
         //ds compute ratio between close and far landmarks
-        const real percentage_of_close_landmarks = _number_of_tracked_landmarks_close/static_cast<real>(_number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
+        const real percentage_of_close_landmarks = _number_of_tracked_landmarks_close/static_cast<real>(number_of_tracked_landmarks);
         if (percentage_of_close_landmarks < 0.1) {
           LOG_WARNING(std::cerr << "BaseTracker::compute|low percentage of close landmarks available: " << percentage_of_close_landmarks
-                    << " (close/total: " << _number_of_tracked_landmarks_close << "/" << _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close << ")" << std::endl)
+                    << " (close/total: " << _number_of_tracked_landmarks_close << "/" << number_of_tracked_landmarks << ")" << std::endl)
         }
 
         //ds derive framepoint weight for current optimization
         const real weight_framepoint = percentage_of_close_landmarks*(1-percentage_landmarks);
         assert(weight_framepoint <= 1);
-
-//        //ds compute far to close landmark ratio TODO simplify or get better logic: currently the idea is to give more weight to framepoints in case we have almost only far landmarks
-//        const real weight_framepoint = 1-(_number_of_tracked_landmarks_far+2*_number_of_tracked_landmarks_close)/static_cast<real>(_number_of_tracked_points);
-//        assert(weight_framepoint <= 1);
 
         //ds call pose solver
         CHRONOMETER_START(pose_optimization)

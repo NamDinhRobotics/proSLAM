@@ -2,14 +2,14 @@
 #include <fstream>
 #include <Eigen/Geometry>
 
-int32_t main(int32_t argc, char** argv) {
-  if (argc != 2) {
-    std::cerr << "usage: ./trajectory converter <pose_graph.g2o>" << std::endl;
+int32_t main(int32_t argc_, char** argv_) {
+  if (argc_ != 2) {
+    std::cerr << "usage: ./trajectory_converter <pose_graph.g2o>" << std::endl;
     return 0;
   }
 
   //ds determine and log configuration
-  const std::string input_file    = argv[1];
+  const std::string input_file    = argv_[1];
   const std::string output_file   = "g2o_trajectory.txt";
   const std::string output_format = "KITTI";
   const std::string pose_keyword  = "VERTEX_SE3:QUAT";

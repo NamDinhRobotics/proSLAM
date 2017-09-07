@@ -32,8 +32,10 @@ namespace proslam {
         delete match;
       }
     }
-    for (const LandmarkCorrespondence* correspondence: correspondences) {
-      delete correspondence;
+    if (!is_valid) {
+      for (const LandmarkCorrespondence* correspondence: correspondences) {
+        delete correspondence;
+      }
     }
     correspondences.clear();
   }

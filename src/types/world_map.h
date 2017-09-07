@@ -1,5 +1,5 @@
 #pragma once
-#include "local_map.h"
+#include "relocalization/local_map_correspondence.h"
 
 namespace proslam {
 
@@ -22,8 +22,9 @@ namespace proslam {
     //ds creates a new frame living in this instance at the provided pose
     Frame* createFrame(const TransformMatrix3D& robot_to_world_, const real& maximum_depth_near_);
 
-    //ds creates a new landmark living in this instance, using the provided framepoint as origin
-    Landmark* createLandmark(const FramePoint* origin_);
+    //! @brief creates a new landmark living in this instance, using the provided framepoint as origin
+    //! @param[in] origin_ initial framepoint, describing the landmark
+    Landmark* createLandmark(FramePoint* origin_);
 
     //ds attempts to create a new local map if the generation criteria are met (returns true if a local map was generated)
     const bool createLocalMap(const bool& drop_framepoints_ = false);
@@ -31,8 +32,17 @@ namespace proslam {
     //ds resets the window for the local map generation
     void resetWindowForLocalMapCreation(const bool& drop_framepoints_ = false);
 
-    //ds adds a loop closure constraint between 2 local maps
-    void addCorrespondence(LocalMap* query_, const LocalMap* reference_, const TransformMatrix3D& query_to_reference_, const real& omega_ = 1);
+    //! @brief adds a loop closure constraint between 2 local maps
+    //! @param[in] query_ query local map
+    //! @param[in] reference_ reference local map (fixed, closed against)
+    //! @param[in] query_to_reference_ query to reference transform
+    //! @param[in] landmark_correspondences_ landmark correspondences of the loop closure
+    //! @param[in] information_ information value
+    void addCorrespondence(LocalMap* query_,
+                           const LocalMap* reference_,
+                           const TransformMatrix3D& query_to_reference_,
+                           const CorrespondencePointerVector& landmark_correspondences_,
+                           const real& information_ = 1);
 
     //! @brief dump trajectory to file (in KITTI benchmark format: 4x4 isometries per line)
     //! @param[in] filename_ text file in which the poses are saved to

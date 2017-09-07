@@ -505,10 +505,11 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
           if (closure->is_valid) {
             assert(_world_map->currentLocalMap() == closure->local_map_query);
 
-            //ds add loop closure constraint (also detects if local maps from two different tracks are connected)
+            //ds add loop closure constraint (merging corresponding landmarks)
             _world_map->addCorrespondence(_world_map->currentLocalMap(),
                                           closure->local_map_reference,
                                           closure->query_to_reference,
+                                          closure->correspondences,
                                           closure->icp_inlier_ratio);
             if (_parameters->command_line_parameters->option_use_gui) {
               for (const LandmarkCorrespondence* match: closure->correspondences) {
@@ -580,7 +581,7 @@ const real SLAMAssembly::getAbsoluteTranslationRootMeanSquaredError() const {
 
   //ds compute RMSE
   real root_mean_squared_error_translation_absolute = 0;
-  for (const real squared_error: squared_errors_translation_absolute) {
+  for (const real& squared_error: squared_errors_translation_absolute) {
     root_mean_squared_error_translation_absolute += squared_error;
   }
   root_mean_squared_error_translation_absolute /= squared_errors_translation_absolute.size();
@@ -608,7 +609,7 @@ const real SLAMAssembly::getRelativeTranslationMeanError() const {
 
   //ds compute error
   real mean_error_translation_relative = 0;
-  for (const real error: errors_translation_relative) {
+  for (const real& error: errors_translation_relative) {
     mean_error_translation_relative += error;
   }
   mean_error_translation_relative /= errors_translation_relative.size();

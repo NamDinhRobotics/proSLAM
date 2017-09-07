@@ -19,3 +19,7 @@ add_executable(trajectory_converter trajectory_converter.cpp)
 #ds minimal stereo calibration suite
 add_executable(stereo_calibrator stereo_calibrator.cpp)
 target_link_libraries(stereo_calibrator ${OpenCV_LIBS} srrg_messages_library boost_system)
+
+#ds euroc trajectory analyzer (e.g. RMSE computation)
+add_executable(trajectory_analyzer trajectory_analyzer.cpp)
+target_link_libraries(trajectory_analyzer ${OpenCV_LIBS} srrg_core_types_library srrg_messages_library boost_system)

@@ -68,14 +68,12 @@ namespace proslam {
     return _current_frame;
   }
 
-  //ds creates a new landmark living in this instance, using the provided framepoint as origin
-  Landmark* WorldMap::createLandmark(const FramePoint* origin_){
+  Landmark* WorldMap::createLandmark(FramePoint* origin_) {
     Landmark* landmark = new Landmark(origin_, _parameters->landmark);
     _landmarks.insert(std::make_pair(landmark->identifier(), landmark));
     return landmark;
   }
 
-  //ds attempts to create a new local map if the generation criteria are met (returns true if a local map was generated)
   const bool WorldMap::createLocalMap(const bool& drop_framepoints_) {
     if (_previous_frame == 0) {
       return false;
@@ -143,13 +141,13 @@ namespace proslam {
     _frame_queue_for_local_map.clear();
   }
 
-  //ds adds a loop closure constraint between 2 local maps
   void WorldMap::addCorrespondence(LocalMap* query_,
                                    const LocalMap* reference_,
                                    const TransformMatrix3D& query_to_reference_,
-                                   const real& omega_) {
+                                   const CorrespondencePointerVector& landmark_correspondences_,
+                                   const real& information_) {
 
-    //ds check if local maps from different tracks were fused by comparing the respective map origins (roots)
+    //ds check if we relocalized after a lost track
     if (_frames.at(0)->root() != _current_frame->root()) {
       assert(_current_frame->localMap() == query_);
 
@@ -157,8 +155,35 @@ namespace proslam {
       setTrack(_current_frame);
     }
 
-    query_->addCorrespondence(reference_, query_to_reference_, omega_);
+    //ds add loop closure information to the world map
+    query_->addCorrespondence(reference_, query_to_reference_, landmark_correspondences_, information_);
     _relocalized = true;
+
+    //ds if merging of corresponding landmarks is desired (TODO beta)
+    if (_parameters->merge_landmarks) {
+
+      //ds for all correspondences
+      for (const LandmarkCorrespondence* landmark_correspondence: landmark_correspondences_) {
+
+        //ds merge components
+        Landmark* landmark_query     = landmark_correspondence->query->landmark;
+        Landmark* landmark_reference = landmark_correspondence->reference->landmark;
+
+        //ds merge query with reference (original) landmark
+        landmark_reference->merge(landmark_query);
+
+        //ds check if the landmark is in the currently tracked ones and update it accordingly
+        for (uint64_t index = 0; index < _currently_tracked_landmarks.size(); ++index) {
+          if (_currently_tracked_landmarks[index] == landmark_query) {
+            _currently_tracked_landmarks[index] = landmark_reference;
+          }
+        }
+
+        //ds free input landmark from bookkeeping
+        _landmarks.erase(landmark_query->identifier());
+        delete landmark_query;
+      }
+    }
 
     //ds informative only
     ++_number_of_closures;
