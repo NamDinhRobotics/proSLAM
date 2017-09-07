@@ -1,0 +1,156 @@
+command_line:
+
+  #ds processing mode (select one: RGB_STEREO, RGB_DEPTH)
+  tracker_mode: RGB_STEREO
+
+  #ds topic names
+  topic_image_left:        /camera_left/image_raw
+  topic_image_right:       /camera_right/image_raw
+  topic_camera_info_left:  /camera_left/camera_info
+  topic_camera_info_right: /camera_right/camera_info
+  
+  #ds dataset file name
+  dataset_file_name:
+
+  #ds options
+  option_use_gui:                   false
+  option_use_odometry:              false
+  option_disable_relocalization:    false
+  option_show_top_viewer:           false
+  option_drop_framepoints:          false
+  option_equalize_histogram:        false
+  option_undistort_and_rectify:     false
+  option_recover_landmarks:         true
+  option_disable_bundle_adjustment: true
+
+landmark:
+
+  #ds minimum number of measurements to always integrate
+  minimum_number_of_forced_updates: 2
+
+  #ds maximum allowed measurement divergence
+  maximum_translation_error_to_depth_ratio: 1
+
+local_map:
+
+  #ds target minimum number of landmarks for local map creation
+  minimum_number_of_landmarks: 10
+
+world_map:
+
+  #ds key frame generation properties
+  minimum_distance_traveled_for_local_map: 0.5
+  minimum_degrees_rotated_for_local_map:   0.5
+  minimum_number_of_frames_for_local_map:  4
+
+base_framepoint_generation:
+
+  #ds dynamic thresholds for feature detection
+  target_number_of_keypoints_tolerance: 0.1
+  detector_threshold:                   10
+  detector_threshold_minimum:           5
+  detector_threshold_step_size:         5
+
+  #ds dynamic thresholds for descriptor matching
+  matching_distance_tracking_threshold:         50
+  matching_distance_tracking_threshold_maximum: 50
+  matching_distance_tracking_threshold_minimum: 15
+  matching_distance_tracking_step_size:         1
+
+stereo_framepoint_generation:
+
+  #ds stereo: triangulation
+  maximum_matching_distance_triangulation: 50
+  baseline_factor:                         50
+  minimum_disparity_pixels:                1
+  epipolar_line_thickness_pixels:          0
+
+depth_framepoint_generation:
+
+  #ds depth sensor configuration
+  maximum_depth_near_meters: 5
+  maximum_depth_far_meters:  20
+
+base_tracking:
+
+  #ds this criteria is used for the decision of whether creating a landmark or not from a track of framepoints
+  minimum_track_length_for_landmark_creation: 3
+
+  #ds track lost criteria
+  minimum_number_of_landmarks_to_track: 10
+
+  #point tracking thresholds
+  minimum_threshold_distance_tracking_pixels: 36    #4x4
+  maximum_threshold_distance_tracking_pixels: 49    #7x7
+  maximum_distance_tracking_pixels:           22500 #150x150 maximum allowed pixel distance between image coordinates prediction and actual detection
+  range_point_tracking:                       2     #pixel search range width for point vicinity tracking
+
+  #framepoint track recovery
+  enable_landmark_recovery:              false
+  maximum_number_of_landmark_recoveries: 3
+
+  #feature density regularization
+  bin_size_pixels:         20
+  ratio_keypoints_to_bins: 1
+
+  #pose optimization
+  minimum_delta_angular_for_movement:       0.001
+  minimum_delta_translational_for_movement: 0.01
+  
+  #pose optimization: aligner unit configuration
+  aligner->error_delta_for_convergence:  1e-3
+  aligner->maximum_error_kernel:         9
+  aligner->damping:                      100
+  aligner->maximum_number_of_iterations: 1000
+  aligner->minimum_number_of_inliers:    0
+  aligner->minimum_inlier_ratio:         0
+
+relocalization:
+
+  #minimum query interspace
+  preliminary_minimum_interspace_queries: 5
+
+  #minimum relative number of matches
+  preliminary_minimum_matching_ratio: 0.1
+
+  #minimum absolute number of matches
+  minimum_number_of_matches_per_landmark: 20
+
+  #correspondence retrieval
+  minimum_matches_per_correspondence: 0
+  
+  #icp: aligner unit configuration
+  aligner->error_delta_for_convergence:  1e-5
+  aligner->maximum_error_kernel:         0.5
+  aligner->damping:                      1
+  aligner->maximum_number_of_iterations: 1000
+  aligner->minimum_number_of_inliers:    25
+  aligner->minimum_inlier_ratio:         0.5
+
+graph_optimization:
+
+  #g2o identifier space between frames and landmark vertices
+  identifier_space: 1000000
+  
+  #maximum number of iterations graph optimization
+  maximum_number_of_iterations: 1000
+
+  #determines window size for bundle adjustment
+  number_of_frames_per_bundle_adjustment: 100
+
+  #base frame weight in pose graph (assuming 1 for landmarks)
+  base_information_frame: 1e5
+  
+  #free translation for pose to pose measurements
+  free_translation_for_pose_measurements: true
+  
+  #translational frame weight reduction in pose graph
+  base_information_frame_factor_for_translation: 1e-5
+
+  #enable robust kernel for loop closure measurements
+  enable_robust_kernel_for_loop_closure_measurements: true
+
+  #enable robust kernel for landmark measurements
+  enable_robust_kernel_for_landmark_measurements: false
+
+visualization:

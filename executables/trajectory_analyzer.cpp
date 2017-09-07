@@ -23,6 +23,7 @@ int32_t main (int32_t argc_, char** argv_) {
   const std::string file_name_trajectory_ground_truth = argv_[2];
   std::cerr << "        trajectory SLAM: " << file_name_trajectory_slam << std::endl;
   std::cerr << "trajectory ground truth: " << file_name_trajectory_ground_truth << std::endl;
+  const uint32_t number_of_poses_to_skip = 0;
 
   //ds parse SLAM trajectory
   std::ifstream input_stream_trajectory_slam(file_name_trajectory_slam);
@@ -34,6 +35,7 @@ int32_t main (int32_t argc_, char** argv_) {
   //ds load SLAM trajectory poses
   std::vector<Eigen::Isometry3d> poses_slam(0);
   std::string buffer_line;
+  uint32_t skipped_poses = 0;
   while (std::getline(input_stream_trajectory_slam, buffer_line)) {
 
     //ds get it to a std::stringstream
@@ -46,7 +48,12 @@ int32_t main (int32_t argc_, char** argv_) {
         buffer_stream >> pose(u,v);
       }
     }
-    poses_slam.push_back(pose);
+
+    if (skipped_poses >= number_of_poses_to_skip) {
+      poses_slam.push_back(pose);
+    } else {
+      ++skipped_poses;
+    }
   }
   input_stream_trajectory_slam.close();
   std::cerr << "        loaded trajectory SLAM poses: " << poses_slam.size() << std::endl;
@@ -63,6 +70,7 @@ int32_t main (int32_t argc_, char** argv_) {
   //ds load ground truth poses
   std::vector<Eigen::Isometry3d> poses_ground_truth(0);
   srrg_core::BaseMessage* message = 0;
+  skipped_poses = 0;
   while ((message = message_reader.readMessage())) {
     srrg_core::BaseSensorMessage* sensor_message = dynamic_cast<srrg_core::BaseSensorMessage*>(message);
     assert(sensor_message);
@@ -71,7 +79,11 @@ int32_t main (int32_t argc_, char** argv_) {
     //ds add to synchronizer
     if (sensor_message->topic() == "/camera_left/image_raw") {
       PinholeImageMessage* image_message_left  = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_message);
-      poses_ground_truth.push_back(image_message_left->odometry().cast<double>());
+      if (skipped_poses >= number_of_poses_to_skip) {
+        poses_ground_truth.push_back(image_message_left->odometry().cast<double>());
+      } else {
+        ++skipped_poses;
+      }
     }
     delete sensor_message;
   }
@@ -90,7 +102,7 @@ int32_t main (int32_t argc_, char** argv_) {
   Eigen::Isometry3d transform_slam_to_ground_truth(Eigen::Isometry3d::Identity());
 
   //ds ICP configuration
-  const uint32_t number_of_iterations = 10;
+  const uint32_t number_of_iterations = 100;
   const double maximum_error_kernel   = 0.1; //ds (m^2)
 
   //ds ICP running variables
