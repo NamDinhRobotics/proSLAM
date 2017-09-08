@@ -11,8 +11,8 @@ GraphOptimizer::GraphOptimizer(GraphOptimizerParameters* parameters_): _paramete
   //ds allocate an optimizable graph
   SlamLinearSolver* linearSolver = new SlamLinearSolver();
   linearSolver->setBlockOrdering(true);
-  SlamBlockSolver* blockSolver = new SlamBlockSolver(linearSolver);
-  g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(blockSolver);
+  SlamBlockSolver* blockSolver = new SlamBlockSolver(std::unique_ptr<SlamLinearSolver>(linearSolver));
+  g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(std::unique_ptr<SlamBlockSolver>(blockSolver));
   _optimizer = new g2o::SparseOptimizer();
   _optimizer->setAlgorithm(solver);
 
