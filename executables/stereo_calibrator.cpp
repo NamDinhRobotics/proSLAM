@@ -1,9 +1,15 @@
 #include <iostream>
 
-#include "srrg_messages/message_reader.h"
-#include "srrg_messages/message_timestamp_synchronizer.h"
-#include "srrg_messages/pinhole_image_message.h"
 #include "framepoint_generation/stereo_framepoint_generator.h"
+
+struct Image {
+    Image(const double& timestamp_seconds_, const std::string file_name_image_): timestamp_seconds(timestamp_seconds_),
+                                                                                 file_name_image(file_name_image_) {}
+    double timestamp_seconds;
+    std::string file_name_image;
+};
+
+const std::vector<Image> getImagesASL(const std::string& folder_images_);
 
 const bool measure(const cv::Mat& image_,
                    const cv::Size& board_size_,
@@ -17,23 +23,66 @@ const double calibrate(const cv::Size image_size_,
                        cv::Mat& camera_calibration_matrix_,
                        cv::Mat& distortion_coefficients_);
 
-int32_t main (int32_t argc, char** argv) {
-  if (argc < 2) {
-    std::cerr << "use: ./stereo_calibrator <BOSS/TXTIO_message_file> [-use-gui -interspace <integer>]" << std::endl;
+int32_t main (int32_t argc_, char** argv_) {
+  if (argc_ < 6) {
+    std::cerr << "use: ./stereo_calibrator -asl <folder_images_left> <folder_images_right> -o <calibration.txt> [-use-gui -interspace <integer> -use-eth]" << std::endl;
+    std::cerr << "                              <folder_images_left/right> should each contain: data, data.csv" << std::endl;
     return 0;
   }
 
   //ds configuration
-  std::string file_name_messages        = argv[1];
-  std::string topic_image_left          = "/camera_left/image_raw";
-  std::string topic_image_right         = "/camera_right/image_raw";
-  bool option_use_gui                   = false;
-  uint32_t measurement_image_interspace = 2;
-  bool option_use_eth_estimates         = true;
+  std::string input_format                          = "";
+  std::string folder_images_left                    = "";
+  std::string folder_images_right                   = "";
+  bool option_use_gui                               = false;
+  uint32_t measurement_image_interspace             = 10;
+  bool option_use_eth_estimates                     = false;
+  const double maximum_timestamp_difference_seconds = 0.01;
+  std::string output_file_name                      = "";
 
   //ds parse parameters
-  if (argc == 3 && !std::strcmp(argv[2], "-use-gui")) {
-    option_use_gui = true;
+  int32_t number_of_checked_parameters = 1;
+  while (number_of_checked_parameters < argc_) {
+    if (!std::strcmp(argv_[number_of_checked_parameters], "-asl")) {
+      input_format = "asl";
+      ++number_of_checked_parameters;
+      if (number_of_checked_parameters == argc_) {break;}
+      folder_images_left = argv_[number_of_checked_parameters];
+      ++number_of_checked_parameters;
+      if (number_of_checked_parameters == argc_) {break;}
+      folder_images_right = argv_[number_of_checked_parameters];
+    } else if (!std::strcmp(argv_[number_of_checked_parameters], "-use-gui")) {
+      option_use_gui = true;
+    } else if (!std::strcmp(argv_[number_of_checked_parameters], "-interspace")) {
+      ++number_of_checked_parameters;
+      if (number_of_checked_parameters == argc_) {break;}
+      measurement_image_interspace = std::stoi(argv_[number_of_checked_parameters]);
+    } else if (!std::strcmp(argv_[number_of_checked_parameters], "-use-eth")) {
+      option_use_eth_estimates = true;
+    } else if (!std::strcmp(argv_[number_of_checked_parameters], "-o")) {
+      ++number_of_checked_parameters;
+      if (number_of_checked_parameters == argc_) {break;}
+      output_file_name = argv_[number_of_checked_parameters];
+    }
+    ++number_of_checked_parameters;
+  }
+
+  //ds input validation
+  if (input_format.empty()) {
+    std::cerr << "ERROR: specify input_format (e.g. -asl)" << std::endl;
+    return 0;
+  }
+  if (folder_images_left.empty()) {
+    std::cerr << "ERROR: specify folder_images_left" << std::endl;
+    return 0;
+  }
+  if (folder_images_right.empty()) {
+    std::cerr << "ERROR: specify folder_images_right" << std::endl;
+    return 0;
+  }
+  if (output_file_name.empty()) {
+    std::cerr << "ERROR: specify output_file_name (e.g. -o <calibration.txt>)" << std::endl;
+    return 0;
   }
 
   //ds board configuration
@@ -44,26 +93,30 @@ int32_t main (int32_t argc, char** argv) {
   cv::Size image_size(0, 0);
 
   //ds log configuration
-  std::cerr << "file_name_messages: " << file_name_messages << std::endl;
-  std::cerr << "topic_image_left: " << topic_image_left << std::endl;
-  std::cerr << "topic_image_right: " << topic_image_right << std::endl;
+  std::cerr << "input_format: " << input_format << std::endl;
+  std::cerr << "folder_images_left: " << folder_images_left << std::endl;
+  std::cerr << "folder_images_right: " << folder_images_right << std::endl;
   std::cerr << "option_use_gui: " << option_use_gui << std::endl;
+  std::cerr << "measurement_image_interspace: " << measurement_image_interspace << std::endl;
+  std::cerr << "option_use_eth_estimates: " << option_use_eth_estimates << std::endl;
+  std::cerr << "output_file_name: " << output_file_name << std::endl;
 
-  //ds configure message synchronizer
-  srrg_core::MessageTimestampSynchronizer synchronizer;
-  std::vector<std::string> camera_topics_synchronized(0);
-  camera_topics_synchronized.push_back(topic_image_left);
-  camera_topics_synchronized.push_back(topic_image_right);
-  synchronizer.setTimeInterval(0.001);
-  synchronizer.setTopics(camera_topics_synchronized);
-
-  //ds configure message reader
-  srrg_core::MessageReader message_reader;
-  message_reader.open(file_name_messages);
-  if (!message_reader.good()) {
-    std::cerr << "ERROR: unable to open message file: '" << file_name_messages << "'" << std::endl;
+  //ds load images for left and right - assuming to be synchronized
+  const std::vector<Image> images_left(getImagesASL(folder_images_left));
+  const std::vector<Image> images_right(getImagesASL(folder_images_right));
+  if (images_left.size() == 0) {
+    std::cerr << "ERROR: no left images loaded" << std::endl;
     return 0;
   }
+  if (images_right.size() == 0) {
+    std::cerr << "ERROR: no right images loaded" << std::endl;
+    return 0;
+  }
+  if (images_left.size() != images_right.size()) {
+    std::cerr << "ERROR: unequal numbers of left and right images" << std::endl;
+    return 0;
+  }
+  const uint32_t number_of_images = images_left.size();
 
   //ds calcuate outer corner positions (constant)
   std::vector<cv::Point3f> object_points;
@@ -80,32 +133,17 @@ int32_t main (int32_t argc, char** argv) {
 
   //ds info
   uint64_t number_of_processed_stereo_images = 0;
+  for (uint32_t image_number = 0; image_number < number_of_images; ++image_number) {
 
-  //ds start playback
-  srrg_core::BaseMessage* message = 0;
-  while ((message = message_reader.readMessage())) {
-    srrg_core::BaseSensorMessage* sensor_message = dynamic_cast<srrg_core::BaseSensorMessage*>(message);
-    sensor_message->untaint();
-
-    //ds add to synchronizer
-    if (sensor_message->topic() == topic_image_left) {
-      synchronizer.putMessage(sensor_message);
-    } else if (sensor_message->topic() == topic_image_right) {
-      synchronizer.putMessage(sensor_message);
-    } else {
-      delete sensor_message;
-    }
+    //ds compute timestamp delta
+    const double timestamp_difference_seconds = std::fabs(images_left[image_number].timestamp_seconds-images_right[image_number].timestamp_seconds);
 
     //ds if we have a synchronized package of sensor messages ready
-    if (synchronizer.messagesReady()) {
-
-      //ds buffer sensor data
-      srrg_core::PinholeImageMessage* image_message_left  = dynamic_cast<srrg_core::PinholeImageMessage*>(synchronizer.messages()[0].get());
-      srrg_core::PinholeImageMessage* image_message_right = dynamic_cast<srrg_core::PinholeImageMessage*>(synchronizer.messages()[1].get());
+    if (timestamp_difference_seconds < maximum_timestamp_difference_seconds) {
 
       //ds grab opencv image data
-      cv::Mat image_left  = image_message_left->image();
-      cv::Mat image_right = image_message_right->image();
+      cv::Mat image_left  = cv::imread(images_left[image_number].file_name_image, CV_LOAD_IMAGE_GRAYSCALE);
+      cv::Mat image_right = cv::imread(images_right[image_number].file_name_image, CV_LOAD_IMAGE_GRAYSCALE);
       cv::Mat image_display_left, image_display_right;
       cv::cvtColor(image_left, image_display_left, CV_GRAY2RGB);
       cv::cvtColor(image_right, image_display_right, CV_GRAY2RGB);
@@ -134,30 +172,23 @@ int32_t main (int32_t argc, char** argv) {
         if (option_use_gui) {
           cv::Mat image_stereo;
           cv::hconcat(image_display_left, image_display_right, image_stereo);
-          cv::imshow(topic_image_left + ", " + topic_image_right, image_stereo);
+          cv::imshow("calibration", image_stereo);
           cv::waitKey(1);
         }
 
         //ds status
         std::printf("%06lu|L: %f|R: %f|CL: %i CR: %i|measurements: %6lu\n", number_of_processed_stereo_images,
-                                                                            image_message_left->timestamp(), image_message_right->timestamp(),
+                                                                            images_left[image_number].timestamp_seconds, images_right[image_number].timestamp_seconds,
                                                                             measured_left, measured_right,
                                                                             object_points_per_image.size());
       }
 
       //ds release processed data
-      image_message_left->release();
-      image_message_right->release();
-      image_left.release();
-      image_right.release();
-      synchronizer.reset();
       ++number_of_processed_stereo_images;
+    } else {
+      std::cerr << "WARNING: received high timestamp difference: " << timestamp_difference_seconds << " skipping the measurements" << std::endl;
     }
   }
-
-  //ds done
-  message_reader.close();
-  synchronizer.reset();
 
   //ds info
   std::cerr << "obtained measurements: " << object_points_per_image.size() << std::endl;
@@ -345,40 +376,26 @@ int32_t main (int32_t argc, char** argv) {
 #endif
 
   //ds restart the stream to check the found parameters
-  message_reader.open(file_name_messages);
-  message = 0;
-  number_of_processed_stereo_images         = 0;
-  uint64_t total_number_of_epipolar_matches = 0;
-  while ((message = message_reader.readMessage())) {
-    srrg_core::BaseSensorMessage* sensor_message = dynamic_cast<srrg_core::BaseSensorMessage*>(message);
-    sensor_message->untaint();
+  double accumulated_relative_epipolar_matches = 0;
+  number_of_processed_stereo_images            = 0;
+  for (uint32_t image_number = 0; image_number < number_of_images; ++image_number) {
 
-    //ds add to synchronizer
-    if (sensor_message->topic() == topic_image_left) {
-      synchronizer.putMessage(sensor_message);
-    } else if (sensor_message->topic() == topic_image_right) {
-      synchronizer.putMessage(sensor_message);
-    } else {
-      delete sensor_message;
-    }
+    //ds compute timestamp delta
+    const double timestamp_difference_seconds = std::fabs(images_left[image_number].timestamp_seconds-images_right[image_number].timestamp_seconds);
 
     //ds if we have a synchronized package of sensor messages ready
-    if (synchronizer.messagesReady()) {
-
-      //ds buffer sensor data
-      srrg_core::PinholeImageMessage* image_message_left  = dynamic_cast<srrg_core::PinholeImageMessage*>(synchronizer.messages()[0].get());
-      srrg_core::PinholeImageMessage* image_message_right = dynamic_cast<srrg_core::PinholeImageMessage*>(synchronizer.messages()[1].get());
+    if (timestamp_difference_seconds < maximum_timestamp_difference_seconds) {
 
       //ds grab opencv image data
-      cv::Mat image_left  = image_message_left->image();
-      cv::Mat image_right = image_message_right->image();
+      cv::Mat image_left  = cv::imread(images_left[image_number].file_name_image, CV_LOAD_IMAGE_GRAYSCALE);
+      cv::Mat image_right = cv::imread(images_right[image_number].file_name_image, CV_LOAD_IMAGE_GRAYSCALE);
       cv::Mat image_display_left, image_display_right;
 
       //ds undistort and rectify
       cv::Mat image_left_undistorted_rectified;
       cv::Mat image_right_undistorted_rectified;
       cv::remap(image_left, image_left_undistorted_rectified, undistort_rectify_maps_left[0], undistort_rectify_maps_left[1], cv::INTER_LINEAR);
-      cv::remap(image_left, image_right_undistorted_rectified, undistort_rectify_maps_right[0], undistort_rectify_maps_right[1], cv::INTER_LINEAR);
+      cv::remap(image_right, image_right_undistorted_rectified, undistort_rectify_maps_right[0], undistort_rectify_maps_right[1], cv::INTER_LINEAR);
       cv::cvtColor(image_left_undistorted_rectified, image_display_left, CV_GRAY2RGB);
       cv::cvtColor(image_right_undistorted_rectified, image_display_right, CV_GRAY2RGB);
 
@@ -501,34 +518,131 @@ int32_t main (int32_t argc, char** argv) {
           const int32_t row = u*image_size.height/10.0;
           cv::line(image_stereo, cv::Point2f(0, row), cv::Point2f(2*image_size.width, row), cv::Scalar(0, 0, 255), 1);
         }
-        cv::imshow(topic_image_left + ", " + topic_image_right, image_stereo);
+        cv::imshow("benchmarking", image_stereo);
         cv::waitKey(0);
       }
-//
-//      //ds status
-//      std::printf("%06lu|L: %f|R: %f|keypoints L: %5lu keypoints R: %5lu "
-//                  "STEREO MATCHES: %5lu (%5.3f)\n", number_of_processed_stereo_images,
-//                                                    image_message_left->timestamp(), image_message_right->timestamp(),
-//                                                    keypoints_left.size(), keypoints_right.size(),
-//                                                    number_of_epipolar_matches, static_cast<double>(number_of_epipolar_matches)/keypoints_left.size());
-      std::cerr << "x";
+
+      //ds status
+      std::printf("%06lu|L: %f|R: %f|keypoints L: %5lu keypoints R: %5lu "
+                  "STEREO MATCHES: %5lu (%5.3f)\n", number_of_processed_stereo_images,
+                                                    images_left[image_number].timestamp_seconds, images_left[image_number].timestamp_seconds,
+                                                    keypoints_left.size(), keypoints_right.size(),
+                                                    number_of_epipolar_matches, static_cast<double>(number_of_epipolar_matches)/keypoints_left.size());
       ++number_of_processed_stereo_images;
-      total_number_of_epipolar_matches += number_of_epipolar_matches;
+      accumulated_relative_epipolar_matches += static_cast<double>(number_of_epipolar_matches)/keypoints_left.size();
     }
   }
+
+  const double average_number_of_relative_epipolar_matches = static_cast<double>(accumulated_relative_epipolar_matches)/number_of_processed_stereo_images;
+  std::cerr << "\nbenchmark completed - average number of relative epipolar matches per stereo image pair: " << average_number_of_relative_epipolar_matches << std::endl;
+  std::cerr << "saving results to: " << output_file_name << std::endl;
+
+  //ds save calibration to file
+  std::ofstream calibration_file(output_file_name);
+  calibration_file << std::fixed;
+  calibration_file << std::setprecision(9);
+  calibration_file << "stereo camera calibration" << std::endl;
+  calibration_file << "\nnumber_of_processed_stereo_measurements: " << object_points_per_image.size() << std::endl;
+  calibration_file << "reprojection_error_pixels: " << reprojection_error_pixels << std::endl;
+  calibration_file << "average_number_of_relative_epipolar_matches: " << average_number_of_relative_epipolar_matches << std::endl;
+  calibration_file << "\nimage_size: " << std::endl;
+  calibration_file << image_size.width << " " << image_size.height << std::endl;
+  calibration_file << "\ncamera_calibration_matrix_left: " << std::endl;
+  for (uint32_t r = 0; r < 3; ++r) {
+    for (uint32_t c = 0; c < 3; ++c) {
+      calibration_file << camera_calibration_matrix_left.at<double>(r,c) << " ";
+    }
+    calibration_file << std::endl;
+  }
+  calibration_file << "\ncamera_calibration_matrix_right: " << std::endl;
+  for (uint32_t r = 0; r < 3; ++r) {
+    for (uint32_t c = 0; c < 3; ++c) {
+      calibration_file << camera_calibration_matrix_right.at<double>(r,c) << " ";
+    }
+    calibration_file << std::endl;
+  }
+  calibration_file << "\ndistortion_coefficients_left: " << std::endl;
+  for (uint32_t r = 0; r < 4; ++r) {
+    calibration_file << distortion_coefficients_left.at<double>(r) << " ";
+  }
+  calibration_file << std::endl;
+  calibration_file << "\ndistortion_coefficients_right: " << std::endl;
+  for (uint32_t r = 0; r < 4; ++r) {
+    calibration_file << distortion_coefficients_right.at<double>(r) << " ";
+  }
+  calibration_file << std::endl;
+  calibration_file << "\nprojection_matrix_left: " << std::endl;
+  for (uint32_t r = 0; r < 3; ++r) {
+    for (uint32_t c = 0; c < 4; ++c) {
+      calibration_file << projection_matrix_left.at<double>(r,c) << " ";
+    }
+    calibration_file << std::endl;
+  }
+  calibration_file << "\nprojection_matrix_right: " << std::endl;
+  for (uint32_t r = 0; r < 3; ++r) {
+    for (uint32_t c = 0; c < 4; ++c) {
+      calibration_file << projection_matrix_right.at<double>(r,c) << " ";
+    }
+    calibration_file << std::endl;
+  }
+  calibration_file << "\nrectification_matrix_left: " << std::endl;
+  for (uint32_t r = 0; r < 3; ++r) {
+    for (uint32_t c = 0; c < 3; ++c) {
+      calibration_file << rectification_matrix_left.at<double>(r,c) << " ";
+    }
+    calibration_file << std::endl;
+  }
+  calibration_file << "\nrectification_matrix_right: " << std::endl;
+  for (uint32_t r = 0; r < 3; ++r) {
+    for (uint32_t c = 0; c < 3; ++c) {
+      calibration_file << rectification_matrix_right.at<double>(r,c) << " ";
+    }
+    calibration_file << std::endl;
+  }
+  calibration_file << std::endl;
+  calibration_file.close();
 
 #if CV_MAJOR_VERSION == 2
   delete keypoint_detector;
   delete descriptor_extractor;
 #endif
 
-  std::cerr << "\nbenchmark completed - average number of epipolar matches per stereo image pair: "
-            << static_cast<double>(total_number_of_epipolar_matches)/number_of_processed_stereo_images << std::endl;
-
-  //ds done
-  message_reader.close();
-  synchronizer.reset();
   return 0;
+}
+
+const std::vector<Image> getImagesASL(const std::string& folder_images_) {
+
+  //ds stamped images
+  std::vector<Image> images;
+
+  //ds load data file (comma separated values)
+  std::ifstream file_images((folder_images_+"/data.csv").c_str());
+
+  //ds image path
+  const std::string image_path(folder_images_+"/data/");
+
+  //ds read line by line
+  std::string buffer_line;
+  while (std::getline(file_images, buffer_line)) {
+
+    //ds skip comment lines
+    if (buffer_line[0] == '#') {
+      continue;
+    }
+
+    //ds parse control
+    std::string::size_type index_begin_item = 0;
+    std::string::size_type index_end_item   = 0;
+
+    //ds parse timestamp - cutting off the 6 last digits (from nanoseconds to milliseconds)
+    index_end_item = buffer_line.find(",", index_begin_item);
+    const uint64_t timestamp_milliseconds = std::atol(buffer_line.substr(index_begin_item, index_end_item-6).c_str());
+    index_begin_item = index_end_item+1;
+
+    //ds parse image name and store it
+    images.push_back(Image(timestamp_milliseconds, image_path+buffer_line.substr(index_begin_item, buffer_line.length()-index_begin_item-1)));
+  }
+  return images;
 }
 
 const bool measure(const cv::Mat& image_,
@@ -576,7 +690,7 @@ const double calibrate(const cv::Size image_size_,
                                                                distortion_coefficients_,
                                                                rotations_per_image,
                                                                translations_per_image,
-                                                               CV_CALIB_USE_INTRINSIC_GUESS | CV_CALIB_RATIONAL_MODEL);
+                                                               CV_CALIB_USE_INTRINSIC_GUESS);
 
   //ds done
   return reprojection_error_pixels;

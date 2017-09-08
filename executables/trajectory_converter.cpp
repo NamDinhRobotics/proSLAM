@@ -18,13 +18,13 @@ int32_t main(int32_t argc_, char** argv_) {
   int32_t number_of_checked_parameters = 1;
   while (number_of_checked_parameters < argc_) {
     if (!std::strcmp(argv_[number_of_checked_parameters], "-g2o")) {
-      ++number_of_checked_parameters;
       input_format = "g2o";
+      ++number_of_checked_parameters;
       if (number_of_checked_parameters == argc_) {break;}
       input_file = argv_[number_of_checked_parameters];
     } else if (!std::strcmp(argv_[number_of_checked_parameters], "-tum")) {
-      ++number_of_checked_parameters;
       input_format = "tum";
+      ++number_of_checked_parameters;
       if (number_of_checked_parameters == argc_) {break;}
       input_file = argv_[number_of_checked_parameters];
     }
