@@ -23,7 +23,6 @@ namespace proslam {
   "-show-top (-st):                         enable top map viewer\n"
   "-drop-framepoints (-df):                 deallocation of past framepoints at runtime (reduces memory demand)\n"
   "-equalize-histogram (-eh):               equalize stereo image histogram before processing\n"
-  "-undistort-rectify (-ur):                undistorts and rectifies input images based on camera info\n"
   "-recover-landmarks (-rl):                enables landmark track recovery\n"
   "-disable-bundle-adjustment (-dba):       disables periodic bundle adjustment for landmarks and frames\n"
   DOUBLE_BAR;
@@ -65,7 +64,6 @@ namespace proslam {
     std::cerr << "-depth-mode (-dm)                  " << (tracker_mode == TrackerMode::RGB_DEPTH) << std::endl;
     std::cerr << "-drop-framepoints (-df)            " << option_drop_framepoints << std::endl;
     std::cerr << "-equalize-histogram (-eh)          " << option_equalize_histogram << std::endl;
-    std::cerr << "-undistort-rectify (-ur)           " << option_undistort_and_rectify << std::endl;
     std::cerr << "-recover-landmarks (-rl)           " << option_recover_landmarks << std::endl;
     std::cerr << "-disable-bundle-adjustment (-dba)  " << option_disable_bundle_adjustment << std::endl;
     if (dataset_file_name.length() > 0) {
@@ -276,8 +274,6 @@ namespace proslam {
         command_line_parameters->option_drop_framepoints = true;
       } else if (!std::strcmp(argv_[number_of_checked_parameters], "-equalize-histogram") || !std::strcmp(argv_[number_of_checked_parameters], "-eh")) {
         command_line_parameters->option_equalize_histogram = true;
-      } else if (!std::strcmp(argv_[number_of_checked_parameters], "-undistort-rectify") || !std::strcmp(argv_[number_of_checked_parameters], "-ur")) {
-        command_line_parameters->option_undistort_and_rectify = true;
       } else if (!std::strcmp(argv_[number_of_checked_parameters], "-depth-mode") || !std::strcmp(argv_[number_of_checked_parameters], "-dm")) {
         command_line_parameters->tracker_mode = CommandLineParameters::TrackerMode::RGB_DEPTH;
       } else if (!std::strcmp(argv_[number_of_checked_parameters], "-use-odometry") || !std::strcmp(argv_[number_of_checked_parameters], "-uo")) {
@@ -331,7 +327,6 @@ namespace proslam {
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_show_top_viewer, bool)
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_drop_framepoints, bool)
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_equalize_histogram, bool)
-      PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_undistort_and_rectify, bool)
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_recover_landmarks, bool)
       PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_disable_bundle_adjustment, bool)
 

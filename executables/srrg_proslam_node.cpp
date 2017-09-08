@@ -252,12 +252,6 @@ int32_t main(int32_t argc_, char** argv_) {
       //ds if we got a valid stereo image pair (enabled only in callback)
       if (found_image_pair) {
 
-        //ds preprocess the images if desired: rectification
-        if (parameters->command_line_parameters->option_undistort_and_rectify) {
-          cv::remap(image_left, image_left, undistort_rectify_maps_left[0], undistort_rectify_maps_left[1], cv::INTER_LINEAR);
-          cv::remap(image_right, image_right, undistort_rectify_maps_right[0], undistort_rectify_maps_right[1], cv::INTER_LINEAR);
-        }
-
         //ds preprocess the images if desired: histogram equalization
         if (parameters->command_line_parameters->option_equalize_histogram) {
           cv::equalizeHist(image_left, image_left);

@@ -3,27 +3,57 @@
 #include <Eigen/Geometry>
 
 #include "srrg_types/types.hpp"
-#include "srrg_messages/message_reader.h"
-#include "srrg_messages/pinhole_image_message.h"
 
 using namespace srrg_core;
 
-//ds computes absolute translation RMSE
-const double getAbsoluteTranslationRootMeanSquaredError(const std::vector<Eigen::Isometry3d>& trajectory_query_,
-                                                        const std::vector<Eigen::Isometry3d>& trajectory_reference_);
+struct PositionMeasurement {
+    PositionMeasurement(const double& timestamp_seconds_,
+                    const Eigen::Vector3d& position_): timestamp_seconds(timestamp_seconds_),
+                                                       position(position_) {}
+    double timestamp_seconds;
+    Eigen::Vector3d position;
+};
+
+const double getAbsoluteTranslationRootMeanSquaredError(const std::vector<std::pair<PositionMeasurement, PositionMeasurement>> position_correspondences_);
+
+const Eigen::Vector3d getInterpolatedPosition(const PositionMeasurement& ground_truth_previous_,
+                                              const PositionMeasurement& ground_truth_next_,
+                                              const PositionMeasurement& measurement_);
 
 int32_t main (int32_t argc_, char** argv_) {
-  if (argc_ != 3) {
-    std::cerr << "usage: ./trajectory_analyzer <trajectory.txt> <messages.txt>" << std::endl;
+  if (argc_ < 5) {
+    std::cerr << "usage: ./trajectory_analyzer -tum <trajectory.txt> -asl <ground_truth.txt> [-skip <integer>]" << std::endl;
     return 0;
   }
 
   //ds determine and log configuration
-  const std::string file_name_trajectory_slam         = argv_[1];
-  const std::string file_name_trajectory_ground_truth = argv_[2];
-  std::cerr << "        trajectory SLAM: " << file_name_trajectory_slam << std::endl;
-  std::cerr << "trajectory ground truth: " << file_name_trajectory_ground_truth << std::endl;
-  const uint32_t number_of_poses_to_skip = 0;
+  std::string file_name_trajectory_slam = argv_[1];
+  std::string file_name_trajectory_ground_truth = argv_[2];
+  uint32_t number_of_poses_to_skip = 0;
+
+  //ds parse configuration
+  int32_t number_of_checked_parameters = 1;
+  while (number_of_checked_parameters < argc_) {
+    if (!std::strcmp(argv_[number_of_checked_parameters], "-tum")) {
+      ++number_of_checked_parameters;
+      if (number_of_checked_parameters == argc_) {break;}
+      file_name_trajectory_slam = argv_[number_of_checked_parameters];
+    } else if (!std::strcmp(argv_[number_of_checked_parameters], "-asl")) {
+      ++number_of_checked_parameters;
+      if (number_of_checked_parameters == argc_) {break;}
+      file_name_trajectory_ground_truth = argv_[number_of_checked_parameters];
+    } else if (!std::strcmp(argv_[number_of_checked_parameters], "-skip")) {
+      ++number_of_checked_parameters;
+      if (number_of_checked_parameters == argc_) {break;}
+      number_of_poses_to_skip = std::stoi(argv_[number_of_checked_parameters]);
+    }
+    ++number_of_checked_parameters;
+  }
+
+  //ds log configuration
+  std::cerr << "file_name_trajectory_slam: " << file_name_trajectory_slam << std::endl;
+  std::cerr << "file_name_trajectory_ground_truth: " << file_name_trajectory_ground_truth << std::endl;
+  std::cerr << "number_of_poses_to_skip: " << number_of_poses_to_skip << std::endl;
 
   //ds parse SLAM trajectory
   std::ifstream input_stream_trajectory_slam(file_name_trajectory_slam);
@@ -33,76 +63,144 @@ int32_t main (int32_t argc_, char** argv_) {
   }
 
   //ds load SLAM trajectory poses
-  std::vector<Eigen::Isometry3d> poses_slam(0);
+  std::vector<PositionMeasurement> positions_slam;
   std::string buffer_line;
   uint32_t skipped_poses = 0;
   while (std::getline(input_stream_trajectory_slam, buffer_line)) {
 
-    //ds get it to a std::stringstream
-    std::istringstream buffer_stream(buffer_line);
+    //ds get line to a string stream object
+    std::istringstream stringstream(buffer_line);
 
-    //ds information fields (KITTI format)
-    Eigen::Isometry3d pose(Eigen::Isometry3d::Identity());
-    for (uint8_t u = 0; u < 3; ++u) {
-      for (uint8_t v = 0; v < 4; ++v) {
-        buffer_stream >> pose(u,v);
-      }
+    //ds possible values
+    double timestamp_seconds = 0;
+    double translation_x = 0;
+    double translation_y = 0;
+    double translation_z = 0;
+    double quaternion_w  = 0;
+    double quaternion_x  = 0;
+    double quaternion_y  = 0;
+    double quaternion_z  = 0;
+
+    //ds parse the full line and check for failure
+    if (!(stringstream >> timestamp_seconds >> translation_x >> translation_y >> translation_z
+                                            >> quaternion_x >> quaternion_y >> quaternion_z >> quaternion_w)) {
+      std::cerr << "ERROR: unable to parse pose lines" << std::endl;
+      input_stream_trajectory_slam.close();
+      return 0;
     }
 
+    //ds set pose value
+    Eigen::Isometry3d parsed_pose(Eigen::Isometry3d::Identity());
+    parsed_pose.translation() = Eigen::Vector3d(translation_x, translation_y, translation_z);
+    parsed_pose.linear()      = Eigen::Quaterniond(quaternion_w, quaternion_x, quaternion_y, quaternion_z).toRotationMatrix();
+
     if (skipped_poses >= number_of_poses_to_skip) {
-      poses_slam.push_back(pose);
+      positions_slam.push_back(PositionMeasurement(timestamp_seconds, parsed_pose.translation()));
     } else {
       ++skipped_poses;
     }
   }
   input_stream_trajectory_slam.close();
-  std::cerr << "        loaded trajectory SLAM poses: " << poses_slam.size() << std::endl;
-  const uint32_t number_of_measurements = poses_slam.size();
+  std::cerr << "loaded trajectory SLAM positions: " << positions_slam.size() << " for: " << file_name_trajectory_slam << std::endl;
 
   //ds parse ground truth trajectory
-  srrg_core::MessageReader message_reader;
-  message_reader.open(file_name_trajectory_ground_truth);
-  if (!message_reader.good()) {
+  std::ifstream input_stream_trajectory_ground_truth(file_name_trajectory_ground_truth);
+  if (!input_stream_trajectory_ground_truth.good() || !input_stream_trajectory_ground_truth.is_open()) {
     std::cerr << "ERROR: unable to open: '" << file_name_trajectory_ground_truth << "'" << std::endl;
     return 0;
   }
 
   //ds load ground truth poses
-  std::vector<Eigen::Isometry3d> poses_ground_truth(0);
-  srrg_core::BaseMessage* message = 0;
-  skipped_poses = 0;
-  while ((message = message_reader.readMessage())) {
-    srrg_core::BaseSensorMessage* sensor_message = dynamic_cast<srrg_core::BaseSensorMessage*>(message);
-    assert(sensor_message);
-    sensor_message->untaint();
+  std::vector<PositionMeasurement> positions_ground_truth;
+  while (std::getline(input_stream_trajectory_ground_truth, buffer_line)) {
 
-    //ds add to synchronizer
-    if (sensor_message->topic() == "/camera_left/image_raw") {
-      PinholeImageMessage* image_message_left  = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_message);
-      if (skipped_poses >= number_of_poses_to_skip) {
-        poses_ground_truth.push_back(image_message_left->odometry().cast<double>());
-      } else {
-        ++skipped_poses;
+    //ds skip comment lines
+    if (buffer_line[0] == '#') {
+      continue;
+    }
+
+    //ds parse control
+    std::string::size_type index_begin_item = 0;
+    std::string::size_type index_end_item   = 0;
+
+    //ds parse timestamp
+    index_end_item = buffer_line.find(",", index_begin_item);
+    const uint64_t timestamp_nanoseconds = std::atol(buffer_line.substr(index_begin_item, index_end_item).c_str());
+    const double timestamp_seconds       = timestamp_nanoseconds/1e9;
+    index_begin_item = index_end_item+1;
+
+    //ds position buffer
+    Eigen::Isometry3d leica_to_world(Eigen::Isometry3d::Identity());
+    for (uint32_t row = 0; row < 3; ++row) {
+      index_end_item = buffer_line.find(",", index_begin_item);
+      leica_to_world.translation()(row) = std::strtod(buffer_line.substr(index_begin_item, index_end_item-index_begin_item).c_str(), 0);
+      index_begin_item = index_end_item+1;
+    }
+
+    //ds add to buffer
+    positions_ground_truth.push_back(PositionMeasurement(timestamp_seconds, leica_to_world.translation()));
+  }
+  input_stream_trajectory_ground_truth.close();
+  std::cerr << "loaded trajectory ground truth positions: " << positions_ground_truth.size() << " for: " << file_name_trajectory_ground_truth << std::endl;
+
+  //ds corresponding measurements
+  std::vector<std::pair<PositionMeasurement, PositionMeasurement>> position_correspondences;
+  Eigen::Vector3d position_shift(Eigen::Vector3d::Zero());
+
+  //ds for each measurement
+  for (uint64_t index_slam = 0; index_slam < positions_slam.size(); ++index_slam) {
+    PositionMeasurement& measurement = positions_slam[index_slam];
+
+    //ds find closest ground truth point - bruteforce
+    double timestamp_difference_seconds_best = 1;
+    uint32_t index_best                      = 0;
+    for (uint64_t index_ground_truth = 0; index_ground_truth < positions_ground_truth.size(); ++index_ground_truth) {
+      const double timestamp_difference_seconds = std::fabs(measurement.timestamp_seconds-positions_ground_truth[index_ground_truth].timestamp_seconds);
+      if (timestamp_difference_seconds < timestamp_difference_seconds_best) {
+        timestamp_difference_seconds_best = timestamp_difference_seconds;
+        index_best = index_ground_truth;
       }
     }
-    delete sensor_message;
-  }
-  message_reader.close();
-  std::cerr << "loaded trajectory ground truth poses: " << poses_ground_truth.size() << std::endl;
 
-  //ds check consistency
-  if (poses_ground_truth.size() != number_of_measurements) {
-    std::cerr << "ERROR: unequal number of SLAM and ground truth measurements (check input files)" << std::endl;
-    return 0;
-  }
+    //ds skip until we arrive at the ground truth timestamp
+    if (index_best == 0) {
+      continue;
+    }
 
-  std::cerr << "\nraw RMSE: " << getAbsoluteTranslationRootMeanSquaredError(poses_slam, poses_ground_truth) << "\n" << std::endl;
+    //ds solution
+    PositionMeasurement ground_truth_interpolated(measurement.timestamp_seconds, measurement.position);
+
+    //ds interpolation: check if before the system
+    if (positions_ground_truth[index_best].timestamp_seconds < measurement.timestamp_seconds) {
+
+      //ds interpolate to next
+      ground_truth_interpolated.position = getInterpolatedPosition(positions_ground_truth[index_best], positions_ground_truth[index_best+1], measurement);
+    } else {
+
+      //ds interpolate from previous
+      ground_truth_interpolated.position = getInterpolatedPosition(positions_ground_truth[index_best-1], positions_ground_truth[index_best], measurement);
+    }
+
+    //ds for the first measurement - compute starting point offset
+    if (index_slam == 0) {
+      position_shift = ground_truth_interpolated.position;
+    }
+
+    //ds adjust position
+    measurement.position += position_shift;
+
+    //ds save the first correspondence
+    position_correspondences.push_back(std::make_pair(measurement, ground_truth_interpolated));
+  }
+  std::cerr << "\ninterpolated positions: " << position_correspondences.size() << " for: " << file_name_trajectory_ground_truth << std::endl;
+
+  std::cerr << "\nraw RMSE: " << getAbsoluteTranslationRootMeanSquaredError(position_correspondences) << "\n" << std::endl;
 
   //ds objective
   Eigen::Isometry3d transform_slam_to_ground_truth(Eigen::Isometry3d::Identity());
 
   //ds ICP configuration
-  const uint32_t number_of_iterations = 100;
+  const uint32_t number_of_iterations = 10;
   const double maximum_error_kernel   = 0.1; //ds (m^2)
 
   //ds ICP running variables
@@ -120,11 +218,11 @@ int32_t main (int32_t argc_, char** argv_) {
     double total_error_squared = 0;
 
     //ds for all SLAM trajectory poses
-    for (uint32_t index = 0; index < number_of_measurements; ++index) {
+    for (const std::pair<PositionMeasurement, PositionMeasurement>& position_correspondence: position_correspondences) {
 
       //ds compute current error
-      const Eigen::Vector3d& measured_point_in_reference = poses_ground_truth[index].translation();
-      const Eigen::Vector3d sampled_point_in_reference   = transform_slam_to_ground_truth*poses_slam[index].translation();
+      const Eigen::Vector3d& measured_point_in_reference = position_correspondence.second.position;
+      const Eigen::Vector3d sampled_point_in_reference   = transform_slam_to_ground_truth*position_correspondence.first.position;
       const Eigen::Vector3d error                        = sampled_point_in_reference-measured_point_in_reference;
 
       //ds update chi
@@ -162,36 +260,29 @@ int32_t main (int32_t argc_, char** argv_) {
     transform_slam_to_ground_truth.linear() -= 0.5*rotation*rotation_squared;
 
     //ds status
-    std::printf("iteration: %03u total error (m^2): %9.3f (inliers: %4u/%4u)\n",
-                iteration, total_error_squared, number_of_inliers, number_of_measurements);
+    std::printf("iteration: %03u total error (m^2): %12.3f (inliers: %4u/%4lu)\n",
+                iteration, total_error_squared, number_of_inliers, position_correspondences.size());
   }
 
   //ds compute optimal poses
-  std::vector<Eigen::Isometry3d> poses_slam_optimal(poses_slam.size());
-  for (uint32_t index = 0; index < number_of_measurements; ++index) {
-    poses_slam_optimal[index] = transform_slam_to_ground_truth*poses_slam[index];
+  for (std::pair<PositionMeasurement, PositionMeasurement>& position_correspondence: position_correspondences) {
+    position_correspondence.first.position = transform_slam_to_ground_truth*position_correspondence.first.position;
   }
   std::cerr << "done" << std::endl;
 
   //ds done
-  std::cerr << "\noptimal RMSE: " << getAbsoluteTranslationRootMeanSquaredError(poses_slam_optimal, poses_ground_truth) << std::endl;
+  std::cerr << "\noptimal RMSE: " << getAbsoluteTranslationRootMeanSquaredError(position_correspondences) << std::endl;
   return 0;
 }
 
-//ds computes absolute translation RMSE
-const double getAbsoluteTranslationRootMeanSquaredError(const std::vector<Eigen::Isometry3d>& trajectory_query_,
-                                                        const std::vector<Eigen::Isometry3d>& trajectory_reference_) {
-
-  if (trajectory_query_.size() != trajectory_reference_.size()) {
-    throw std::runtime_error("getAbsoluteTranslationRootMeanSquaredError: ERROR: passed trajectories with unequal number of measurements");
-  }
+const double getAbsoluteTranslationRootMeanSquaredError(const std::vector<std::pair<PositionMeasurement, PositionMeasurement>> position_correspondences_) {
 
   //ds compute absolute squared errors
   std::vector<double> squared_errors_translation_absolute(0);
-  for (uint32_t index = 0; index < trajectory_query_.size(); ++index) {
+  for (const std::pair<PositionMeasurement, PositionMeasurement>& position_correspondence: position_correspondences_) {
 
     //ds compute squared errors between frames
-    squared_errors_translation_absolute.push_back((trajectory_query_[index].translation()-trajectory_reference_[index].translation()).squaredNorm());
+    squared_errors_translation_absolute.push_back((position_correspondence.first.position-position_correspondence.second.position).squaredNorm());
   }
 
   //ds compute RMSE
@@ -205,4 +296,27 @@ const double getAbsoluteTranslationRootMeanSquaredError(const std::vector<Eigen:
 
   //ds done
   return root_mean_squared_error_translation_absolute;
+}
+
+const Eigen::Vector3d getInterpolatedPosition(const PositionMeasurement& ground_truth_previous_,
+                                              const PositionMeasurement& ground_truth_next_,
+                                              const PositionMeasurement& measurement_) {
+
+  //ds interpolate to next
+  const double timestamp_difference_seconds_ground_truth = ground_truth_next_.timestamp_seconds-ground_truth_previous_.timestamp_seconds;
+  const double timestamp_difference_seconds = measurement_.timestamp_seconds-ground_truth_previous_.timestamp_seconds;
+//  std::printf("interpolating timestamps: [%f, %f, %f\n", ground_truth_previous_.timestamp_seconds,
+//                                                         measurement_.timestamp_seconds,
+//                                                         ground_truth_next_.timestamp_seconds);
+
+  //ds compute interpolated reference measurement
+  const Eigen::Vector3d position_interpolated = ground_truth_previous_.position +
+                                                timestamp_difference_seconds/timestamp_difference_seconds_ground_truth*
+                                                (ground_truth_next_.position-ground_truth_previous_.position);
+
+//  std::cerr << ground_truth_previous_.position.transpose() << std::endl;
+//  std::cerr << position_interpolated.transpose() << std::endl;
+//  std::cerr << ground_truth_next_.position.transpose() << std::endl;
+
+  return position_interpolated;
 }

@@ -19,7 +19,6 @@ command_line:
   option_show_top_viewer:           false
   option_drop_framepoints:          false
   option_equalize_histogram:        false
-  option_undistort_and_rectify:     false
   option_recover_landmarks:         true
   option_disable_bundle_adjustment: true
 
@@ -90,7 +89,7 @@ base_tracking:
   maximum_number_of_landmark_recoveries: 3
 
   #feature density regularization
-  bin_size_pixels:         20
+  bin_size_pixels:         18
   ratio_keypoints_to_bins: 1
 
   #pose optimization

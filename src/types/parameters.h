@@ -58,10 +58,10 @@ namespace proslam {
     bool option_show_top_viewer           = false;
     bool option_drop_framepoints          = false;
     bool option_equalize_histogram        = false;
-    bool option_undistort_and_rectify     = false;
     bool option_use_odometry              = false;
     bool option_recover_landmarks         = true;
     bool option_disable_bundle_adjustment = true;
+    bool option_ground_truth_available    = false;
   };
 
   //! @class generic aligner parameters, present in modules with aligner units

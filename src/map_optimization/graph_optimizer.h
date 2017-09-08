@@ -64,7 +64,7 @@ public:
 //ds g2o wrapper functions
 protected:
 
-  void _setPoseEdge(g2o::OptimizableGraph* optimizer_,
+  void _setPoseEdge(g2o::OptimizableGraph& optimizer_,
                     g2o::OptimizableGraph::Vertex* vertex_from_,
                     g2o::OptimizableGraph::Vertex* vertex_to_,
                     const TransformMatrix3D& transform_from_to_,
@@ -72,7 +72,7 @@ protected:
                     const bool& free_translation_ = true,
                     const bool& enable_robust_kernel_ = false) const;
 
-  void _setPointEdge(g2o::OptimizableGraph* optimizer_,
+  void _setPointEdge(g2o::OptimizableGraph& optimizer_,
                      g2o::VertexSE3* vertex_frame_,
                      g2o::VertexPointXYZ* vertex_landmark_,
                      const PointCoordinates& framepoint_robot_coordinates,
@@ -82,7 +82,7 @@ protected:
 protected:
 
   //! @brief g2o optimizer (holding the pose graph)
-  g2o::SparseOptimizer* _optimizer;
+  g2o::SparseOptimizer _optimizer;
 
   //! @brief last frame vertex added (to be locked for optimization)
   g2o::VertexSE3* _vertex_frame_last_added;

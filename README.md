@@ -75,6 +75,8 @@ and build it (slow as it will perform a download using unladen swallows):
     
     catkin build g2o_catkin
 
+at the moment only `g2o revision f0bd463` is fully supported
+
 ---
 5) download this repository to your catkin workspace:
 

@@ -11,12 +11,14 @@ namespace proslam {
                Frame* previous_,
                Frame* next_,
                const TransformMatrix3D& robot_to_world_,
-               const real& maximum_depth_near_): _identifier(_instances),
-                                                 _previous(previous_),
-                                                 _next(next_),
-                                                 _maximum_depth_near(maximum_depth_near_),
-                                                 _local_map(0),
-                                                 _root(context_->rootFrame()) {
+               const real& maximum_depth_near_,
+               const double& timestamp_image_left_seconds_): _identifier(_instances),
+                                                             _timestamp_image_left_seconds(timestamp_image_left_seconds_),
+                                                             _previous(previous_),
+                                                             _next(next_),
+                                                             _maximum_depth_near(maximum_depth_near_),
+                                                             _local_map(0),
+                                                             _root(context_->rootFrame()) {
     ++_instances;
     setRobotToWorld(robot_to_world_);
     _created_points.clear();

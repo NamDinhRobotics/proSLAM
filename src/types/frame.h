@@ -26,7 +26,8 @@ namespace proslam {
           Frame* previous_,
           Frame* next_,
           const TransformMatrix3D& robot_to_world_,
-          const real& maximum_depth_near_);
+          const real& maximum_depth_near_,
+          const double& timestamp_image_left_seconds_);
 
     //ds FramePoints cleanup
     ~Frame();
@@ -37,8 +38,8 @@ namespace proslam {
   //ds getters/setters
   public:
 
-    //ds unique identifier for a frame instance (exists once in memory)
     const Identifier& identifier() const {return _identifier;}
+    const double& timestampImageLeft() const {return _timestamp_image_left_seconds;}
 
     inline const Frame* root() const {return _root;}
     inline void setRoot(const Frame* root_) {_root = root_;}
@@ -118,6 +119,9 @@ namespace proslam {
 
     //ds unique identifier for a landmark (exists once in memory)
     const Identifier _identifier;
+
+    //! @brief timestamp of _intensity_image_left taken from the dataset
+    const double _timestamp_image_left_seconds;
 
     //ds tracker status at the time of creation of this instance
     Status _status = Localizing;

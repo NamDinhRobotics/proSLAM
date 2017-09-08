@@ -30,6 +30,7 @@ public:
   const Count numberOfRowsImage() const {return _number_of_rows_image;}
   const Count numberOfColsImage() const {return _number_of_cols_image;}
   void setMotionPreviousToCurrent(const TransformMatrix3D& motion_previous_to_current_) {_motion_previous_to_current_robot = motion_previous_to_current_;}
+  void setTimestamp(const double& timestamp_image_left_seconds_) {_timestamp_image_left_seconds = timestamp_image_left_seconds_;}
   BaseFramePointGenerator* framepointGenerator() {return _framepoint_generator;}
   const BaseFramePointGenerator* framepointGenerator() const {return _framepoint_generator;}
   const Count& totalNumberOfTrackedPoints() const {return _total_number_of_tracked_points;}
@@ -94,8 +95,9 @@ protected:
   //ds framepoint tracking configuration
   int32_t _pixel_distance_tracking_threshold;
 
-  //ds pose solving
-  TransformMatrix3D _motion_previous_to_current_robot;
+  //! @brief position tracking bookkeeping
+  TransformMatrix3D _motion_previous_to_current_robot = TransformMatrix3D::Identity();
+  double _timestamp_image_left_seconds                           = 0;
 
   //ds framepoint track recovery
   Count _number_of_lost_points           = 0;

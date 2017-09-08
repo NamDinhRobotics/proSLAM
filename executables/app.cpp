@@ -86,8 +86,9 @@ int32_t main(int32_t argc_, char** argv_) {
     //ds print full report
     slam_system.printReport();
 
-    //ds save trajectory to disk
-    slam_system.writeTrajectory("trajectory.txt");
+    //ds save trajectories to disk
+    slam_system.writeTrajectory("trajectory_kitti.txt");
+    slam_system.writeTrajectoryTUM("trajectory_tum.txt");
 
     //ds save g2o graph to disk
     slam_system.writePoseGraphToFile("pose_graph.g2o");

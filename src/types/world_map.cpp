@@ -43,12 +43,13 @@ namespace proslam {
     _currently_tracked_landmarks.clear();
   }
 
-  //ds creates a new frame living in this instance at the provided pose
-  Frame* WorldMap::createFrame(const TransformMatrix3D& robot_to_world_, const real& maximum_depth_near_){
+  Frame* WorldMap::createFrame(const TransformMatrix3D& robot_to_world_,
+                               const real& maximum_depth_near_,
+                               const double& timestamp_image_left_seconds_){
 
     //ds update current frame
     _previous_frame = _current_frame;
-    _current_frame  = new Frame(this, _previous_frame, 0, robot_to_world_, maximum_depth_near_);
+    _current_frame  = new Frame(this, _previous_frame, 0, robot_to_world_, maximum_depth_near_, timestamp_image_left_seconds_);
 
     //ds check if the frame has a predecessor
     if (_previous_frame) {
@@ -189,21 +190,23 @@ namespace proslam {
     ++_number_of_closures;
   }
 
-  void WorldMap::writeTrajectory(const std::string& filename_) const {
+  void WorldMap::writeTrajectoryKITTI(const std::string& filename_) const {
 
     //ds construct filename
-    std::string filename(filename_);
+    std::string filename_kitti(filename_);
 
     //ds if not set
     if (filename_ == "") {
 
       //ds generate generic filename with timestamp
-      filename = "trajectory-"+std::to_string(static_cast<uint64_t>(std::round(srrg_core::getTime())))+".txt";
+      filename_kitti = "trajectory_kitti-"+std::to_string(static_cast<uint64_t>(std::round(srrg_core::getTime())))+".txt";
     }
 
-    //ds open file stream (overwriting)
-    std::ofstream outfile_trajectory(filename, std::ifstream::out);
+    //ds open file stream for kitti (overwriting)
+    std::ofstream outfile_trajectory(filename_kitti, std::ifstream::out);
     assert(outfile_trajectory.good());
+    outfile_trajectory << std::fixed;
+    outfile_trajectory << std::setprecision(9);
 
     //ds for each frame (assuming continuous, sequential indexing)
     for (const FramePointerMapElement frame: _frames) {
@@ -220,7 +223,47 @@ namespace proslam {
       outfile_trajectory << "\n";
     }
     outfile_trajectory.close();
-    LOG_INFO(std::cerr << "WorldMap::WorldMap|saved trajectory to: " << filename << std::endl)
+    LOG_INFO(std::cerr << "WorldMap::WorldMap|saved trajectory (KITTI format) to: " << filename_kitti << std::endl)
+  }
+
+  void WorldMap::writeTrajectoryTUM(const std::string& filename_) const {
+
+    //ds construct filename
+    std::string filename_tum(filename_);
+
+    //ds if not set
+    if (filename_ == "") {
+
+      //ds generate generic filename with timestamp
+      filename_tum = "trajectory_tum-"+std::to_string(static_cast<uint64_t>(std::round(srrg_core::getTime())))+".txt";
+    }
+
+    //ds open file stream for tum (overwriting)
+    std::ofstream outfile_trajectory(filename_tum, std::ifstream::out);
+    assert(outfile_trajectory.good());
+    outfile_trajectory << std::fixed;
+    outfile_trajectory << std::setprecision(9);
+
+    //ds for each frame (assuming continuous, sequential indexing)
+    for (const FramePointerMapElement frame: _frames) {
+
+      //ds buffer transform
+      const TransformMatrix3D& robot_to_world = frame.second->robotToWorld();
+      const Quaternion orientation = Quaternion(robot_to_world.linear());
+
+      //ds dump transform according to TUM format
+      outfile_trajectory << frame.second->timestampImageLeft() << " ";
+      outfile_trajectory << robot_to_world.translation().x() << " ";
+      outfile_trajectory << robot_to_world.translation().y() << " ";
+      outfile_trajectory << robot_to_world.translation().z() << " ";
+      outfile_trajectory << orientation.x() << " ";
+      outfile_trajectory << orientation.y() << " ";
+      outfile_trajectory << orientation.z() << " ";
+      outfile_trajectory << orientation.w() << " ";
+      outfile_trajectory << "\n";
+    }
+    outfile_trajectory.close();
+    LOG_INFO(std::cerr << "WorldMap::WorldMap|saved trajectory (TUM format) to: " << filename_tum << std::endl)
   }
 
   void WorldMap::breakTrack(const Frame* frame_) {

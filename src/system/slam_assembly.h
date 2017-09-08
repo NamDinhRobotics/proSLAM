@@ -55,9 +55,10 @@ public:
     return new std::thread([=] {playbackMessageFile();});
   }
 
-  //ds process a pair of rectified and undistorted stereo images
+  //! @brief process a pair of rectified and undistorted stereo images
   void process(const cv::Mat& intensity_image_left_,
                const cv::Mat& intensity_image_right_,
+               const double& timestamp_image_left_seconds_ = 0,
                const bool& use_odometry_ = false,
                const TransformMatrix3D& odometry_ = TransformMatrix3D::Identity());
 
@@ -72,7 +73,11 @@ public:
 
   //! @brief dump trajectory to file (in KITTI benchmark format: 4x4 isometries per line)
   //! @param[in] file_name_ text file path in which the poses are saved to
-  void writeTrajectory(const std::string& file_name_ = "") const {if (_world_map) {_world_map->writeTrajectory(file_name_);}}
+  void writeTrajectory(const std::string& file_name_ = "") const {if (_world_map) {_world_map->writeTrajectoryKITTI(file_name_);}}
+
+  //! @brief dump trajectory to file (in TUM benchmark format: timestamp x z y and qx qy qz qw per line)
+  //! @param[in] filename_ text file in which the poses are saved to
+  void writeTrajectoryTUM(const std::string& file_name_ = "") const {if (_world_map) {_world_map->writeTrajectoryTUM(file_name_);}}
 
   //! @brief save trajectory to a vector (in KITTI benchmark format: 4x4 isometries per line)
   //! @param[in,out] poses_ vector with poses, set in the function
@@ -148,9 +153,6 @@ protected:
 
 //ds informative only
 protected:
-
-  //! @brief recorded ground truth input
-  std::vector<TransformMatrix3D> _robot_to_world_ground_truth_poses;
 
   //! @brief total system processing runtime
   double _processing_time_total_seconds = 0;

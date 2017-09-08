@@ -19,8 +19,13 @@ namespace proslam {
     //ds clears all internal structures (prepares a fresh world map)
     void clear();
 
-    //ds creates a new frame living in this instance at the provided pose
-    Frame* createFrame(const TransformMatrix3D& robot_to_world_, const real& maximum_depth_near_);
+    //! @brief creates a new frame living in this instance at the provided pose
+    //! @param[in] robot_to_world_ robot to world transform
+    //! @param[in] maximum_depth_near_ maximum depth for a near framepoint
+    //! @param[in] timestamp_image_left_seconds_ optional timestamp information
+    Frame* createFrame(const TransformMatrix3D& robot_to_world_,
+                       const real& maximum_depth_near_,
+                       const double& timestamp_image_left_seconds_ = 0);
 
     //! @brief creates a new landmark living in this instance, using the provided framepoint as origin
     //! @param[in] origin_ initial framepoint, describing the landmark
@@ -44,11 +49,15 @@ namespace proslam {
                            const CorrespondencePointerVector& landmark_correspondences_,
                            const real& information_ = 1);
 
-    //! @brief dump trajectory to file (in KITTI benchmark format: 4x4 isometries per line)
+    //! @brief dump trajectory to file (in KITTI benchmark format: 4x4 isometries per line and TUM benchmark format: timestamp x z y and qx qy qz qw per line)
     //! @param[in] filename_ text file in which the poses are saved to
-    void writeTrajectory(const std::string& filename_ = "") const;
+    void writeTrajectoryKITTI(const std::string& filename_ = "") const;
 
-    //! @brief save trajectory to a vector (in KITTI benchmark format: 4x4 isometries per line)
+    //! @brief dump trajectory to file (in TUM benchmark format: timestamp x z y and qx qy qz qw per line)
+    //! @param[in] filename_ text file in which the poses are saved to
+    void writeTrajectoryTUM(const std::string& filename_ = "") const;
+
+    //! @brief save trajectory to a vector
     //! @param[in,out] poses_ vector with poses, set in the function
     template<typename RealType>
     void writeTrajectory(std::vector<Eigen::Matrix<RealType, 4, 4>>& poses_) const {

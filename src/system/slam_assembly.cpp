@@ -24,7 +24,6 @@ SLAMAssembly::SLAMAssembly(ParameterCollection* parameters_): _parameters(parame
   _graph_optimizer->configure();
   _relocalizer->configure();
   _synchronizer.reset();
-  _robot_to_world_ground_truth_poses.clear();
 }
 
 SLAMAssembly::~SLAMAssembly() {
@@ -42,25 +41,20 @@ SLAMAssembly::~SLAMAssembly() {
   delete _map_viewer;
   delete _minimap_viewer;
   delete _ui_server;
-  _robot_to_world_ground_truth_poses.clear();
   _synchronizer.reset();
 }
 
 void SLAMAssembly::_createStereoTracker(Camera* camera_left_, Camera* camera_right_){
 
-  //ds if rectification is desired
-  if (_parameters->command_line_parameters->option_undistort_and_rectify) {
-
-    //ds sanity check
-    if ((camera_left_->projectionMatrix().block<3,3>(0,0) - camera_right_->projectionMatrix().block<3,3>(0,0)).squaredNorm() != 0) {
-      LOG_ERROR(std::cerr << "SLAMAssembly::_createStereoTracker|provided mismatching projection matrices" << std::endl)
-      throw std::runtime_error("mismatching projection matrices");
-    }
-
-    //ds replace camera matrices with identical one
-    camera_left_->setCameraMatrix(camera_left_->projectionMatrix().block<3,3>(0,0));
-    camera_right_->setCameraMatrix(camera_left_->cameraMatrix());
+  //ds sanity check
+  if ((camera_left_->projectionMatrix().block<3,3>(0,0) - camera_right_->projectionMatrix().block<3,3>(0,0)).squaredNorm() != 0) {
+    LOG_ERROR(std::cerr << "SLAMAssembly::_createStereoTracker|provided mismatching projection matrices" << std::endl)
+    throw std::runtime_error("mismatching projection matrices");
   }
+
+  //ds replace camera matrices with identical one
+  camera_left_->setCameraMatrix(camera_left_->projectionMatrix().block<3,3>(0,0));
+  camera_right_->setCameraMatrix(camera_left_->cameraMatrix());
 
   //ds allocate and configure the framepoint generator
   StereoFramePointGenerator* framepoint_generator = new StereoFramePointGenerator(_parameters->stereo_framepoint_generator_parameters);
@@ -318,7 +312,6 @@ void SLAMAssembly::playbackMessageFile() {
 
   //ds restart stream
   _message_reader.open(_parameters->command_line_parameters->dataset_file_name);
-  _robot_to_world_ground_truth_poses.clear();
 
   //ds frame counts
   _number_of_processed_frames = 0;
@@ -382,7 +375,7 @@ void SLAMAssembly::playbackMessageFile() {
       }
 
       //ds check if first frame and odometry is available
-      if (_world_map->frames().size() == 0 && image_message_left->hasOdom()) {
+      if (_world_map->frames().size() == 0 && image_message_left->hasOdom() && _parameters->command_line_parameters->option_ground_truth_available) {
         _world_map->setRobotToWorld(image_message_left->odometry().cast<real>()*robot_to_camera_left);
         if (_parameters->command_line_parameters->option_use_gui) {
           _map_viewer->setWorldToRobotOrigin(_world_map->robotToWorld().inverse());
@@ -395,6 +388,7 @@ void SLAMAssembly::playbackMessageFile() {
       //ds progress SLAM with the new images
       process(intensity_image_left_rectified,
               intensity_image_right_rectified,
+              image_message_left->timestamp(),
               image_message_left->hasOdom() && _parameters->command_line_parameters->option_use_odometry,
               image_message_left->odometry().cast<real>());
 
@@ -407,7 +401,7 @@ void SLAMAssembly::playbackMessageFile() {
       _current_fps = _number_of_processed_frames/_processing_time_total_seconds;
 
       //ds record ground truth history for error computation
-      if (image_message_left->hasOdom()) {
+      if (image_message_left->hasOdom() && _parameters->command_line_parameters->option_ground_truth_available) {
         _world_map->setRobotToWorldGroundTruth(image_message_left->odometry().cast<real>()*robot_to_camera_left);
       }
 
@@ -455,11 +449,13 @@ void SLAMAssembly::playbackMessageFile() {
 
 void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
                            const cv::Mat& intensity_image_right_,
+                           const double& timestamp_image_left_seconds_,
                            const bool& use_odometry_,
                            const TransformMatrix3D& odometry_) {
 
   //ds call the tracker
   _tracker->setIntensityImageLeft(&intensity_image_left_);
+  _tracker->setTimestamp(timestamp_image_left_seconds_);
 
   //ds depending on tracking mode
   switch (_parameters->command_line_parameters->tracker_mode){
@@ -634,10 +630,12 @@ void SLAMAssembly::printReport() const {
   }
 
   //ds print standard errors
-  std::cerr << "    absolute translation RMSE (m): " << getAbsoluteTranslationRootMeanSquaredError() << std::endl;
-  std::cerr << "    relative translation   ME (m): " << getRelativeTranslationMeanError() << std::endl;
-  std::cerr << "    final translational error (m): " << (_world_map->currentFrame()->robotToWorld().translation()-_world_map->currentFrame()->robotToWorldGroundTruth().translation()).norm() << std::endl;
-  std::cerr << BAR << std::endl;
+  if (_parameters->command_line_parameters->option_ground_truth_available) {
+    std::cerr << "    absolute translation RMSE (m): " << getAbsoluteTranslationRootMeanSquaredError() << std::endl;
+    std::cerr << "    relative translation   ME (m): " << getRelativeTranslationMeanError() << std::endl;
+    std::cerr << "    final translational error (m): " << (_world_map->currentFrame()->robotToWorld().translation()-_world_map->currentFrame()->robotToWorldGroundTruth().translation()).norm() << std::endl;
+    std::cerr << BAR << std::endl;
+  }
 
   //ds compute trajectory length
   double trajectory_length = 0;

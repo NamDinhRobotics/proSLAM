@@ -25,7 +25,7 @@ const double calibrate(const cv::Size image_size_,
 
 int32_t main (int32_t argc_, char** argv_) {
   if (argc_ < 6) {
-    std::cerr << "use: ./stereo_calibrator -asl <folder_images_left> <folder_images_right> -o <calibration.txt> [-use-gui -interspace <integer> -use-eth]" << std::endl;
+    std::cerr << "use: ./stereo_calibrator -asl <folder_images_left> <folder_images_right> -o <calibration.txt> [-use-gui -interspace <integer> -use-eth -check-orb]" << std::endl;
     std::cerr << "                              <folder_images_left/right> should each contain: data, data.csv" << std::endl;
     return 0;
   }
@@ -39,6 +39,7 @@ int32_t main (int32_t argc_, char** argv_) {
   bool option_use_eth_estimates                     = false;
   const double maximum_timestamp_difference_seconds = 0.01;
   std::string output_file_name                      = "";
+  bool option_test_orb_slam_calibration             = false;
 
   //ds parse parameters
   int32_t number_of_checked_parameters = 1;
@@ -63,6 +64,8 @@ int32_t main (int32_t argc_, char** argv_) {
       ++number_of_checked_parameters;
       if (number_of_checked_parameters == argc_) {break;}
       output_file_name = argv_[number_of_checked_parameters];
+    } else if (!std::strcmp(argv_[number_of_checked_parameters], "-check-orb")) {
+      option_test_orb_slam_calibration = true;
     }
     ++number_of_checked_parameters;
   }
@@ -98,8 +101,9 @@ int32_t main (int32_t argc_, char** argv_) {
   std::cerr << "folder_images_right: " << folder_images_right << std::endl;
   std::cerr << "option_use_gui: " << option_use_gui << std::endl;
   std::cerr << "measurement_image_interspace: " << measurement_image_interspace << std::endl;
-  std::cerr << "option_use_eth_estimates: " << option_use_eth_estimates << std::endl;
+  std::cerr << "option_use_eth_estimates: " << (option_use_eth_estimates || option_test_orb_slam_calibration) << std::endl;
   std::cerr << "output_file_name: " << output_file_name << std::endl;
+  std::cerr << "option_test_orb_slam_calibration: " << option_test_orb_slam_calibration << std::endl;
 
   //ds load images for left and right - assuming to be synchronized
   const std::vector<Image> images_left(getImagesASL(folder_images_left));
@@ -200,7 +204,7 @@ int32_t main (int32_t argc_, char** argv_) {
   cv::Mat distortion_coefficients_right(cv::Mat::zeros(4, 1, CV_64F));
 
   //ds check estimate initialization
-  if (option_use_eth_estimates) {
+  if (option_use_eth_estimates || option_test_orb_slam_calibration) {
     std::cerr << "using ETH estimates for camera calibration matrices and distortion coefficients" << std::endl;
 
     //ds set camera calibration matrix estimates
@@ -235,82 +239,118 @@ int32_t main (int32_t argc_, char** argv_) {
   cv::Mat rotation_camera_left_to_right(3, 3, CV_64F, cv::Scalar(0));
   cv::Mat translation_camera_left_to_right(3, 1, CV_64F, cv::Scalar(0));
   cv::Mat depth_mapping(4, 4, CV_64F, cv::Scalar(0));
-  cv::Mat projection_matrix_left(3, 4, CV_64F, cv::Scalar(0));
-  cv::Mat projection_matrix_right(3, 4, CV_64F, cv::Scalar(0));
+  cv::Mat projection_matrix_left(cv::Mat::eye(3, 4, CV_64F));
+  cv::Mat projection_matrix_right(cv::Mat::eye(3, 4, CV_64F));
   cv::Mat rectification_matrix_left(3, 3, CV_64F, cv::Scalar(0));
   cv::Mat rectification_matrix_right(3, 3, CV_64F, cv::Scalar(0));
   cv::Mat essential_matrix;
   cv::Mat fundamental_matrix;
+  double reprojection_error_pixels = 0;
 
-  std::cerr << "\ncalibrating stereo camera .. ";
-  const double reprojection_error_pixels = cv::stereoCalibrate(object_points_per_image,
-                                                               image_points_per_image_left,
-                                                               image_points_per_image_right,
-                                                               camera_calibration_matrix_left,
-                                                               distortion_coefficients_left,
-                                                               camera_calibration_matrix_right,
-                                                               distortion_coefficients_right,
-                                                               image_size,
-                                                               rotation_camera_left_to_right,
-                                                               translation_camera_left_to_right,
-                                                               essential_matrix,
-                                                               fundamental_matrix,
-                                                               CV_CALIB_USE_INTRINSIC_GUESS);
-  std::cerr << "reprojection error (Pixels): " << reprojection_error_pixels << std::endl;
-  std::cerr << "\nrotation camera LEFT to RIGHT: \n" << std::endl;
-  std::cerr << rotation_camera_left_to_right << std::endl;
-  std::cerr << "\ntranslation camera LEFT to RIGHT: \n" << std::endl;
-  std::cerr << translation_camera_left_to_right << std::endl;
+  if (option_test_orb_slam_calibration) {
 
-  //ds display the obtained camera calibration matrices and distortion coefficients
-  std::cerr << "\ncamera matrices: \n" << std::endl;
-  std::cerr << "             LEFT            -             RIGHT" << std::endl;
-  std::printf("%8.3f %8.3f %8.3f   |   %8.3f %8.3f %8.3f\n", camera_calibration_matrix_left.at<double>(0,0),
-                                                             camera_calibration_matrix_left.at<double>(0,1),
-                                                             camera_calibration_matrix_left.at<double>(0,2),
-                                                             camera_calibration_matrix_right.at<double>(0,0),
-                                                             camera_calibration_matrix_right.at<double>(0,1),
-                                                             camera_calibration_matrix_right.at<double>(0,2));
-  std::printf("%8.3f %8.3f %8.3f   |   %8.3f %8.3f %8.3f\n", camera_calibration_matrix_left.at<double>(1,0),
-                                                             camera_calibration_matrix_left.at<double>(1,1),
-                                                             camera_calibration_matrix_left.at<double>(1,2),
-                                                             camera_calibration_matrix_right.at<double>(1,0),
-                                                             camera_calibration_matrix_right.at<double>(1,1),
-                                                             camera_calibration_matrix_right.at<double>(1,2));
-  std::printf("%8.3f %8.3f %8.3f   |   %8.3f %8.3f %8.3f\n", camera_calibration_matrix_left.at<double>(2,0),
-                                                             camera_calibration_matrix_left.at<double>(2,1),
-                                                             camera_calibration_matrix_left.at<double>(2,2),
-                                                             camera_calibration_matrix_right.at<double>(2,0),
-                                                             camera_calibration_matrix_right.at<double>(2,1),
-                                                             camera_calibration_matrix_right.at<double>(2,2));
+    //ds update values
+    rectification_matrix_left.at<double>(0,0) = 0.999966347530033;
+    rectification_matrix_left.at<double>(0,1) = -0.001422739138722922;
+    rectification_matrix_left.at<double>(0,2) = 0.008079580483432283;
+    rectification_matrix_left.at<double>(1,0) = 0.001365741834644127;
+    rectification_matrix_left.at<double>(1,1) = 0.9999741760894847;
+    rectification_matrix_left.at<double>(1,2) = 0.007055629199258132;
+    rectification_matrix_left.at<double>(2,0) = -0.008089410156878961;
+    rectification_matrix_left.at<double>(2,1) = -0.007044357138835809;
+    rectification_matrix_left.at<double>(2,2) = 0.9999424675829176;
 
-  std::cerr << "\ndistortion coefficients: \n" << std::endl;
-  std::printf(" LEFT: %9.6f, %9.6f, %9.6f, %9.6f\n",
-              distortion_coefficients_left.at<double>(0),
-              distortion_coefficients_left.at<double>(1),
-              distortion_coefficients_left.at<double>(2),
-              distortion_coefficients_left.at<double>(3));
-  std::printf("RIGHT: %9.6f, %9.6f, %9.6f, %9.6f\n",
-              distortion_coefficients_right.at<double>(0),
-              distortion_coefficients_right.at<double>(1),
-              distortion_coefficients_right.at<double>(2),
-              distortion_coefficients_right.at<double>(3));
+    rectification_matrix_right.at<double>(0,0) = 0.9999633526194376;
+    rectification_matrix_right.at<double>(0,1) = -0.003625811871560086;
+    rectification_matrix_right.at<double>(0,2) = 0.007755443660172947;
+    rectification_matrix_right.at<double>(1,0) = 0.003680398547259526;
+    rectification_matrix_right.at<double>(1,1) = 0.9999684752771629;
+    rectification_matrix_right.at<double>(1,2) = -0.007035845251224894;
+    rectification_matrix_right.at<double>(2,0) = -0.007729688520722713;
+    rectification_matrix_right.at<double>(2,1) = 0.007064130529506649;
+    rectification_matrix_right.at<double>(2,2) = 0.999945173484644;
 
-  //ds compute rectification parameters
-  cv::stereoRectify(camera_calibration_matrix_left,
-                    distortion_coefficients_left,
-                    camera_calibration_matrix_right,
-                    distortion_coefficients_right,
-                    image_size,
-                    rotation_camera_left_to_right,
-                    translation_camera_left_to_right,
-                    rectification_matrix_left,
-                    rectification_matrix_right,
-                    projection_matrix_left,
-                    projection_matrix_right,
-                    depth_mapping,
-                    CV_CALIB_ZERO_DISPARITY,
-                    0);
+    projection_matrix_left.at<double>(0,0) = 435.2046959714599;
+    projection_matrix_left.at<double>(0,2) = 367.4517211914062;
+    projection_matrix_left.at<double>(1,1) = 435.2046959714599;
+    projection_matrix_left.at<double>(1,2) = 252.2008514404297;
+
+    projection_matrix_right.at<double>(0,0) = 435.2046959714599;
+    projection_matrix_right.at<double>(0,2) = 367.4517211914062;
+    projection_matrix_right.at<double>(0,3) = -47.90639384423901;
+    projection_matrix_right.at<double>(1,1) = 435.2046959714599;
+    projection_matrix_right.at<double>(1,2) = 252.2008514404297;
+  } else {
+    std::cerr << "\ncalibrating stereo camera .. ";
+    reprojection_error_pixels = cv::stereoCalibrate(object_points_per_image,
+                                                    image_points_per_image_left,
+                                                    image_points_per_image_right,
+                                                    camera_calibration_matrix_left,
+                                                    distortion_coefficients_left,
+                                                    camera_calibration_matrix_right,
+                                                    distortion_coefficients_right,
+                                                    image_size,
+                                                    rotation_camera_left_to_right,
+                                                    translation_camera_left_to_right,
+                                                    essential_matrix,
+                                                    fundamental_matrix,
+                                                    CV_CALIB_USE_INTRINSIC_GUESS);
+    std::cerr << "reprojection error (Pixels): " << reprojection_error_pixels << std::endl;
+    std::cerr << "\nrotation camera LEFT to RIGHT: \n" << std::endl;
+    std::cerr << rotation_camera_left_to_right << std::endl;
+    std::cerr << "\ntranslation camera LEFT to RIGHT: \n" << std::endl;
+    std::cerr << translation_camera_left_to_right << std::endl;
+
+    //ds display the obtained camera calibration matrices and distortion coefficients
+    std::cerr << "\ncamera matrices: \n" << std::endl;
+    std::cerr << "             LEFT            -             RIGHT" << std::endl;
+    std::printf("%8.3f %8.3f %8.3f   |   %8.3f %8.3f %8.3f\n", camera_calibration_matrix_left.at<double>(0,0),
+                                                               camera_calibration_matrix_left.at<double>(0,1),
+                                                               camera_calibration_matrix_left.at<double>(0,2),
+                                                               camera_calibration_matrix_right.at<double>(0,0),
+                                                               camera_calibration_matrix_right.at<double>(0,1),
+                                                               camera_calibration_matrix_right.at<double>(0,2));
+    std::printf("%8.3f %8.3f %8.3f   |   %8.3f %8.3f %8.3f\n", camera_calibration_matrix_left.at<double>(1,0),
+                                                               camera_calibration_matrix_left.at<double>(1,1),
+                                                               camera_calibration_matrix_left.at<double>(1,2),
+                                                               camera_calibration_matrix_right.at<double>(1,0),
+                                                               camera_calibration_matrix_right.at<double>(1,1),
+                                                               camera_calibration_matrix_right.at<double>(1,2));
+    std::printf("%8.3f %8.3f %8.3f   |   %8.3f %8.3f %8.3f\n", camera_calibration_matrix_left.at<double>(2,0),
+                                                               camera_calibration_matrix_left.at<double>(2,1),
+                                                               camera_calibration_matrix_left.at<double>(2,2),
+                                                               camera_calibration_matrix_right.at<double>(2,0),
+                                                               camera_calibration_matrix_right.at<double>(2,1),
+                                                               camera_calibration_matrix_right.at<double>(2,2));
+
+    std::cerr << "\ndistortion coefficients: \n" << std::endl;
+    std::printf(" LEFT: %9.6f, %9.6f, %9.6f, %9.6f\n",
+                distortion_coefficients_left.at<double>(0),
+                distortion_coefficients_left.at<double>(1),
+                distortion_coefficients_left.at<double>(2),
+                distortion_coefficients_left.at<double>(3));
+    std::printf("RIGHT: %9.6f, %9.6f, %9.6f, %9.6f\n",
+                distortion_coefficients_right.at<double>(0),
+                distortion_coefficients_right.at<double>(1),
+                distortion_coefficients_right.at<double>(2),
+                distortion_coefficients_right.at<double>(3));
+
+    //ds compute rectification parameters
+    cv::stereoRectify(camera_calibration_matrix_left,
+                      distortion_coefficients_left,
+                      camera_calibration_matrix_right,
+                      distortion_coefficients_right,
+                      image_size,
+                      rotation_camera_left_to_right,
+                      translation_camera_left_to_right,
+                      rectification_matrix_left,
+                      rectification_matrix_right,
+                      projection_matrix_left,
+                      projection_matrix_right,
+                      depth_mapping,
+                      CV_CALIB_ZERO_DISPARITY,
+                      0);
+  }
 
   //ds display the obtained projection matrices
   std::cerr << "\nprojection matrices: \n" << std::endl;

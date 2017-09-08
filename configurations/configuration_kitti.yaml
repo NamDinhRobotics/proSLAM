@@ -19,7 +19,6 @@ command_line:
   option_show_top_viewer:           false
   option_drop_framepoints:          false
   option_equalize_histogram:        false
-  option_undistort_and_rectify:     false
   option_recover_landmarks:         true
   option_disable_bundle_adjustment: true
 
