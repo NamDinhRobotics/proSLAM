@@ -1,6 +1,7 @@
 #include "world_map.h"
 
 #include <fstream>
+#include <iomanip>
 
 namespace proslam {
   using namespace srrg_core;

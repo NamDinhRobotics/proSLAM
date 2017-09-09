@@ -1,4 +1,6 @@
 #include <iostream>
+#include <fstream>
+#include <iomanip>
 
 #include "framepoint_generation/stereo_framepoint_generator.h"
 
@@ -25,7 +27,8 @@ const double calibrate(const cv::Size image_size_,
 
 int32_t main (int32_t argc_, char** argv_) {
   if (argc_ < 6) {
-    std::cerr << "use: ./stereo_calibrator -asl <folder_images_left> <folder_images_right> -o <calibration.txt> [-use-gui -interspace <integer> -use-eth -check-orb]" << std::endl;
+    std::cerr << "use: ./stereo_calibrator -asl <folder_images_left> <folder_images_right> -o <calibration.txt>"<< std::endl;
+    std::cerr << "                        [-use-gui -interspace <integer> -use-eth -check-orb -test-asl <folder_images_left_test> <folder_images_right_test>]" << std::endl;
     std::cerr << "                              <folder_images_left/right> should each contain: data, data.csv" << std::endl;
     return 0;
   }
@@ -66,6 +69,14 @@ int32_t main (int32_t argc_, char** argv_) {
       output_file_name = argv_[number_of_checked_parameters];
     } else if (!std::strcmp(argv_[number_of_checked_parameters], "-check-orb")) {
       option_test_orb_slam_calibration = true;
+    } else if (!std::strcmp(argv_[number_of_checked_parameters], "-test-asl")) {
+      input_format = "asl";
+      ++number_of_checked_parameters;
+      if (number_of_checked_parameters == argc_) {break;}
+      folder_images_left = argv_[number_of_checked_parameters];
+      ++number_of_checked_parameters;
+      if (number_of_checked_parameters == argc_) {break;}
+      folder_images_right = argv_[number_of_checked_parameters];
     }
     ++number_of_checked_parameters;
   }
@@ -282,6 +293,7 @@ int32_t main (int32_t argc_, char** argv_) {
     projection_matrix_right.at<double>(1,2) = 252.2008514404297;
   } else {
     std::cerr << "\ncalibrating stereo camera .. ";
+#if CV_MAJOR_VERSION == 2
     reprojection_error_pixels = cv::stereoCalibrate(object_points_per_image,
                                                     image_points_per_image_left,
                                                     image_points_per_image_right,
@@ -294,7 +306,26 @@ int32_t main (int32_t argc_, char** argv_) {
                                                     translation_camera_left_to_right,
                                                     essential_matrix,
                                                     fundamental_matrix,
+                                                    cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 1e-6),
                                                     CV_CALIB_USE_INTRINSIC_GUESS);
+#elif CV_MAJOR_VERSION == 3
+  reprojection_error_pixels = cv::stereoCalibrate(object_points_per_image,
+                                                  image_points_per_image_left,
+                                                  image_points_per_image_right,
+                                                  camera_calibration_matrix_left,
+                                                  distortion_coefficients_left,
+                                                  camera_calibration_matrix_right,
+                                                  distortion_coefficients_right,
+                                                  image_size,
+                                                  rotation_camera_left_to_right,
+                                                  translation_camera_left_to_right,
+                                                  essential_matrix,
+                                                  fundamental_matrix,
+                                                  CV_CALIB_USE_INTRINSIC_GUESS);
+#else
+  #error OpenCV version not supported
+#endif
+
     std::cerr << "reprojection error (Pixels): " << reprojection_error_pixels << std::endl;
     std::cerr << "\nrotation camera LEFT to RIGHT: \n" << std::endl;
     std::cerr << rotation_camera_left_to_right << std::endl;
