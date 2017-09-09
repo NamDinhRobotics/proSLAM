@@ -73,6 +73,23 @@ namespace proslam {
       }
     }
 
+    //! @brief save trajectory to a vector with timestamps
+    //! @param[in,out] poses_ vector with timestamps and poses, set in the function
+    template<typename RealType>
+    void writeTrajectoryWithTimestamps(std::vector<std::pair<RealType, Eigen::Transform<RealType, 3, Eigen::Isometry>>>& poses_) const {
+
+      //ds prepare output vector
+      poses_.resize(_frames.size());
+
+      //ds add the pose for each frame
+      Identifier identifier_frame = 0;
+      for (const FramePointerMapElement frame: _frames) {
+        poses_[identifier_frame].first  = frame.second->timestampImageLeftSeconds();
+        poses_[identifier_frame].second = frame.second->robotToWorld().matrix().cast<RealType>();
+        ++identifier_frame;
+      }
+    }
+
     //! @brief this function does what you think it does
     //! @param[in] frame_ frame at which the track was broken
     void breakTrack(const Frame* frame_);

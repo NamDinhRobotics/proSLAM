@@ -17,7 +17,7 @@ namespace proslam {
 class SLAMAssembly {
 
 //ds object management
-public:
+public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds default constructor - already allocating required default objects
   SLAMAssembly(ParameterCollection* parameters_);
@@ -62,27 +62,26 @@ public:
                const bool& use_odometry_ = false,
                const TransformMatrix3D& odometry_ = TransformMatrix3D::Identity());
 
-  //ds computes absolute translation RMSE
-  const real getAbsoluteTranslationRootMeanSquaredError() const;
-
-  //ds computes relative translation ME
-  const real getRelativeTranslationMeanError() const;
-
   //ds prints extensive run summary
   void printReport() const;
 
   //! @brief dump trajectory to file (in KITTI benchmark format: 4x4 isometries per line)
   //! @param[in] file_name_ text file path in which the poses are saved to
-  void writeTrajectory(const std::string& file_name_ = "") const {if (_world_map) {_world_map->writeTrajectoryKITTI(file_name_);}}
+  void writeTrajectoryKITTI(const std::string& file_name_ = "") const {if (_world_map) {_world_map->writeTrajectoryKITTI(file_name_);}}
 
   //! @brief dump trajectory to file (in TUM benchmark format: timestamp x z y and qx qy qz qw per line)
   //! @param[in] filename_ text file in which the poses are saved to
   void writeTrajectoryTUM(const std::string& file_name_ = "") const {if (_world_map) {_world_map->writeTrajectoryTUM(file_name_);}}
 
-  //! @brief save trajectory to a vector (in KITTI benchmark format: 4x4 isometries per line)
+  //! @brief save trajectory to a vector
   //! @param[in,out] poses_ vector with poses, set in the function
   template<typename RealType>
   void writeTrajectory(std::vector<Eigen::Matrix<RealType, 4, 4>>& poses_) const {if (_world_map) {_world_map->writeTrajectory<RealType>(poses_);}}
+
+  //! @brief save trajectory to a vector with timestamps
+  //! @param[in,out] poses_ vector with timestamps and poses, set in the function
+  template<typename RealType>
+  void writeTrajectoryWithTimestamps(std::vector<std::pair<RealType, Eigen::Transform<RealType, 3, Eigen::Isometry>>>& poses_) const {if (_world_map) {_world_map->writeTrajectoryWithTimestamps<RealType>(poses_);}}
 
   //! @brief resets the complete pipeline, releasing memory
   void reset();
@@ -148,8 +147,8 @@ protected:
   //! @brief termination check - terminates processing loop
   std::atomic<bool> _is_termination_requested;
 
-  //! @brief viewer status
-  bool _is_viewer_open;
+  //! @brief flag that is checked if an OpenGL or OpenCV window is currently active
+  std::atomic<bool> _is_viewer_open;
 
 //ds informative only
 protected:

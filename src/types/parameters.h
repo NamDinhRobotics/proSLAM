@@ -61,7 +61,6 @@ namespace proslam {
     bool option_use_odometry              = false;
     bool option_recover_landmarks         = true;
     bool option_disable_bundle_adjustment = true;
-    bool option_ground_truth_available    = false;
   };
 
   //! @class generic aligner parameters, present in modules with aligner units

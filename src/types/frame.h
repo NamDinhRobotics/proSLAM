@@ -39,7 +39,7 @@ namespace proslam {
   public:
 
     const Identifier& identifier() const {return _identifier;}
-    const double& timestampImageLeft() const {return _timestamp_image_left_seconds;}
+    const double& timestampImageLeftSeconds() const {return _timestamp_image_left_seconds;}
 
     inline const Frame* root() const {return _root;}
     inline void setRoot(const Frame* root_) {_root = root_;}

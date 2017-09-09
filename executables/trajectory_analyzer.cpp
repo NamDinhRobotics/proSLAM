@@ -16,9 +16,9 @@ struct PositionMeasurement {
 
 const double getAbsoluteTranslationRootMeanSquaredError(const std::vector<std::pair<PositionMeasurement, PositionMeasurement>> position_correspondences_);
 
-const Eigen::Vector3d getInterpolatedPosition(const PositionMeasurement& ground_truth_previous_,
-                                              const PositionMeasurement& ground_truth_next_,
-                                              const PositionMeasurement& measurement_);
+const Eigen::Vector3d getInterpolatedPositionLinear(const PositionMeasurement& ground_truth_previous_,
+                                                    const PositionMeasurement& ground_truth_next_,
+                                                    const PositionMeasurement& measurement_);
 
 int32_t main (int32_t argc_, char** argv_) {
   if (argc_ < 5) {
@@ -174,11 +174,11 @@ int32_t main (int32_t argc_, char** argv_) {
     if (positions_ground_truth[index_best].timestamp_seconds < measurement.timestamp_seconds) {
 
       //ds interpolate to next
-      ground_truth_interpolated.position = getInterpolatedPosition(positions_ground_truth[index_best], positions_ground_truth[index_best+1], measurement);
+      ground_truth_interpolated.position = getInterpolatedPositionLinear(positions_ground_truth[index_best], positions_ground_truth[index_best+1], measurement);
     } else {
 
       //ds interpolate from previous
-      ground_truth_interpolated.position = getInterpolatedPosition(positions_ground_truth[index_best-1], positions_ground_truth[index_best], measurement);
+      ground_truth_interpolated.position = getInterpolatedPositionLinear(positions_ground_truth[index_best-1], positions_ground_truth[index_best], measurement);
     }
 
     //ds for the first measurement - compute starting point offset
@@ -298,7 +298,7 @@ const double getAbsoluteTranslationRootMeanSquaredError(const std::vector<std::p
   return root_mean_squared_error_translation_absolute;
 }
 
-const Eigen::Vector3d getInterpolatedPosition(const PositionMeasurement& ground_truth_previous_,
+const Eigen::Vector3d getInterpolatedPositionLinear(const PositionMeasurement& ground_truth_previous_,
                                               const PositionMeasurement& ground_truth_next_,
                                               const PositionMeasurement& measurement_) {
 

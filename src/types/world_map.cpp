@@ -253,7 +253,7 @@ namespace proslam {
       const Quaternion orientation = Quaternion(robot_to_world.linear());
 
       //ds dump transform according to TUM format
-      outfile_trajectory << frame.second->timestampImageLeft() << " ";
+      outfile_trajectory << frame.second->timestampImageLeftSeconds() << " ";
       outfile_trajectory << robot_to_world.translation().x() << " ";
       outfile_trajectory << robot_to_world.translation().y() << " ";
       outfile_trajectory << robot_to_world.translation().z() << " ";

@@ -37,6 +37,8 @@ int32_t main (int32_t argc_, char** argv_) {
   std::string input_format                          = "";
   std::string folder_images_left                    = "";
   std::string folder_images_right                   = "";
+  std::string folder_images_left_test               = "";
+  std::string folder_images_right_test              = "";
   bool option_use_gui                               = false;
   uint32_t measurement_image_interspace             = 10;
   bool option_use_eth_estimates                     = false;
@@ -73,10 +75,10 @@ int32_t main (int32_t argc_, char** argv_) {
       input_format = "asl";
       ++number_of_checked_parameters;
       if (number_of_checked_parameters == argc_) {break;}
-      folder_images_left = argv_[number_of_checked_parameters];
+      folder_images_left_test = argv_[number_of_checked_parameters];
       ++number_of_checked_parameters;
       if (number_of_checked_parameters == argc_) {break;}
-      folder_images_right = argv_[number_of_checked_parameters];
+      folder_images_right_test = argv_[number_of_checked_parameters];
     }
     ++number_of_checked_parameters;
   }
@@ -99,6 +101,12 @@ int32_t main (int32_t argc_, char** argv_) {
     return 0;
   }
 
+  //ds if no test images are specified - use calibration ones
+  if (folder_images_left_test.empty() || folder_images_right_test.empty()) {
+    folder_images_left_test  = folder_images_left;
+    folder_images_right_test = folder_images_right;
+  }
+
   //ds board configuration
   const uint32_t cols = 6;
   const uint32_t rows = 7;
@@ -115,6 +123,8 @@ int32_t main (int32_t argc_, char** argv_) {
   std::cerr << "option_use_eth_estimates: " << (option_use_eth_estimates || option_test_orb_slam_calibration) << std::endl;
   std::cerr << "output_file_name: " << output_file_name << std::endl;
   std::cerr << "option_test_orb_slam_calibration: " << option_test_orb_slam_calibration << std::endl;
+  std::cerr << "folder_images_left_test: " << folder_images_left_test << std::endl;
+  std::cerr << "folder_images_right_test: " << folder_images_right_test << std::endl;
 
   //ds load images for left and right - assuming to be synchronized
   const std::vector<Image> images_left(getImagesASL(folder_images_left));
@@ -204,6 +214,7 @@ int32_t main (int32_t argc_, char** argv_) {
       std::cerr << "WARNING: received high timestamp difference: " << timestamp_difference_seconds << " skipping the measurements" << std::endl;
     }
   }
+  cv::destroyAllWindows();
 
   //ds info
   std::cerr << "obtained measurements: " << object_points_per_image.size() << std::endl;
@@ -435,7 +446,7 @@ int32_t main (int32_t argc_, char** argv_) {
 
   std::cerr << "\ncalibration completed - benchmarking epipolar matching on all images .." << std::endl;
 
-  //ds epipolar structure generation
+  //ds feature handling
 #if CV_MAJOR_VERSION == 2
   cv::FeatureDetector* keypoint_detector        = new cv::FastFeatureDetector();
   cv::DescriptorExtractor* descriptor_extractor = new cv::BriefDescriptorExtractor();
@@ -446,20 +457,24 @@ int32_t main (int32_t argc_, char** argv_) {
   #error OpenCV version not supported
 #endif
 
+  //ds load test images for left and right - assuming to be synchronized
+  const std::vector<Image> images_left_test(getImagesASL(folder_images_left_test));
+  const std::vector<Image> images_right_test(getImagesASL(folder_images_right_test));
+
   //ds restart the stream to check the found parameters
   double accumulated_relative_epipolar_matches = 0;
   number_of_processed_stereo_images            = 0;
   for (uint32_t image_number = 0; image_number < number_of_images; ++image_number) {
 
     //ds compute timestamp delta
-    const double timestamp_difference_seconds = std::fabs(images_left[image_number].timestamp_seconds-images_right[image_number].timestamp_seconds);
+    const double timestamp_difference_seconds = std::fabs(images_left_test[image_number].timestamp_seconds-images_right_test[image_number].timestamp_seconds);
 
     //ds if we have a synchronized package of sensor messages ready
     if (timestamp_difference_seconds < maximum_timestamp_difference_seconds) {
 
       //ds grab opencv image data
-      cv::Mat image_left  = cv::imread(images_left[image_number].file_name_image, CV_LOAD_IMAGE_GRAYSCALE);
-      cv::Mat image_right = cv::imread(images_right[image_number].file_name_image, CV_LOAD_IMAGE_GRAYSCALE);
+      cv::Mat image_left  = cv::imread(images_left_test[image_number].file_name_image, CV_LOAD_IMAGE_GRAYSCALE);
+      cv::Mat image_right = cv::imread(images_right_test[image_number].file_name_image, CV_LOAD_IMAGE_GRAYSCALE);
       cv::Mat image_display_left, image_display_right;
 
       //ds undistort and rectify
@@ -596,13 +611,14 @@ int32_t main (int32_t argc_, char** argv_) {
       //ds status
       std::printf("%06lu|L: %f|R: %f|keypoints L: %5lu keypoints R: %5lu "
                   "STEREO MATCHES: %5lu (%5.3f)\n", number_of_processed_stereo_images,
-                                                    images_left[image_number].timestamp_seconds, images_left[image_number].timestamp_seconds,
+                                                    images_left_test[image_number].timestamp_seconds, images_right_test[image_number].timestamp_seconds,
                                                     keypoints_left.size(), keypoints_right.size(),
                                                     number_of_epipolar_matches, static_cast<double>(number_of_epipolar_matches)/keypoints_left.size());
       ++number_of_processed_stereo_images;
       accumulated_relative_epipolar_matches += static_cast<double>(number_of_epipolar_matches)/keypoints_left.size();
     }
   }
+  cv::destroyAllWindows();
 
   const double average_number_of_relative_epipolar_matches = static_cast<double>(accumulated_relative_epipolar_matches)/number_of_processed_stereo_images;
   std::cerr << "\nbenchmark completed - average number of relative epipolar matches per stereo image pair: " << average_number_of_relative_epipolar_matches << std::endl;
