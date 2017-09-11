@@ -4,7 +4,7 @@ Contributors: Dominik Schlegel, Mirco Colosi, Giorgio Grisetti <br/>
 As this is a working repository, none of the code is assumed to be static. <br/>
 For related publications please refer to revision [d58f9016][publication_revision] <br/>
 
-[publication_revision]: https://gitlab.com/srrg-software/srrg_proslam/commit/d58f901619e0476e65028bcbf5251271045c9fef
+[publication_revision]: https://gitlab.com/srrg-software/srrg_proslam/tree/d58f901619e0476e65028bcbf5251271045c9fef
 
 ---
 ### Demo videos ###
