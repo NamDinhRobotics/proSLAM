@@ -167,7 +167,7 @@ A custom configuration file can be specified as follows:
 
     rosrun srrg_proslam app 00.txt -c configuration.yaml
     
-[proslam_wiki]: ]https://gitlab.com/srrg-software/srrg_proslam/wikis/home
+[proslam_wiki]: https://gitlab.com/srrg-software/srrg_proslam/wikis/home
 
 ---
 ### It doesn't work? ###
