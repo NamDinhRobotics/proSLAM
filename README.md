@@ -159,13 +159,15 @@ Please use the provided datasets in SRRG format. <br/>
 The ROS node (`node`) is currently under development.
 
 ---
-### Configuration file (YAML) ###
+### [Configuration file][proslam_wiki] (YAML) ###
 
 ProSLAM supports classic YAML configuration files, enabling fine-grained adjustment of deep system parameters. <br/>
 Example configuration files can be found in the `configurations` folder. <br/>
 A custom configuration file can be specified as follows:
 
     rosrun srrg_proslam app 00.txt -c configuration.yaml
+    
+[proslam_wiki]: ]https://gitlab.com/srrg-software/srrg_proslam/wikis/home
 
 ---
 ### It doesn't work? ###
