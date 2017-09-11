@@ -1,7 +1,7 @@
 #pragma once
 #include <queue>
 #include "aligners/xyz_aligner.h"
-#include "relocalization/local_map_correspondence.h"
+#include "closure.h"
 
 namespace proslam {
 
@@ -23,6 +23,8 @@ public:
     const HBSTNode::MatchableVector matchables;
     const HBSTTree* hbst_tree;
   };
+  typedef std::vector<Query*, Eigen::aligned_allocator<Query*>> QueryVector;
+  typedef std::queue<Query*> QueryQueue;
 
 //ds object management
 PROSLAM_MAKE_PROCESSING_CLASS(Relocalizer)
@@ -65,10 +67,10 @@ protected:
   Query* _query;
 
   //ds intermediate buffer for query frames before they enter the history
-  std::queue<Query*> _query_history_queue;
+  QueryQueue _query_history_queue;
 
   //ds frame-wise descriptor point clouds
-  std::vector<Query*> _query_history;
+  QueryVector _query_history;
 
   //ds correspondence retrieval
   std::set<Identifier> _mask_id_references_for_correspondences;

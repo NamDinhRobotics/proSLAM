@@ -2,8 +2,15 @@
 
 namespace proslam {
 
-  //ds initialize aligner with minimal entity
-  void XYZAligner::initialize(LocalMapCorrespondence* context_, const TransformMatrix3D& current_to_reference_) {
+  XYZAligner::XYZAligner(AlignerParameters* parameters_): BaseLocalMapAligner(parameters_) {
+    //ds nothing to do
+  }
+
+  XYZAligner::~XYZAligner() {
+    //ds nothing to do
+  }
+
+  void XYZAligner::initialize(Closure* context_, const TransformMatrix3D& current_to_reference_) {
     _context              = context_;
     _current_to_reference = current_to_reference_;
 
@@ -13,7 +20,6 @@ namespace proslam {
     _parameters->damping = 0;
   }
 
-  //ds linearize the system: to be called inside oneRound
   void XYZAligner::linearize(const bool& ignore_outliers_) {
 
     //ds initialize setup
@@ -64,7 +70,6 @@ namespace proslam {
     }
   }
 
-  //ds solve alignment problem for one round
   void XYZAligner::oneRound(const bool& ignore_outliers_) {
 
     //ds linearize system
@@ -80,7 +85,6 @@ namespace proslam {
     _current_to_reference.linear()      -= 0.5*rotation*rotation_squared;
   }
 
-  //ds solve alignment problem until convergence is reached
   void XYZAligner::converge() {
 
     //ds previous error to check for convergence

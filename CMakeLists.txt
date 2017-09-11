@@ -62,6 +62,9 @@ endif()
 #ds attempt to locate a g2o package through cmake modules
 find_package(G2O QUIET)
 
+#ds set ownership model for g2o TODO retrieve this automatically from g2o (comment this line if you're using an older g2o version)
+add_definitions(-DSRRG_PROSLAM_G2O_HAS_NEW_OWNERSHIP_MODEL)
+
 #ds check if a custom g2o library is installed
 set(SRRG_PROSLAM_HAS_OWN_G2O false)
 

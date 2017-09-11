@@ -5,6 +5,14 @@
 namespace proslam {
   using namespace srrg_core;
 
+  StereoUVAligner::StereoUVAligner(AlignerParameters* parameters_): BaseFrameAligner(parameters_) {
+    //ds nothing to do
+  }
+
+  StereoUVAligner::~StereoUVAligner() {
+    //ds nothing to do
+  }
+
   //ds initialize aligner with minimal entity
   void StereoUVAligner::initialize(Frame* frame_, const TransformMatrix3D& robot_to_world_) {
     _frame = frame_;

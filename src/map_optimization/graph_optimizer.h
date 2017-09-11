@@ -8,7 +8,7 @@
 #include "g2o/solvers/csparse/linear_solver_csparse.h"
 #include "g2o/types/slam3d/types_slam3d.h"
 #include "types/world_map.h"
-#include "relocalization/local_map_correspondence.h"
+#include "relocalization/closure.h"
 
 namespace proslam {
 
@@ -64,7 +64,7 @@ public:
 //ds g2o wrapper functions
 protected:
 
-  void _setPoseEdge(g2o::OptimizableGraph& optimizer_,
+  void _setPoseEdge(g2o::OptimizableGraph* optimizer_,
                     g2o::OptimizableGraph::Vertex* vertex_from_,
                     g2o::OptimizableGraph::Vertex* vertex_to_,
                     const TransformMatrix3D& transform_from_to_,
@@ -72,7 +72,7 @@ protected:
                     const bool& free_translation_ = true,
                     const bool& enable_robust_kernel_ = false) const;
 
-  void _setPointEdge(g2o::OptimizableGraph& optimizer_,
+  void _setPointEdge(g2o::OptimizableGraph* optimizer_,
                      g2o::VertexSE3* vertex_frame_,
                      g2o::VertexPointXYZ* vertex_landmark_,
                      const PointCoordinates& framepoint_robot_coordinates,
@@ -82,16 +82,16 @@ protected:
 protected:
 
   //! @brief g2o optimizer (holding the pose graph)
-  g2o::SparseOptimizer _optimizer;
+  g2o::SparseOptimizer* _optimizer;
 
   //! @brief last frame vertex added (to be locked for optimization)
   g2o::VertexSE3* _vertex_frame_last_added;
 
   //! @brief bookkeeping: added frames
-  std::map<Frame*, g2o::VertexSE3*> _frames_in_pose_graph;
+  std::map<Frame*, g2o::VertexSE3*, std::less<Frame*>, Eigen::aligned_allocator<std::pair<Frame*, g2o::VertexSE3*>>> _frames_in_pose_graph;
 
   //! @brief bookkeeping: added landmarks
-  std::map<Landmark*, g2o::VertexPointXYZ*> _landmarks_in_pose_graph;
+  std::map<Landmark*, g2o::VertexPointXYZ*, std::less<Landmark*>, Eigen::aligned_allocator<std::pair<Landmark*, g2o::VertexSE3*>>> _landmarks_in_pose_graph;
 
   //ds informative only
   CREATE_CHRONOMETER(addition)

@@ -21,9 +21,8 @@ SLAMAssembly::SLAMAssembly(ParameterCollection* parameters_): _parameters(parame
                                                               _minimap_viewer(0),
                                                               _is_termination_requested(false),
                                                               _is_viewer_open(false) {
-  _graph_optimizer->configure();
-  _relocalizer->configure();
   _synchronizer.reset();
+  LOG_DEBUG(std::cerr << "SLAMAssembly::SLAMAssembly|constructed" << std::endl)
 }
 
 SLAMAssembly::~SLAMAssembly() {
@@ -75,6 +74,10 @@ void SLAMAssembly::_createStereoTracker(Camera* camera_left_, Camera* camera_rig
   tracker->configure();
   _tracker = tracker;
   _tracker->setWorldMap(_world_map);
+
+  //ds configure components
+  _graph_optimizer->configure();
+  _relocalizer->configure();
 }
 
 void SLAMAssembly::_createDepthTracker(const Camera* camera_left_, const Camera* camera_right_){
@@ -98,6 +101,10 @@ void SLAMAssembly::_createDepthTracker(const Camera* camera_left_, const Camera*
   tracker->configure();
   _tracker = tracker;
   _tracker->setWorldMap(_world_map);
+
+  //ds configure components
+  _graph_optimizer->configure();
+  _relocalizer->configure();
 }
 
 void SLAMAssembly::loadCamerasFromMessageFile() {
@@ -408,8 +415,8 @@ void SLAMAssembly::playbackMessageFile() {
       //ds runtime info
       if (processing_time_seconds_current > runtime_info_update_frequency_seconds) {
 
-        //ds runtime info - depending on set modes
-        if (!_parameters->command_line_parameters->option_disable_relocalization) {
+        //ds runtime info - depending on set modes and available information
+        if (!_parameters->command_line_parameters->option_disable_relocalization && _world_map->localMaps().size() > 1) {
           LOG_INFO(std::printf("SLAMAssembly::playbackMessageFile|frames: %5lu <FPS: %6.2f>|landmarks: %6lu|local maps: %4lu (%3.2f)|closures: %3lu (%3.2f)\n",
                       _number_of_processed_frames,
                       number_of_processed_frames_current/processing_time_seconds_current,
@@ -497,7 +504,7 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
         _relocalizer->compute();
 
         //ds check the closures
-        for(LocalMapCorrespondence* closure: _relocalizer->closures()) {
+        for(Closure* closure: _relocalizer->closures()) {
           if (closure->is_valid) {
             assert(_world_map->currentLocalMap() == closure->local_map_query);
 

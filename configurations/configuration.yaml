@@ -1,5 +1,8 @@
 command_line:
 
+  #system log level (select one: DEBUG, INFO, WARNING, ERROR)
+  logging_level: DEBUG
+
   #ds processing mode (select one: RGB_STEREO, RGB_DEPTH)
   tracker_mode: RGB_STEREO
 

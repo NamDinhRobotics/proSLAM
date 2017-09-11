@@ -1,4 +1,4 @@
-#include "../position_tracking/base_tracker.h"
+#include "base_tracker.h"
 
 namespace proslam {
   using namespace srrg_core;
@@ -563,7 +563,7 @@ namespace proslam {
   }
 
   //ds retrieves framepoint projections as image coordinates in a vector (at the same time removing points with invalid projections)
-  void BaseTracker::_getImageCoordinates(std::vector<ImageCoordinates>& projected_image_coordinates_left_, Frame* previous_frame_, const Frame* current_frame_) const {
+  void BaseTracker::_getImageCoordinates(ImageCoordinatesVector& projected_image_coordinates_left_, Frame* previous_frame_, const Frame* current_frame_) const {
     assert(previous_frame_ != 0);
     assert(current_frame_ != 0);
 

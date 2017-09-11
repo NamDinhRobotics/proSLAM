@@ -5,7 +5,6 @@
 #include <vector>
 #include <map>
 #include <Eigen/Geometry>
-#include <Eigen/StdVector>
 #include <opencv2/core/version.hpp>
 #include <opencv2/opencv.hpp>
 
@@ -34,6 +33,11 @@ namespace proslam {
       virtual ~CLASS_NAME(); \
     private: PROSLAM_CONCATENATE(CLASS_NAME, Parameters)* _parameters;
 
+  #define PROSLAM_MAKE_PROCESSING_SUBCLASS(SUBCLASS_NAME, PARAMETERS_TYPE) \
+    public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW \
+      SUBCLASS_NAME(PARAMETERS_TYPE* parameters_); \
+      virtual ~SUBCLASS_NAME();
+
   //ds descriptor bit width
 #ifndef SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS
   #define SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS 256
@@ -46,7 +50,9 @@ namespace proslam {
 
   //ds existential types
   typedef Eigen::Matrix<real, 3, 1> PointCoordinates;
+  typedef std::vector<PointCoordinates, Eigen::aligned_allocator<PointCoordinates>> PointCoordinatesVector;
   typedef Eigen::Matrix<real, 3, 1> ImageCoordinates;
+  typedef std::vector<ImageCoordinates, Eigen::aligned_allocator<ImageCoordinates>> ImageCoordinatesVector;
   typedef Eigen::Matrix<real, 3, 1> PointColorRGB;
   typedef Eigen::Matrix<real, 3, 3> CameraMatrix;
   typedef Eigen::Matrix<real, 3, 4> ProjectionMatrix;
@@ -57,8 +63,8 @@ namespace proslam {
   typedef uint64_t Index;
   typedef uint64_t Count;
   typedef cv::Mat IntensityImage;
-  typedef cv::Mat DepthImage;
   typedef std::vector<IntensityImage> IntensityImageVector;
+  typedef cv::Mat DepthImage;
   typedef std::vector<DepthImage> DepthImageVector;
   typedef std::pair<PointCoordinates, PointColorRGB> PointDrawable;
 

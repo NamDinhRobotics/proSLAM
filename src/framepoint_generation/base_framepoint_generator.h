@@ -16,9 +16,6 @@ public:
     bool available;
   };
 
-  //ds a 2d array of pointers to framepoints
-  typedef FramePoint*** FramePointMatrix;
-
 //ds object handling
 PROSLAM_MAKE_PROCESSING_CLASS(BaseFramePointGenerator)
 

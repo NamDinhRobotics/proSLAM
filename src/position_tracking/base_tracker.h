@@ -53,7 +53,7 @@ protected:
   void _addNewFramepoints(Frame* frame_);
 
   //ds retrieves framepoint projections as image coordinates in a vector (at the same time removing points with invalid projections)
-  void _getImageCoordinates(std::vector<ImageCoordinates>& predictions_left, Frame* previous_frame_, const Frame* current_frame_) const;
+  void _getImageCoordinates(ImageCoordinatesVector& predictions_left, Frame* previous_frame_, const Frame* current_frame_) const;
 
   //ds prunes invalid framespoints after pose optimization
   void _pruneFramepoints(Frame* frame_);
@@ -102,15 +102,15 @@ protected:
   //ds framepoint track recovery
   Count _number_of_lost_points           = 0;
   Count _number_of_lost_points_recovered = 0;
-  std::vector<FramePoint*> _lost_points;
+  FramePointPointerVector _lost_points;
 
   //ds buffers
-  std::vector<ImageCoordinates> _projected_image_coordinates_left;
+  ImageCoordinatesVector _projected_image_coordinates_left;
 
   //ds feature density regularization
   Count _number_of_rows_bin;
   Count _number_of_cols_bin;
-  BaseFramePointGenerator::FramePointMatrix _bin_map_left;
+  FramePointMatrix _bin_map_left;
   bool _enable_keypoint_binning;
 
 private:

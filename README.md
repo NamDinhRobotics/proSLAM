@@ -25,10 +25,11 @@ For related publications please refer to revision 69671dfe <br/>
 ---
 ### Supported environments ###
 Currently Linux only:
- - Ubuntu 14.04 LTS + ROS Indigo /(OpenCV2 + Qt4)
- - Ubuntu 16.04 LTS + ROS Kinetic/(OpenCV3 + Qt5)<br/>
+ - Ubuntu 14.04 LTS + ROS Indigo/(OpenCV2 + Qt4) + g2o (up to revision: f0bd463)
+ - Ubuntu 16.04 LTS + ROS Kinetic/(OpenCV3 + Qt5) + g2o (current)<br/>
 
-The complete system **runs on a single thread** (visualization components are synchronous)
+The complete SLAM system **runs on a single thread** (a second thread is launched for optional visualization) <br/>
+ProSLAM features an extensive parameter configuration on all SLAM layers and 4 different logging levels.
 
 ---
 ### Code statistics | Revision 69671dfe ###
@@ -41,10 +42,10 @@ The complete system **runs on a single thread** (visualization components are sy
 
 | Language     | files  | blank lines | comment lines | code lines |
 | :----------- | :----- | :---------- | :------------ | :--------- |
-| C++          | 18     | 737         | 646           | 2874       |
-| C/C++ Header | 18     | 414         | 303           | 1086       |
-| CMake        | 8      | 8           | 1             | 75         |
-| SUM:         | **44** | **1159**    | **950**       | **4035**   |
+| C++          | 21     | 887         | 718           | 3386       |
+| C/C++ Header | 27     | 715         | 632           | 1478       |
+| CMake        | 9      | 7           | 1             | 82         |
+| SUM:         | **57** | **1609**    | **1351**      | **4946**   |
 
 ---
 ### How do I get set up? ###
@@ -75,7 +76,8 @@ and build it (slow as it will perform a download using unladen swallows):
     
     catkin build g2o_catkin
 
-at the moment only `g2o revision f0bd463` is fully supported
+Note: If one is using a g2o version with the old ownership model the line: `add_definitions(-DSRRG_PROSLAM_G2O_HAS_NEW_OWNERSHIP_MODEL)`
+in the root `CMakeLists.txt` must be commented for proper compilation.
 
 ---
 5) download this repository to your catkin workspace:
@@ -108,9 +110,9 @@ CMake variables that must be set when building without ROS or to select specific
 The folder should now contain 4 files (.txt) and 1 folder (.txt.d) plus the tarball 00.tar.gz
 
 ---
-3) run the system directly in the folder (`rosrun` is used for convenience only, the binary can also be launched normally with `./srrg_proslam_app`):
+3) run the system directly in the folder (`rosrun` is used for convenience only, the binary can also be launched normally with `./app`):
 
-    rosrun srrg_proslam srrg_proslam_app 00.txt -use-gui
+    rosrun srrg_proslam app 00.txt -use-gui
 
 Two windows will pop up - "input: images" (OpenCV), "output: map" (OpenGL)
 
@@ -126,7 +128,7 @@ Two windows will pop up - "input: images" (OpenCV), "output: map" (OpenGL)
 ---
 7) to see the raw system performance simply launch srrg_proslam without any parameters other than the input dataset:
 
-    rosrun srrg_proslam srrg_proslam_app 00.txt
+    rosrun srrg_proslam app 00.txt
 
 After a complete run we can evaluate the KITTI error statistics by calling:
 
@@ -152,7 +154,7 @@ The EuRoC datasets generally require image histogram equalization for best perfo
 On-the-fly raw stereo image processing with custom stereo camera parameters will be supported shortly. <br/>
 Please use the provided datasets in SRRG format. <br/>
 
-The ROS node (`srrg_proslam_node`) is currently under development.
+The ROS node (`node`) is currently under development.
 
 ---
 ### Configuration file (YAML) ###
@@ -161,7 +163,7 @@ ProSLAM supports classic YAML configuration files, enabling fine-grained adjustm
 Example configuration files can be found in the `configurations` folder. <br/>
 A custom configuration file can be specified as follows:
 
-    rosrun srrg_proslam srrg_proslam_app 00.txt -c configuration.yaml
+    rosrun srrg_proslam app 00.txt -c configuration.yaml
 
 ---
 ### It doesn't work? ###
