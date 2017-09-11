@@ -78,7 +78,8 @@ and build it (slow as it will perform a download using unladen swallows):
     
     catkin build g2o_catkin
 
-Note: If one is using a g2o version with the old ownership model the line: `add_definitions(-DSRRG_PROSLAM_G2O_HAS_NEW_OWNERSHIP_MODEL)`
+Note: If one is using a g2o version with the old ownership model the line: <br/>
+`add_definitions(-DSRRG_PROSLAM_G2O_HAS_NEW_OWNERSHIP_MODEL)`
 in the root `CMakeLists.txt` must be commented for proper compilation.
 
 ---
