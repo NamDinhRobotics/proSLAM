@@ -2,7 +2,9 @@
 
 Contributors: Dominik Schlegel, Mirco Colosi, Giorgio Grisetti <br/>
 As this is a working repository, none of the code is assumed to be static. <br/>
-For related publications please refer to revision 69671dfe <br/>
+For related publications please refer to revision [d58f9016][publication_revision] <br/>
+
+[publication_revision]: https://gitlab.com/srrg-software/srrg_proslam/commit/d58f901619e0476e65028bcbf5251271045c9fef
 
 ---
 ### Demo videos ###
@@ -32,7 +34,7 @@ The complete SLAM system **runs on a single thread** (a second thread is launche
 ProSLAM features an extensive parameter configuration on all SLAM layers and 4 different logging levels.
 
 ---
-### Code statistics | Revision 69671dfe ###
+### Code statistics | Revision [d58f9016][publication_revision] ###
 
     cloc srrg_proslam/src/
 
