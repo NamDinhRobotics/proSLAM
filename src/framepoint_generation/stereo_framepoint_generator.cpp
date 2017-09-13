@@ -3,10 +3,7 @@
 namespace proslam {
 
   StereoFramePointGenerator::StereoFramePointGenerator(StereoFramePointGeneratorParameters* parameters_): BaseFramePointGenerator(parameters_),
-                                                                                                          _parameters(parameters_),
-                                                                                                          _camera_right(0),
-                                                                                                          _baseline_pixelsmeters(0),
-                                                                                                          _baseline_meters(0) {
+                                                                                                          _parameters(parameters_) {
     LOG_DEBUG(std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|construced" << std::endl)
   }
 
@@ -216,6 +213,10 @@ namespace proslam {
       LOG_WARNING(std::cerr << "StereoFramePointGenerator::findStereoKeypoints|low triangulation success ratio: " << triangulation_succcess_ratio
                 << " (" << _number_of_available_points << "/" << _keypoints_with_descriptors_left.size() << ")" << std::endl)
     }
+
+    //ds update the average
+    _average_triangulation_success_ratio = (_number_of_triangulations*_average_triangulation_success_ratio+triangulation_succcess_ratio)/(_number_of_triangulations+1);
+    ++_number_of_triangulations;
   }
 
   //ds computes 3D position of a stereo keypoint pair in the keft camera frame (called within findStereoKeypoints)

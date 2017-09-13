@@ -363,7 +363,6 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
         PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, minimum_threshold_distance_tracking_pixels, int32_t)
         PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, range_point_tracking, int32_t)
         PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, maximum_distance_tracking_pixels, int32_t)
-        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, enable_landmark_recovery, bool)
         PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, maximum_number_of_landmark_recoveries, Count)
         PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, bin_size_pixels, Count)
         PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, ratio_keypoints_to_bins, real)
@@ -398,7 +397,6 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
         PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, minimum_threshold_distance_tracking_pixels, int32_t)
         PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, range_point_tracking, int32_t)
         PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, maximum_distance_tracking_pixels, int32_t)
-        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, enable_landmark_recovery, bool)
         PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, maximum_number_of_landmark_recoveries, Count)
         PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, bin_size_pixels, Count)
         PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, ratio_keypoints_to_bins, real)
@@ -470,13 +468,19 @@ void ParameterCollection::setMode(const CommandLineParameters::TrackerMode& mode
   switch (mode_) {
     case CommandLineParameters::TrackerMode::RGB_STEREO: {
       if (!stereo_framepoint_generator_parameters) {stereo_framepoint_generator_parameters = new StereoFramePointGeneratorParameters(command_line_parameters->logging_level);}
-      if (!stereo_tracker_parameters) {stereo_tracker_parameters = new StereoTrackerParameters(command_line_parameters->logging_level);}
+      if (!stereo_tracker_parameters) {
+        stereo_tracker_parameters = new StereoTrackerParameters(command_line_parameters->logging_level);
+        stereo_tracker_parameters->enable_landmark_recovery = command_line_parameters->option_recover_landmarks;
+      }
       if (command_line_parameters->option_recover_landmarks) {stereo_tracker_parameters->enable_landmark_recovery = true;}
       break;
     }
     case CommandLineParameters::TrackerMode::RGB_DEPTH: {
       if (!depth_framepoint_generator_parameters) {depth_framepoint_generator_parameters = new DepthFramePointGeneratorParameters(command_line_parameters->logging_level);}
-      if (!depth_tracker_parameters) {depth_tracker_parameters = new DepthTrackerParameters(command_line_parameters->logging_level);}
+      if (!depth_tracker_parameters) {
+        depth_tracker_parameters = new DepthTrackerParameters(command_line_parameters->logging_level);
+        depth_tracker_parameters->enable_landmark_recovery = command_line_parameters->option_recover_landmarks;
+      }
       if (command_line_parameters->option_recover_landmarks) {depth_tracker_parameters->enable_landmark_recovery = true;}
       break;
     }

@@ -23,7 +23,3 @@ target_link_libraries(stereo_calibrator ${OpenCV_LIBS})
 #ds euroc trajectory analyzer (e.g. RMSE computation)
 add_executable(trajectory_analyzer trajectory_analyzer.cpp)
 target_link_libraries(trajectory_analyzer ${OpenCV_LIBS} srrg_core_types_library)
-
-#ds g2o testing
-add_executable(test_g2o_compatibility test_g2o_compatibility.cpp)
-target_link_libraries(test_g2o_compatibility srrg_proslam_map_optimization_library)

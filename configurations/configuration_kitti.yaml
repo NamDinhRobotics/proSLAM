@@ -84,8 +84,7 @@ base_tracking:
   maximum_distance_tracking_pixels:           22500 #150x150 maximum allowed pixel distance between image coordinates prediction and actual detection
   range_point_tracking:                       2     #pixel search range width for point vicinity tracking
 
-  #framepoint track recovery
-  enable_landmark_recovery:              false
+  #landmark track recovery (if enabled)
   maximum_number_of_landmark_recoveries: 3
 
   #feature density regularization

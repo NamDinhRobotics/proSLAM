@@ -92,14 +92,18 @@ endif()
 #ds if a custom g2o package was found
 if(SRRG_PROSLAM_HAS_OWN_G2O)
 
-  #ds add it to the catkin variables - this way we can support also g2o catkin without changing variable names
-  set(g2o_catkin_INCLUDE_DIRS ${G2O_INCLUDE_DIR})
-
-  #ds link against the libraries we require
-  set(g2o_catkin_LIBRARIES ${G2O_SOLVER_CSPARSE_EXTENSION} ${G2O_TYPES_SLAM3D} ${G2O_CORE_LIBRARY})
+  #ds add it to our variables
+  set(g2o_INCLUDE_DIRS ${G2O_INCLUDE_DIR})
+  set(g2o_LIBRARIES ${G2O_SOLVER_CSPARSE_EXTENSION} ${G2O_TYPES_SLAM3D} ${G2O_CORE_LIBRARY} ${G2O_STUFF_LIBRARY})
 
 else()
+
+  #ds attempt to find a catkin g2o
   find_package(g2o_catkin REQUIRED)
+  
+    #ds add it to our variables
+  set(g2o_INCLUDE_DIRS ${g2o_catkin_INCLUDE_DIRS})
+  set(g2o_LIBRARIES ${g2o_catkin_LIBRARIES})
 endif()
 
 #ds load suite sparse for pose graph optimization
@@ -124,7 +128,7 @@ endif()
 #ds specify additional locations of header files
 include_directories(
   ${EIGEN3_INCLUDE_DIR}
-  ${g2o_catkin_INCLUDE_DIRS}
+  ${g2o_INCLUDE_DIRS}
   ${CSPARSE_INCLUDE_DIR}
   ${OpenCV_INCLUDE_DIRS}
   ${QGLVIEWER_INCLUDE_DIR}
@@ -141,7 +145,7 @@ link_directories(${catkin_LIBRARY_DIRS})
 catkin_package(
   INCLUDE_DIRS
   ${EIGEN3_INCLUDE_DIR}
-  ${g2o_catkin_INCLUDE_DIRS}
+  ${g2o_INCLUDE_DIRS}
   ${CSPARSE_INCLUDE_DIR}
   ${OpenCV_INCLUDE_DIRS}
   ${QGLVIEWER_INCLUDE_DIR}

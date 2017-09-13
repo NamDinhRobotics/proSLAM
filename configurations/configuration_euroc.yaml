@@ -18,7 +18,7 @@ command_line:
   option_disable_relocalization:    false
   option_show_top_viewer:           false
   option_drop_framepoints:          false
-  option_equalize_histogram:        false
+  option_equalize_histogram:        true
   option_recover_landmarks:         true
   option_disable_bundle_adjustment: true
 
@@ -46,9 +46,9 @@ base_framepoint_generation:
 
   #ds dynamic thresholds for feature detection
   target_number_of_keypoints_tolerance: 0.1
-  detector_threshold:                   10
+  detector_threshold:                   5
   detector_threshold_minimum:           5
-  detector_threshold_step_size:         5
+  detector_threshold_step_size:         1
 
   #ds dynamic thresholds for descriptor matching
   matching_distance_tracking_threshold:         50
@@ -62,7 +62,7 @@ stereo_framepoint_generation:
   maximum_matching_distance_triangulation: 50
   baseline_factor:                         50
   minimum_disparity_pixels:                1
-  epipolar_line_thickness_pixels:          0
+  epipolar_line_thickness_pixels:          1
 
 depth_framepoint_generation:
 
@@ -76,20 +76,19 @@ base_tracking:
   minimum_track_length_for_landmark_creation: 3
 
   #ds track lost criteria
-  minimum_number_of_landmarks_to_track: 10
+  minimum_number_of_landmarks_to_track: 3
 
   #point tracking thresholds
-  minimum_threshold_distance_tracking_pixels: 36    #4x4
+  minimum_threshold_distance_tracking_pixels: 16    #4x4
   maximum_threshold_distance_tracking_pixels: 49    #7x7
   maximum_distance_tracking_pixels:           22500 #150x150 maximum allowed pixel distance between image coordinates prediction and actual detection
   range_point_tracking:                       2     #pixel search range width for point vicinity tracking
 
-  #framepoint track recovery
-  enable_landmark_recovery:              false
-  maximum_number_of_landmark_recoveries: 3
+  #landmark track recovery (if enabled)
+  maximum_number_of_landmark_recoveries: 10
 
   #feature density regularization
-  bin_size_pixels:         18
+  bin_size_pixels:         19
   ratio_keypoints_to_bins: 1
 
   #pose optimization
@@ -99,7 +98,7 @@ base_tracking:
   #pose optimization: aligner unit configuration
   aligner->error_delta_for_convergence:  1e-3
   aligner->maximum_error_kernel:         9
-  aligner->damping:                      100
+  aligner->damping:                      1000
   aligner->maximum_number_of_iterations: 1000
   aligner->minimum_number_of_inliers:    0
   aligner->minimum_inlier_ratio:         0
@@ -120,11 +119,11 @@ relocalization:
   
   #icp: aligner unit configuration
   aligner->error_delta_for_convergence:  1e-5
-  aligner->maximum_error_kernel:         0.5
+  aligner->maximum_error_kernel:         0.05
   aligner->damping:                      1
   aligner->maximum_number_of_iterations: 1000
   aligner->minimum_number_of_inliers:    25
-  aligner->minimum_inlier_ratio:         0.5
+  aligner->minimum_inlier_ratio:         0.75
 
 graph_optimization:
 
@@ -144,7 +143,7 @@ graph_optimization:
   free_translation_for_pose_measurements: true
   
   #translational frame weight reduction in pose graph
-  base_information_frame_factor_for_translation: 1e-5
+  base_information_frame_factor_for_translation: 1e-1
 
   #enable robust kernel for loop closure measurements
   enable_robust_kernel_for_loop_closure_measurements: true

@@ -51,7 +51,7 @@ base_framepoint_generation:
   target_number_of_keypoints_tolerance: 0.1
   detector_threshold:                   5
   detector_threshold_minimum:           5
-  detector_threshold_step_size:         5
+  detector_threshold_step_size:         1
 
   #ds dynamic thresholds for descriptor matching
   matching_distance_tracking_threshold:         50
@@ -63,7 +63,7 @@ stereo_framepoint_generation:
 
   #ds stereo: triangulation
   maximum_matching_distance_triangulation: 50
-  baseline_factor:                         45
+  baseline_factor:                         40
   minimum_disparity_pixels:                1
   epipolar_line_thickness_pixels:          0
 
@@ -87,12 +87,11 @@ base_tracking:
   maximum_distance_tracking_pixels:           22500 #150x150 maximum allowed pixel distance between image coordinates prediction and actual detection
   range_point_tracking:                       2     #pixel search range width for point vicinity tracking
 
-  #framepoint track recovery
-  enable_landmark_recovery:              false
+  #landmark track recovery (if enabled)
   maximum_number_of_landmark_recoveries: 3
 
   #feature density regularization
-  bin_size_pixels:         14
+  bin_size_pixels:         12
   ratio_keypoints_to_bins: 1
 
   #pose optimization
@@ -102,7 +101,7 @@ base_tracking:
   #pose optimization: aligner unit configuration
   aligner->error_delta_for_convergence:  1e-3
   aligner->maximum_error_kernel:         9
-  aligner->damping:                      1
+  aligner->damping:                      100
   aligner->maximum_number_of_iterations: 1000
   aligner->minimum_number_of_inliers:    0
   aligner->minimum_inlier_ratio:         0

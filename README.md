@@ -27,7 +27,7 @@ For related publications please refer to revision [d58f9016][publication_revisio
 ---
 ### Supported environments ###
 Currently Linux only:
- - Ubuntu 14.04 LTS + ROS Indigo/(OpenCV2 + Qt4) + g2o (up to revision: f0bd463)
+ - Ubuntu 14.04 LTS + ROS Indigo/(OpenCV2 + Qt4) + g2o (<span style="color:red">up to revision: f0bd463</span>)
  - Ubuntu 16.04 LTS + ROS Kinetic/(OpenCV3 + Qt5) + g2o (current)<br/>
 
 The complete SLAM system **runs on a single thread** (a second thread is launched for optional visualization) <br/>

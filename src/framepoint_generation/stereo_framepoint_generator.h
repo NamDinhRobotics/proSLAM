@@ -29,22 +29,27 @@ public:
 
   inline void setCameraRight(const Camera* camera_right_) {_camera_right = camera_right_;}
   void setMaximumMatchingDistanceTriangulation(const real& maximum_matching_distance_triangulation_) {_parameters->maximum_matching_distance_triangulation = maximum_matching_distance_triangulation_;}
+  inline const real& averageTriangulationSuccessRatio() const {return _average_triangulation_success_ratio;}
 
 //ds settings
 protected:
 
   //! @brief right camera handle
-  const Camera* _camera_right;
+  const Camera* _camera_right = 0;
 
   //! @brief derived triangulation properties
-  real _baseline_pixelsmeters;
-  real _baseline_meters;
+  real _baseline_pixelsmeters = 0;
+  real _baseline_meters       = 0;
 
   //! @brief parallel epipolar line offsets to search for stereo matches (based on Parameter: epipolar_line_thickness)
   std::vector<int32_t> _epipolar_line_offsets_pixels;
 
   //! @brief inner memory buffers (operated on in compute, kept here for readability)
   std::vector<KeypointWithDescriptor> _keypoints_with_descriptors_right;
+
+  //! @brief information only: average triangulation success ratio
+  real _average_triangulation_success_ratio = 0;
+  Count _number_of_triangulations           = 0;
 
 private:
 

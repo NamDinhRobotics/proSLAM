@@ -18,7 +18,7 @@ class GraphOptimizer {
 //ds exported data types
 public:
 
-  typedef g2o::BlockSolver<g2o::BlockSolverTraits<-1, -1> >  SlamBlockSolver;
+  typedef g2o::BlockSolver<g2o::BlockSolverTraits<-1, -1>> SlamBlockSolver;
   typedef g2o::LinearSolverCSparse<SlamBlockSolver::PoseMatrixType> SlamLinearSolver;
 
   //! @brief g2o parameter identifiers

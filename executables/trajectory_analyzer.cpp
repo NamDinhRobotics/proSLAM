@@ -8,8 +8,9 @@ using namespace srrg_core;
 
 struct PositionMeasurement {
     PositionMeasurement(const double& timestamp_seconds_,
-                    const Eigen::Vector3d& position_): timestamp_seconds(timestamp_seconds_),
-                                                       position(position_) {}
+                        const Eigen::Vector3d& position_): timestamp_seconds(timestamp_seconds_),
+                                                           position(position_) {}
+    PositionMeasurement(): timestamp_seconds(0), position(Eigen::Vector3d::Zero()) {}
     double timestamp_seconds;
     Eigen::Vector3d position;
 };
@@ -101,6 +102,15 @@ int32_t main (int32_t argc_, char** argv_) {
     }
   }
   input_stream_trajectory_slam.close();
+
+  //ds check skip
+  if (number_of_poses_to_skip >= positions_slam.size()) {
+    std::cerr << "ERROR: insufficient number of measurements for number_of_poses_to_skip: " << number_of_poses_to_skip << std::endl;
+    return 0;
+  }
+
+  //ds also cut skipped poses from the end
+  positions_slam.resize(positions_slam.size()-number_of_poses_to_skip);
   std::cerr << "loaded trajectory SLAM positions: " << positions_slam.size() << " for: " << file_name_trajectory_slam << std::endl;
 
   //ds parse ground truth trajectory
@@ -201,7 +211,7 @@ int32_t main (int32_t argc_, char** argv_) {
 
   //ds ICP configuration
   const uint32_t number_of_iterations = 10;
-  const double maximum_error_kernel   = 0.1; //ds (m^2)
+  const double maximum_error_kernel   = 1; //ds (m^2)
 
   //ds ICP running variables
   Matrix6d H(Matrix6d::Zero());
@@ -260,8 +270,8 @@ int32_t main (int32_t argc_, char** argv_) {
     transform_slam_to_ground_truth.linear() -= 0.5*rotation*rotation_squared;
 
     //ds status
-    std::printf("iteration: %03u total error (m^2): %12.3f (inliers: %4u/%4lu)\n",
-                iteration, total_error_squared, number_of_inliers, position_correspondences.size());
+    std::printf("iteration: %03u total error (m^2): %12.3f (inliers: %4u/%4lu=%4.2f)\n",
+                iteration, total_error_squared, number_of_inliers, position_correspondences.size(), static_cast<double>(number_of_inliers)/position_correspondences.size());
   }
 
   //ds compute optimal poses

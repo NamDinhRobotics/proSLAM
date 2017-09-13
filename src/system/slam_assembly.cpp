@@ -594,16 +594,31 @@ void SLAMAssembly::printReport() const {
   }
 
   //ds general stats
-  std::cerr << "      total trajectory length (m): " << trajectory_length << std::endl;
-  std::cerr << "                     total frames: " << _number_of_processed_frames << std::endl;
-  std::cerr << "    total processing duration (s): " << _processing_time_total_seconds << std::endl;
-  std::cerr << "                      average FPS: " << _current_fps << std::endl;
-  std::cerr << "          average velocity (km/h): " << 3.6*trajectory_length/_processing_time_total_seconds << std::endl;
-  std::cerr << "average processing time (s/frame): " << _processing_time_total_seconds/_number_of_processed_frames << std::endl;
-  std::cerr << "average landmarks close per frame: " << _tracker->totalNumberOfLandmarksClose()/_number_of_processed_frames << std::endl;
-  std::cerr << "  average landmarks far per frame: " << _tracker->totalNumberOfLandmarksFar()/_number_of_processed_frames << std::endl;
-  std::cerr << "         average tracks per frame: " << _tracker->totalNumberOfTrackedPoints()/_number_of_processed_frames << std::endl;
-  std::cerr << "        average tracks per second: " << _tracker->totalNumberOfTrackedPoints()/_processing_time_total_seconds << std::endl;
+  std::cerr << "        total trajectory length (m): " << trajectory_length << std::endl;
+  std::cerr << "                       total frames: " << _number_of_processed_frames << std::endl;
+  std::cerr << "      total processing duration (s): " << _processing_time_total_seconds << std::endl;
+  std::cerr << "                        average FPS: " << _current_fps << std::endl;
+  std::cerr << "            average velocity (km/h): " << 3.6*trajectory_length/_processing_time_total_seconds << std::endl;
+  std::cerr << "  average processing time (s/frame): " << _processing_time_total_seconds/_number_of_processed_frames << std::endl;
+  std::cerr << "  average landmarks close per frame: " << _tracker->totalNumberOfLandmarksClose()/_number_of_processed_frames << std::endl;
+  std::cerr << "    average landmarks far per frame: " << _tracker->totalNumberOfLandmarksFar()/_number_of_processed_frames << std::endl;
+  std::cerr << "           average tracks per frame: " << _tracker->totalNumberOfTrackedPoints()/_number_of_processed_frames << std::endl;
+  std::cerr << "          average tracks per second: " << _tracker->totalNumberOfTrackedPoints()/_processing_time_total_seconds << std::endl;
+
+  //ds display further information depending on tracking mode
+  switch (_parameters->command_line_parameters->tracker_mode){
+    case CommandLineParameters::TrackerMode::RGB_STEREO: {
+      StereoFramePointGenerator* stereo_framepoint_generator = dynamic_cast<StereoFramePointGenerator*>(_tracker->framepointGenerator());
+      std::cerr << "average triangulation success ratio: " << stereo_framepoint_generator->averageTriangulationSuccessRatio() << std::endl;
+      break;
+    }
+    case CommandLineParameters::TrackerMode::RGB_DEPTH: {
+      break;
+    }
+    default: {
+      break;
+    }
+  }
   std::cerr << BAR << std::endl;
 
   //ds computational costs

@@ -25,7 +25,6 @@ void GraphOptimizer::configure() {
   linearSolver->setBlockOrdering(true);
   SlamBlockSolver* blockSolver = new SlamBlockSolver(linearSolver);
   g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(blockSolver);
-  _optimizer->setAlgorithm(solver);
 #endif
 
   //ds allocate optimizer
@@ -38,16 +37,14 @@ void GraphOptimizer::configure() {
   _frames_in_pose_graph.clear();
   _landmarks_in_pose_graph.clear();
 
-
   //ds clean pose graph
   _optimizer->clear();
   _optimizer->setVerbose(false);
 
-
+  //ds set world offset
   g2o::ParameterSE3Offset* parameter_world_offset = new g2o::ParameterSE3Offset();
   parameter_world_offset->setId(G2oParameter::WORLD_OFFSET);
   _optimizer->addParameter(parameter_world_offset);
-
   LOG_DEBUG(std::cerr << "GraphOptimizer::GraphOptimizer|configured" << std::endl)
 }
 
@@ -72,8 +69,9 @@ void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std:
   std::map<Landmark*, g2o::VertexPointXYZ*, std::less<Landmark*>, Eigen::aligned_allocator<std::pair<Landmark*, g2o::VertexPointXYZ*>>> landmarks_in_pose_graph;
 
   //ds set world parameter (required for landmark EdgeSE3PointXYZ measurements)
-  //#ifndef SRRG_PROSLAM_G2O_HAS_NEW_OWNERSHIP_MODEL
-  //#endif
+  g2o::ParameterSE3Offset* parameter_world_offset = new g2o::ParameterSE3Offset();
+  parameter_world_offset->setId(G2oParameter::WORLD_OFFSET);
+  pose_graph->addParameter(parameter_world_offset);
 
   //ds loop over all frames - adding frames and landmarks
   for (const FramePointerMapElement& frame: world_map_->frames()) {
@@ -101,7 +99,6 @@ void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std:
     }
 
     //ds add landmark measurements contained in the frame by scanning its framepoints
-#ifndef SRRG_PROSLAM_G2O_HAS_NEW_OWNERSHIP_MODEL
     for (FramePoint* framepoint: frame.second->points()) {
 
       //ds if the framepoint is linked to a landmark
@@ -130,7 +127,6 @@ void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std:
         _setPointEdge(pose_graph, vertex_frame_current, vertex_landmark, framepoint->robotCoordinates(), 1/framepoint->depthMeters());
       }
     }
-#endif
 
     //ds next frame
     vertex_frame_last_added = vertex_frame_current;
@@ -155,7 +151,6 @@ void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std:
                      _parameters->enable_robust_kernel_for_loop_closure_measurements);
 
         //ds merge landmarks
-#ifndef SRRG_PROSLAM_G2O_HAS_NEW_OWNERSHIP_MODEL
         for (const LandmarkCorrespondence* landmark_correspondence: closure.landmark_correspondences) {
           try {
 
@@ -175,7 +170,6 @@ void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std:
           }
           catch (const std::out_of_range& /*exception*/) {}
         }
-#endif
       }
     }
   }
@@ -439,7 +433,7 @@ void GraphOptimizer::_setPointEdge(g2o::OptimizableGraph* optimizer_,
   landmark_edge->setVertex(1, vertex_landmark_);
   landmark_edge->setMeasurement(framepoint_robot_coordinates);
   landmark_edge->setInformation(information_factor_*Eigen::Matrix<double, 3, 3>::Identity());
-//  landmark_edge->setParameterId(0, G2oParameter::WORLD_OFFSET);
+  landmark_edge->setParameterId(0, G2oParameter::WORLD_OFFSET);
   if (_parameters->enable_robust_kernel_for_landmark_measurements) {landmark_edge->setRobustKernel(new g2o::RobustKernelCauchy());}
   optimizer_->addEdge(landmark_edge);
 }
