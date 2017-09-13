@@ -107,11 +107,11 @@ find_package(SuiteSparse REQUIRED)
 
 #ds check flags for release build
 if("${CMAKE_BUILD_TYPE}" STREQUAL "Release" OR "${CMAKE_BUILD_TYPE}" STREQUAL "RELEASE")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -Wall -Ofast -DNDEBUG -fPIC")
-  message("adding flags for '${CMAKE_BUILD_TYPE}': '--std=c++11 -Wall -Ofast -DNDEBUG -fPIC'")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=gnu++11 -march=native -Wall -Ofast -DNDEBUG -fPIC")
+  message("adding flags for '${CMAKE_BUILD_TYPE}': '--std=gnu++11 -march=native -Wall -Ofast -DNDEBUG -fPIC'")
 else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -Wall -O0 -g -fPIC -fstack-check")
-  message("adding flags for '${CMAKE_BUILD_TYPE}': '--std=c++11 -Wall -O0 -g -fPIC -fstack-check'")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=gnu++11 -march=native -Wall -O0 -g -fPIC -fstack-check")
+  message("adding flags for '${CMAKE_BUILD_TYPE}': '--std=gnu++11 -march=native -Wall -O0 -g -fPIC -fstack-check'")
 endif()
 
 #ds enable ARM flags if applicable
