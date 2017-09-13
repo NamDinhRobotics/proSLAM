@@ -38,9 +38,16 @@ void GraphOptimizer::configure() {
   _frames_in_pose_graph.clear();
   _landmarks_in_pose_graph.clear();
 
+
   //ds clean pose graph
   _optimizer->clear();
   _optimizer->setVerbose(false);
+
+
+  g2o::ParameterSE3Offset* parameter_world_offset = new g2o::ParameterSE3Offset();
+  parameter_world_offset->setId(G2oParameter::WORLD_OFFSET);
+  _optimizer->addParameter(parameter_world_offset);
+
   LOG_DEBUG(std::cerr << "GraphOptimizer::GraphOptimizer|configured" << std::endl)
 }
 
@@ -65,11 +72,8 @@ void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std:
   std::map<Landmark*, g2o::VertexPointXYZ*, std::less<Landmark*>, Eigen::aligned_allocator<std::pair<Landmark*, g2o::VertexPointXYZ*>>> landmarks_in_pose_graph;
 
   //ds set world parameter (required for landmark EdgeSE3PointXYZ measurements)
-#ifndef SRRG_PROSLAM_G2O_HAS_NEW_OWNERSHIP_MODEL
-  g2o::ParameterSE3Offset* parameter_world_offset = new g2o::ParameterSE3Offset();
-  parameter_world_offset->setId(G2oParameter::WORLD_OFFSET);
-  pose_graph->addParameter(parameter_world_offset);
-#endif
+  //#ifndef SRRG_PROSLAM_G2O_HAS_NEW_OWNERSHIP_MODEL
+  //#endif
 
   //ds loop over all frames - adding frames and landmarks
   for (const FramePointerMapElement& frame: world_map_->frames()) {

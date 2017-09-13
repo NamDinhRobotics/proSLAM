@@ -4,7 +4,6 @@
 G2O_USE_TYPE_GROUP(slam3d);
 
 int32_t main (int32_t argc_, char** argv_) {
-
   std::cerr << "allocating proslam::GraphOptimizerParameters" << std::endl;
   proslam::GraphOptimizerParameters* parameters = new proslam::GraphOptimizerParameters(proslam::LoggingLevel::Debug);
   std::cerr << "allocated" << std::endl;
