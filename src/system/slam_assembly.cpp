@@ -22,6 +22,7 @@ SLAMAssembly::SLAMAssembly(ParameterCollection* parameters_): _parameters(parame
                                                               _is_termination_requested(false),
                                                               _is_viewer_open(false) {
   _synchronizer.reset();
+  _processing_times_seconds.clear();
   LOG_DEBUG(std::cerr << "SLAMAssembly::SLAMAssembly|constructed" << std::endl)
 }
 
@@ -401,6 +402,7 @@ void SLAMAssembly::playbackMessageFile() {
 
       //ds update timing stats
       const double processing_time_seconds = srrg_core::getTime()-time_start_seconds;
+      _processing_times_seconds.push_back(processing_time_seconds);
       _processing_time_total_seconds  += processing_time_seconds;
       processing_time_seconds_current += processing_time_seconds;
       ++_number_of_processed_frames;
@@ -593,13 +595,24 @@ void SLAMAssembly::printReport() const {
     }
   }
 
+  //ds compute mean processing time and standard deviation
+  const double processing_time_mean_seconds = _processing_time_total_seconds/_number_of_processed_frames;
+  double processing_time_standard_deviation_seconds = 0;
+  for (const double& processing_time_seconds: _processing_times_seconds) {
+    processing_time_standard_deviation_seconds += (processing_time_mean_seconds-processing_time_seconds)
+                                                 *(processing_time_mean_seconds-processing_time_seconds);
+  }
+  processing_time_standard_deviation_seconds /= _processing_times_seconds.size();
+  processing_time_standard_deviation_seconds = std::sqrt(processing_time_standard_deviation_seconds);
+
   //ds general stats
   std::cerr << "        total trajectory length (m): " << trajectory_length << std::endl;
   std::cerr << "                       total frames: " << _number_of_processed_frames << std::endl;
   std::cerr << "      total processing duration (s): " << _processing_time_total_seconds << std::endl;
   std::cerr << "                        average FPS: " << _current_fps << std::endl;
   std::cerr << "            average velocity (km/h): " << 3.6*trajectory_length/_processing_time_total_seconds << std::endl;
-  std::cerr << "  average processing time (s/frame): " << _processing_time_total_seconds/_number_of_processed_frames << std::endl;
+  std::cerr << "     mean processing time (s/frame): " << processing_time_mean_seconds
+            << " (standard deviation: " << processing_time_standard_deviation_seconds << ")" << std::endl;
   std::cerr << "  average landmarks close per frame: " << _tracker->totalNumberOfLandmarksClose()/_number_of_processed_frames << std::endl;
   std::cerr << "    average landmarks far per frame: " << _tracker->totalNumberOfLandmarksFar()/_number_of_processed_frames << std::endl;
   std::cerr << "           average tracks per frame: " << _tracker->totalNumberOfTrackedPoints()/_number_of_processed_frames << std::endl;
@@ -609,7 +622,8 @@ void SLAMAssembly::printReport() const {
   switch (_parameters->command_line_parameters->tracker_mode){
     case CommandLineParameters::TrackerMode::RGB_STEREO: {
       StereoFramePointGenerator* stereo_framepoint_generator = dynamic_cast<StereoFramePointGenerator*>(_tracker->framepointGenerator());
-      std::cerr << "average triangulation success ratio: " << stereo_framepoint_generator->averageTriangulationSuccessRatio() << std::endl;
+      std::cerr << "average triangulation success ratio: " << stereo_framepoint_generator->meanTriangulationSuccessRatio()
+                << " (standard deviation: " << stereo_framepoint_generator->standardDeviationTriangulationSuccessRatio() << ")" << std::endl;
       break;
     }
     case CommandLineParameters::TrackerMode::RGB_DEPTH: {
@@ -659,6 +673,8 @@ void SLAMAssembly::printReport() const {
 }
 
 void SLAMAssembly::reset() {
+  _synchronizer.reset();
+  _processing_times_seconds.clear();
   _world_map->clear();
 }
 }

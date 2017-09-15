@@ -29,7 +29,8 @@ public:
 
   inline void setCameraRight(const Camera* camera_right_) {_camera_right = camera_right_;}
   void setMaximumMatchingDistanceTriangulation(const real& maximum_matching_distance_triangulation_) {_parameters->maximum_matching_distance_triangulation = maximum_matching_distance_triangulation_;}
-  inline const real& averageTriangulationSuccessRatio() const {return _average_triangulation_success_ratio;}
+  const real& meanTriangulationSuccessRatio() const {return _mean_triangulation_success_ratio;}
+  const real standardDeviationTriangulationSuccessRatio() const;
 
 //ds settings
 protected:
@@ -48,8 +49,9 @@ protected:
   std::vector<KeypointWithDescriptor> _keypoints_with_descriptors_right;
 
   //! @brief information only: average triangulation success ratio
-  real _average_triangulation_success_ratio = 0;
-  Count _number_of_triangulations           = 0;
+  real _mean_triangulation_success_ratio = 0;
+  Count _number_of_triangulations        = 0;
+  std::vector<real> _triangulation_success_ratios;
 
 private:
 

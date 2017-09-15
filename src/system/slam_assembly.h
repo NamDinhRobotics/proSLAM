@@ -135,10 +135,10 @@ protected:
   MapViewer* _map_viewer;
   MapViewer* _minimap_viewer;
 
-//ds txt_io playback components
+//ds playback components
 protected:
 
-  //ds message parser
+  //! @brief srrg message parser
   srrg_core::MessageReader _message_reader;
 
   //ds txt_io message synchronizer
@@ -155,6 +155,9 @@ protected:
 
   //! @brief total system processing runtime
   double _processing_time_total_seconds = 0;
+
+  //! @brief frame-wise processing times
+  std::vector<double> _processing_times_seconds;
 
   //! @brief total number of processed frames
   Count _number_of_processed_frames = 0;

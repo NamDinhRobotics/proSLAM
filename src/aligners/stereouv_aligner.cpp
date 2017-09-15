@@ -40,7 +40,7 @@ namespace proslam {
     _number_of_outliers = 0;
     _total_error        = 0;
 
-    //ds loop over all points (assumed to have previous points)
+    //ds loop over all current framepoints (assuming that each of them has a previous one)
     for (Index index_point = 0; index_point < _frame->points().size(); index_point++) {
       _errors[index_point]  = -1;
       _inliers[index_point] = false;
@@ -69,7 +69,10 @@ namespace proslam {
       }
 
       //ds retrieve homogeneous projections
-      const Vector4 sampled_point_in_camera_left_homogeneous(sampled_point_in_camera_left.x(), sampled_point_in_camera_left.y(), sampled_point_in_camera_left.z(), 1);
+      const Vector4 sampled_point_in_camera_left_homogeneous(sampled_point_in_camera_left.x(),
+                                                             sampled_point_in_camera_left.y(),
+                                                             sampled_point_in_camera_left.z(),
+                                                             1);
       const PointCoordinates sampled_abc_in_camera_left  = _projection_matrix_left*sampled_point_in_camera_left_homogeneous;
       const PointCoordinates sampled_abc_in_camera_right = _projection_matrix_right*sampled_point_in_camera_left_homogeneous;
       const real& sampled_c_left  = sampled_abc_in_camera_left.z();

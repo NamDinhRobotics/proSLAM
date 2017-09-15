@@ -91,7 +91,7 @@ base_tracking:
   maximum_number_of_landmark_recoveries: 3
 
   #feature density regularization
-  bin_size_pixels:         12
+  bin_size_pixels:         20
   ratio_keypoints_to_bins: 1
 
   #pose optimization
