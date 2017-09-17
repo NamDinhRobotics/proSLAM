@@ -1,6 +1,8 @@
-# ProSLAM: Programmers SLAM
+    
+    ProSLAM: Programmers SLAM
 
 Contributors: Dominik Schlegel, Mirco Colosi, Giorgio Grisetti <br/>
+
 As this is a working repository, none of the code is assumed to be static. <br/>
 For related publications please refer to revision [d58f9016][publication_revision] <br/>
 
