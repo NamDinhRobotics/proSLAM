@@ -103,7 +103,7 @@ namespace proslam {
 
     //ds create new frame
     Frame* current_frame = _createFrame();
- 
+
     //ds compute full sensory prior for the current frame
     _framepoint_generator->compute(current_frame);
     _number_of_potential_points = _framepoint_generator->numberOfAvailablePoints();

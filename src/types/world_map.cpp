@@ -143,11 +143,11 @@ void WorldMap::resetWindowForLocalMapCreation(const bool& drop_framepoints_) {
   _frame_queue_for_local_map.clear();
 }
 
-void WorldMap::addCorrespondence(LocalMap* query_,
-                                 const LocalMap* reference_,
-                                 const TransformMatrix3D& query_to_reference_,
-                                 const CorrespondencePointerVector& landmark_correspondences_,
-                                 const real& information_) {
+void WorldMap::addLoopClosure(LocalMap* query_,
+                              const LocalMap* reference_,
+                              const TransformMatrix3D& query_to_reference_,
+                              const CorrespondencePointerVector& landmark_correspondences_,
+                              const real& information_) {
 
   //ds check if we relocalized after a lost track
   if (_frames.at(0)->root() != _current_frame->root()) {
@@ -161,8 +161,9 @@ void WorldMap::addCorrespondence(LocalMap* query_,
   query_->addCorrespondence(reference_, query_to_reference_, landmark_correspondences_, information_);
   _relocalized = true;
 
-  //ds if merging of corresponding landmarks is desired (TODO beta)
+  //ds if merging of corresponding landmarks is desired
   if (_parameters->merge_landmarks) {
+    CHRONOMETER_START(landmark_merging)
 
     //ds for all correspondences
     for (const LandmarkCorrespondence* landmark_correspondence: landmark_correspondences_) {
@@ -171,20 +172,32 @@ void WorldMap::addCorrespondence(LocalMap* query_,
       Landmark* landmark_query     = landmark_correspondence->query->landmark;
       Landmark* landmark_reference = landmark_correspondence->reference->landmark;
 
-      //ds merge query with reference (original) landmark
-      landmark_reference->merge(landmark_query);
+      //ds check if not already merged (case can appear as previous local maps carry "at that time not" merged landmarks
+      if (landmark_query != landmark_reference) {
 
-      //ds check if the landmark is in the currently tracked ones and update it accordingly
-      for (uint64_t index = 0; index < _currently_tracked_landmarks.size(); ++index) {
-        if (_currently_tracked_landmarks[index] == landmark_query) {
-          _currently_tracked_landmarks[index] = landmark_reference;
-        }
+          //ds merge query with reference (original) landmark
+          landmark_reference->merge(landmark_query);
+
+          //ds check if the landmark is in the currently tracked ones and update it accordingly
+          for (uint64_t index = 0; index < _currently_tracked_landmarks.size(); ++index) {
+            if (_currently_tracked_landmarks[index] == landmark_query) {
+              _currently_tracked_landmarks[index] = landmark_reference;
+
+              //ds update reference for framepoint - TODO move to landmark merge method
+              for (FramePoint* framepoint: _current_frame->points()) {
+                if (framepoint->landmark() == landmark_query) {
+                  framepoint->setLandmark(landmark_reference);
+                }
+              }
+            }
+          }
+
+        //ds free input landmark from bookkeeping
+        _landmarks.erase(landmark_query->identifier());
+        delete landmark_query;
       }
-
-      //ds free input landmark from bookkeeping
-      _landmarks.erase(landmark_query->identifier());
-      delete landmark_query;
     }
+    CHRONOMETER_STOP(landmark_merging)
   }
 
   //ds informative only

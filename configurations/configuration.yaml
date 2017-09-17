@@ -44,6 +44,7 @@ world_map:
   minimum_distance_traveled_for_local_map: 0.5
   minimum_degrees_rotated_for_local_map:   0.5
   minimum_number_of_frames_for_local_map:  4
+  merge_landmarks:                         false
 
 base_framepoint_generation:
 
@@ -51,7 +52,7 @@ base_framepoint_generation:
   target_number_of_keypoints_tolerance: 0.1
   detector_threshold:                   5
   detector_threshold_minimum:           5
-  detector_threshold_step_size:         1
+  detector_threshold_step_size:         5
 
   #ds dynamic thresholds for descriptor matching
   matching_distance_tracking_threshold:         50
@@ -91,7 +92,7 @@ base_tracking:
   maximum_number_of_landmark_recoveries: 3
 
   #feature density regularization
-  bin_size_pixels:         20
+  bin_size_pixels:         15
   ratio_keypoints_to_bins: 1
 
   #pose optimization
@@ -101,7 +102,7 @@ base_tracking:
   #pose optimization: aligner unit configuration
   aligner->error_delta_for_convergence:  1e-3
   aligner->maximum_error_kernel:         9
-  aligner->damping:                      100
+  aligner->damping:                      1
   aligner->maximum_number_of_iterations: 1000
   aligner->minimum_number_of_inliers:    0
   aligner->minimum_inlier_ratio:         0
@@ -131,7 +132,7 @@ relocalization:
 graph_optimization:
 
   #g2o identifier space between frames and landmark vertices
-  identifier_space: 1000000
+  identifier_space: 1e6
   
   #maximum number of iterations graph optimization
   maximum_number_of_iterations: 1000

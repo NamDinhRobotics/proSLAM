@@ -150,25 +150,27 @@ void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std:
                      _parameters->free_translation_for_pose_measurements,
                      _parameters->enable_robust_kernel_for_loop_closure_measurements);
 
-        //ds merge landmarks
-        for (const LandmarkCorrespondence* landmark_correspondence: closure.landmark_correspondences) {
-          try {
+        //ds merge landmarks - if not already done online
+        if (!world_map_->parameters()->merge_landmarks) {
+          for (const LandmarkCorrespondence* landmark_correspondence: closure.landmark_correspondences) {
+            try {
 
-            //ds retrieve query and reference vertices
-            g2o::VertexPointXYZ* vertex_query     = landmarks_in_pose_graph.at(landmark_correspondence->query->landmark);
-            g2o::VertexPointXYZ* vertex_reference = landmarks_in_pose_graph.at(landmark_correspondence->reference->landmark);
+              //ds retrieve query and reference vertices
+              g2o::VertexPointXYZ* vertex_query     = landmarks_in_pose_graph.at(landmark_correspondence->query->landmark);
+              g2o::VertexPointXYZ* vertex_reference = landmarks_in_pose_graph.at(landmark_correspondence->reference->landmark);
 
-            //ds if not already merged
-            if (vertex_query != vertex_reference) {
+              //ds if not already merged
+              if (vertex_query != vertex_reference) {
 
-              //ds merge query into reference
-              pose_graph->mergeVertices(vertex_reference, vertex_query, true);
+                //ds merge query into reference
+                pose_graph->mergeVertices(vertex_reference, vertex_query, true);
 
-              //ds update bookkeeping
-              landmarks_in_pose_graph.at(landmark_correspondence->query->landmark) = vertex_reference;
+                //ds update bookkeeping
+                landmarks_in_pose_graph.at(landmark_correspondence->query->landmark) = vertex_reference;
+              }
             }
+            catch (const std::out_of_range& /*exception*/) {}
           }
-          catch (const std::out_of_range& /*exception*/) {}
         }
       }
     }

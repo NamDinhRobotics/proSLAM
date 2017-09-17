@@ -247,7 +247,7 @@ public:
   Count maximum_number_of_landmark_recoveries = 3;
 
   //! @brief feature density regularization
-  Count bin_size_pixels        = 16;
+  Count bin_size_pixels        = 15;
   real ratio_keypoints_to_bins = 1;
 
   //! @brief pose optimization
@@ -327,13 +327,13 @@ public:
   Count maximum_number_of_iterations = 100;
 
   //! @brief g2o identifier space between frames and landmark vertices
-  Count identifier_space = 1e5;
+  Count identifier_space = 1e6;
 
   //! @brief determines window size for bundle adjustment
   Count number_of_frames_per_bundle_adjustment = 100;
 
   //! @brief base frame weight in pose graph (assuming 1 for landmarks)
-  real base_information_frame = 1e6;
+  real base_information_frame = 1e5;
 
   //! @brief free translation for pose to pose measurements
   bool free_translation_for_pose_measurements = true;

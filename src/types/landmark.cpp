@@ -75,6 +75,7 @@ void Landmark::update(const FramePoint* point_) {
 }
 
 void Landmark::merge(Landmark* landmark_) {
+  assert(landmark_ != this);
 
   //ds update active state
   _state->appearances.insert(_state->appearances.end(), landmark_->_state->appearances.begin(), landmark_->_state->appearances.end());
@@ -88,7 +89,7 @@ void Landmark::merge(Landmark* landmark_) {
   _number_of_updates    += landmark_->_number_of_updates;
   _number_of_recoveries += landmark_->_number_of_recoveries;
 
-  //ds update framepoint pointers
+  //ds update past framepoint pointers
   FramePoint* framepoint = landmark_->_origin;
   while (framepoint) {
     framepoint->setLandmark(this);

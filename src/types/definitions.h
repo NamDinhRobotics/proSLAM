@@ -31,7 +31,8 @@ namespace proslam {
       CLASS_NAME(PROSLAM_CONCATENATE(CLASS_NAME, Parameters)* parameters_); \
       virtual void configure(); \
       virtual ~CLASS_NAME(); \
-    private: PROSLAM_CONCATENATE(CLASS_NAME, Parameters)* _parameters;
+    private: PROSLAM_CONCATENATE(CLASS_NAME, Parameters)* _parameters; \
+    public: const PROSLAM_CONCATENATE(CLASS_NAME, Parameters)* parameters() const {return _parameters;}
 
   #define PROSLAM_MAKE_PROCESSING_SUBCLASS(SUBCLASS_NAME, PARAMETERS_TYPE) \
     public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW \

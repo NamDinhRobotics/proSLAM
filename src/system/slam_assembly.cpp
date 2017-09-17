@@ -511,11 +511,11 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
             assert(_world_map->currentLocalMap() == closure->local_map_query);
 
             //ds add loop closure constraint (merging corresponding landmarks)
-            _world_map->addCorrespondence(_world_map->currentLocalMap(),
-                                          closure->local_map_reference,
-                                          closure->query_to_reference,
-                                          closure->correspondences,
-                                          closure->icp_inlier_ratio);
+            _world_map->addLoopClosure(_world_map->currentLocalMap(),
+                                       closure->local_map_reference,
+                                       closure->query_to_reference,
+                                       closure->correspondences,
+                                       closure->icp_inlier_ratio);
             if (_parameters->command_line_parameters->option_use_gui) {
               for (const LandmarkCorrespondence* match: closure->correspondences) {
                 _world_map->landmarks().at(match->query->landmark->identifier())->setIsInLoopClosureQuery(true);
@@ -669,6 +669,7 @@ void SLAMAssembly::printReport() const {
   std::printf("         relocalization | %f | %f\n", _relocalizer->getTimeConsumptionSeconds_overall()/_processing_time_total_seconds, _relocalizer->getTimeConsumptionSeconds_overall());
   std::printf("    pose graph addition | %f | %f\n", _graph_optimizer->getTimeConsumptionSeconds_addition()/_processing_time_total_seconds, _graph_optimizer->getTimeConsumptionSeconds_addition());
   std::printf("pose graph optimization | %f | %f\n", _graph_optimizer->getTimeConsumptionSeconds_optimization()/_processing_time_total_seconds, _graph_optimizer->getTimeConsumptionSeconds_optimization());
+  if (_parameters->world_map_parameters->merge_landmarks) {std::printf("       landmark merging | %f | %f\n", _world_map->getTimeConsumptionSeconds_landmark_merging()/_processing_time_total_seconds, _world_map->getTimeConsumptionSeconds_landmark_merging());}
   std::cerr << DOUBLE_BAR << std::endl;
 }
 

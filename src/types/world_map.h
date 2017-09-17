@@ -43,11 +43,11 @@ public:
   //! @param[in] query_to_reference_ query to reference transform
   //! @param[in] landmark_correspondences_ landmark correspondences of the loop closure
   //! @param[in] information_ information value
-  void addCorrespondence(LocalMap* query_,
-                         const LocalMap* reference_,
-                         const TransformMatrix3D& query_to_reference_,
-                         const CorrespondencePointerVector& landmark_correspondences_,
-                         const real& information_ = 1);
+  void addLoopClosure(LocalMap* query_,
+                      const LocalMap* reference_,
+                      const TransformMatrix3D& query_to_reference_,
+                      const CorrespondencePointerVector& landmark_correspondences_,
+                      const real& information_ = 1);
 
   //! @brief dump trajectory to file (in KITTI benchmark format: 4x4 isometries per line and TUM benchmark format: timestamp x z y and qx qy qz qw per line)
   //! @param[in] filename_ text file in which the poses are saved to
@@ -126,6 +126,8 @@ public:
   const FramePointerVector& frameQueueForLocalMap() const {return _frame_queue_for_local_map;}
   void setRobotToWorldGroundTruth(const TransformMatrix3D& robot_to_world_ground_truth_) {if (_current_frame) {_current_frame->setRobotToWorldGroundTruth(robot_to_world_ground_truth_);}}
 
+  const WorldMapParameters* parameters() const {return _parameters;}
+
 //ds helpers
 public:
 
@@ -169,6 +171,9 @@ protected:
   Frame* _last_frame_before_track_break = 0;
   LocalMap* _last_local_map_before_track_break = 0;
   LocalMap* _root_local_map = 0;
+
+  //ds informative only
+  CREATE_CHRONOMETER(landmark_merging)
 
 private:
 
