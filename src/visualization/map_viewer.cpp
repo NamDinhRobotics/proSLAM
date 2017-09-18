@@ -17,7 +17,7 @@ MapViewer::MapViewer(MapViewerParameters* parameters_): _parameters(parameters_)
                                                         _robot_viewpoint(TransformMatrix3D::Identity()),
                                                         _world_to_robot(TransformMatrix3D::Identity()) {
   setWindowTitle(_parameters->window_title.c_str());
-  setFPSIsDisplayed(true);
+//  setFPSIsDisplayed(true);
 
   //ds set keyboard descriptions
   setKeyDescription(Qt::Key_1, "Toggles map points display");

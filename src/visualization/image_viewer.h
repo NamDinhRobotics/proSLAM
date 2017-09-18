@@ -20,6 +20,9 @@ public:
   //! @brief draw function - LOCKING
   void draw();
 
+  //! @brief saves current image to disk
+  void saveToDisk();
+
 //ds helpers
 protected:
 
@@ -40,5 +43,11 @@ protected:
 
   //! @brief currently displayed image
   cv::Mat _current_image;
+
+  //! @brief saved images count (for stamp generation)
+  Count _number_of_saved_images = 0;
+
+  //! @brief last complete image copy to save to disk
+  cv::Mat _image_to_save;
 };
 }

@@ -26,7 +26,7 @@ int32_t main(int32_t argc_, char** argv_) {
 
   //ds dynamic elements (in this scope for cleanup in case an exception occurs)
   QApplication* gui_server   = 0;
-  std::thread* system_thread = 0;
+  std::thread* slam_thread = 0;
 
   try {
 
@@ -50,7 +50,7 @@ int32_t main(int32_t argc_, char** argv_) {
       slam_system.initializeGUI(gui_server);
 
       //ds start message playback in separate thread
-      system_thread = slam_system.playbackMessageFileInThread();
+      slam_thread = slam_system.playbackMessageFileInThread();
 
       //ds enter GUI loop
       while (slam_system.isViewerOpen()) {
@@ -71,8 +71,8 @@ int32_t main(int32_t argc_, char** argv_) {
 
       //ds join system thread
       std::cerr << "main|joining thread: system" << std::endl;
-      system_thread->join();
-      delete system_thread;
+      slam_thread->join();
+      delete slam_thread;
       std::cerr << "main|all threads successfully joined" << std::endl;
     } else {
 
@@ -99,7 +99,7 @@ int32_t main(int32_t argc_, char** argv_) {
     //ds clean dynamic memory
     if (parameters) {delete parameters;}
     if (gui_server) {delete gui_server;}
-    if (system_thread) {delete system_thread;}
+    if (slam_thread) {delete slam_thread;}
     return 0;
   }
 

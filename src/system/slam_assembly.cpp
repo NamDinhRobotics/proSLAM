@@ -19,6 +19,7 @@ SLAMAssembly::SLAMAssembly(ParameterCollection* parameters_): _parameters(parame
                                                               _image_viewer(0),
                                                               _map_viewer(0),
                                                               _minimap_viewer(0),
+//                                                              _new_image_available(false),
                                                               _is_termination_requested(false),
                                                               _is_viewer_open(false) {
   _synchronizer.reset();
@@ -291,6 +292,7 @@ void SLAMAssembly::updateGUI() {
     if (_map_viewer->requestedPlaybackSteps() > 0) {
       _map_viewer->decrementPlaybackSteps();
     }
+//    _new_image_available = true;
   }
 }
 
@@ -307,6 +309,20 @@ void SLAMAssembly::draw() {
       _minimap_viewer->updateGL();
     }
     _ui_server->processEvents();
+
+//    //ds save images to disk
+//    if (_new_image_available) {
+//
+//      //ds save images to disk
+//      _map_viewer->setSnapshotFileName("map.jpg");
+//      _map_viewer->saveSnapshot();
+//      if (_minimap_viewer) {
+//        _minimap_viewer->setSnapshotFileName("minimap.jpg");
+//        _minimap_viewer->saveSnapshot();
+//      }
+//      _image_viewer->saveToDisk();
+//      _new_image_available = false;
+//    }
   }
 }
 

@@ -50,7 +50,19 @@ void ImageViewer::draw() {
     //ds display the image
     cv::imshow(_parameters->window_title.c_str(), _current_image);
     cv::waitKey(1);
+
+//    //ds backup image for saving
+//    _image_to_save = _current_image.clone();
   }
+}
+
+void ImageViewer::saveToDisk() {
+//  if (_current_frame) {
+//    char buffer_file_name[32];
+//    std::snprintf(buffer_file_name, 32, "image-%04lu.jpg", _number_of_saved_images);
+//    cv::imwrite(buffer_file_name, _image_to_save);
+//    ++_number_of_saved_images;
+//  }
 }
 
 void ImageViewer::_drawPoints() {

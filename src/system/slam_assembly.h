@@ -135,6 +135,8 @@ protected:
   MapViewer* _map_viewer;
   MapViewer* _minimap_viewer;
 
+//  std::atomic<bool> _new_image_available;
+
 //ds playback components
 protected:
 
