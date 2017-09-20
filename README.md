@@ -10,21 +10,14 @@ For related publications please refer to revision [d58f9016][publication_revisio
 
 ---
 ### Demo videos ###
-[ProSLAM: Full run KITTI Sequence 00 updated (real-time, 1 thread@2.40GHz/i7-4700MQ)][kitti_00_updated] <br/>
-[ProSLAM: Full run KITTI Sequence 00 (real-time, 1 thread@2.40GHz/i7-4700MQ)][kitti_00] <br/>
-[ProSLAM: Full run KITTI Sequence 01 (real-time, 1 thread@2.40GHz/i7-4700MQ)][kitti_01] <br/>
-[ProSLAM: Full run KITTI Sequence 06 (real-time, 1 thread@3.50GHz/i7-4770K)][kitti_06] <br/>
-[ProSLAM: Full run KITTI Sequence 10 (real-time, 1 thread@2.40GHz/i7-4700MQ)][kitti_10] <br/>
-[ProSLAM: Full run EuRoC MH_01_easy (real-time, 1 thread@3.50GHz/i7-4770K)][euroc_01] <br/>
+[ProSLAM: Full run KITTI Sequence 00 updated (real-time, 1 thread@2.40GHz/i7-4700MQ)](https://www.youtube.com/watch?v=hIeaB-MMJMo) <br/>
+[ProSLAM: Full run KITTI Sequence 00 (real-time, 1 thread@2.40GHz/i7-4700MQ)](https://www.youtube.com/watch?v=n_UmEpIwb9Y) <br/>
+[ProSLAM: Full run KITTI Sequence 01 (real-time, 1 thread@2.40GHz/i7-4700MQ)](https://www.youtube.com/watch?v=iGSCOEn5Nx8) <br/>
+[ProSLAM: Full run KITTI Sequence 06 (real-time, 1 thread@3.50GHz/i7-4770K)](https://www.youtube.com/watch?v=Bmig0ASFOY4) <br/>
+[ProSLAM: Full run KITTI Sequence 10 (real-time, 1 thread@2.40GHz/i7-4700MQ)](https://www.youtube.com/watch?v=ZW8OQ2b0tjk) <br/>
+[ProSLAM: Full run EuRoC MH_01_easy (real-time, 1 thread@3.50GHz/i7-4770K)](https://www.youtube.com/watch?v=TctS1b1zCbY) <br/>
 
 (All of the above are clickable YouTube links)
-
-[kitti_00_updated]: https://www.youtube.com/watch?v=hIeaB-MMJMo
-[kitti_00]: https://www.youtube.com/watch?v=n_UmEpIwb9Y
-[kitti_01]: https://www.youtube.com/watch?v=iGSCOEn5Nx8
-[kitti_06]: https://www.youtube.com/watch?v=Bmig0ASFOY4
-[kitti_10]: https://www.youtube.com/watch?v=ZW8OQ2b0tjk
-[euroc_01]: https://www.youtube.com/watch?v=TctS1b1zCbY
 
 ---
 ### Supported environments ###
@@ -136,20 +129,27 @@ To see the raw system performance on EuRoC simply launch srrg_proslam without an
 
 After a complete run we evaluate the `EuRoC RMSE` by calling:
 
-    rosrun srrg_proslam trajectory_analyzer -tum trajectory_tum.txt -asl mav0/state_groundtruth_estimate0/data.csv
+    rosrun srrg_proslam trajectory_analyzer -tum trajectory_tum.txt -asl state_groundtruth_estimate.csv
 
 ---
-### Pre-formatted datasets ###
+### Pre-formatted SRRG datasets (online ground truth display) ###
  - `KITTI Sequence 00`: https://drive.google.com/open?id=0ByaBRAPfmgEqdXhJRmktQ2lsMEE (2.8GB)
  - `KITTI Sequence 01`: https://drive.google.com/open?id=0ByaBRAPfmgEqN19hTUJjRG9XV3M (0.7GB)
  - `KITTI Sequence 04`: https://drive.google.com/open?id=0ByaBRAPfmgEqOEhEdEdLcUJUMlE (0.2GB)
  - `KITTI Sequence 06`: https://drive.google.com/open?id=0ByaBRAPfmgEqcC14TS1mbF9XSmc (0.7GB)
- - `EuRoC MH_01_easy`: https://drive.google.com/open?id=0ByaBRAPfmgEqbUctejZwb0xRaFk (1.9GB)
- - `EuRoC MH_05_difficult`: https://drive.google.com/open?id=0ByaBRAPfmgEqTWVCZDVqNTY2QXc (0.9GB)
- - `EuRoC V1_01_easy`: https://drive.google.com/open?id=0ByaBRAPfmgEqRW5aWUZWV1NLSVE (1.3GB) <br/>
+ - `EuRoC MH_01_easy`: https://drive.google.com/open?id=0ByaBRAPfmgEqbUctejZwb0xRaFk (1.3GB)
+ - `EuRoC MH_05_difficult`: https://drive.google.com/open?id=0ByaBRAPfmgEqTWVCZDVqNTY2QXc (0.7GB)
+ - `EuRoC V1_01_easy`: https://drive.google.com/open?id=0ByaBRAPfmgEqRW5aWUZWV1NLSVE (1.0GB) <br/>
 
 Run procedure remains identical to the one above (only the dataset name has to be adjusted, e.g. `00.txt` becomes `MH_01_easy.txt`) <br/>
-The EuRoC datasets generally require image histogram equalization for best performance (option `-equalize-histogram/-eh`)
+The EuRoC sequences generally require image histogram equalization for best performance (option `-equalize-histogram/-eh`)
+
+Dataset conversion utilities are available in the [srrg_core](https://gitlab.com/srrg-software/srrg_core) package <br/>
+An example to obtain a converted EuRoC sequence (using a hardcoded camera calibration) goes as follows:
+
+    rosrun srrg_core srrg_message_converter_euroc_app -o MH_01_easy.txt -hard-calibration
+
+Note that the command has to be issued from inside of the ASL folder `mav0`
 
 ---
 ### Custom stereo camera sensor input / ROS node ###
