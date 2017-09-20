@@ -93,7 +93,7 @@ CMake variables that must be set when building without ROS or to select specific
 
 ---
 ### How do I check if it works? ###
-1) download the `KITTI Sequence 00` into a folder on your computer: https://drive.google.com/open?id=0ByaBRAPfmgEqdXhJRmktQ2lsMEE (2.8GB)
+1) download the [KITTI Sequence 00](https://drive.google.com/open?id=0ByaBRAPfmgEqdXhJRmktQ2lsMEE) to your computer.
 
 2) launch a terminal in that folder and uncompress the tarball:
 
@@ -105,7 +105,8 @@ The folder should now contain 4 files (.txt) and 1 folder (.txt.d) plus the tarb
 
     rosrun srrg_proslam app 00.txt -use-gui
 
-Two windows will pop up - "input: images" (OpenCV), "output: map" (OpenGL) - **all controls are handled in the "output: map" window**
+Two windows will pop up - "input: images" (OpenCV), "output: map" (OpenGL) <br/>
+**all controls are handled in the "output: map" window**
 
 4) press `[Space]` on the "output: map" window to toggle between automatic processing and stepwise (press `[ARROW_UP]` for stepping) mode
 
@@ -145,7 +146,7 @@ Run procedure remains identical to the one above (only the dataset name has to b
 The EuRoC sequences generally require image histogram equalization for best performance (option `-equalize-histogram/-eh`)
 
 Dataset conversion utilities are available in the [srrg_core](https://gitlab.com/srrg-software/srrg_core) package <br/>
-An example to obtain a converted EuRoC sequence (using a hardcoded camera calibration) goes as follows:
+An example to obtain a converted EuRoC sequence (e.g. `MH_01_easy.txt`, using a hardcoded camera calibration) goes as follows:
 
     rosrun srrg_core srrg_message_converter_euroc_app -o MH_01_easy.txt -hard-calibration
 
