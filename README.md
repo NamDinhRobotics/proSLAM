@@ -33,7 +33,7 @@ Currently Linux only:
  - Ubuntu 16.04 LTS + ROS Kinetic/(OpenCV3 + Qt5) + g2o (current)<br/>
 
 The complete SLAM system **runs on a single thread** (a second thread is launched for optional visualization) <br/>
-ProSLAM features an extensive parameter configuration on all SLAM layers and 4 different logging levels.
+ProSLAM features an extensive [parameter configuration][proslam_wiki] on all SLAM layers and 4 different logging levels.
 
 ---
 ### Code statistics | Revision [d58f9016][publication_revision] ###
@@ -57,7 +57,6 @@ ProSLAM features an extensive parameter configuration on all SLAM layers and 4 d
 
     sudo apt-get install build-essential libeigen3-dev libsuitesparse-dev freeglut3-dev libqglviewer-dev
 
----
 2) download and install
  - ROS: http://wiki.ros.org/ROS/Installation
 
@@ -65,12 +64,10 @@ or (OpenCV + Qt)
  - OpenCV3: https://github.com/opencv/opencv/archive/3.2.0.zip (Version 3.2.0) - used for FAST detection, BRIEF extraction, visualization
  - Qt5: https://wiki.qt.io/Install_Qt_5_on_Ubuntu (Version 5.7.0)              - used for visualization
 
----
 3) download and install the colorful `Catkin Command Line Tools`: https://catkin-tools.readthedocs.io/en/latest/installing.html (alternatively one can also use `ROS catkin`):
 
     sudo apt-get install python-catkin-tools
 
----
 4) set the environment variable `$G2O_ROOT` to use your own g2o installation - or clone `g2o for catkin` (https://github.com/yorsh87/g2o_catkin) to your catkin workspace:
 
     sudo apt-get install ninja-build
@@ -84,7 +81,6 @@ Note: If one is using a g2o version with the old ownership model the line: <br/>
 `add_definitions(-DSRRG_PROSLAM_G2O_HAS_NEW_OWNERSHIP_MODEL)`
 in the root `CMakeLists.txt` must be commented for proper compilation.
 
----
 5) download this repository to your catkin workspace:
 
     git clone https://gitlab.com/srrg-software/srrg_proslam.git
@@ -104,44 +100,46 @@ CMake variables that must be set when building without ROS or to select specific
 
 ---
 ### How do I check if it works? ###
-
 1) download the `KITTI Sequence 00` into a folder on your computer: https://drive.google.com/open?id=0ByaBRAPfmgEqdXhJRmktQ2lsMEE (2.8GB)
 
----
 2) launch a terminal in that folder and uncompress the tarball:
 
     tar -xzvf 00.tar.gz
 
 The folder should now contain 4 files (.txt) and 1 folder (.txt.d) plus the tarball 00.tar.gz
 
----
 3) run the system directly in the folder (`rosrun` is used for convenience only, the binary can also be launched normally with `./app`):
 
     rosrun srrg_proslam app 00.txt -use-gui
 
-Two windows will pop up - "input: images" (OpenCV), "output: map" (OpenGL)
+Two windows will pop up - "input: images" (OpenCV), "output: map" (OpenGL) - **all controls are handled in the "output: map" window**
 
----
 4) press `[Space]` on the "output: map" window to toggle between automatic processing and stepwise (press `[ARROW_UP]` for stepping) mode
 
----
 5) press `[H]` to view the available commands for the "output: map" viewer (Number keys `1`-`8`)
 
----
 6) press `[Esc]` to terminate the system prematurely
 
 ---
-7) to see the raw system performance simply launch srrg_proslam without any parameters other than the input dataset:
+### Quantitative result evaluation ###
+To see the raw system performance on KITTI simply launch srrg_proslam without any parameters other than the input dataset:
 
     rosrun srrg_proslam app 00.txt
 
-After a complete run we can evaluate the KITTI error statistics by calling:
+After a complete run we evaluate the `KITTI error statistics` by calling:
 
-    rosrun srrg_proslam kitti_evaluate_odometry trajectory.txt 00_gt.txt 00.txt
+    rosrun srrg_proslam kitti_evaluate_odometry trajectory_kitti.txt 00_gt.txt 00.txt
+    
+To see the raw system performance on EuRoC simply launch srrg_proslam without any parameters other than the input dataset:
+
+    rosrun srrg_proslam app MH_01_easy.txt
+
+After a complete run we evaluate the `EuRoC RMSE` by calling:
+
+    rosrun srrg_proslam trajectory_analyzer -tum trajectory_tum.txt -asl mav0/state_groundtruth_estimate0/data.csv
 
 ---
 ### Pre-formatted datasets ###
-
  - `KITTI Sequence 00`: https://drive.google.com/open?id=0ByaBRAPfmgEqdXhJRmktQ2lsMEE (2.8GB)
  - `KITTI Sequence 01`: https://drive.google.com/open?id=0ByaBRAPfmgEqN19hTUJjRG9XV3M (0.7GB)
  - `KITTI Sequence 04`: https://drive.google.com/open?id=0ByaBRAPfmgEqOEhEdEdLcUJUMlE (0.2GB)
@@ -155,15 +153,13 @@ The EuRoC datasets generally require image histogram equalization for best perfo
 
 ---
 ### Custom stereo camera sensor input / ROS node ###
-
 On-the-fly raw stereo image processing with custom stereo camera parameters will be supported shortly. <br/>
 Please use the provided datasets in SRRG format. <br/>
 
-The ROS node (`node`) is currently under development.
+The ROS node is currently under development.
 
 ---
 ### [Configuration file][proslam_wiki] (YAML) ###
-
 ProSLAM supports classic YAML configuration files, enabling fine-grained adjustment of deep system parameters. <br/>
 Example configuration files can be found in the `configurations` folder. <br/>
 A custom configuration file can be specified as follows:
@@ -174,5 +170,4 @@ A custom configuration file can be specified as follows:
 
 ---
 ### It doesn't work? ###
-
 Feel free to contact the maintainer at any time (see package.xml)
