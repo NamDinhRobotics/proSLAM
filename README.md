@@ -10,6 +10,7 @@ For related publications please refer to revision [d58f9016][publication_revisio
 
 ---
 ### Demo videos ###
+[ProSLAM: KITTI Sequence 00 at 150 Hz](https://www.youtube.com/watch?v=Lio_M_O1VhI) <br/>
 [ProSLAM: Full run KITTI Sequence 00 updated (real-time, 1 thread@2.40GHz/i7-4700MQ)](https://www.youtube.com/watch?v=hIeaB-MMJMo) <br/>
 [ProSLAM: Full run KITTI Sequence 00 (real-time, 1 thread@2.40GHz/i7-4700MQ)](https://www.youtube.com/watch?v=n_UmEpIwb9Y) <br/>
 [ProSLAM: Full run KITTI Sequence 01 (real-time, 1 thread@2.40GHz/i7-4700MQ)](https://www.youtube.com/watch?v=iGSCOEn5Nx8) <br/>
