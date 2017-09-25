@@ -22,7 +22,7 @@ command_line:
   option_show_top_viewer:           false
   option_drop_framepoints:          false
   option_equalize_histogram:        false
-  option_recover_landmarks:         true
+  option_recover_landmarks:         false
   option_disable_bundle_adjustment: true
 
 landmark:
@@ -80,7 +80,7 @@ base_tracking:
   minimum_track_length_for_landmark_creation: 3
 
   #ds track lost criteria
-  minimum_number_of_landmarks_to_track: 10
+  minimum_number_of_landmarks_to_track: 5
 
   #point tracking thresholds
   minimum_threshold_distance_tracking_pixels: 16    #4x4
@@ -92,7 +92,7 @@ base_tracking:
   maximum_number_of_landmark_recoveries: 3
 
   #feature density regularization
-  bin_size_pixels:         15
+  bin_size_pixels:         22
   ratio_keypoints_to_bins: 1
 
   #pose optimization

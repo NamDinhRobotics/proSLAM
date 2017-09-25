@@ -280,7 +280,7 @@ void WorldMap::writeTrajectoryTUM(const std::string& filename_) const {
   LOG_INFO(std::cerr << "WorldMap::WorldMap|saved trajectory (TUM format) to: " << filename_tum << std::endl)
 }
 
-void WorldMap::breakTrack(const Frame* frame_) {
+void WorldMap::breakTrack(Frame* frame_) {
 
   //ds if the track is not already broken
   if (_last_frame_before_track_break == 0)
@@ -288,6 +288,7 @@ void WorldMap::breakTrack(const Frame* frame_) {
     _last_frame_before_track_break     = _previous_frame;
     _last_local_map_before_track_break = _current_local_map;
   }
+  frame_->breakTrack();
 
   //ds purge previous and set new root - this will trigger a new start
   _previous_frame = 0;

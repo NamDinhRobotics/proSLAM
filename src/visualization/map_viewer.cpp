@@ -155,16 +155,14 @@ void MapViewer::draw(){
     }
 
     //ds for all frames in the map - obtain the current root
-    const Frame* frame = _world_map->rootFrame();
-    while (frame) {
+    for (const FramePointerMapElement& frame_element: _world_map->frames()) {
 
       //ds check if we have a keyframe and drawing is enabled
-      if (frame->isKeyframe()) {
-        _drawFrame(frame, Vector3(0.5, 0.5, 1));
+      if (frame_element.second->isKeyframe()) {
+        _drawFrame(frame_element.second, Vector3(0.5, 0.5, 1));
       } else if (_parameters->frames_drawn) {
-        _drawFrame(frame, Vector3(0.75, 0.75, 1));
+        _drawFrame(frame_element.second, Vector3(0.75, 0.75, 1));
       }
-      frame = frame->next();
     }
 
     //ds if desired, draw landmarks into map

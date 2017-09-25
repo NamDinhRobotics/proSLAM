@@ -52,6 +52,9 @@ public:
   inline const Frame* next() const {return _next;}
   void setNext(Frame* next_) {_next = next_;}
 
+  void breakTrack() {_is_track_broken = true;}
+  const bool isTrackBroken() const {return _is_track_broken;}
+
   inline std::vector<cv::KeyPoint>& keypointsLeft() {return _keypoints_left;}
   inline std::vector<cv::KeyPoint>& keypointsRight() {return _keypoints_right;}
   inline cv::Mat& descriptorsLeft() {return _descriptors_left;}
@@ -129,6 +132,9 @@ protected:
   //ds links to preceding and subsequent instances
   Frame* _previous = 0;
   Frame* _next     = 0;
+
+  //! @brief flag, set if track broke during processing this
+  bool _is_track_broken =  false;
 
   //! @brief detected keypoints at the time of creation of the Frame
   std::vector<cv::KeyPoint> _keypoints_left;

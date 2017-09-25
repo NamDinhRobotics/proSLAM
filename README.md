@@ -126,7 +126,7 @@ To see the raw system performance on KITTI simply launch srrg_proslam without an
 
 After a complete run we evaluate the `KITTI error statistics` by calling:
 
-    rosrun srrg_proslam kitti_evaluate_odometry trajectory_kitti.txt 00_gt.txt 00.txt
+    rosrun srrg_core srrg_kitti_evaluate_odometry_app -odom trajectory_kitti.txt -gt 00_gt.txt -seq 00
     
 To see the raw system performance on EuRoC simply launch srrg_proslam without any parameters other than the input dataset:
 

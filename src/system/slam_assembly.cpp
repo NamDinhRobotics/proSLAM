@@ -189,6 +189,10 @@ void SLAMAssembly::loadCamerasFromMessageFile() {
 
     //ds set left
     _camera_left->setProjectionMatrix(projection_matrix);
+    LOG_DEBUG(std::cerr << "projection matrix LEFT: " << std::endl;)
+    LOG_DEBUG(std::printf("%11.6f %11.6f %11.6f %11.6f\n", projection_matrix(0,0), projection_matrix(0,1), projection_matrix(0,2), projection_matrix(0,3)))
+    LOG_DEBUG(std::printf("%11.6f %11.6f %11.6f %11.6f\n", projection_matrix(1,0), projection_matrix(1,1), projection_matrix(1,2), projection_matrix(1,3)))
+    LOG_DEBUG(std::printf("%11.6f %11.6f %11.6f %11.6f\n", projection_matrix(2,0), projection_matrix(2,1), projection_matrix(2,2), projection_matrix(2,3)))
 
     //ds sanity check
     if ((_camera_left->cameraMatrix()-_camera_right->cameraMatrix()).squaredNorm() != 0) {
@@ -199,6 +203,10 @@ void SLAMAssembly::loadCamerasFromMessageFile() {
     //ds compute right camera with baseline offset
     projection_matrix.block<3,1>(0,3) = _camera_left->cameraMatrix()*_camera_right->robotToCamera().translation();
     _camera_right->setProjectionMatrix(projection_matrix);
+    LOG_DEBUG(std::cerr << "projection matrix RIGHT: " << std::endl;)
+    LOG_DEBUG(std::printf("%11.6f %11.6f %11.6f %11.6f\n", projection_matrix(0,0), projection_matrix(0,1), projection_matrix(0,2), projection_matrix(0,3) ))
+    LOG_DEBUG(std::printf("%11.6f %11.6f %11.6f %11.6f\n", projection_matrix(1,0), projection_matrix(1,1), projection_matrix(1,2), projection_matrix(1,3)))
+    LOG_DEBUG(std::printf("%11.6f %11.6f %11.6f %11.6f\n", projection_matrix(2,0), projection_matrix(2,1), projection_matrix(2,2), projection_matrix(2,3)))
   }
 
   //ds load cameras to assembly
@@ -507,7 +515,7 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
   //ds track framepoints and derive new robot pose
   _tracker->compute();
 
-  //ds if we have a valid frame (not the case after the track is lost) TODO handle properly with exceptions
+  //ds if we have a valid frame
   if (_world_map->currentFrame()) {
 
     //ds if relocalization is desired

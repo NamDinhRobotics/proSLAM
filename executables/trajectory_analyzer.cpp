@@ -210,7 +210,7 @@ int32_t main (int32_t argc_, char** argv_) {
   Eigen::Isometry3d transform_slam_to_ground_truth(Eigen::Isometry3d::Identity());
 
   //ds ICP configuration
-  const uint32_t number_of_iterations = 10;
+  const uint32_t number_of_iterations = 100;
   const double maximum_error_kernel   = 1; //ds (m^2)
 
   //ds ICP running variables

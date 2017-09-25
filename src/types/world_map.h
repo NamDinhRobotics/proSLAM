@@ -92,7 +92,7 @@ public:
 
   //! @brief this function does what you think it does
   //! @param[in] frame_ frame at which the track was broken
-  void breakTrack(const Frame* frame_);
+  void breakTrack(Frame* frame_);
 
   //! @brief this function does what you think it does
   //! @param[in] frame_ frame at which the track was found again
