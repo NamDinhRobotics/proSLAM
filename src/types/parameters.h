@@ -233,7 +233,7 @@ public:
   Count minimum_number_of_landmarks_to_track = 10;
 
   //! @brief tracking criteria for framepoints, required to perform position tracking
-  Count minimum_number_of_framepoints_to_track = 100;
+  Count minimum_number_of_framepoints_to_track = 25;
 
   //! @brief point tracking thresholds
   int32_t minimum_threshold_distance_tracking_pixels = 4*4;
