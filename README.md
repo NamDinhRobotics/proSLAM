@@ -68,13 +68,13 @@ in the root `CMakeLists.txt` must be commented for proper compilation.
 
     git clone https://gitlab.com/srrg-software/srrg_proslam.git
     
-enter the project directory in your catkin workspace (e.g. `../src/srrg_proslam`) and fetch the modular SRRG libraries by executing the script:
+6) enter the project directory in your catkin workspace (e.g. `../src/srrg_proslam`) and fetch the modular SRRG libraries by executing the script:
 
     ./pull_srrg_packages.bash
 
 Note: For `Ubuntu 14.04` running `gcc <5` the `srrg_boss` revision [72f24f75](https://gitlab.com/srrg-software/srrg_boss/tree/72f24f75260adeb2a11380551038b81aa24c89a0) should be checked out.
 
-then build the project using (`ROS catkin` requires: `catkin_make -pkg` instead of `catkin build`):
+7) then build the project using (`ROS catkin` requires: `catkin_make -pkg` instead of `catkin build`):
     
     catkin build srrg_proslam
 
