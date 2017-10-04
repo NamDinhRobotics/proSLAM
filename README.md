@@ -26,27 +26,11 @@ Previous versions: <br/>
 ---
 ### Supported environments ###
 Currently Linux only:
- - Ubuntu 14.04 LTS + ROS Indigo/(OpenCV2 + Qt4) + g2o (<span style="color:red">up to revision: f0bd463</span>)
+ - Ubuntu 14.04 LTS + ROS Indigo/(OpenCV2 + Qt4) + g2o (<span style="color:red">up to revision: [3a740d8](https://github.com/RainerKuemmerle/g2o/commit/3a740d8922e524bf832c66aaf5c8f59c70aec604)</span>)
  - Ubuntu 16.04 LTS + ROS Kinetic/(OpenCV3 + Qt5) + g2o (current)<br/>
 
 The complete SLAM system **runs on a single thread** (a second thread is launched for optional visualization) <br/>
 ProSLAM features an extensive [parameter configuration][proslam_wiki] on all SLAM layers and 4 different logging levels.
-
----
-### Code statistics | Revision [d58f9016][publication_revision] ###
-
-    cloc srrg_proslam/src/
-
-| http://cloc.sourceforge.net v 1.60 |
-| :-: |
-
-
-| Language     | files  | blank lines | comment lines | code lines |
-| :----------- | :----- | :---------- | :------------ | :--------- |
-| C++          | 21     | 887         | 718           | 3386       |
-| C/C++ Header | 27     | 715         | 632           | 1478       |
-| CMake        | 9      | 7           | 1             | 82         |
-| SUM:         | **57** | **1609**    | **1351**      | **4946**   |
 
 ---
 ### How do I get set up? ###
@@ -74,8 +58,10 @@ and build it (slow as it will perform a download using unladen swallows):
     
     catkin build g2o_catkin
 
-Note: If one is using a g2o version with the old ownership model the line: <br/>
+Note: If one is using a g2o version with the old ownership model ([3a740d8](https://github.com/RainerKuemmerle/g2o/commit/3a740d8922e524bf832c66aaf5c8f59c70aec604) or earlier) the line:
+
 `add_definitions(-DSRRG_PROSLAM_G2O_HAS_NEW_OWNERSHIP_MODEL)`
+
 in the root `CMakeLists.txt` must be commented for proper compilation.
 
 5) download this repository to your catkin workspace:
@@ -85,8 +71,10 @@ in the root `CMakeLists.txt` must be commented for proper compilation.
 enter the project directory in your catkin workspace (e.g. `../src/srrg_proslam`) and fetch the modular SRRG libraries by executing the script:
 
     ./pull_srrg_packages.bash
-    
-then build the project using:
+
+Note: For `Ubuntu 14.04` running `gcc <5` the `srrg_boss` revision [72f24f75](https://gitlab.com/srrg-software/srrg_boss/tree/72f24f75260adeb2a11380551038b81aa24c89a0) should be checked out.
+
+then build the project using (`ROS catkin` requires: `catkin_make -pkg` instead of `catkin build`):
     
     catkin build srrg_proslam
 
@@ -175,4 +163,4 @@ A custom configuration file can be specified as follows:
 
 ---
 ### It doesn't work? ###
-Feel free to contact the maintainer at any time (see package.xml)
+[Open an issue](https://gitlab.com/srrg-software/srrg_proslam/issues) or contact the maintainer (see package.xml)
