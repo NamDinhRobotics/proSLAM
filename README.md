@@ -36,7 +36,7 @@ ProSLAM features an extensive [parameter configuration][proslam_wiki] on all SLA
 ### How do I get set up? ###
 1) install the Ubuntu packages
 
-    sudo apt-get install build-essential libeigen3-dev libsuitesparse-dev freeglut3-dev libqglviewer-dev
+    sudo apt-get install build-essential libeigen3-dev libsuitesparse-dev freeglut3-dev libqglviewer-dev libyaml-cpp-dev
 
 2) download and install
  - ROS: http://wiki.ros.org/ROS/Installation
