@@ -4,9 +4,9 @@
 Contributors: Dominik Schlegel, Mirco Colosi, Giorgio Grisetti <br/>
 
 As this is a working repository, none of the code is assumed to be static. <br/>
-For related publications please refer to revision [d58f9016][publication_revision] <br/>
+For related publications please refer to revision [f9d6d06c][publication_revision] <br/>
 
-[publication_revision]: https://gitlab.com/srrg-software/srrg_proslam/tree/d58f901619e0476e65028bcbf5251271045c9fef
+[publication_revision]: https://gitlab.com/srrg-software/srrg_proslam/tree/f9d6d06cfa25cbe95221093159f60073cd26c974
 
 ---
 ### Demo videos ###
@@ -107,17 +107,17 @@ Two windows will pop up - "input: images" (OpenCV), "output: map" (OpenGL) <br/>
 
 ---
 ### Quantitative result evaluation ###
-To see the raw system performance on KITTI simply launch srrg_proslam without any parameters other than the input dataset:
+To see the raw system performance on KITTI simply launch srrg_proslam with the input dataset and the configuration file:
 
-    rosrun srrg_proslam app 00.txt
+    rosrun srrg_proslam app 00.txt -c ${PROSLAM_ROOT}/configurations/configuration_kitti.yaml
 
 After a complete run we evaluate the `KITTI error statistics` by calling:
 
     rosrun srrg_core srrg_kitti_evaluate_odometry_app -odom trajectory_kitti.txt -gt 00_gt.txt -seq 00.txt
     
-To see the raw system performance on EuRoC simply launch srrg_proslam without any parameters other than the input dataset:
+To see the raw system performance on EuRoC simply launch srrg_proslam with the input dataset and the configuration file:
 
-    rosrun srrg_proslam app MH_01_easy.txt
+    rosrun srrg_proslam app MH_01_easy.txt -c ${PROSLAM_ROOT}/configurations/configuration_euroc.yaml
 
 After a complete run we evaluate the `EuRoC RMSE` by calling:
 
