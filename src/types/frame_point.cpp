@@ -2,16 +2,20 @@
 
 namespace proslam {
 
+Count FramePoint::_instances = 0;
+
 FramePoint::FramePoint(const cv::KeyPoint& keypoint_left_,
                        const cv::Mat& descriptor_left_,
                        const cv::KeyPoint& keypoint_right_,
                        const cv::Mat& descriptor_right_,
-                       Frame* frame_): _keypoint_left(keypoint_left_),
+                       Frame* frame_): _identifier(_instances),
+                                       _keypoint_left(keypoint_left_),
                                        _keypoint_right(keypoint_right_),
                                        _descriptor_left(descriptor_left_),
                                        _descriptor_right(descriptor_right_),
                                        _image_coordinates_left(PointCoordinates(keypoint_left_.pt.x, keypoint_left_.pt.y, 1)),
                                        _image_coordinates_right(PointCoordinates(keypoint_right_.pt.x, keypoint_right_.pt.y, 1)) {
+  ++_instances;
   setFrame(frame_);
 }
 

@@ -81,6 +81,7 @@ public:
   //ds landmark coordinates update with visual information (tracking)
   void update(const FramePoint* point_);
 
+  const real& totalWeight() const {return _total_weight;}
   const Count& numberOfRecoveries() const {return _number_of_recoveries;}
   void incrementNumberOfRecoveries() {++_number_of_recoveries;}
   void setNumberOfRecoveries(const Count& number_of_recoveries_) {_number_of_recoveries = number_of_recoveries_;}
@@ -140,7 +141,7 @@ private:
 };
 
 typedef std::vector<Landmark*, Eigen::aligned_allocator<Landmark*>> LandmarkPointerVector;
-typedef std::pair<Identifier, Landmark*> LandmarkPointerMapElement;
-typedef std::map<Identifier, Landmark*, std::less<Identifier>, Eigen::aligned_allocator<LandmarkPointerMapElement>> LandmarkPointerMap;
+typedef std::pair<const Identifier, Landmark*> LandmarkPointerMapElement;
+typedef std::map<const Identifier, Landmark*, std::less<const Identifier>, Eigen::aligned_allocator<LandmarkPointerMapElement>> LandmarkPointerMap;
 typedef std::set<const Landmark*, std::less<const Landmark*>, Eigen::aligned_allocator<const Landmark*>> LandmarkPointerSet;
 }

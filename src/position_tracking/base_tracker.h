@@ -8,6 +8,38 @@ namespace proslam {
 //ds this class processes two subsequent Frames and establishes Framepoint correspondences (tracks) based on the corresponding images
 class BaseTracker {
 
+//ds exported types
+public:
+
+  //ds track proposal between 2 framepoints
+  struct TrackCandidate {
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    TrackCandidate(FramePoint* framepoint_previous_,
+                   const int32_t& row_,
+                   const int32_t& col_,
+                   const int32_t& pixel_distance_,
+                   const real& matching_distance_): framepoint(framepoint_previous_),
+                                                    row(row_),
+                                                    col(col_),
+                                                    pixel_distance(pixel_distance_),
+                                                    descriptor_distance(matching_distance_) {}
+
+    TrackCandidate(): framepoint(0),
+                      row(0),
+                      col(0),
+                      pixel_distance(0),
+                      descriptor_distance(0) {}
+
+    FramePoint* framepoint;
+    int32_t row;
+    int32_t col;
+    int32_t pixel_distance;
+    real descriptor_distance;
+  };
+  typedef std::vector<TrackCandidate, Eigen::aligned_allocator<TrackCandidate>> TrackCandidateVector;
+  typedef std::pair<const Identifier, TrackCandidateVector> TrackCandidateMapElement;
+  typedef std::map<const Identifier, TrackCandidateVector, std::less<const Identifier>, Eigen::aligned_allocator<TrackCandidateMapElement>> TrackCandidateMap;
+
 //ds object handling
 PROSLAM_MAKE_PROCESSING_CLASS(BaseTracker)
 
@@ -16,6 +48,10 @@ public:
 
   //! @brief creates a new Frame for the given images, retrieves the correspondences relative to the previous Frame, optimizes the current frame pose and updates landmarks
   virtual void compute();
+
+  //! @breaks the track at the current frame
+  //! @param[in] frame_ target frame to break the track at
+  void breakTrack(Frame* frame_);
 
 //ds getters/setters
 public:
@@ -47,7 +83,7 @@ protected:
   void _trackFramepoints(Frame* previous_frame_, Frame* current_frame_);
 
   //ds adds a new track
-  void _addTrack(FramePoint* framepoint_previous_, Frame* current_frame_, const Count& row_, const Count& col_);
+  void _addTrack(TrackCandidate& track_candidate_, Frame* current_frame_);
 
   //ds adds new framepoints to the provided frame (picked from the pool of the _framepoint_generator)
   void _addNewFramepoints(Frame* frame_);
@@ -70,9 +106,10 @@ protected:
 //ds attributes
 protected:
 
-  //ds tracker status
-  Frame::Status _status          = Frame::Localizing;
-  Frame::Status _status_previous = Frame::Localizing;
+  //ds tracker state
+  Frame::Status _status                        = Frame::Localizing;
+  Frame::Status _status_previous               = Frame::Localizing;
+  Count _number_of_subsequently_tracked_frames = 0;
 
   //ds running variables and buffered values
   Count _number_of_tracked_landmarks_far      = 0;
@@ -83,7 +120,6 @@ protected:
   int32_t _number_of_rows_image;
   int32_t _number_of_cols_image;
 
-
   //gg working elements
   const cv::Mat* _intensity_image_left;
   WorldMap* _context;
@@ -91,9 +127,6 @@ protected:
   //gg processing objects
   BaseFrameAligner* _pose_optimizer;
   BaseFramePointGenerator* _framepoint_generator;
-
-  //ds framepoint tracking configuration
-  int32_t _pixel_distance_tracking_threshold;
 
   //! @brief position tracking bookkeeping
   TransformMatrix3D _motion_previous_to_current_robot = TransformMatrix3D::Identity();
@@ -111,7 +144,6 @@ protected:
   Count _number_of_rows_bin;
   Count _number_of_cols_bin;
   FramePointMatrix _bin_map_left;
-  bool _enable_keypoint_binning;
 
 private:
 

@@ -351,7 +351,7 @@ void SLAMAssembly::playbackMessageFile() {
 
   //ds time measurement
   const double runtime_info_update_frequency_seconds = 5;
-  double processing_time_seconds_current              = 0;
+  double processing_time_seconds_current             = 0;
 
   //ds visualization/start point
   const TransformMatrix3D robot_to_camera_left(_camera_left->robotToCamera());
@@ -518,7 +518,7 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
   //ds if we have a valid frame
   if (_world_map->currentFrame()) {
 
-    //ds if relocalization is desired
+    //ds if relocalization is not disabled
     if (!_parameters->command_line_parameters->option_disable_relocalization) {
 
       //ds local map generation - regardless of tracker state

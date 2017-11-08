@@ -60,7 +60,7 @@ public:
   //! @brief save trajectory to a vector
   //! @param[in,out] poses_ vector with poses, set in the function
   template<typename RealType>
-  void writeTrajectory(std::vector<Eigen::Matrix<RealType, 4, 4>>& poses_) const {
+  void writeTrajectory(std::vector<Eigen::Matrix<RealType, 4, 4>, Eigen::aligned_allocator<Eigen::Matrix<RealType, 4, 4>>>& poses_) const {
 
     //ds prepare output vector
     poses_.resize(_frames.size());

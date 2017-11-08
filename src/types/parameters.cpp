@@ -123,7 +123,7 @@ BaseTrackerParameters::BaseTrackerParameters(const LoggingLevel& logging_level_)
   //ds set specific default parameters
   aligner->error_delta_for_convergence  = 1e-3;
   aligner->maximum_error_kernel         = 9;
-  aligner->maximum_number_of_iterations = 1e3;
+  aligner->maximum_number_of_iterations = 1000;
 }
 
 void BaseTrackerParameters::print() const {
@@ -291,6 +291,9 @@ void ParameterCollection::parseFromCommandLine(const int32_t& argc_, char ** arg
   //ds generate tracker mode specific parameters (no effect if configuration file and tracker mode not overwritten)
   setMode(command_line_parameters->tracker_mode);
 
+  //ds propagate duplicated values (generic)
+  image_viewer_parameters->tracker_mode = command_line_parameters->tracker_mode;
+
   //ds validate input parameters and exit on failure
   validateParameters();
 }
@@ -360,11 +363,13 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
         //MotionEstimation
         PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, minimum_track_length_for_landmark_creation, Count)
         PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, minimum_number_of_landmarks_to_track, Count)
+        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, minimum_number_of_framepoints_to_track, Count)
         PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, maximum_threshold_distance_tracking_pixels, int32_t)
         PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, minimum_threshold_distance_tracking_pixels, int32_t)
         PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, range_point_tracking, int32_t)
         PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, maximum_distance_tracking_pixels, int32_t)
         PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, maximum_number_of_landmark_recoveries, Count)
+        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, enable_keypoint_binning, bool)
         PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, bin_size_pixels, Count)
         PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, ratio_keypoints_to_bins, real)
         PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, minimum_delta_angular_for_movement, real)
@@ -394,11 +399,13 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
         //MotionEstimation
         PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, minimum_track_length_for_landmark_creation, Count)
         PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, minimum_number_of_landmarks_to_track, Count)
+        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, minimum_number_of_framepoints_to_track, Count)
         PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, maximum_threshold_distance_tracking_pixels, int32_t)
         PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, minimum_threshold_distance_tracking_pixels, int32_t)
         PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, range_point_tracking, int32_t)
         PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, maximum_distance_tracking_pixels, int32_t)
         PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, maximum_number_of_landmark_recoveries, Count)
+        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, enable_keypoint_binning, bool)
         PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, bin_size_pixels, Count)
         PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, ratio_keypoints_to_bins, real)
         PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, minimum_delta_angular_for_movement, real)
@@ -431,7 +438,7 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
 
     //Pose Graph Optimization
     PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, maximum_number_of_iterations, Count)
-    PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, identifier_space, Count)
+    PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, identifier_space, real)
     PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, number_of_frames_per_bundle_adjustment, Count)
     PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, base_information_frame, real)
     PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, free_translation_for_pose_measurements, bool)
@@ -458,9 +465,6 @@ void ParameterCollection::validateParameters() {
     LOG_ERROR(std::cerr << "ParameterCollection::validateParameters|empty value entered for parameter: -topic-image-right (-ir) (enter -h for help)" << std::endl)
     throw std::runtime_error("empty value entered for parameter: -topic-image-right");
   }
-
-  //ds synchronize values for multiplicated fields
-  world_map_parameters->landmark->option_disable_relocalization = command_line_parameters->option_disable_relocalization;
 }
 
 void ParameterCollection::setMode(const CommandLineParameters::TrackerMode& mode_) {

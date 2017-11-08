@@ -76,7 +76,7 @@ public:
   //! @brief save trajectory to a vector
   //! @param[in,out] poses_ vector with poses, set in the function
   template<typename RealType>
-  void writeTrajectory(std::vector<Eigen::Matrix<RealType, 4, 4>>& poses_) const {if (_world_map) {_world_map->writeTrajectory<RealType>(poses_);}}
+  void writeTrajectory(std::vector<Eigen::Matrix<RealType, 4, 4>, Eigen::aligned_allocator<Eigen::Matrix<RealType, 4, 4>>>& poses_) const {if (_world_map) {_world_map->writeTrajectory<RealType>(poses_);}}
 
   //! @brief save trajectory to a vector with timestamps
   //! @param[in,out] poses_ vector with timestamps and poses, set in the function

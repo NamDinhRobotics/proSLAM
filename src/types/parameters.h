@@ -107,9 +107,6 @@ public:
 
   //! @brief maximum allowed measurement divergence
   real maximum_translation_error_to_depth_ratio = 1;
-
-  //! @brief disable relocalization (prevents descriptor accumulation in landmark)
-  bool option_disable_relocalization = false;
 };
 
 //! @class local map parameters
@@ -168,14 +165,14 @@ public:
 
   //! @brief dynamic thresholds for feature detection
   real target_number_of_keypoints_tolerance = 0.1;
-  int32_t detector_threshold                = 15;
+  int32_t detector_threshold                = 10;
   int32_t detector_threshold_minimum        = 5;
   real detector_threshold_step_size         = 5;
 
   //! @brief dynamic thresholds for descriptor matching
   int32_t matching_distance_tracking_threshold         = 50;
   int32_t matching_distance_tracking_threshold_maximum = 50;
-  int32_t matching_distance_tracking_threshold_minimum = 15;
+  int32_t matching_distance_tracking_threshold_minimum = 10;
   int32_t matching_distance_tracking_step_size         = 1;
 };
 
@@ -229,14 +226,17 @@ public:
   //! @brief this criteria is used for the decision of whether creating a landmark or not from a track of framepoints
   Count minimum_track_length_for_landmark_creation = 3;
 
+  //! @brief minimum number of subsequently tracked frames for narrowing the framepoint tracking
+  Count minimum_number_of_subsequently_tracked_frames = 10;
+
   //! @brief tracking criteria for landmarks, required to perform position tracking
-  Count minimum_number_of_landmarks_to_track = 10;
+  Count minimum_number_of_landmarks_to_track = 5;
 
   //! @brief tracking criteria for framepoints, required to perform position tracking
-  Count minimum_number_of_framepoints_to_track = 25;
+  Count minimum_number_of_framepoints_to_track = 10;
 
   //! @brief point tracking thresholds
-  int32_t minimum_threshold_distance_tracking_pixels = 4*4;
+  int32_t minimum_threshold_distance_tracking_pixels = 5*5;
   int32_t maximum_threshold_distance_tracking_pixels = 7*7;
 
   //! @brief pixel search range width for point vicinity tracking
@@ -250,6 +250,7 @@ public:
   Count maximum_number_of_landmark_recoveries = 3;
 
   //! @brief feature density regularization
+  bool enable_keypoint_binning = true;
   Count bin_size_pixels        = 15;
   real ratio_keypoints_to_bins = 1;
 
@@ -361,8 +362,12 @@ public:
   //! @brief parameter printing function
   virtual void print() const;
 
-  //! @brief viewer window title
-  std::string window_title = "input: images [OpenCV]";
+  //! @brief viewer window titles
+  std::string window_title           = "input: images [OpenCV]";
+  std::string window_title_secondary = "input: images [OpenCV] | secondary";
+
+  //! @brief tracker mode (propagated)
+  CommandLineParameters::TrackerMode tracker_mode = CommandLineParameters::TrackerMode::RGB_STEREO;
 };
 
 //! @class map viewer parameters

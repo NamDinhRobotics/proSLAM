@@ -59,9 +59,9 @@ namespace proslam {
       PointCoordinates sampled_point_in_camera_left = PointCoordinates::Zero();
       if (landmark && landmark->areCoordinatesValidated()) {
         sampled_point_in_camera_left = _world_to_camera*landmark->coordinates();
+        _omega *= (1+landmark->numberOfUpdates());
       } else {
         sampled_point_in_camera_left = _world_to_camera*frame_point->previous()->worldCoordinates();
-        _omega *= _weight_framepoint;
       }
       const real& depth_meters = sampled_point_in_camera_left.z();
       if (depth_meters <= 0 || depth_meters > _maximum_depth_far_meters) {
@@ -191,7 +191,7 @@ namespace proslam {
     const Matrix3 rotation = _world_to_camera.linear();
     Matrix3 rotation_squared             = rotation.transpose() * rotation;
     rotation_squared.diagonal().array() -= 1;
-    _world_to_camera.linear()      -= 0.5*rotation*rotation_squared;
+    _world_to_camera.linear()           -= 0.5*rotation*rotation_squared;
   }
 
   //ds solve alignment problem until convergence is reached
@@ -207,10 +207,12 @@ namespace proslam {
       //ds check if converged (no descent required)
       if (_parameters->error_delta_for_convergence > std::fabs(total_error_previous-_total_error)) {
 
-        //ds trigger inlier only runs
-        oneRound(true);
-        oneRound(true);
-        oneRound(true);
+        //ds trigger 3 inlier only runs - only if there are enough correspondences available
+        if (_number_of_inliers > 100) {
+          oneRound(true);
+          oneRound(true);
+          oneRound(true);
+        }
 
         //ds compute information matrix
         _information_matrix = _H;

@@ -62,8 +62,17 @@ endif()
 #ds attempt to locate a g2o package through cmake modules
 find_package(G2O QUIET)
 
-#ds set ownership model for g2o TODO retrieve this automatically from g2o (comment this line if you're using an older g2o version)
-add_definitions(-DSRRG_PROSLAM_G2O_HAS_NEW_OWNERSHIP_MODEL)
+#ds set ownership model for g2o TODO retrieve this information from g2o (current g2o requires cmake 3+)
+if (${CMAKE_MAJOR_VERSION} GREATER 2)
+
+  #ds (comment this line if you're using an older g2o version but cmake 3+)
+  add_definitions(-DSRRG_PROSLAM_G2O_HAS_NEW_OWNERSHIP_MODEL)
+  message("found CMake 3+: assuming new g2o ownership model")
+else()
+
+  #ds old g2o ownership model is used
+  message("found CMake 2: assuming old g2o ownership model")
+endif()
 
 #ds check if a custom g2o library is installed
 set(SRRG_PROSLAM_HAS_OWN_G2O false)

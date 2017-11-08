@@ -64,11 +64,9 @@ void Landmark::update(const PointCoordinates& coordinates_in_world_, const real&
 
 void Landmark::update(const FramePoint* point_) {
 
-  //ds accumulate descriptors if relocalization is desired
-  if (!_parameters->option_disable_relocalization) {
-    _state->appearances.push_back(new HBSTMatchable(reinterpret_cast<const void*>(_state), point_->descriptorLeft()));
-    _state->appearances.push_back(new HBSTMatchable(reinterpret_cast<const void*>(_state), point_->descriptorRight()));
-  }
+  //ds update appearance history
+  _state->appearances.push_back(new HBSTMatchable(reinterpret_cast<const void*>(_state), point_->descriptorLeft()));
+  _state->appearances.push_back(new HBSTMatchable(reinterpret_cast<const void*>(_state), point_->descriptorRight()));
 
   //ds always update position
   update(point_->worldCoordinates(), point_->depthMeters());

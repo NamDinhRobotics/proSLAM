@@ -22,7 +22,6 @@ public:
 //ds setters/getters
 public:
 
-  void setWeightFramepoint(const real& weight_framepoint_) {_weight_framepoint = weight_framepoint_;}
   void setMaximumDepthNearMeters(const real& maximum_depth_near_meters_) {_maximum_depth_near_meters = maximum_depth_near_meters_;}
   void setMaximumDepthFarMeters(const real& maximum_depth_far_meters_) {_maximum_depth_far_meters = maximum_depth_far_meters_;}
   inline const TransformMatrix3D& robotToWorld() const {return _robot_to_world;}
@@ -38,7 +37,6 @@ protected:
   TransformMatrix3D _world_to_camera = TransformMatrix3D::Identity();
   TransformMatrix3D _camera_to_world = TransformMatrix3D::Identity();
 
-  real _weight_framepoint         = 1;
   real _maximum_depth_near_meters = 0;
   real _maximum_depth_far_meters  = 0;
 

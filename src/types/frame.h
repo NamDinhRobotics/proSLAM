@@ -186,6 +186,6 @@ protected:
 };
 
 typedef std::vector<Frame*, Eigen::aligned_allocator<Frame*>> FramePointerVector;
-typedef std::pair<Identifier, Frame*> FramePointerMapElement;
-typedef std::map<Identifier, Frame*, std::less<Identifier>, Eigen::aligned_allocator<FramePointerMapElement>> FramePointerMap;
+typedef std::pair<const Identifier, Frame*> FramePointerMapElement;
+typedef std::map<const Identifier, Frame*, std::less<const Identifier>, Eigen::aligned_allocator<FramePointerMapElement>> FramePointerMap;
 }

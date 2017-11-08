@@ -345,7 +345,7 @@ void GraphOptimizer::optimizeFrames(WorldMap* world_map_) {
   CHRONOMETER_START(optimization)
 
   //ds optimize existing graph
-//  const std::string file_name = "pose_graph_"+std::to_string(_frames_in_pose_graph.size())+".g2o";
+//  const std::string file_name = "pose_graph_"+std::to_string(world_map_->currentFrame()->identifier())+".g2o";
 //  _optimizer->save(file_name.c_str());
   _optimizer->initializeOptimization();
   _optimizer->optimize(_parameters->maximum_number_of_iterations);
@@ -378,7 +378,7 @@ void GraphOptimizer::optimizeFramesWithLandmarks(WorldMap* world_map_) {
   CHRONOMETER_START(optimization)
 
   //ds optimize existing graph
-//  const std::string file_name = "pose_graph_"+std::to_string((*_frames_in_pose_graph.begin()).first->identifier())+".g2o";
+//  const std::string file_name = "pose_graph_"+std::to_string(world_map_->currentFrame()->identifier())+".g2o";
 //  _optimizer->save(file_name.c_str());
   _optimizer->initializeOptimization();
   _optimizer->optimize(_parameters->maximum_number_of_iterations);

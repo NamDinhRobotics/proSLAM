@@ -58,9 +58,9 @@ namespace proslam {
       PointCoordinates predicted_point_in_camera = PointCoordinates::Zero();
       if (landmark && landmark->areCoordinatesValidated()) {
         predicted_point_in_camera = _world_to_camera*landmark->coordinates();
+        _omega *= 1.5;
       } else {
         predicted_point_in_camera = _world_to_camera*frame_point->previous()->worldCoordinates();
-        _omega *= _weight_framepoint;
       }
       const real& depth_meters = predicted_point_in_camera.z();
       if (depth_meters <= 0 || depth_meters > _maximum_depth_far_meters) {

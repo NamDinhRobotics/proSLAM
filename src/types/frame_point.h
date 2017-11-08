@@ -27,6 +27,9 @@ protected:
 //ds getters/setters
 public:
 
+  //ds unique identifier for a framepoint (exists once in memory)
+  inline const Index identifier() const {return _identifier;}
+
   //ds FramePoint in the previous image
   inline FramePoint* previous() const {return _previous;}
   void setPrevious(FramePoint* previous_);
@@ -83,6 +86,9 @@ public:
 //ds attributes
 protected:
 
+  //ds unique identifier for a framepoint (exists once in memory)
+  const Identifier _identifier;
+
   //ds connections to temporal and ownership elements
   FramePoint* _previous = 0; //ds FramePoint in the previous image
   FramePoint* _next     = 0; //ds FramePoint in the next image (updated as soon as previous is called)
@@ -118,6 +124,12 @@ protected:
   //ds visualization only
   PointCoordinates _reprojection_coordinates_left  = PointCoordinates::Zero();
   PointCoordinates _reprojection_coordinates_right = PointCoordinates::Zero();
+
+//ds class specific
+private:
+
+  //ds inner instance count - incremented upon constructor call (also unsuccessful calls)
+  static Count _instances;
 };
 
 typedef std::vector<FramePoint*, Eigen::aligned_allocator<FramePoint*>> FramePointPointerVector;

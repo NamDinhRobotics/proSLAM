@@ -11,11 +11,9 @@ BaseTracker::BaseTracker(BaseTrackerParameters* parameters_): _parameters(parame
                                                               _context(0),
                                                               _pose_optimizer(0),
                                                               _framepoint_generator(0),
-                                                              _pixel_distance_tracking_threshold(4*4),
                                                               _number_of_rows_bin(0),
                                                               _number_of_cols_bin(0),
                                                               _bin_map_left(0),
-                                                              _enable_keypoint_binning(false),
                                                               _has_odometry(false) {
   LOG_DEBUG(std::cerr << "BaseTracker::BaseTracker|constructed" << std::endl)
 }
@@ -141,7 +139,6 @@ void BaseTracker::compute() {
         //ds solve pose on frame points only
         CHRONOMETER_START(pose_optimization);
         _pose_optimizer->initialize(current_frame, current_frame->robotToWorld());
-        _pose_optimizer->setWeightFramepoint(1);
         _pose_optimizer->converge();
         CHRONOMETER_STOP(pose_optimization);
 
@@ -193,27 +190,7 @@ void BaseTracker::compute() {
 
       //ds if we got not enough tracks to evaluate for position tracking
       if (_number_of_tracked_points < _parameters->minimum_number_of_framepoints_to_track) {
-
-        //ds reset state
-        LOG_WARNING(std::printf("BaseTracker::compute|LOST TRACK due to insufficient number of tracks at frame [%06lu]\n", current_frame->identifier()))
-        _status_previous = Frame::Localizing;
-        _status          = Frame::Localizing;
-
-        //ds stick to previous solution - simulating a fresh start
-        current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
-        _motion_previous_to_current_robot = TransformMatrix3D::Identity();
-        _number_of_lost_points_recovered = 0;
-        _number_of_tracked_points        = 0;
-
-        //ds reset frame in world context, triggering a restart of the pipeline
-        _context->breakTrack(current_frame);
-
-        //ds release all framepoints currently in the bin - enabling a full fresh addition in the add framepoints phase
-        for (Index row_bin = 0; row_bin < _number_of_rows_bin; ++row_bin) {
-          for (Index col_bin = 0; col_bin < _number_of_cols_bin; ++col_bin) {
-            _bin_map_left[row_bin][col_bin] = 0;
-          }
-        }
+        breakTrack(current_frame);
         break;
       }
 
@@ -234,14 +211,9 @@ void BaseTracker::compute() {
                   << " (close/total: " << _number_of_tracked_landmarks_close << "/" << number_of_tracked_landmarks << ")" << std::endl)
       }
 
-      //ds derive framepoint weight for current optimization
-      const real weight_framepoint = percentage_of_close_landmarks*(1-percentage_landmarks);
-      assert(weight_framepoint <= 1);
-
       //ds call pose solver
       CHRONOMETER_START(pose_optimization)
       _pose_optimizer->initialize(current_frame, current_frame->robotToWorld());
-      _pose_optimizer->setWeightFramepoint(std::max(weight_framepoint, static_cast<real>(0.01)));
       _pose_optimizer->converge();
       CHRONOMETER_STOP(pose_optimization)
 
@@ -287,30 +259,12 @@ void BaseTracker::compute() {
         CHRONOMETER_START(landmark_optimization)
         _updateLandmarks(_context, current_frame);
         CHRONOMETER_STOP(landmark_optimization)
+
+        //ds tracking
         _status_previous = _status;
         _status          = Frame::Tracking;
       } else {
-
-        //ds reset state
-        LOG_WARNING(std::printf("BaseTracker::compute|LOST TRACK due to invalid position optimization at frame [%06lu]\n", current_frame->identifier()))
-        _status_previous = Frame::Localizing;
-        _status          = Frame::Localizing;
-
-        //ds stick to previous solution - simulating a fresh start
-        current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
-        _motion_previous_to_current_robot = TransformMatrix3D::Identity();
-        _number_of_lost_points_recovered = 0;
-        _number_of_tracked_points        = 0;
-
-        //ds reset frame in world context, triggering a restart of the pipeline
-        _context->breakTrack(current_frame);
-
-        //ds release all framepoints currently in the bin - enabling a full fresh addition in the add framepoints phase
-        for (Index row_bin = 0; row_bin < _number_of_rows_bin; ++row_bin) {
-          for (Index col_bin = 0; col_bin < _number_of_cols_bin; ++col_bin) {
-            _bin_map_left[row_bin][col_bin] = 0;
-          }
-        }
+        breakTrack(current_frame);
       }
       break;
     }
@@ -319,6 +273,13 @@ void BaseTracker::compute() {
       assert(false);
       break;
     }
+  }
+
+  //ds update track count accordingly
+  if (_status == Frame::Tracking) {
+    ++_number_of_subsequently_tracked_frames;
+  } else {
+    _number_of_subsequently_tracked_frames = 0;
   }
 
   //ds add new framepoints
@@ -336,7 +297,7 @@ void BaseTracker::compute() {
 void BaseTracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame_) {
   assert(previous_frame_);
   assert(current_frame_);
-  _enable_keypoint_binning = true;
+  const bool track_by_appearance = (_number_of_subsequently_tracked_frames < _parameters->minimum_number_of_subsequently_tracked_frames);
 
   //ds control variables
   current_frame_->points().resize(_number_of_potential_points);
@@ -351,18 +312,23 @@ void BaseTracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame
   //ds prepare lost buffer
   _lost_points.resize(previous_frame_->points().size());
 
-  //ds check state
-  if (_status_previous == Frame::Localizing) {
+  //ds check state for current framepoint tracking configuration
+  int32_t pixel_distance_tracking_threshold;
+  if (track_by_appearance) {
 
     //ds for localization mode we have a more relaxed tracking condition
-    _pixel_distance_tracking_threshold = _parameters->maximum_threshold_distance_tracking_pixels;
+    pixel_distance_tracking_threshold = _parameters->maximum_threshold_distance_tracking_pixels;
   } else {
 
     //ds narrow search limit closer to projection when we're in tracking mode
-    _pixel_distance_tracking_threshold = _parameters->minimum_threshold_distance_tracking_pixels;
+    pixel_distance_tracking_threshold = _parameters->minimum_threshold_distance_tracking_pixels;
   }
-  const real _maximum_matching_distance_tracking_point  = _framepoint_generator->matchingDistanceTrackingThreshold();
-  const real _maximum_matching_distance_tracking_region = _framepoint_generator->matchingDistanceTrackingThreshold();
+
+  //ds obtain currently active tracking distance
+  const real maximum_matching_distance_tracking = _framepoint_generator->matchingDistanceTrackingThreshold();
+
+  //ds get a fresh track candidate buffer
+  TrackCandidateMap track_candidates;
 
   //ds loop over all past points
   for (Index index_point_previous = 0; index_point_previous < previous_frame_->points().size(); ++index_point_previous) {
@@ -378,7 +344,8 @@ void BaseTracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame
     const int32_t col_previous   = std::round(previous_point->imageCoordinatesLeft().x());
 
     //ds exhaustive search
-    int32_t pixel_distance_best = _pixel_distance_tracking_threshold;
+    int32_t pixel_distance_best = pixel_distance_tracking_threshold;
+    real matching_distance_best = maximum_matching_distance_tracking;
     int32_t row_best = -1;
     int32_t col_best = -1;
 
@@ -389,75 +356,149 @@ void BaseTracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame
     const int32_t col_start_point = std::max(col_projection-_parameters->range_point_tracking, static_cast<int32_t>(0));
     const int32_t col_end_point   = std::min(col_projection+_parameters->range_point_tracking, static_cast<int32_t>(_framepoint_generator->numberOfColsImage()));
 
-    //ds locate best match
-    for (int32_t row_point = row_start_point; row_point < row_end_point; ++row_point) {
-      for (int32_t col_point = col_start_point; col_point < col_end_point; ++col_point) {
-        if (_framepoint_generator->framepointsInImage()[row_point][col_point]) {
-          const int32_t pixel_distance = std::fabs(row_projection-row_point)+std::fabs(col_projection-col_point);
-          const real matching_distance = cv::norm(previous_point->descriptorLeft(),
-                                                  _framepoint_generator->framepointsInImage()[row_point][col_point]->descriptorLeft(),
-                                                  SRRG_PROSLAM_DESCRIPTOR_NORM);
+    //ds check state
+    if (track_by_appearance) {
 
-          if (pixel_distance < pixel_distance_best && matching_distance < _maximum_matching_distance_tracking_point) {
-            pixel_distance_best = pixel_distance;
-            row_best = row_point;
-            col_best = col_point;
+      //ds locate best match in appearance
+      for (int32_t row_point = row_start_point; row_point < row_end_point; ++row_point) {
+        for (int32_t col_point = col_start_point; col_point < col_end_point; ++col_point) {
+          if (_framepoint_generator->framepointsInImage()[row_point][col_point]) {
+            const int32_t pixel_distance = std::fabs(row_projection-row_point)+std::fabs(col_projection-col_point);
+            const real matching_distance = cv::norm(previous_point->descriptorLeft(),
+                                                    _framepoint_generator->framepointsInImage()[row_point][col_point]->descriptorLeft(),
+                                                    SRRG_PROSLAM_DESCRIPTOR_NORM);
+
+            if (matching_distance < matching_distance_best) {
+              pixel_distance_best    = pixel_distance;
+              matching_distance_best = matching_distance;
+              row_best = row_point;
+              col_best = col_point;
+            }
           }
         }
       }
-    }
+    } else {
 
-    //ds if we found a match
-    if (pixel_distance_best < _pixel_distance_tracking_threshold) {
-
-      //ds check if track is consistent
-      if ((row_best-row_previous)*(row_best-row_previous)+(col_best-col_previous)*(col_best-col_previous) < _parameters->maximum_distance_tracking_pixels) {
-        _addTrack(previous_point, current_frame_, row_best, col_best);
-        continue;
-      }
-    }
-
-    //ds ------------------------------------------- STAGE 2: REGIONAL TRACKING
-    pixel_distance_best = _pixel_distance_tracking_threshold;
-
-    //ds compute borders
-    const int32_t row_start_region = std::max(row_projection-_pixel_distance_tracking_threshold, static_cast<int32_t>(0));
-    const int32_t row_end_region   = std::min(row_projection+_pixel_distance_tracking_threshold, static_cast<int32_t>(_framepoint_generator->numberOfRowsImage()));
-    const int32_t col_start_region = std::max(col_projection-_pixel_distance_tracking_threshold, static_cast<int32_t>(0));
-    const int32_t col_end_region   = std::min(col_projection+_pixel_distance_tracking_threshold, static_cast<int32_t>(_framepoint_generator->numberOfColsImage()));
-
-    //ds locate best match
-    for (int32_t row_region = row_start_region; row_region < row_end_region; ++row_region) {
-      for (int32_t col_region = col_start_region; col_region < col_end_region; ++col_region) {
-        if (_framepoint_generator->framepointsInImage()[row_region][col_region]) {
-
-          //ds if area has not been already evaluated in previous stage
-          if (row_region < row_start_point||
-              row_region >= row_end_point ||
-              col_region < col_start_point||
-              col_region >= col_end_point ) {
-
-            const int32_t pixel_distance = std::fabs(row_projection-row_region)+std::fabs(col_projection-col_region);
+      //ds locate best match in motion
+      for (int32_t row_point = row_start_point; row_point < row_end_point; ++row_point) {
+        for (int32_t col_point = col_start_point; col_point < col_end_point; ++col_point) {
+          if (_framepoint_generator->framepointsInImage()[row_point][col_point]) {
+            const int32_t pixel_distance = std::fabs(row_projection-row_point)+std::fabs(col_projection-col_point);
             const real matching_distance = cv::norm(previous_point->descriptorLeft(),
-                                                    _framepoint_generator->framepointsInImage()[row_region][col_region]->descriptorLeft(),
+                                                    _framepoint_generator->framepointsInImage()[row_point][col_point]->descriptorLeft(),
                                                     SRRG_PROSLAM_DESCRIPTOR_NORM);
 
-            if (pixel_distance < pixel_distance_best && matching_distance < _maximum_matching_distance_tracking_region) {
-              pixel_distance_best = pixel_distance;
-              row_best = row_region;
-              col_best = col_region;
+            if (pixel_distance < pixel_distance_best && matching_distance < maximum_matching_distance_tracking) {
+              pixel_distance_best    = pixel_distance;
+              matching_distance_best = matching_distance;
+              row_best = row_point;
+              col_best = col_point;
             }
           }
         }
       }
     }
 
-    //ds if we found a match
-    if (pixel_distance_best < _pixel_distance_tracking_threshold) {
+    //ds if we found a match that satisfies the current and original descriptor distance (drift resistance)
+    if ((row_best != -1) &&
+        (cv::norm(previous_point->origin()->descriptorLeft(),
+                 _framepoint_generator->framepointsInImage()[row_best][col_best]->descriptorLeft(),
+                 SRRG_PROSLAM_DESCRIPTOR_NORM) < _parameters->maximum_threshold_distance_tracking_pixels)) {
 
       //ds check if track is consistent
       if ((row_best-row_previous)*(row_best-row_previous)+(col_best-col_previous)*(col_best-col_previous) < _parameters->maximum_distance_tracking_pixels) {
-        _addTrack(previous_point, current_frame_, row_best, col_best);
+        FramePoint* current_point = _framepoint_generator->framepointsInImage()[row_best][col_best];
+        try {
+          track_candidates.at(current_point->identifier()).push_back(TrackCandidate(previous_point, row_best, col_best, pixel_distance_best, matching_distance_best));
+        } catch (const std::out_of_range& /**/) {
+          track_candidates.insert(std::make_pair(current_point->identifier(), TrackCandidateVector(1, TrackCandidate(previous_point, row_best, col_best, pixel_distance_best, matching_distance_best))));
+        }
+        continue;
+      }
+    }
+
+    //ds ------------------------------------------- STAGE 2: REGIONAL TRACKING
+    pixel_distance_best = pixel_distance_tracking_threshold;
+
+    //ds compute borders
+    const int32_t row_start_region = std::max(row_projection-pixel_distance_tracking_threshold, static_cast<int32_t>(0));
+    const int32_t row_end_region   = std::min(row_projection+pixel_distance_tracking_threshold, static_cast<int32_t>(_framepoint_generator->numberOfRowsImage()));
+    const int32_t col_start_region = std::max(col_projection-pixel_distance_tracking_threshold, static_cast<int32_t>(0));
+    const int32_t col_end_region   = std::min(col_projection+pixel_distance_tracking_threshold, static_cast<int32_t>(_framepoint_generator->numberOfColsImage()));
+
+    //ds check state
+    if (track_by_appearance) {
+
+      //ds locate best match in appearance
+      for (int32_t row_region = row_start_region; row_region < row_end_region; ++row_region) {
+        for (int32_t col_region = col_start_region; col_region < col_end_region; ++col_region) {
+          if (_framepoint_generator->framepointsInImage()[row_region][col_region]) {
+
+            //ds if area has not been already evaluated in previous stage
+            if (row_region < row_start_point||
+                row_region >= row_end_point ||
+                col_region < col_start_point||
+                col_region >= col_end_point ) {
+
+              const int32_t pixel_distance = std::fabs(row_projection-row_region)+std::fabs(col_projection-col_region);
+              const real matching_distance = cv::norm(previous_point->descriptorLeft(),
+                                                      _framepoint_generator->framepointsInImage()[row_region][col_region]->descriptorLeft(),
+                                                      SRRG_PROSLAM_DESCRIPTOR_NORM);
+
+              if (matching_distance < matching_distance_best) {
+                pixel_distance_best    = pixel_distance;
+                matching_distance_best = matching_distance;
+                row_best = row_region;
+                col_best = col_region;
+              }
+            }
+          }
+        }
+      }
+    } else {
+
+      //ds locate best match in motion
+      for (int32_t row_region = row_start_region; row_region < row_end_region; ++row_region) {
+        for (int32_t col_region = col_start_region; col_region < col_end_region; ++col_region) {
+          if (_framepoint_generator->framepointsInImage()[row_region][col_region]) {
+
+            //ds if area has not been already evaluated in previous stage
+            if (row_region < row_start_point||
+                row_region >= row_end_point ||
+                col_region < col_start_point||
+                col_region >= col_end_point ) {
+
+              const int32_t pixel_distance = std::fabs(row_projection-row_region)+std::fabs(col_projection-col_region);
+              const real matching_distance = cv::norm(previous_point->descriptorLeft(),
+                                                      _framepoint_generator->framepointsInImage()[row_region][col_region]->descriptorLeft(),
+                                                      SRRG_PROSLAM_DESCRIPTOR_NORM);
+
+              if (pixel_distance < pixel_distance_best && matching_distance < maximum_matching_distance_tracking) {
+                pixel_distance_best    = pixel_distance;
+                matching_distance_best = matching_distance;
+                row_best = row_region;
+                col_best = col_region;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    //ds if we found a match that satisfies the current and original descriptor distance (drift resistance)
+    if ((row_best != -1) &&
+        (cv::norm(previous_point->origin()->descriptorLeft(),
+                 _framepoint_generator->framepointsInImage()[row_best][col_best]->descriptorLeft(),
+                 SRRG_PROSLAM_DESCRIPTOR_NORM) < _parameters->maximum_threshold_distance_tracking_pixels)) {
+
+      //ds check if track is consistent
+      if ((row_best-row_previous)*(row_best-row_previous)+(col_best-col_previous)*(col_best-col_previous) < _parameters->maximum_distance_tracking_pixels) {
+        FramePoint* current_point = _framepoint_generator->framepointsInImage()[row_best][col_best];
+        try {
+          track_candidates.at(current_point->identifier()).push_back(TrackCandidate(previous_point, row_best, col_best, pixel_distance_best, matching_distance_best));
+        } catch (const std::out_of_range& /**/) {
+          track_candidates.insert(std::make_pair(current_point->identifier(), TrackCandidateVector(1, TrackCandidate(previous_point, row_best, col_best, pixel_distance_best, matching_distance_best))));
+        }
         continue;
       }
     }
@@ -468,6 +509,59 @@ void BaseTracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame
       ++_number_of_lost_points;
     }
   }
+
+  //ds evaluate track candidates and pick best for each current framepoint
+  for (TrackCandidateMapElement candidates_selection: track_candidates) {
+    TrackCandidateVector& candidates = candidates_selection.second;
+
+    //ds if there are multiple candidates
+    if (candidates.size() > 1) {
+
+      //ds find best in appearance
+      if (track_by_appearance) {
+
+        //ds best distance so far - appearance
+        TrackCandidate& candidate_best = candidates.front();
+        real distance_best             = candidates.front().descriptor_distance;
+
+        //ds loop over the candidates
+        for (TrackCandidate& candidate: candidates) {
+          if (candidate.descriptor_distance < distance_best) {
+            distance_best  = candidate.descriptor_distance;
+            candidate_best = candidate;
+          }
+        }
+
+        //ds save best
+        _addTrack(candidate_best, current_frame_);
+
+      //ds find best in pixel distance
+      } else {
+
+        //ds best distance so far - projection
+        TrackCandidate& candidate_best = candidates.front();
+        real distance_best             = candidates.front().pixel_distance;
+
+        //ds loop over the candidates
+        for (TrackCandidate& candidate: candidates) {
+          if (candidate.pixel_distance < distance_best) {
+            distance_best  = candidate.pixel_distance;
+            candidate_best = candidate;
+          }
+        }
+
+        //ds save best
+        _addTrack(candidate_best, current_frame_);
+      }
+    } else {
+
+      //ds take the only candidate
+      TrackCandidate& candidate = candidates.front();
+      _addTrack(candidate, current_frame_);
+    }
+  }
+
+  //ds update frame with current points
   current_frame_->points().resize(_number_of_tracked_points);
   _lost_points.resize(_number_of_lost_points);
 
@@ -480,11 +574,11 @@ void BaseTracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame
   _total_number_of_landmarks_far   += _number_of_tracked_landmarks_far;
 }
 
-void BaseTracker::_addTrack(FramePoint* framepoint_previous_, Frame* current_frame_, const Count& row_, const Count& col_) {
+void BaseTracker::_addTrack(TrackCandidate& track_candidate_, Frame* current_frame_) {
 
   //ds allocate a new point connected to the previous one
-  FramePoint* current_point = _framepoint_generator->framepointsInImage()[row_][col_];
-  current_point->setPrevious(framepoint_previous_);
+  FramePoint* current_point = _framepoint_generator->framepointsInImage()[track_candidate_.row][track_candidate_.col];
+  current_point->setPrevious(track_candidate_.framepoint);
 
   //ds set the point to the control structure
   current_frame_->points()[_number_of_tracked_points] = current_point;
@@ -498,14 +592,39 @@ void BaseTracker::_addTrack(FramePoint* framepoint_previous_, Frame* current_fra
   ++_number_of_tracked_points;
 
   //ds determine bin index of the current point
-  const Count row_bin = std::floor(static_cast<real>(row_)/_parameters->bin_size_pixels);
-  const Count col_bin = std::floor(static_cast<real>(col_)/_parameters->bin_size_pixels);
+  const Count row_bin = std::floor(static_cast<real>(track_candidate_.row)/_parameters->bin_size_pixels);
+  const Count col_bin = std::floor(static_cast<real>(track_candidate_.col)/_parameters->bin_size_pixels);
 
-  //ds occupy corresponding bin
+  //ds occupy corresponding bin for keypoint binning
   _bin_map_left[row_bin][col_bin] = current_point;
 
-  //ds disable further matching and reduce search time
-  _framepoint_generator->framepointsInImage()[row_][col_] = 0;
+  //ds remove from framepoint grid so the binning will not add this point as a new one
+  _framepoint_generator->framepointsInImage()[track_candidate_.row][track_candidate_.col] = 0;
+}
+
+//! @breaks the track at the current frame
+void BaseTracker::breakTrack(Frame* frame_) {
+
+  //ds reset state
+  LOG_WARNING(std::printf("BaseTracker::breakTrack|LOST TRACK at frame [%06lu]\n", frame_->identifier()))
+  _status_previous = Frame::Localizing;
+  _status          = Frame::Localizing;
+
+  //ds stick to previous solution - simulating a fresh start
+  frame_->setRobotToWorld(frame_->previous()->robotToWorld());
+  _motion_previous_to_current_robot = TransformMatrix3D::Identity();
+  _number_of_lost_points_recovered = 0;
+  _number_of_tracked_points        = 0;
+
+  //ds reset frame in world context, triggering a restart of the pipeline
+  _context->breakTrack(frame_);
+
+  //ds release all framepoints currently in the bin - enabling a full fresh addition in the add framepoints phase
+  for (Index row_bin = 0; row_bin < _number_of_rows_bin; ++row_bin) {
+    for (Index col_bin = 0; col_bin < _number_of_cols_bin; ++col_bin) {
+      _bin_map_left[row_bin][col_bin] = 0;
+    }
+  }
 }
 
 //ds adds new framepoints to the provided frame (picked from the pool of the _framepoint_generator)
@@ -518,8 +637,8 @@ void BaseTracker::_addNewFramepoints(Frame* frame_) {
   //ds buffer current pose
   const TransformMatrix3D& frame_to_world = frame_->robotToWorld();
 
-  //ds if binning is desired
-  if (_enable_keypoint_binning) {
+  //ds if binning is desired and we're tracking
+  if (_parameters->enable_keypoint_binning && _status == Frame::Tracking) {
 
     //ds check triangulation map for unmatched points and fill them into the bin map
     for (Index row = 0; row < _framepoint_generator->numberOfRowsImage(); ++row) {
