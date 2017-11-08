@@ -71,8 +71,6 @@ in the root `CMakeLists.txt` must be commented for proper compilation.
 
     ./pull_srrg_packages.bash
 
-Note: For `Ubuntu 14.04` running `gcc <5` the `srrg_boss` revision [72f24f75](https://gitlab.com/srrg-software/srrg_boss/tree/72f24f75260adeb2a11380551038b81aa24c89a0) should be checked out.
-
 7) then build the project using (`ROS catkin` requires: `catkin_make -pkg` instead of `catkin build`):
     
     catkin build srrg_proslam
@@ -109,7 +107,7 @@ Two windows will pop up - "input: images" (OpenCV), "output: map" (OpenGL) <br/>
 ### Quantitative result evaluation ###
 To see the raw system performance on KITTI simply launch srrg_proslam with the input dataset and the configuration file:
 
-    rosrun srrg_proslam app 00.txt -c ${PROSLAM_ROOT}/configurations/configuration_kitti.yaml
+    rosrun srrg_proslam app 00.txt -c configuration_kitti.yaml
 
 After a complete run we evaluate the `KITTI error statistics` by calling:
 
@@ -117,11 +115,13 @@ After a complete run we evaluate the `KITTI error statistics` by calling:
     
 To see the raw system performance on EuRoC simply launch srrg_proslam with the input dataset and the configuration file:
 
-    rosrun srrg_proslam app MH_01_easy.txt -c ${PROSLAM_ROOT}/configurations/configuration_euroc.yaml
+    rosrun srrg_proslam app MH_01_easy.txt -c configuration_euroc.yaml
 
 After a complete run we evaluate the `EuRoC RMSE` by calling:
 
     rosrun srrg_proslam trajectory_analyzer -tum trajectory_tum.txt -asl state_groundtruth_estimate.csv
+    
+The specific configuration files (`configuration_kitti.yaml, configuration_euroc.yaml`) can be found in the configurations folder of the ProSLAM project
 
 ---
 ### Pre-formatted SRRG datasets (online ground truth display) ###
@@ -134,6 +134,7 @@ After a complete run we evaluate the `EuRoC RMSE` by calling:
  - `EuRoC V1_01_easy`: https://drive.google.com/open?id=0ByaBRAPfmgEqRW5aWUZWV1NLSVE (1.0GB) <br/>
 
 Run procedure remains identical to the one above (only the dataset name has to be adjusted, e.g. `00.txt` becomes `MH_01_easy.txt`) <br/>
+The ground truth display can be toggled by pressing the Number key `4` in the "output: map" window <br/>
 The EuRoC sequences generally require image histogram equalization for best performance (option `-equalize-histogram/-eh`)
 
 Dataset conversion utilities are available in the [srrg_core](https://gitlab.com/srrg-software/srrg_core) package <br/>
@@ -141,7 +142,7 @@ An example to obtain a converted EuRoC sequence (e.g. `MH_01_easy.txt`, using a 
 
     rosrun srrg_core srrg_message_converter_euroc_app -o MH_01_easy.txt -hard-calibration
 
-Note that the command has to be issued from inside of the ASL folder `mav0`
+Note that the command has to be issued from inside of the ASL folder `mav0` <br/>
 
 ---
 ### Custom stereo camera sensor input / ROS node ###
