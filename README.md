@@ -162,5 +162,10 @@ A custom configuration file can be specified as follows:
 [proslam_wiki]: https://gitlab.com/srrg-software/srrg_proslam/wikis/home
 
 ---
+### Full system overview
+![](https://drive.google.com/uc?export=download&id=1U8SJuETvbtYgqGFVIPffUPwI-iikSs4s)
+Detailed notes coming soon!
+
+---
 ### It doesn't work? ###
 [Open an issue](https://gitlab.com/srrg-software/srrg_proslam/issues) or contact the maintainer (see package.xml)
