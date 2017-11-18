@@ -3,15 +3,22 @@
 #include <iomanip>
 
 #include "framepoint_generation/stereo_framepoint_generator.h"
+#include "srrg_messages/message_reader.h"
+#include "srrg_messages/message_timestamp_synchronizer.h"
+#include "srrg_messages/pinhole_image_message.h"
 
-struct Image {
-    Image(const double& timestamp_seconds_, const std::string file_name_image_): timestamp_seconds(timestamp_seconds_),
+//ds easy logging macro
+#define LOG_VARIABLE(VARIABLE_) \
+  std::cerr << #VARIABLE_ << ": " << VARIABLE_ << std::endl;
+
+struct ImageDescriptor {
+    ImageDescriptor(const double& timestamp_seconds_, const std::string file_name_image_): timestamp_seconds(timestamp_seconds_),
                                                                                  file_name_image(file_name_image_) {}
     double timestamp_seconds;
     std::string file_name_image;
 };
 
-const std::vector<Image> getImagesASL(const std::string& folder_images_);
+const std::vector<ImageDescriptor> getImageDescriptorsASL(const std::string& folder_images_);
 
 const bool measure(const cv::Mat& image_,
                    const cv::Size& board_size_,
@@ -26,85 +33,98 @@ const double calibrate(const cv::Size image_size_,
                        cv::Mat& distortion_coefficients_);
 
 int32_t main (int32_t argc_, char** argv_) {
-  if (argc_ < 6) {
-    std::cerr << "use: ./stereo_calibrator -asl <folder_images_left> <folder_images_right> -o <calibration.txt>"<< std::endl;
+  if (argc_ < 3) {
+    std::cerr << "use: ./stereo_calibrator -srrg <messages> / -asl <folder_images_left> <folder_images_right> -o <calibration.txt>"<< std::endl;
     std::cerr << "                        [-use-gui -interspace <integer> -use-eth -check-orb -test-asl <folder_images_left_test> <folder_images_right_test>]" << std::endl;
-    std::cerr << "                              <folder_images_left/right> should each contain: data, data.csv" << std::endl;
-    return 0;
+    std::cerr << "                         <folder_images_left/right> should each contain: data, data.csv (ASL format)" << std::endl;
+    return EXIT_FAILURE;
   }
 
   //ds configuration
   std::string input_format                          = "";
-  std::string folder_images_left                    = "";
-  std::string folder_images_right                   = "";
+  std::string folder_images_left                    = "/camera_left/image_raw";  //ds nasty hack: we also use this field for the default topic name in srrg txt/boss files
+  std::string folder_images_right                   = "/camera_right/image_raw"; //ds nasty hack: we also use this field for the default topic name in srrg txt/boss files
   std::string folder_images_left_test               = "";
   std::string folder_images_right_test              = "";
+  std::string file_name_messages                    = "";
   bool option_use_gui                               = false;
-  uint32_t measurement_image_interspace             = 10;
+  uint32_t measurement_image_interspace             = 1;
   bool option_use_eth_estimates                     = false;
   const double maximum_timestamp_difference_seconds = 0.01;
   std::string output_file_name                      = "";
   bool option_test_orb_slam_calibration             = false;
 
   //ds parse parameters
-  int32_t number_of_checked_parameters = 1;
-  while (number_of_checked_parameters < argc_) {
-    if (!std::strcmp(argv_[number_of_checked_parameters], "-asl")) {
+  int32_t u = 1;
+  while (u < argc_) {
+    if (!std::strcmp(argv_[u], "-asl")) {
       input_format = "asl";
-      ++number_of_checked_parameters;
-      if (number_of_checked_parameters == argc_) {break;}
-      folder_images_left = argv_[number_of_checked_parameters];
-      ++number_of_checked_parameters;
-      if (number_of_checked_parameters == argc_) {break;}
-      folder_images_right = argv_[number_of_checked_parameters];
-    } else if (!std::strcmp(argv_[number_of_checked_parameters], "-use-gui")) {
+      ++u;
+      if (u == argc_) {break;}
+      folder_images_left = argv_[u];
+      ++u;
+      if (u == argc_) {break;}
+      folder_images_right = argv_[u];
+    } else if (!std::strcmp(argv_[u], "-srrg")) {
+      input_format = "srrg";
+      ++u;
+      if (u == argc_) {break;}
+      file_name_messages = argv_[u];
+    } else if (!std::strcmp(argv_[u], "-use-gui") || !std::strcmp(argv_[u], "-ug")) {
       option_use_gui = true;
-    } else if (!std::strcmp(argv_[number_of_checked_parameters], "-interspace")) {
-      ++number_of_checked_parameters;
-      if (number_of_checked_parameters == argc_) {break;}
-      measurement_image_interspace = std::stoi(argv_[number_of_checked_parameters]);
-    } else if (!std::strcmp(argv_[number_of_checked_parameters], "-use-eth")) {
+    } else if (!std::strcmp(argv_[u], "-interspace")) {
+      ++u;
+      if (u == argc_) {break;}
+      measurement_image_interspace = std::stoi(argv_[u]);
+    } else if (!std::strcmp(argv_[u], "-use-eth")) {
       option_use_eth_estimates = true;
-    } else if (!std::strcmp(argv_[number_of_checked_parameters], "-o")) {
-      ++number_of_checked_parameters;
-      if (number_of_checked_parameters == argc_) {break;}
-      output_file_name = argv_[number_of_checked_parameters];
-    } else if (!std::strcmp(argv_[number_of_checked_parameters], "-check-orb")) {
+    } else if (!std::strcmp(argv_[u], "-o")) {
+      ++u;
+      if (u == argc_) {break;}
+      output_file_name = argv_[u];
+    } else if (!std::strcmp(argv_[u], "-check-orb")) {
       option_test_orb_slam_calibration = true;
-    } else if (!std::strcmp(argv_[number_of_checked_parameters], "-test-asl")) {
+    } else if (!std::strcmp(argv_[u], "-test-asl")) {
       input_format = "asl";
-      ++number_of_checked_parameters;
-      if (number_of_checked_parameters == argc_) {break;}
-      folder_images_left_test = argv_[number_of_checked_parameters];
-      ++number_of_checked_parameters;
-      if (number_of_checked_parameters == argc_) {break;}
-      folder_images_right_test = argv_[number_of_checked_parameters];
+      ++u;
+      if (u == argc_) {break;}
+      folder_images_left_test = argv_[u];
+      ++u;
+      if (u == argc_) {break;}
+      folder_images_right_test = argv_[u];
     }
-    ++number_of_checked_parameters;
+    ++u;
   }
 
   //ds input validation
   if (input_format.empty()) {
     std::cerr << "ERROR: specify input_format (e.g. -asl)" << std::endl;
-    return 0;
+    return EXIT_FAILURE;
   }
-  if (folder_images_left.empty()) {
-    std::cerr << "ERROR: specify folder_images_left" << std::endl;
-    return 0;
-  }
-  if (folder_images_right.empty()) {
-    std::cerr << "ERROR: specify folder_images_right" << std::endl;
-    return 0;
-  }
-  if (output_file_name.empty()) {
-    std::cerr << "ERROR: specify output_file_name (e.g. -o <calibration.txt>)" << std::endl;
-    return 0;
-  }
+  if (input_format == "asl") {
+    if (folder_images_left.empty()) {
+      std::cerr << "ERROR: specify folder_images_left" << std::endl;
+      return EXIT_FAILURE;
+    }
+    if (folder_images_right.empty()) {
+      std::cerr << "ERROR: specify folder_images_right" << std::endl;
+      return EXIT_FAILURE;
+    }
+    if (output_file_name.empty()) {
+      std::cerr << "ERROR: specify output_file_name (e.g. -o <calibration.txt>)" << std::endl;
+      return EXIT_FAILURE;
+    }
 
-  //ds if no test images are specified - use calibration ones
-  if (folder_images_left_test.empty() || folder_images_right_test.empty()) {
-    folder_images_left_test  = folder_images_left;
-    folder_images_right_test = folder_images_right;
+    //ds if no test images are specified - use calibration ones
+    if (folder_images_left_test.empty() || folder_images_right_test.empty()) {
+      folder_images_left_test  = folder_images_left;
+      folder_images_right_test = folder_images_right;
+    }
+  } else {
+    if (file_name_messages.empty()) {
+      std::cerr << "ERROR: specify file_name_messages" << std::endl;
+      return EXIT_FAILURE;
+    }
   }
 
   //ds board configuration
@@ -115,33 +135,104 @@ int32_t main (int32_t argc_, char** argv_) {
   cv::Size image_size(0, 0);
 
   //ds log configuration
-  std::cerr << "input_format: " << input_format << std::endl;
-  std::cerr << "folder_images_left: " << folder_images_left << std::endl;
-  std::cerr << "folder_images_right: " << folder_images_right << std::endl;
-  std::cerr << "option_use_gui: " << option_use_gui << std::endl;
-  std::cerr << "measurement_image_interspace: " << measurement_image_interspace << std::endl;
-  std::cerr << "option_use_eth_estimates: " << (option_use_eth_estimates || option_test_orb_slam_calibration) << std::endl;
-  std::cerr << "output_file_name: " << output_file_name << std::endl;
-  std::cerr << "option_test_orb_slam_calibration: " << option_test_orb_slam_calibration << std::endl;
-  std::cerr << "folder_images_left_test: " << folder_images_left_test << std::endl;
-  std::cerr << "folder_images_right_test: " << folder_images_right_test << std::endl;
+  LOG_VARIABLE(input_format)
+  if (input_format == "asl") {
+    LOG_VARIABLE(folder_images_left)
+    LOG_VARIABLE(folder_images_right)
+    LOG_VARIABLE(folder_images_left_test)
+    LOG_VARIABLE(folder_images_right_test)
+  } else {
+    LOG_VARIABLE(file_name_messages)
+  }
+  LOG_VARIABLE(option_use_gui)
+  LOG_VARIABLE(measurement_image_interspace)
+  LOG_VARIABLE(option_use_eth_estimates)
+  LOG_VARIABLE(output_file_name)
+  LOG_VARIABLE(option_test_orb_slam_calibration)
 
   //ds load images for left and right - assuming to be synchronized
-  const std::vector<Image> images_left(getImagesASL(folder_images_left));
-  const std::vector<Image> images_right(getImagesASL(folder_images_right));
-  if (images_left.size() == 0) {
+  std::vector<ImageDescriptor> image_descriptors_left;
+  std::vector<ImageDescriptor> image_descriptors_right;
+
+  //ds for ASL
+  if (input_format == "asl") {
+
+    //ds parse asl csv file
+    image_descriptors_left  = getImageDescriptorsASL(folder_images_left);
+    image_descriptors_right = getImageDescriptorsASL(folder_images_right);
+  } else {
+
+    //ds load image information using the srrg message player
+    srrg_core::MessageReader message_reader;
+    srrg_core::MessageTimestampSynchronizer synchronizer;
+
+    //ds attempt to open the provided file and check for failure
+    message_reader.open(file_name_messages);
+    if (!message_reader.good()) {
+      std::cerr << "unable to open file_name_messages: " << file_name_messages << std::endl;
+      return EXIT_FAILURE;
+    }
+
+    //ds configure message synchronizer
+    std::vector<std::string> camera_topics_synchronized(0);
+    camera_topics_synchronized.push_back(folder_images_left);
+    camera_topics_synchronized.push_back(folder_images_right);
+    synchronizer.setTimeInterval(0.001);
+    synchronizer.setTopics(camera_topics_synchronized);
+
+    //ds load all images
+    srrg_core::BaseMessage* message = 0;
+    while ((message = message_reader.readMessage())) {
+      srrg_core::BaseSensorMessage* sensor_message = dynamic_cast<srrg_core::BaseSensorMessage*>(message);
+      if (sensor_message) {
+        sensor_message->untaint();
+
+        //ds add to synchronizer
+        if (sensor_message->topic() == folder_images_left) {
+          synchronizer.putMessage(sensor_message);
+        } else if (sensor_message->topic() == folder_images_right) {
+          synchronizer.putMessage(sensor_message);
+        } else {
+          delete sensor_message;
+        }
+
+        //ds if we have a synchronized package of sensor messages ready
+        if (synchronizer.messagesReady()) {
+
+          //ds instantiate the messages
+          srrg_core::PinholeImageMessage* image_message_left  = dynamic_cast<srrg_core::PinholeImageMessage*>(synchronizer.messages()[0].get());
+          srrg_core::PinholeImageMessage* image_message_right = dynamic_cast<srrg_core::PinholeImageMessage*>(synchronizer.messages()[1].get());
+
+          //ds update our buffers
+          image_descriptors_left.push_back(ImageDescriptor(image_message_left->timestamp(), image_message_left->binaryFullFilename()));
+          image_descriptors_right.push_back(ImageDescriptor(image_message_right->timestamp(), image_message_right->binaryFullFilename()));
+
+          //ds done
+          image_message_left->release();
+          image_message_right->release();
+          synchronizer.reset();
+        }
+      }
+    }
+    message_reader.close();
+  }
+  std::cerr << "loaded image descriptors  LEFT: " << image_descriptors_left.size() << std::endl;
+  std::cerr << "loaded image descriptors RIGHT: " << image_descriptors_right.size() << std::endl;
+
+  //ds validation
+  if (image_descriptors_left.size() == 0) {
     std::cerr << "ERROR: no left images loaded" << std::endl;
     return 0;
   }
-  if (images_right.size() == 0) {
+  if (image_descriptors_right.size() == 0) {
     std::cerr << "ERROR: no right images loaded" << std::endl;
     return 0;
   }
-  if (images_left.size() != images_right.size()) {
+  if (image_descriptors_left.size() != image_descriptors_right.size()) {
     std::cerr << "ERROR: unequal numbers of left and right images" << std::endl;
     return 0;
   }
-  const uint32_t number_of_images = images_left.size();
+  const uint32_t number_of_images = image_descriptors_left.size();
 
   //ds calcuate outer corner positions (constant)
   std::vector<cv::Point3f> object_points;
@@ -161,14 +252,14 @@ int32_t main (int32_t argc_, char** argv_) {
   for (uint32_t image_number = 0; image_number < number_of_images; ++image_number) {
 
     //ds compute timestamp delta
-    const double timestamp_difference_seconds = std::fabs(images_left[image_number].timestamp_seconds-images_right[image_number].timestamp_seconds);
+    const double timestamp_difference_seconds = std::fabs(image_descriptors_left[image_number].timestamp_seconds-image_descriptors_right[image_number].timestamp_seconds);
 
     //ds if we have a synchronized package of sensor messages ready
     if (timestamp_difference_seconds < maximum_timestamp_difference_seconds) {
 
       //ds grab opencv image data
-      cv::Mat image_left  = cv::imread(images_left[image_number].file_name_image, CV_LOAD_IMAGE_GRAYSCALE);
-      cv::Mat image_right = cv::imread(images_right[image_number].file_name_image, CV_LOAD_IMAGE_GRAYSCALE);
+      cv::Mat image_left  = cv::imread(image_descriptors_left[image_number].file_name_image, CV_LOAD_IMAGE_GRAYSCALE);
+      cv::Mat image_right = cv::imread(image_descriptors_right[image_number].file_name_image, CV_LOAD_IMAGE_GRAYSCALE);
       cv::Mat image_display_left, image_display_right;
       cv::cvtColor(image_left, image_display_left, CV_GRAY2RGB);
       cv::cvtColor(image_right, image_display_right, CV_GRAY2RGB);
@@ -201,11 +292,20 @@ int32_t main (int32_t argc_, char** argv_) {
           cv::waitKey(1);
         }
 
-        //ds status
-        std::printf("%06lu|L: %f|R: %f|CL: %i CR: %i|measurements: %6lu\n", number_of_processed_stereo_images,
-                                                                            images_left[image_number].timestamp_seconds, images_right[image_number].timestamp_seconds,
-                                                                            measured_left, measured_right,
-                                                                            object_points_per_image.size());
+        //ds if not checkerboard is detected
+        if (!measured_left && !measured_right) {
+
+          //ds status: failed
+          std::printf("%06lu|L: %f|R: %f|no checkerboard detected!\n", number_of_processed_stereo_images,
+                                                                       image_descriptors_left[image_number].timestamp_seconds, image_descriptors_right[image_number].timestamp_seconds);
+        } else {
+
+          //ds status
+          std::printf("%06lu|L: %f|R: %f|CL: %i CR: %i|measurements: %6lu\n", number_of_processed_stereo_images,
+                                                                              image_descriptors_left[image_number].timestamp_seconds, image_descriptors_right[image_number].timestamp_seconds,
+                                                                              measured_left, measured_right,
+                                                                              object_points_per_image.size());
+        }
       }
 
       //ds release processed data
@@ -458,8 +558,8 @@ int32_t main (int32_t argc_, char** argv_) {
 #endif
 
   //ds load test images for left and right - assuming to be synchronized
-  const std::vector<Image> images_left_test(getImagesASL(folder_images_left_test));
-  const std::vector<Image> images_right_test(getImagesASL(folder_images_right_test));
+  const std::vector<ImageDescriptor> images_left_test(getImageDescriptorsASL(folder_images_left_test));
+  const std::vector<ImageDescriptor> images_right_test(getImageDescriptorsASL(folder_images_right_test));
 
   //ds restart the stream to check the found parameters
   double accumulated_relative_epipolar_matches = 0;
@@ -697,10 +797,10 @@ int32_t main (int32_t argc_, char** argv_) {
   return 0;
 }
 
-const std::vector<Image> getImagesASL(const std::string& folder_images_) {
+const std::vector<ImageDescriptor> getImageDescriptorsASL(const std::string& folder_images_) {
 
   //ds stamped images
-  std::vector<Image> images;
+  std::vector<ImageDescriptor> images;
 
   //ds load data file (comma separated values)
   std::ifstream file_images((folder_images_+"/data.csv").c_str());
@@ -727,7 +827,7 @@ const std::vector<Image> getImagesASL(const std::string& folder_images_) {
     index_begin_item = index_end_item+1;
 
     //ds parse image name and store it
-    images.push_back(Image(timestamp_milliseconds, image_path+buffer_line.substr(index_begin_item, buffer_line.length()-index_begin_item-1)));
+    images.push_back(ImageDescriptor(timestamp_milliseconds, image_path+buffer_line.substr(index_begin_item, buffer_line.length()-index_begin_item-1)));
   }
   return images;
 }
