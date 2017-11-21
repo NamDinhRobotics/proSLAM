@@ -222,15 +222,15 @@ int32_t main (int32_t argc_, char** argv_) {
   //ds validation
   if (image_descriptors_left.size() == 0) {
     std::cerr << "ERROR: no left images loaded" << std::endl;
-    return 0;
+    return EXIT_FAILURE;
   }
   if (image_descriptors_right.size() == 0) {
     std::cerr << "ERROR: no right images loaded" << std::endl;
-    return 0;
+    return EXIT_FAILURE;
   }
   if (image_descriptors_left.size() != image_descriptors_right.size()) {
     std::cerr << "ERROR: unequal numbers of left and right images" << std::endl;
-    return 0;
+    return EXIT_FAILURE;
   }
   const uint32_t number_of_images = image_descriptors_left.size();
 
@@ -557,9 +557,36 @@ int32_t main (int32_t argc_, char** argv_) {
   #error OpenCV version not supported
 #endif
 
-  //ds load test images for left and right - assuming to be synchronized
-  const std::vector<ImageDescriptor> images_left_test(getImageDescriptorsASL(folder_images_left_test));
-  const std::vector<ImageDescriptor> images_right_test(getImageDescriptorsASL(folder_images_right_test));
+  //ds load test images for left and right
+  std::vector<ImageDescriptor> image_descriptors_left_test(getImageDescriptorsASL(folder_images_left_test));
+  std::vector<ImageDescriptor> image_descriptors_right_test(getImageDescriptorsASL(folder_images_right_test));
+  if (input_format == "asl") {
+
+    //ds load ASL images
+    image_descriptors_left_test  = getImageDescriptorsASL(folder_images_left_test);
+    image_descriptors_right_test = getImageDescriptorsASL(folder_images_right_test);
+  } else {
+
+    //ds fallback to original input images (don't change the messages file)
+    image_descriptors_left_test  = image_descriptors_left;
+    image_descriptors_right_test = image_descriptors_right;
+  }
+  std::cerr << "loaded image descriptors  LEFT: " << image_descriptors_left_test.size() << std::endl;
+  std::cerr << "loaded image descriptors RIGHT: " << image_descriptors_right_test.size() << std::endl;
+
+  //ds validation
+  if (image_descriptors_left_test.size() == 0) {
+    std::cerr << "ERROR: no left benchmark images loaded" << std::endl;
+    return EXIT_FAILURE;
+  }
+  if (image_descriptors_right_test.size() == 0) {
+    std::cerr << "ERROR: no right benchmark images loaded" << std::endl;
+    return EXIT_FAILURE;
+  }
+  if (image_descriptors_left_test.size() != image_descriptors_right_test.size()) {
+    std::cerr << "ERROR: unequal numbers of left and right benchmark images" << std::endl;
+    return EXIT_FAILURE;
+  }
 
   //ds restart the stream to check the found parameters
   double accumulated_relative_epipolar_matches = 0;
@@ -567,14 +594,14 @@ int32_t main (int32_t argc_, char** argv_) {
   for (uint32_t image_number = 0; image_number < number_of_images; ++image_number) {
 
     //ds compute timestamp delta
-    const double timestamp_difference_seconds = std::fabs(images_left_test[image_number].timestamp_seconds-images_right_test[image_number].timestamp_seconds);
+    const double timestamp_difference_seconds = std::fabs(image_descriptors_left_test[image_number].timestamp_seconds-image_descriptors_right_test[image_number].timestamp_seconds);
 
     //ds if we have a synchronized package of sensor messages ready
     if (timestamp_difference_seconds < maximum_timestamp_difference_seconds) {
 
       //ds grab opencv image data
-      cv::Mat image_left  = cv::imread(images_left_test[image_number].file_name_image, CV_LOAD_IMAGE_GRAYSCALE);
-      cv::Mat image_right = cv::imread(images_right_test[image_number].file_name_image, CV_LOAD_IMAGE_GRAYSCALE);
+      cv::Mat image_left  = cv::imread(image_descriptors_left_test[image_number].file_name_image, CV_LOAD_IMAGE_GRAYSCALE);
+      cv::Mat image_right = cv::imread(image_descriptors_right_test[image_number].file_name_image, CV_LOAD_IMAGE_GRAYSCALE);
       cv::Mat image_display_left, image_display_right;
 
       //ds undistort and rectify
@@ -711,7 +738,7 @@ int32_t main (int32_t argc_, char** argv_) {
       //ds status
       std::printf("%06lu|L: %f|R: %f|keypoints L: %5lu keypoints R: %5lu "
                   "STEREO MATCHES: %5lu (%5.3f)\n", number_of_processed_stereo_images,
-                                                    images_left_test[image_number].timestamp_seconds, images_right_test[image_number].timestamp_seconds,
+                                                    image_descriptors_left_test[image_number].timestamp_seconds, image_descriptors_right_test[image_number].timestamp_seconds,
                                                     keypoints_left.size(), keypoints_right.size(),
                                                     number_of_epipolar_matches, static_cast<double>(number_of_epipolar_matches)/keypoints_left.size());
       ++number_of_processed_stereo_images;
@@ -794,7 +821,7 @@ int32_t main (int32_t argc_, char** argv_) {
   delete descriptor_extractor;
 #endif
 
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 const std::vector<ImageDescriptor> getImageDescriptorsASL(const std::string& folder_images_) {
