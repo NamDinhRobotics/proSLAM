@@ -127,10 +127,12 @@ The specific configuration files (`configuration_kitti.yaml, configuration_euroc
 ### Pre-formatted SRRG datasets (online ground truth display) ###
  - `KITTI Sequence 00`: https://drive.google.com/open?id=0ByaBRAPfmgEqdXhJRmktQ2lsMEE (2.8GB)
  - `KITTI Sequence 01`: https://drive.google.com/open?id=0ByaBRAPfmgEqN19hTUJjRG9XV3M (0.7GB)
+ - `KITTI Sequence 03`: https://drive.google.com/open?id=1ySsnZoMT_HotLWF9ToyWIa3Ud_YhSEKj (0.6GB)
  - `KITTI Sequence 04`: https://drive.google.com/open?id=0ByaBRAPfmgEqOEhEdEdLcUJUMlE (0.2GB)
  - `KITTI Sequence 06`: https://drive.google.com/open?id=0ByaBRAPfmgEqcC14TS1mbF9XSmc (0.7GB)
+ - `KITTI Sequence 10`: https://drive.google.com/open?id=1Nt71O0i0ClZwa6W8PrybjlNV9Xq99S1y (0.7GB)
  - `EuRoC MH_01_easy`: https://drive.google.com/open?id=0ByaBRAPfmgEqbUctejZwb0xRaFk (1.3GB)
- - `EuRoC MH_05_difficult`: https://drive.google.com/open?id=0ByaBRAPfmgEqTWVCZDVqNTY2QXc (0.7GB)
+ - `EuRoC MH_05_difficult`: https://drive.google.com/open?id=0ByaBRAPfmgEqTWVCZDVqNTY2QXc (0.8GB)
  - `EuRoC V1_01_easy`: https://drive.google.com/open?id=0ByaBRAPfmgEqRW5aWUZWV1NLSVE (1.0GB) <br/>
 
 Run procedure remains identical to the one above (only the dataset name has to be adjusted, e.g. `00.txt` becomes `MH_01_easy.txt`) <br/>
