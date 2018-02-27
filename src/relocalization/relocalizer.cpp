@@ -87,7 +87,7 @@ void Relocalizer::detect() {
     }
 
     //ds skip the candidate if the minimum number of matches is not guaranteed
-    if (reference->hbst_tree->getMatchingRatioLazyEvaluation(_query->matchables) < _parameters->preliminary_minimum_matching_ratio) {
+    if (reference->hbst_tree->getMatchingRatio(_query->matchables) < _parameters->preliminary_minimum_matching_ratio) {
       continue;
     }
 
