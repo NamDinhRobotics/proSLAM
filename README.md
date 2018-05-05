@@ -25,8 +25,9 @@ Previous versions: <br/>
 
 ---
 ### Supported environments ###
-Currently Linux only:
- - Ubuntu 16.04 LTS + ROS Kinetic/(OpenCV3 + Qt5) + g2o (current)<br/>
+ - Ubuntu 14.04 LTS (**gcc 5**) + ROS Indigo / OpenCV2 + Qt4 + g2o (see Note for old version)
+ - Ubuntu 16.04 LTS (gcc 5) + ROS Kinetic / OpenCV3 + Qt5 + g2o (current)
+ - Ubuntu 18.04 LTS (gcc 7) + OpenCV3 + Qt5 + g2o (current)
 
 The complete SLAM system **runs on a single thread** (a second thread is launched for optional visualization) <br/>
 ProSLAM features an extensive [parameter configuration][proslam_wiki] on all SLAM layers and 4 different logging levels.
@@ -62,6 +63,8 @@ Note: If one is using a g2o version with the old ownership model ([3a740d8](http
 `add_definitions(-DSRRG_PROSLAM_G2O_HAS_NEW_OWNERSHIP_MODEL)`
 
 in the root `CMakeLists.txt` must be commented for proper compilation.
+
+Note: Make sure to copy or link the generated `config.h` header file of your g2o build into your g2o include folder (in case of a custom build).
 
 5) download this repository to your catkin workspace:
 
