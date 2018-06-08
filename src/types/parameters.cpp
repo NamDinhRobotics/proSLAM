@@ -52,10 +52,10 @@ void CommandLineParameters::print() const {
   std::cerr << "-topic-image-left (-il)           '" << topic_image_left << "'" << std::endl;
   std::cerr << "-topic-image-right (-ir)          '" << topic_image_right << "'" << std::endl;
   if (topic_camera_info_left.length() > 0) {
-  std::cerr << "-topic-camera-left-info  (-cl)    '" << topic_camera_info_left << "'" << std::endl;
+  std::cerr << "-topic-camera-info-left (-cl)     '" << topic_camera_info_left << "'" << std::endl;
   }
   if (topic_camera_info_right.length() > 0) {
-  std::cerr << "-topic-camera-right-info (-cr)    '" << topic_camera_info_right << "'" << std::endl;
+  std::cerr << "-topic-camera-info-right (-cr)    '" << topic_camera_info_right << "'" << std::endl;
   }
   std::cerr << "-use-gui (-ug)                     " << option_use_gui << std::endl;
   std::cerr << "-open-loop (-ol)                   " << option_disable_relocalization << std::endl;

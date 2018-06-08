@@ -82,9 +82,11 @@ void SLAMAssembly::_createStereoTracker(Camera* camera_left_, Camera* camera_rig
   _relocalizer->configure();
 }
 
-void SLAMAssembly::_createDepthTracker(const Camera* camera_left_, const Camera* camera_right_){
+void SLAMAssembly::_createDepthTracker(Camera* camera_left_, Camera* camera_right_){
 
   //ds allocate and configure the framepoint generator
+  _camera_left = camera_left_;
+  _camera_right = camera_right_;
   DepthFramePointGenerator* framepoint_generator = new DepthFramePointGenerator(_parameters->depth_framepoint_generator_parameters);
   framepoint_generator->setCameraLeft(camera_left_);
   framepoint_generator->setCameraRight(camera_right_);
@@ -489,7 +491,6 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
   //ds call the tracker
   _tracker->setIntensityImageLeft(&intensity_image_left_);
   _tracker->setTimestamp(timestamp_image_left_seconds_);
-
   //ds depending on tracking mode
   switch (_parameters->command_line_parameters->tracker_mode){
     case CommandLineParameters::TrackerMode::RGB_STEREO: {

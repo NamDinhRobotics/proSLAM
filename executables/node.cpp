@@ -9,6 +9,7 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/subscriber.h>
 
+#include "types/parameters.h"
 #include "system/slam_assembly.h"
 
 //ds lazy globals
@@ -65,7 +66,7 @@ void callbackCameraInfoRight(const sensor_msgs::CameraInfoConstPtr& message_) {
   }
 }
 
-//ds image retrieval
+//ds stereo image retrieval
 void callbackStereoImage(const sensor_msgs::ImageConstPtr& image_left_, const sensor_msgs::ImageConstPtr& image_right_){
   found_image_pair = false;
 
@@ -81,7 +82,6 @@ void callbackStereoImage(const sensor_msgs::ImageConstPtr& image_left_, const se
   }
 
   try {
-
     //ds obtain cv image pointer
     cv_bridge::CvImagePtr image_pointer = cv_bridge::toCvCopy(image_right_, sensor_msgs::image_encodings::MONO8);
     image_right = image_pointer->image;
@@ -93,6 +93,35 @@ void callbackStereoImage(const sensor_msgs::ImageConstPtr& image_left_, const se
 
   //ds enable access
   found_image_pair = true;
+}
+
+//mc left and depth image retrival
+void callbackDepthImage(const sensor_msgs::ImageConstPtr& image_left_, const sensor_msgs::ImageConstPtr& image_right_) {
+  found_image_pair = false;
+
+  try {
+    //ds obtain cv image pointer for the left image and set it
+    cv_bridge::CvImagePtr image_pointer = cv_bridge::toCvCopy(image_left_, sensor_msgs::image_encodings::MONO8);
+    image_left = image_pointer->image;
+  }
+  catch (const cv_bridge::Exception& exception_) {
+    std::cerr << "callbackDepthImage|exception: " << exception_.what() << " (image left)" << std::endl;
+    return;
+  }
+
+  try {
+    //ds obtain cv image pointer
+    cv_bridge::CvImagePtr image_pointer = cv_bridge::toCvCopy(image_right_, sensor_msgs::image_encodings::TYPE_32FC1);
+    image_pointer->image.convertTo(image_right, CV_16UC1);
+  }
+  catch (const cv_bridge::Exception& exception_) {
+    std::cerr << "callbackDepthImage|exception: " << exception_.what() << " (image right)" << std::endl;
+    return;
+  }
+
+  //ds enable access
+  found_image_pair = true;
+
 }
 
 //ds ground truth sources
@@ -224,8 +253,11 @@ int32_t main(int32_t argc_, char** argv_) {
   //ds define policy and initialize synchronizer
   typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> StereoImagePolicy;
   message_filters::Synchronizer<StereoImagePolicy> stereo_image_synchronizer(StereoImagePolicy(5), subscriber_image_left, subscriber_image_right);
-  stereo_image_synchronizer.registerCallback(boost::bind(&callbackStereoImage, _1, _2));
-
+  if (parameters->command_line_parameters->tracker_mode == proslam::CommandLineParameters::TrackerMode::RGB_STEREO) {
+    stereo_image_synchronizer.registerCallback(boost::bind(&callbackStereoImage, _1, _2));
+  } else {
+    stereo_image_synchronizer.registerCallback(boost::bind(&callbackDepthImage, _1, _2));
+  }
 //  //ds subscribe to ground truth topic if available
 //  ros::Subscriber subscriber_ground_truth = node.subscribe("/odom", 1, callbackGroundTruth);
 
@@ -258,87 +290,18 @@ int32_t main(int32_t argc_, char** argv_) {
           cv::equalizeHist(image_right, image_right);
         }
 
-  //      //ds get a dummy frame
-  //      proslam::Frame* frame = slam_system.worldMap()->createFrame(proslam::TransformMatrix3D::Identity(), slam_system.tracker()->framepointGenerator()->maximumDepthNearMeters());
-  //      frame->setCameraLeft(camera_left);
-  //      frame->setCameraRight(camera_right);
-  //
-  //      //ds compute keypoints
-  //      std::vector<cv::KeyPoint> keypoints_left;
-  //      std::vector<cv::KeyPoint> keypoints_right;
-  //      slam_system.tracker()->framepointGenerator()->detectKeypoints(image_left, keypoints_left);
-  //      slam_system.tracker()->framepointGenerator()->detectKeypoints(image_right, keypoints_right);
-  //
-  //      const proslam::Count number_of_keypoints_left  = keypoints_left.size();
-  //      const proslam::Count number_of_keypoints_right = keypoints_right.size();
-  //
-  //      //ds compute descriptors
-  //      cv::Mat descriptors_left;
-  //      cv::Mat descriptors_right;
-  //
-  //      proslam::StereoFramePointGenerator* triangulator = dynamic_cast<proslam::StereoFramePointGenerator*>(slam_system.tracker()->framepointGenerator());
-  //      assert(triangulator);
-  //
-  //      triangulator->extractDescriptors(image_left, keypoints_left, descriptors_left);
-  //      triangulator->extractDescriptors(image_right, keypoints_right, descriptors_right);
-  //      triangulator->initialize(keypoints_left, keypoints_right, descriptors_left, descriptors_right);
-  //
-  //          //ds triangulate points and fill the frame
-  //      triangulator->findStereoKeypoints(frame);
-  //
-  //      //ds show the images
-  //      cv::Mat image_display;
-  //      cv::hconcat(image_left, image_right, image_display);
-  //      cv::cvtColor(image_display, image_display, CV_GRAY2RGB);
-  //
-  ////      //ds draw keypoints on image
-  ////      for (const cv::KeyPoint& keypoint_left: keypoints_left) {
-  ////        cv::circle(image_display, keypoint_left.pt, 2, cv::Scalar(0, 255, 0));
-  ////      }
-  ////      for (const cv::KeyPoint& keypoint_right: keypoints_right) {
-  ////        cv::circle(image_display, keypoint_right.pt+point_offset, 2, cv::Scalar(0, 255, 0));
-  ////      }
-  //
-  //      //ds visualize triangulated points
-  //      for (proslam::Index row = 0; row < triangulator->numberOfRowsImage(); ++row) {
-  //        for (proslam::Index col = 0; col < triangulator->numberOfColsImage(); ++col) {
-  //          if (triangulator->framepointsInImage()[row][col]) {
-  //            const proslam::FramePoint* point = triangulator->framepointsInImage()[row][col];
-  //
-  //            //ds determine colorization
-  //            cv::Scalar color (0, 0, 0);
-  //            if (point->isNear()) {
-  //              color = cv::Scalar(255, 0, 0);
-  //            } else {
-  //              color = cv::Scalar(255, 0, 255);
-  //            }
-  //
-  //            //ds draw left and right detection
-  //            cv::circle(image_display, point->keypointLeft().pt, 2, color, -1);
-  //            cv::circle(image_display, point->keypointRight().pt+point_offset, 2, color, -1);
-  //            triangulator->framepointsInImage()[row][col] = 0;
-  //          }
-  //        }
-  //      }
-  //
-  //      std::cerr << "L keypoints: " << number_of_keypoints_left << " descriptors: " << descriptors_left.rows
-  //                << " R keypoints: " << number_of_keypoints_right << " descriptors: " << descriptors_right.rows
-  //                << " framepoints: " << triangulator->numberOfAvailablePoints() << std::endl;
-  //
-  //      cv::imshow("FAST detection", image_display);
-  //      cv::waitKey(1);
-
-
-
-
-
         //ds process images
-        slam_system.process(image_left, image_right);
-
+	slam_system.process(image_left, image_right);
+	
         //ds add ground truth if available
-  //      slam_system.addGroundTruthMeasurement(orientation_correction*ground_truth);
+	//      slam_system.addGroundTruthMeasurement(orientation_correction*ground_truth);
         ++number_of_frames_current_window;
-        found_image_pair = false;
+      //ds update ui
+      slam_system.updateGUI();
+      found_image_pair = false;
+	
+      } else {
+	continue;
       }
 
       //ds display stats after each interval
@@ -347,14 +310,11 @@ int32_t main(int32_t argc_, char** argv_) {
 
         //ds runtime info - depending on set modes
 
-  //      std::cerr << "fps: " << number_of_frames_current_window/total_duration_seconds_current << std::endl;
+	//      std::cerr << "fps: " << number_of_frames_current_window/total_duration_seconds_current << std::endl;
 
         number_of_frames_current_window   = 0;
         start_time_current_window_seconds = srrg_core::getTime();
       }
-
-      //ds update ui
-      slam_system.updateGUI();
     }
   } catch (const std::runtime_error& exception_) {
     std::cerr << "main|caught exception '" << exception_.what() << "'" << std::endl;

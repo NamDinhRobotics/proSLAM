@@ -98,7 +98,7 @@ protected:
 
   void _createStereoTracker(Camera* camera_left_, Camera* camera_right_);
 
-  void _createDepthTracker(const Camera* camera_left_, const Camera* camera_right_);
+  void _createDepthTracker(Camera* camera_left_, Camera* camera_right_);
 
 //ds SLAM modules
 protected:
