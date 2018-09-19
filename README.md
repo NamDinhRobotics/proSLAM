@@ -3,8 +3,10 @@
 
 Contributors: Dominik Schlegel, Mirco Colosi, Giorgio Grisetti <br/>
 
+**ProSLAM uses the lightning-fast, header-only [HBST library](https://gitlab.com/srrg-software/srrg_hbst) for binary descriptor similarity search (loop closing)**
+
 As this is a working repository, none of the code is assumed to be static <br/>
-For related publications please refer to revision [f9d6d06c][publication_revision] <br/>
+For related publications please refer to revision: [f9d6d06c][publication_revision] <br/>
 
 [publication_revision]: https://gitlab.com/srrg-software/srrg_proslam/tree/f9d6d06cfa25cbe95221093159f60073cd26c974
 
@@ -20,10 +22,7 @@ Previous versions: <br/>
 [ProSLAM: Full run KITTI Sequence 06 (real-time, 1 thread@3.50GHz/i7-4770K)](https://www.youtube.com/watch?v=Bmig0ASFOY4) <br/>
 [ProSLAM: Full run KITTI Sequence 10 (real-time, 1 thread@2.40GHz/i7-4700MQ)](https://www.youtube.com/watch?v=ZW8OQ2b0tjk) <br/>
 [ProSLAM: Full run EuRoC MH_01_easy (real-time, 1 thread@3.50GHz/i7-4770K)](https://www.youtube.com/watch?v=TctS1b1zCbY) <br/>
-
 (All of the above are clickable YouTube links)
-
-**ProSLAM uses the lightning-fast, header-only [HBST library](https://gitlab.com/srrg-software/srrg_hbst) for loop closing**
 
 ---
 ### Supported environments ###
