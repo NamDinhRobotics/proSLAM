@@ -23,7 +23,7 @@ Previous versions: <br/>
 
 (All of the above are clickable YouTube links)
 
-** ProSLAM uses the lightning-fast, header-only [HBST library](https://gitlab.com/srrg-software/srrg_hbst) for loop closing **
+**ProSLAM uses the lightning-fast, header-only [HBST library](https://gitlab.com/srrg-software/srrg_hbst) for loop closing**
 
 ---
 ### Supported environments ###
