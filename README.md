@@ -3,7 +3,7 @@
 
 Contributors: Dominik Schlegel, Mirco Colosi, Giorgio Grisetti <br/>
 
-As this is a working repository, none of the code is assumed to be static. <br/>
+As this is a working repository, none of the code is assumed to be static <br/>
 For related publications please refer to revision [f9d6d06c][publication_revision] <br/>
 
 [publication_revision]: https://gitlab.com/srrg-software/srrg_proslam/tree/f9d6d06cfa25cbe95221093159f60073cd26c974
@@ -23,6 +23,8 @@ Previous versions: <br/>
 
 (All of the above are clickable YouTube links)
 
+** ProSLAM uses the lightning-fast, header-only [HBST library](https://gitlab.com/srrg-software/srrg_hbst) for loop closing **
+
 ---
 ### Supported environments ###
  - Ubuntu 14.04 LTS (**gcc 5**) + ROS Indigo / OpenCV2 + Qt4 + g2o (see Note for old version)
@@ -30,7 +32,7 @@ Previous versions: <br/>
  - Ubuntu 18.04 LTS (gcc 7) + OpenCV3 + Qt5 + g2o (current)
 
 The complete SLAM system **runs on a single thread** (a second thread is launched for optional visualization) <br/>
-ProSLAM features an extensive [parameter configuration][proslam_wiki] on all SLAM layers and 4 different logging levels.
+ProSLAM features an extensive [parameter configuration][proslam_wiki] on all SLAM layers and 4 different logging levels
 
 ---
 ### How do I get set up? ###
