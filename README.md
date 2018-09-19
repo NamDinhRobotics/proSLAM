@@ -176,3 +176,16 @@ Detailed notes coming soon!
 ---
 ### It doesn't work? ###
 [Open an issue](https://gitlab.com/srrg-software/srrg_proslam/issues) or contact the maintainer (see package.xml)
+
+## Related publications
+Please cite our most recent article when using the ProSLAM system: <br>
+
+    @inproceedings{2018-schlegel-proslam, 
+      author    = {D. Schlegel and M. Colosi and G. Grisetti}, 
+      booktitle = {2018 IEEE International Conference on Robotics and Automation (ICRA)}, 
+      title     = {{ProSLAM: Graph SLAM from a Programmer's Perspective}}, 
+      year      = {2018},
+      pages     = {1-9}
+    }
+
+> ICRA 2018 'ProSLAM: Graph SLAM from a Programmer's Perspective' https://ieeexplore.ieee.org/document/8461180/ (DOI: 10.1109/ICRA.2018.8461180)
