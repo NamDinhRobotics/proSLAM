@@ -5,11 +5,6 @@ Contributors: Dominik Schlegel, Mirco Colosi, Giorgio Grisetti <br/>
 
 **ProSLAM uses the lightning-fast, header-only [HBST library](https://gitlab.com/srrg-software/srrg_hbst) for binary descriptor similarity search (loop closing)**
 
-As this is a working repository, none of the code is assumed to be static <br/>
-For related publications please refer to revision: [f9d6d06c][publication_revision] <br/>
-
-[publication_revision]: https://gitlab.com/srrg-software/srrg_proslam/tree/f9d6d06cfa25cbe95221093159f60073cd26c974
-
 ---
 ### Demo videos ###
 Current state: <br/>
@@ -37,47 +32,47 @@ ProSLAM features an extensive [parameter configuration][proslam_wiki] on all SLA
 ### How do I get set up? ###
 1) install the Ubuntu packages
 
-    sudo apt-get install build-essential libeigen3-dev libsuitesparse-dev freeglut3-dev libqglviewer-dev libyaml-cpp-dev
+        sudo apt-get install build-essential libeigen3-dev libsuitesparse-dev freeglut3-dev libqglviewer-dev libyaml-cpp-dev
 
 2) download and install
- - ROS: http://wiki.ros.org/ROS/Installation
+    - ROS: http://wiki.ros.org/ROS/Installation
 
-or (OpenCV + Qt)
- - OpenCV3: https://github.com/opencv/opencv/archive/3.2.0.zip (Version 3.2.0) - used for FAST detection, BRIEF extraction, visualization
- - Qt5: https://wiki.qt.io/Install_Qt_5_on_Ubuntu (Version 5.7.0)              - used for visualization
+    or (OpenCV + Qt)
+    - OpenCV3: https://github.com/opencv/opencv/archive/3.2.0.zip (Version 3.2.0) - used for FAST detection, BRIEF extraction, visualization
+    - Qt5: https://wiki.qt.io/Install_Qt_5_on_Ubuntu (Version 5.7.0)              - used for visualization
 
 3) download and install the colorful `Catkin Command Line Tools`: https://catkin-tools.readthedocs.io/en/latest/installing.html (alternatively one can also use `ROS catkin`):
 
-    sudo apt-get install python-catkin-tools
+        sudo apt-get install python-catkin-tools
 
 4) set the environment variable `$G2O_ROOT` to use your own g2o installation - or clone `g2o for catkin` (https://github.com/yorsh87/g2o_catkin) to your catkin workspace:
 
-    sudo apt-get install ninja-build
-    git clone https://github.com/yorsh87/g2o_catkin.git
+        sudo apt-get install ninja-build
+        git clone https://github.com/yorsh87/g2o_catkin.git
     
-and build it (slow as it will perform a download using unladen swallows):
+    and build it (slow as it will perform a download using unladen swallows):
     
-    catkin build g2o_catkin
+        catkin build g2o_catkin
 
-Note: If one is using a g2o version with the old ownership model ([3a740d8](https://github.com/RainerKuemmerle/g2o/commit/3a740d8922e524bf832c66aaf5c8f59c70aec604) or earlier) the line:
+    Note: If one is using a g2o version with the old ownership model ([3a740d8](https://github.com/RainerKuemmerle/g2o/commit/3a740d8922e524bf832c66aaf5c8f59c70aec604) or earlier) the line:
 
-`add_definitions(-DSRRG_PROSLAM_G2O_HAS_NEW_OWNERSHIP_MODEL)`
+    `add_definitions(-DSRRG_PROSLAM_G2O_HAS_NEW_OWNERSHIP_MODEL)`
 
-in the root `CMakeLists.txt` must be commented for proper compilation.
+    in the root `CMakeLists.txt` must be commented for proper compilation.
 
-Note: Make sure to copy or link the generated `config.h` header file of your g2o build into your g2o include folder (in case of a custom build).
+    Note: Make sure to copy or link the generated `config.h` header file of your g2o build into your g2o include folder (in case of a custom build).
 
 5) download this repository to your catkin workspace:
 
-    git clone https://gitlab.com/srrg-software/srrg_proslam.git
+        git clone https://gitlab.com/srrg-software/srrg_proslam.git
     
 6) enter the project directory in your catkin workspace (e.g. `../src/srrg_proslam`) and fetch the modular SRRG libraries by executing the script:
 
-    ./pull_srrg_packages.bash
+        ./pull_srrg_packages.bash
 
 7) then build the project using (`ROS catkin` requires: `catkin_make -pkg` instead of `catkin build`):
     
-    catkin build srrg_proslam
+        catkin build srrg_proslam
 
 CMake variables that must be set when building without ROS or to select specific libraries:
 
