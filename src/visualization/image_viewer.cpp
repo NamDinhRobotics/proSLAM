@@ -10,10 +10,6 @@ ImageViewer::ImageViewer(ImageViewerParameters* parameters_): _parameters(parame
 }
 
 ImageViewer::~ImageViewer() {
-  LOG_DEBUG(std::cerr << "ImageViewer::~ImageViewer|destroying" << std::endl)
-
-  //ds release cv window
-  cv::destroyWindow(_parameters->window_title);
   LOG_DEBUG(std::cerr << "ImageViewer::~ImageViewer|destroyed" << std::endl)
 }
 
@@ -72,10 +68,10 @@ void ImageViewer::draw() {
 void ImageViewer::saveToDisk() {
 //  if (_current_frame) {
 //    char buffer_file_name[32];
-//    std::snprintf(buffer_file_name, 32, "image-rgb-%04lu.jpg", _number_of_saved_images);
+//    std::snprintf(buffer_file_name, 32, "images/image-rgb-%04lu.jpg", _number_of_saved_images);
 //    cv::imwrite(buffer_file_name, _image_to_save);
-//    std::snprintf(buffer_file_name, 32, "image-depth-%04lu.png", _number_of_saved_images);
-//    cv::imwrite(buffer_file_name, _image_to_save_secondary);
+////    std::snprintf(buffer_file_name, 32, "images/image-depth-%04lu.png", _number_of_saved_images);
+////    cv::imwrite(buffer_file_name, _image_to_save_secondary);
 //    ++_number_of_saved_images;
 //  }
 }
@@ -88,36 +84,22 @@ void ImageViewer::_drawPoints() {
 
       //ds if the point is linked to a landmark
       if (point->landmark()) {
-        cv::Scalar color = CV_COLOR_CODE_WHITE;
-
-        //ds check validity
-        if (point->landmark()->areCoordinatesValidated()) {
-
-          //ds compute intensity
-          const real color_intensity = std::min(static_cast<real>(1.0), point->trackLength()/static_cast<real>(25));
-
-          //ds check landmark kind: by vision or by depth
-          if (point->landmark()->isNear()) {
-            color = cv::Scalar(100+color_intensity*155, 0, 0);
-          } else {
-            color = cv::Scalar(100+color_intensity*155, 0, 100+color_intensity*155);
-          }
-        } else {
-          color = CV_COLOR_CODE_RED;
-        }
+        cv::Scalar color = CV_COLOR_CODE_BLUE;
 
         //ds check if the landmark is part of a loop closure
         if (point->landmark()->isInLoopClosureQuery() || point->landmark()->isInLoopClosureReference()) {
           color = CV_COLOR_CODE_DARKGREEN;
         }
 
-        //ds draw reprojection circle - if valid
-        if (point->reprojectionCoordinatesLeft().x() > 0 || point->reprojectionCoordinatesLeft().y() > 0) {
-          cv::circle(_current_image, cv::Point(point->reprojectionCoordinatesLeft().x(), point->reprojectionCoordinatesLeft().y()), 4, color);
-        }
+        //ds draw reprojection circle
+        cv::circle(_current_image, cv::Point(point->reprojectionCoordinatesLeft().x(), point->reprojectionCoordinatesLeft().y()), 4, color);
 
         //ds draw the point
-        cv::circle(_current_image, cv::Point(point->imageCoordinatesLeft().x(), point->imageCoordinatesLeft().y()), 2, color, -1);
+        const cv::Point2i projection(point->imageCoordinatesLeft().x(), point->imageCoordinatesLeft().y());
+        cv::circle(_current_image, projection, 2, color, -1);
+
+        //ds draw track length
+        cv::putText(_current_image, std::to_string(point->trackLength()), projection+cv::Point2i(5, 5), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.25, CV_COLOR_CODE_RED);
       }
     }
   }
@@ -128,16 +110,18 @@ void ImageViewer::_drawTracking() {
 
     //ds for all points in the current frame
     for (const FramePoint* point: _current_frame->points()) {
+      const cv::Point current_point(point->imageCoordinatesLeft().x(), point->imageCoordinatesLeft().y());
       if (point->landmark()) {
-        const cv::Point current_point(point->imageCoordinatesLeft().x(), point->imageCoordinatesLeft().y());
         const cv::Point previous_point(point->previous()->imageCoordinatesLeft().x(), point->previous()->imageCoordinatesLeft().y());
         cv::line(_current_image, current_point, previous_point, CV_COLOR_CODE_GREEN);
       } else if (point->previous()) {
-        const cv::Point current_point(point->imageCoordinatesLeft().x(), point->imageCoordinatesLeft().y());
         const cv::Point previous_point(point->previous()->imageCoordinatesLeft().x(), point->previous()->imageCoordinatesLeft().y());
         cv::circle(_current_image, current_point, 1, CV_COLOR_CODE_GREEN, -1);
         cv::line(_current_image, current_point, previous_point, CV_COLOR_CODE_GREEN);
       }
+
+      //ds draw tracking circle
+      cv::circle(_current_image, current_point, _current_frame->projectionTrackingDistancePixels(), CV_COLOR_CODE_GREEN);
     }
   }
 }

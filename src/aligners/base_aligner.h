@@ -41,6 +41,7 @@ public:
   inline const uint64_t numberOfCorrespondences() const {return _number_of_inliers+_number_of_outliers;}
   inline const real totalError() const {return _total_error;}
   inline const bool hasSystemConverged() const {return _has_system_converged;}
+  inline AlignerParameters* parameters() {return _parameters;}
 
 //ds aligner specific
 protected:

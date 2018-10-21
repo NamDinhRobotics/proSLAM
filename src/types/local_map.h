@@ -83,11 +83,15 @@ public:
   inline LocalMap* next() {return _next;}
   void setNext(LocalMap* local_map_) {_next = local_map_;}
   inline Frame* keyframe() const {return _keyframe;}
+  inline const FramePointerVector& frames() const {return _frames;}
 
   inline const HBSTNode::MatchableVector& appearances() const {return _appearances;}
   inline const Landmark::StatePointerVector& landmarks() const {return _landmarks;}
 
   inline const ClosureVector& closures() const {return _closures;}
+
+  //ds reset allocated object counter
+  static void reset() {_instances = 0;}
 
 //ds attributes
 protected:

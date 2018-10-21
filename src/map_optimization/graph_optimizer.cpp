@@ -19,12 +19,13 @@ void GraphOptimizer::configure() {
   std::unique_ptr<SlamLinearSolver> linearSolver = g2o::make_unique<SlamLinearSolver>();
   linearSolver->setBlockOrdering(true);
   std::unique_ptr<SlamBlockSolver> blockSolver = g2o::make_unique<SlamBlockSolver>(std::move(linearSolver));
-  g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(std::move(blockSolver));
+  g2o::OptimizationAlgorithmGaussNewton* solver = new g2o::OptimizationAlgorithmGaussNewton(std::move(blockSolver));
 #else
   SlamLinearSolver* linearSolver = new SlamLinearSolver();
   linearSolver->setBlockOrdering(true);
   SlamBlockSolver* blockSolver = new SlamBlockSolver(linearSolver);
-  g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(blockSolver);
+  g2o::OptimizationAlgorithmGaussNewton* solver = new g2o::OptimizationAlgorithmGaussNewton(blockSolver);
+  //g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(blockSolver);
 #endif
 
   //ds allocate optimizer
@@ -61,6 +62,9 @@ GraphOptimizer::~GraphOptimizer(){
 }
 
 void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std::string& file_name_) const {
+  if (world_map_->frames().empty()) {
+    return;
+  }
   LOG_INFO(std::cerr << "GraphOptimizer::writePoseGraphToFile|saving final pose graph to file: " << file_name_ << std::endl)
 
   //ds get a graph handle
@@ -95,7 +99,7 @@ void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std:
                   vertex_frame_last_added,
                   frame.second->previous()->worldToRobot()*frame.second->robotToWorld(),
                   _parameters->base_information_frame,
-                  _parameters->free_translation_for_pose_measurements);
+                  _parameters->free_translation_for_poses);
     }
 
     //ds add landmark measurements contained in the frame by scanning its framepoints
@@ -147,8 +151,8 @@ void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std:
                      pose_graph->vertex(closure.local_map->keyframe()->identifier()),
                      closure.relation,
                      _parameters->base_information_frame,
-                     _parameters->free_translation_for_pose_measurements,
-                     _parameters->enable_robust_kernel_for_loop_closure_measurements);
+                     _parameters->free_translation_for_poses,
+                     _parameters->enable_robust_kernel_for_poses);
 
         //ds merge landmarks - if not already done online
         if (!world_map_->parameters()->merge_landmarks) {
@@ -199,13 +203,29 @@ void GraphOptimizer::addFrame(Frame* frame_) {
     vertex_frame_current->setFixed(true);
   } else {
 
+    //ds compute information value based on landmark content
+    real information_factor = _parameters->base_information_frame;
+
+    //ds adjust information value according to frame state
+    if (frame_->isTrackBroken()) {
+
+      //ds set minimum information
+      information_factor = 1;
+    }
+    if (frame_->status() == Frame::Localizing) {
+
+      //ds reduce information value (we don't have landmarks in a localizing frame)
+      information_factor = _parameters->base_information_frame/10;
+    }
+
     //ds we can connect it to the preceeding frame by adding the odometry measurement
     _setPoseEdge(_optimizer,
                 vertex_frame_current,
                 _vertex_frame_last_added,
                 frame_->previous()->worldToRobot()*frame_->robotToWorld(),
-                _parameters->base_information_frame,
-                _parameters->free_translation_for_pose_measurements);
+                information_factor,
+                _parameters->free_translation_for_poses,
+                _parameters->enable_robust_kernel_for_poses);
   }
 
   //ds if the frame carries loop closures
@@ -233,14 +253,17 @@ void GraphOptimizer::addFrame(Frame* frame_) {
         _optimizer->vertex(reference_frame->identifier())->setFixed(true);
       }
 
+      //ds compute information value
+      const real information_factor = _parameters->base_information_frame*closure.omega;
+
       //ds retrieve closure edge
       _setPoseEdge(_optimizer,
                    _optimizer->vertex(frame_->localMap()->keyframe()->identifier()),
                    _optimizer->vertex(reference_frame->identifier()),
                    closure.relation,
-                   _parameters->base_information_frame,
-                   _parameters->free_translation_for_pose_measurements,
-                   _parameters->enable_robust_kernel_for_loop_closure_measurements);
+                   information_factor,
+                   _parameters->free_translation_for_poses,
+                   _parameters->enable_robust_kernel_for_poses);
     }
   }
 
@@ -332,7 +355,7 @@ void GraphOptimizer::addFrameWithLandmarks(Frame* frame_) {
                 _vertex_frame_last_added,
                 frame_->previous()->worldToRobot()*frame_->robotToWorld(),
                 _parameters->base_information_frame,
-                _parameters->free_translation_for_pose_measurements);
+                _parameters->free_translation_for_poses);
   }
 
   //ds bookkeep the added frame
@@ -436,7 +459,7 @@ void GraphOptimizer::_setPointEdge(g2o::OptimizableGraph* optimizer_,
   landmark_edge->setMeasurement(framepoint_robot_coordinates);
   landmark_edge->setInformation(information_factor_*Eigen::Matrix<double, 3, 3>::Identity());
   landmark_edge->setParameterId(0, G2oParameter::WORLD_OFFSET);
-  if (_parameters->enable_robust_kernel_for_landmark_measurements) {landmark_edge->setRobustKernel(new g2o::RobustKernelCauchy());}
+  if (_parameters->enable_robust_kernel_for_landmarks) {landmark_edge->setRobustKernel(new g2o::RobustKernelCauchy());}
   optimizer_->addEdge(landmark_edge);
 }
 }

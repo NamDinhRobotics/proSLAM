@@ -163,6 +163,8 @@ catkin_package(
   src
 
   LIBRARIES
+  
+  #ds package libraries
   srrg_proslam_aligners_library 
   srrg_proslam_framepoint_generation_library 
   srrg_proslam_map_optimization_library 
@@ -171,6 +173,16 @@ catkin_package(
   srrg_proslam_types_library 
   srrg_proslam_visualization_library 
   srrg_proslam_slam_assembly_library
+  
+  #ds export the used libraries in this project (consistency for integration)
+  ${g2o_LIBRARIES}
+  ${CSPARSE_LIBRARY}
+  ${OpenCV_LIBS}
+  yaml-cpp
+  ${OPENGL_gl_LIBRARY}
+  ${OPENGL_glu_LIBRARY}
+  ${QGLVIEWER_LIBRARY}
+  ${SRRG_QT_LIBRARIES}
 )
 
 #ds set sources

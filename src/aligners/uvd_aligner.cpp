@@ -14,19 +14,21 @@ namespace proslam {
   }
 
   //ds initialize aligner with minimal entity
-  void UVDAligner::initialize(Frame* frame_, const TransformMatrix3D& robot_to_world_) {
-    _frame = frame_;
-    _errors.resize(_frame->points().size());
-    _inliers.resize(_frame->points().size());
-    _robot_to_world = robot_to_world_;
-    _world_to_robot = _robot_to_world.inverse();
+  void UVDAligner::initialize(const Frame* frame_previous_,
+                              const Frame* frame_current_,
+                              const TransformMatrix3D& previous_to_current_) {
+    _frame_current = frame_current_;
+    _errors.resize(_frame_current->points().size());
+    _inliers.resize(_frame_current->points().size());
+//  TODO _robot_to_world = previous_to_current_;
+//    _world_to_robot = _robot_to_world.inverse();
 
     //ds wrappers for optimization
-    _camera_to_world = _robot_to_world*_frame->cameraLeft()->cameraToRobot();
-    _world_to_camera = _camera_to_world.inverse();
-    _camera_matrix  = _frame->cameraLeft()->cameraMatrix();
-    _number_of_rows_image = _frame->cameraLeft()->numberOfImageRows();
-    _number_of_cols_image = _frame->cameraLeft()->numberOfImageCols();
+//    _camera_to_world = _robot_to_world*_frame_current->cameraLeft()->cameraToRobot();
+//    _world_to_camera = _camera_to_world.inverse();
+    _camera_matrix  = _frame_current->cameraLeft()->cameraMatrix();
+    _number_of_rows_image = _frame_current->cameraLeft()->numberOfImageRows();
+    _number_of_cols_image = _frame_current->cameraLeft()->numberOfImageCols();
   }
 
   //ds linearize the system: to be called inside oneRound
@@ -40,15 +42,15 @@ namespace proslam {
     _total_error        = 0;
 
     //ds loop over all points (assumed to have previous points)
-    for (Index index_point = 0; index_point < _frame->points().size(); index_point++) {
+    for (Index index_point = 0; index_point < _frame_current->points().size(); index_point++) {
       _errors[index_point]  = -1;
       _inliers[index_point] = false;
       _omega.setIdentity();
       _omega(2,2)*=10;
       
       //ds buffer framepoint
-      FramePoint* frame_point = _frame->points()[index_point];
-      assert(_frame->cameraLeft()->isInFieldOfView(frame_point->imageCoordinatesLeft()));
+      FramePoint* frame_point = _frame_current->points()[index_point];
+      assert(_frame_current->cameraLeft()->isInFieldOfView(frame_point->imageCoordinatesLeft()));
       assert(frame_point->previous());
 
       //ds buffer landmark
@@ -56,11 +58,11 @@ namespace proslam {
 
       //ds compute the point in the camera frame - prefering a landmark estimate if available
       PointCoordinates predicted_point_in_camera = PointCoordinates::Zero();
-      if (landmark && landmark->areCoordinatesValidated()) {
-        predicted_point_in_camera = _world_to_camera*landmark->coordinates();
+      if (landmark) {
+//        predicted_point_in_camera = _world_to_camera*landmark->coordinates();
         _omega *= 1.5;
       } else {
-        predicted_point_in_camera = _world_to_camera*frame_point->previous()->worldCoordinates();
+//        predicted_point_in_camera = _world_to_camera*frame_point->previous()->worldCoordinates();
       }
       const real& depth_meters = predicted_point_in_camera.z();
       if (depth_meters <= 0 || depth_meters > _maximum_depth_far_meters) {
@@ -81,7 +83,7 @@ namespace proslam {
         continue;
       }
 
-      assert(_frame->cameraLeft()->isInFieldOfView(predicted_point_in_image));
+      assert(_frame_current->cameraLeft()->isInFieldOfView(predicted_point_in_image));
       
       //ds precompute
       const real inverse_predicted_d  = 1/depth_meters;
@@ -166,13 +168,13 @@ namespace proslam {
 
     //ds compute solution transformation
     const Vector6 dx = _H.ldlt().solve(-_b);
-    _world_to_camera = v2t(dx)*_world_to_camera;
+//    _world_to_camera = v2t(dx)*_world_to_camera;
 
     //ds enforce proper rotation matrix
-    const Matrix3 rotation = _world_to_camera.linear();
-    Matrix3 rotation_squared             = rotation.transpose() * rotation;
-    rotation_squared.diagonal().array() -= 1;
-    _world_to_camera.linear()      -= 0.5*rotation*rotation_squared;
+//    const Matrix3 rotation = _world_to_camera.linear();
+//    Matrix3 rotation_squared             = rotation.transpose() * rotation;
+//    rotation_squared.diagonal().array() -= 1;
+//    _world_to_camera.linear()      -= 0.5*rotation*rotation_squared;
   }
 
   //ds solve alignment problem until convergence is reached
@@ -212,9 +214,9 @@ namespace proslam {
       }
     }
 
-    //ds update wrapped structures
-    _camera_to_world = _world_to_camera.inverse();    
-    _robot_to_world = _camera_to_world*_frame->cameraLeft()->robotToCamera();
-    _world_to_robot = _robot_to_world.inverse();
+//    //ds update wrapped structures
+//    _camera_to_world = _world_to_camera.inverse();
+//    _robot_to_world = _camera_to_world*_frame_current->cameraLeft()->robotToCamera();
+//    _world_to_robot = _robot_to_world.inverse();
   }
 }

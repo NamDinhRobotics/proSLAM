@@ -39,6 +39,8 @@ protected:
 public:
 
   const Identifier& identifier() const {return _identifier;}
+
+  inline void setTimestampImageLeftSeconds(const double& timestamp_image_left_seconds_) {_timestamp_image_left_seconds = timestamp_image_left_seconds_;}
   const double& timestampImageLeftSeconds() const {return _timestamp_image_left_seconds;}
 
   inline const Frame* root() const {return _root;}
@@ -55,6 +57,9 @@ public:
   void breakTrack() {_is_track_broken = true;}
   const bool isTrackBroken() const {return _is_track_broken;}
 
+  void setProjectionTrackingDistancePixels(const uint32_t& projection_tracking_distance_pixels_) {_projection_tracking_distance_pixels = projection_tracking_distance_pixels_;}
+  const uint32_t& projectionTrackingDistancePixels() const {return _projection_tracking_distance_pixels;}
+
   inline std::vector<cv::KeyPoint>& keypointsLeft() {return _keypoints_left;}
   inline std::vector<cv::KeyPoint>& keypointsRight() {return _keypoints_right;}
   inline cv::Mat& descriptorsLeft() {return _descriptors_left;}
@@ -69,6 +74,8 @@ public:
   inline const TransformMatrix3D& robotToWorld() const {return _robot_to_world;}
   void setRobotToWorld(const TransformMatrix3D& robot_to_world_);
   inline const TransformMatrix3D& worldToRobot() const {return _world_to_robot;}
+  inline const TransformMatrix3D& cameraLeftToWorld() const {return _camera_left_to_world;}
+  inline const TransformMatrix3D& worldToCameraLeft() const {return _world_to_camera_left;}
 
   inline const TransformMatrix3D& frameToLocalMap() const {return _frame_to_local_map;}
   inline const TransformMatrix3D& localMapToFrame() const {return _local_map_to_frame;}
@@ -87,6 +94,9 @@ public:
                      const cv::Mat& descriptor_right_,
                      const PointCoordinates& camera_coordinates_left_,
                      FramePoint* previous_point_ = 0);
+
+  //! @brief created framepoints by this factory
+  inline const FramePointPointerVector& createdPoints() const {return _created_points;}
 
   inline const IntensityImage& intensityImageLeft() const {return *_intensity_image_left;}
   void setIntensityImageLeft(const IntensityImage* intensity_image_)  {_intensity_image_left = intensity_image_;}
@@ -117,14 +127,19 @@ public:
   //ds update framepoint world coordinates
   void updateActivePoints();
 
+  Count _number_of_detected_keypoints = 0;
+
+  //ds reset allocated object counter
+  static void reset() {_instances = 0;}
+
 //ds attributes
 protected:
 
   //ds unique identifier for a landmark (exists once in memory)
   const Identifier _identifier;
 
-  //! @brief timestamp of _intensity_image_left taken from the dataset
-  const double _timestamp_image_left_seconds;
+  //! @brief full acquisition timestamp of _intensity_image_left in seconds
+  double _timestamp_image_left_seconds;
 
   //ds tracker status at the time of creation of this instance
   Status _status = Localizing;
@@ -135,6 +150,9 @@ protected:
 
   //! @brief flag, set if track broke during processing this
   bool _is_track_broken =  false;
+
+  //! @brief pixel tracking distance used for this frame
+  uint32_t _projection_tracking_distance_pixels = 0;
 
   //! @brief detected keypoints at the time of creation of the Frame
   std::vector<cv::KeyPoint> _keypoints_left;
@@ -155,6 +173,9 @@ protected:
   TransformMatrix3D _local_map_to_frame = TransformMatrix3D::Identity();
   TransformMatrix3D _robot_to_world     = TransformMatrix3D::Identity();
   TransformMatrix3D _world_to_robot     = TransformMatrix3D::Identity();
+
+  TransformMatrix3D _camera_left_to_world = TransformMatrix3D::Identity();
+  TransformMatrix3D _world_to_camera_left = TransformMatrix3D::Identity();
 
   //ds stereo camera configuration affiliated with this frame
   const Camera* _camera_left   = 0;

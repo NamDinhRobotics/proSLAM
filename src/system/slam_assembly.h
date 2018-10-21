@@ -10,6 +10,7 @@
 #include "relocalization/relocalizer.h"
 #include "visualization/image_viewer.h"
 #include "visualization/map_viewer.h"
+#include "framepoint_generation/stereo_framepoint_generator.h"
 
 namespace proslam {
 
@@ -92,6 +93,11 @@ public:
   void requestTermination() {_is_termination_requested = true;}
   const bool isViewerOpen() const {return _is_viewer_open;}
   const double currentFPS() const {return _current_fps;}
+  const double averageNumberOfLandmarksPerFrame() const {return _tracker->totalNumberOfLandmarks()/_number_of_processed_frames;}
+  const double averageNumberOfTracksPerFrame() const {return _tracker->totalNumberOfTrackedPoints()/_number_of_processed_frames;}
+  const Count numberOfRecursiveRegistrations() const {return _tracker->numberOfRecursiveRegistrations();}
+  const real meanTrackingRatio() const {return _tracker->meanTrackingRatio();}
+  const real meanTriangulationRatio() const {return dynamic_cast<StereoFramePointGenerator*>(_tracker->framepointGenerator())->meanTriangulationSuccessRatio();}
 
 //ds helpers:
 protected:

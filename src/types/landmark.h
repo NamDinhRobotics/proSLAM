@@ -12,6 +12,7 @@ public:
 
   //ds container describing the landmark at the time of local map construction
   struct State {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     State(Landmark* landmark_,
           const PointCoordinates& world_coordinates_,
           LocalMap* local_map_ = 0): landmark(landmark_),
@@ -38,6 +39,25 @@ public:
     LocalMap* local_map;
   };
   typedef std::vector<State*, Eigen::aligned_allocator<State*>> StatePointerVector;
+
+  struct Measurement {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    Measurement(const FramePoint* framepoint_): world_to_camera(framepoint_->frame()->worldToCameraLeft()),
+                                                camera_coordinates(framepoint_->cameraCoordinatesLeft()),
+                                                world_coordinates(framepoint_->worldCoordinates()),
+                                                inverse_depth_meters(1/framepoint_->cameraCoordinatesLeft().z()) {}
+
+    Measurement(): world_to_camera(TransformMatrix3D::Identity()),
+                   camera_coordinates(PointCoordinates::Zero()),
+                   world_coordinates(PointCoordinates::Zero()),
+                   inverse_depth_meters(0) {}
+
+    TransformMatrix3D world_to_camera;
+    PointCoordinates camera_coordinates;
+    PointCoordinates world_coordinates;
+    real inverse_depth_meters;
+  };
+  typedef std::vector<Measurement, Eigen::aligned_allocator<Measurement>> MeasurementVector;
 
 //ds object handling: specific instantiation controlled by WorldMap class (factory)
 protected:
@@ -68,15 +88,11 @@ public:
   void renewState();
 
   //ds position related
-  inline const bool areCoordinatesValidated() const {return _are_coordinates_validated;}
   const Count numberOfUpdates() const {return _number_of_updates;}
 
   //ds information about whether the landmark is visible in the current image
   inline const bool isCurrentlyTracked() const {return _is_currently_tracked;}
   inline void setIsCurrentlyTracked(const bool& is_currently_tracked_) {_is_currently_tracked = is_currently_tracked_;}
-
-  //ds landmark coordinates update - without visual information (e.g. map optimization)
-  void update(const PointCoordinates& coordinates_in_world_, const real& depth_meters_ = 1);
 
   //ds landmark coordinates update with visual information (tracking)
   void update(const FramePoint* point_);
@@ -90,9 +106,10 @@ public:
   //! @param[in] landmark_ the landmark to absorbed, landmark_ will be freed and its memory location will point to this
   void merge(Landmark* landmark_);
 
+  //ds reset allocated object counter
+  static void reset() {_instances = 0;}
+
   //ds visualization only
-  inline const bool isNear() const {return _is_near;}
-  inline void setIsNear(const bool& is_near_) {_is_near = is_near_;}
   inline const bool isInLoopClosureQuery() const {return _is_in_loop_closure_query;}
   inline const bool isInLoopClosureReference() const {return _is_in_loop_closure_reference;}
   inline void setIsInLoopClosureQuery(const bool& is_in_loop_closure_query_) {_is_in_loop_closure_query = is_in_loop_closure_query_;}
@@ -114,11 +131,10 @@ protected:
   StatePointerVector _states;
 
   //ds flags
-  bool _are_coordinates_validated = false; //ds 3D coordinates have been updated successfully with new measurements (updates)
-  bool _is_currently_tracked      = false; //ds set if the landmark is visible (=tracked) in the current image
-  bool _is_near                   = false; //ds set if the landmark coordinates are within a certain threshold (close to the camera)
+  bool _is_currently_tracked = false; //ds set if the landmark is visible (=tracked) in the current image
 
   //ds landmark coordinates optimization
+  MeasurementVector _measurements;
   real _total_weight          = 0;
   Count _number_of_updates    = 0;
   Count _number_of_recoveries = 0;

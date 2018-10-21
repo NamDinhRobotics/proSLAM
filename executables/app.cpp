@@ -91,7 +91,9 @@ int32_t main(int32_t argc_, char** argv_) {
     slam_system.writeTrajectoryTUM("trajectory_tum.txt");
 
     //ds save g2o graph to disk
-    slam_system.writePoseGraphToFile("pose_graph.g2o");
+    if (parameters->command_line_parameters->option_save_pose_graph) {
+      slam_system.writePoseGraphToFile("pose_graph.g2o");
+    }
   } catch (const std::runtime_error& exception_) {
     std::cerr << DOUBLE_BAR << std::endl;
     std::cerr << "main|caught runtime exception '" << exception_.what() << "'" << std::endl;

@@ -13,7 +13,6 @@ public:
   struct KeypointWithDescriptor {
     cv::KeyPoint keypoint;
     cv::Mat descriptor;
-    bool available;
   };
 
 //ds object handling
@@ -31,26 +30,14 @@ public:
   //ds extracts the defined descriptors for the given keypoints (called within compute)
   void extractDescriptors(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_, cv::Mat& descriptors_);
 
+  //ds adjust detector thresholds (for all image streams)
+  void adjustDetectorThresholds();
+
 //ds getters/setters
 public:
 
-  //ds enable external access to keypoint detection
-#if CV_MAJOR_VERSION == 2
-  cv::FeatureDetector* keypointDetector() const {return _keypoint_detector;}
-#elif CV_MAJOR_VERSION == 3
-  cv::Ptr<cv::FastFeatureDetector> keypointDetector() const {return _keypoint_detector;}
-#else
-#error OpenCV version not supported
-#endif
-
-  //ds enable external access to descriptor computation
-#if CV_MAJOR_VERSION == 2
-  const cv::DescriptorExtractor* descriptorExtractor() const {return _descriptor_extractor;}
-#elif CV_MAJOR_VERSION == 3
+  //ds enable external access to descriptor extractor
   cv::Ptr<cv::DescriptorExtractor> descriptorExtractor() const {return _descriptor_extractor;}
-#else
-#error OpenCV version not supported
-#endif
 
   //ds access to framepoints stored in an image-like matrix (pixel wise)
   FramePointMatrix framepointsInImage() {return _framepoints_in_image;}
@@ -62,11 +49,11 @@ public:
   const real maximumDepthNearMeters() const {return _maximum_depth_near_meters;}
   const real maximumDepthFarMeters() const {return _maximum_depth_far_meters;}
   const Count& targetNumberOfKeypoints() const {return _target_number_of_keypoints;}
-  void setTargetNumberOfKeyoints(const Count& target_number_of_keypoints_) {_target_number_of_keypoints = target_number_of_keypoints_;}
+  void setTargetNumberOfKeyoints(const Count& target_number_of_keypoints_);
 
-  void setDetectorThreshold(const int32_t& detector_threshold_);
   const int32_t matchingDistanceTrackingThreshold() const {return _parameters->matching_distance_tracking_threshold;}
   const Count numberOfAvailablePoints() const {return _number_of_available_points;}
+  const Count numberOfDetectedKeypoints() const {return _number_of_detected_keypoints;}
 
   //ds settings
 protected:
@@ -79,6 +66,8 @@ protected:
 
   //ds point detection properties
   Count _target_number_of_keypoints;
+  Count _target_number_of_keypoints_per_detector;
+  Count _number_of_detected_keypoints;
   Count _number_of_available_points;
 
   //ds triangulation properties
@@ -88,26 +77,23 @@ protected:
   real _maximum_depth_near_meters;
   real _maximum_depth_far_meters;
 
-  //ds currently triangulated framepoints stored in a image-like matrix (pixel access)
+  //! @brief grid of detectors (equally distributed over the image with size=number_of_detectors_per_dimension*number_of_detectors_per_dimension)
+  cv::Ptr<cv::FastFeatureDetector>** _detectors;
+  real** _detector_thresholds;
+
+  //! @brief number of detectors
+  //! @brief the same for all image streams
+  uint32_t _number_of_detectors;
+
+  //! @brief image region for each detector
+  //! @brief the same for all image streams
+  cv::Rect** _detector_regions;
+
+  //! @brief currently triangulated framepoints stored in a image-like matrix (pixel access) for easy tracking
   FramePointMatrix _framepoints_in_image;
 
-  //ds feature detection
-#if CV_MAJOR_VERSION == 2
-  cv::FeatureDetector* _keypoint_detector;
-#elif CV_MAJOR_VERSION == 3
-  cv::Ptr<cv::FastFeatureDetector> _keypoint_detector;
-#else
-#error OpenCV version not supported
-#endif
-
   //ds descriptor extraction
-#if CV_MAJOR_VERSION == 2
-  const cv::DescriptorExtractor* _descriptor_extractor;
-#elif CV_MAJOR_VERSION == 3
   cv::Ptr<cv::DescriptorExtractor> _descriptor_extractor;
-#else
-#error OpenCV version not supported
-#endif
 
   //ds inner memory buffers (operated on in compute)
   std::vector<KeypointWithDescriptor> _keypoints_with_descriptors_left;

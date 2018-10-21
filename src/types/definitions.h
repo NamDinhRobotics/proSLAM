@@ -32,7 +32,7 @@ namespace proslam {
       virtual void configure(); \
       virtual ~CLASS_NAME(); \
     private: PROSLAM_CONCATENATE(CLASS_NAME, Parameters)* _parameters; \
-    public: const PROSLAM_CONCATENATE(CLASS_NAME, Parameters)* parameters() const {return _parameters;}
+    public: PROSLAM_CONCATENATE(CLASS_NAME, Parameters)* parameters() {return _parameters;}
 
   #define PROSLAM_MAKE_PROCESSING_SUBCLASS(SUBCLASS_NAME, PARAMETERS_TYPE) \
     public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW \
@@ -83,6 +83,7 @@ namespace proslam {
   typedef Eigen::Matrix<real, 3, 6> Matrix3_6;
   typedef Eigen::Matrix<real, 4, 6> Matrix4_6;
   typedef Eigen::Matrix<real, 2, 6> Matrix2_6;
+  typedef Eigen::Matrix<real, 1, 3> Matrix1_3;
   typedef Eigen::Matrix<real, 2, 3> Matrix2_3;
   typedef Eigen::Matrix<real, 6, 3> Matrix6_3;
   typedef Eigen::Matrix<real, 6, 4> Matrix6_4;
@@ -126,15 +127,13 @@ namespace proslam {
   #define CHRONOMETER_START(NAME) const double time_start_seconds_##NAME = srrg_core::getTime();
   #define CHRONOMETER_STOP(NAME) _time_consumption_seconds_##NAME += srrg_core::getTime()-time_start_seconds_##NAME;
 
-  //ds "release assertions"
-  #define ASSERT(CONDITION) \
-    if (!CONDITION) { \
-      throw std::runtime_error("flying polar buffalo error"); \
-    }
-
   //ds print functions
   #define        BAR "---------------------------------------------------------------------------------------------------------------------------------"
   #define DOUBLE_BAR "================================================================================================================================="
+
+  //ds assertion handling
+  #define ASSERT(ASSERTION, INFO) \
+    assert(ASSERTION && INFO);
 
   //ds generic logging macro - called by each implemented logging function
   #define LOG_GENERIC(LOGGING_LEVEL, LOGGING_LEVEL_DESCRIPTION, EXPRESSION) \

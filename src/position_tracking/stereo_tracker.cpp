@@ -28,11 +28,12 @@ namespace proslam {
   }
 
   Frame* StereoTracker::_createFrame(){
-    Frame* current_frame = _context->createFrame(_context->robotToWorld(), _framepoint_generator->maximumDepthNearMeters(), _timestamp_image_left_seconds);
+    Frame* current_frame = _context->createFrame(_context->robotToWorld(), _framepoint_generator->maximumDepthNearMeters());
     current_frame->setCameraLeft(_camera_left);
     current_frame->setIntensityImageLeft(_intensity_image_left);
     current_frame->setCameraRight(_camera_right);
     current_frame->setIntensityImageRight(_intensity_image_right);
+    current_frame->setRobotToWorld(_context->robotToWorld()); //ds TODO remove
     return current_frame;
   }
   
@@ -46,9 +47,12 @@ namespace proslam {
   void StereoTracker::_recoverPoints(Frame* current_frame_) {
 
     //ds precompute transforms
-    const TransformMatrix3D world_to_camera_left    = _camera_left->robotToCamera()*current_frame_->worldToRobot();
+    const TransformMatrix3D world_to_camera_left    = current_frame_->worldToCameraLeft();
     const ProjectionMatrix& projection_matrix_left  = _camera_left->projectionMatrix();
     const ProjectionMatrix& projection_matrix_right = _camera_right->projectionMatrix();
+
+    //ds obtain currently active tracking distance
+    const real maximum_distance_appearance = _framepoint_generator->parameters()->matching_distance_tracking_threshold;
 
     //ds buffers
     const cv::Mat& intensity_image_left  = current_frame_->intensityImageLeft();
@@ -85,16 +89,16 @@ namespace proslam {
       point_in_image_right /= point_in_image_right.z();
 
       //ds check for invalid projections
-      if (point_in_image_left.x() < 0 || point_in_image_left.x() > _number_of_cols_image  ||
-          point_in_image_right.x() < 0 || point_in_image_right.x() > _number_of_cols_image||
-          point_in_image_left.y() < 0 || point_in_image_left.y() > _number_of_rows_image  ) {
+      if (point_in_image_left.x() < 0 || point_in_image_left.x() > _camera_left->numberOfImageCols()  ||
+          point_in_image_right.x() < 0 || point_in_image_right.x() > _camera_left->numberOfImageCols()||
+          point_in_image_left.y() < 0 || point_in_image_left.y() > _camera_left->numberOfImageRows()  ) {
 
         //ds out of FOV
         continue;
       }
       assert(point_in_image_left.y() == point_in_image_right.y());
 
-      //ds set projections
+      //ds set projections - at subpixel accuarcy
       const cv::Point2f projection_left(point_in_image_left.x(), point_in_image_left.y());
       const cv::Point2f projection_right(point_in_image_right.x(), point_in_image_right.y());
 
@@ -104,12 +108,12 @@ namespace proslam {
       const float regional_full_height = regional_border_center+regional_border_center+1;
 
       //ds if available search range is insufficient
-      if (projection_left.x <= regional_border_center+1              ||
-          projection_left.x >= _number_of_cols_image-regional_border_center-1 ||
-          projection_left.y <= regional_border_center+1              ||
-          projection_left.y >= _number_of_rows_image-regional_border_center-1 ||
-          projection_right.x <= regional_border_center+1             ||
-          projection_right.x >= _number_of_cols_image-regional_border_center-1) {
+      if (projection_left.x <= regional_border_center+1                                   ||
+          projection_left.x >= _camera_left->numberOfImageCols()-regional_border_center-1 ||
+          projection_left.y <= regional_border_center+1                                   ||
+          projection_left.y >= _camera_left->numberOfImageRows()-regional_border_center-1 ||
+          projection_right.x <= regional_border_center+1                                  ||
+          projection_right.x >= _camera_left->numberOfImageCols()-regional_border_center-1) {
 
         //ds skip complete tracking
         continue;
@@ -143,8 +147,8 @@ namespace proslam {
       }
       keypoint_buffer_right[0].pt += corner_right;
 
-      if (cv::norm(point_previous->descriptorLeft(), descriptor_left, SRRG_PROSLAM_DESCRIPTOR_NORM) < _framepoint_generator->matchingDistanceTrackingThreshold()  &&
-          cv::norm(point_previous->descriptorRight(), descriptor_right, SRRG_PROSLAM_DESCRIPTOR_NORM) < _framepoint_generator->matchingDistanceTrackingThreshold()) {
+      if (cv::norm(point_previous->descriptorLeft(), descriptor_left, SRRG_PROSLAM_DESCRIPTOR_NORM) < maximum_distance_appearance &&
+          cv::norm(point_previous->descriptorRight(), descriptor_right, SRRG_PROSLAM_DESCRIPTOR_NORM) < maximum_distance_appearance ) {
         try {
 
           //ds triangulate point
@@ -164,9 +168,9 @@ namespace proslam {
         } catch (const ExceptionTriangulation& /*exception_*/) {}
       }
     }
-    _number_of_lost_points_recovered = index_lost_point_recovered-_number_of_tracked_points;
+    _number_of_recovered_points = index_lost_point_recovered-_number_of_tracked_points;
     _number_of_tracked_points = index_lost_point_recovered;
     current_frame_->points().resize(_number_of_tracked_points);
-//    LOG_DEBUG(std::cerr << "StereoTracker::_recoverPoints|recovered points: " << _number_of_lost_points_recovered << "/" << _number_of_lost_points << std::endl)
+//    std::cerr << "StereoTracker::_recoverPoints|recovered points: " << _number_of_recovered_points << "/" << _number_of_lost_points << std::endl;
   }
 }

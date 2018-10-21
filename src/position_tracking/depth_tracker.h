@@ -1,5 +1,5 @@
 #pragma once
-#include "../position_tracking/base_tracker.h"
+#include "position_tracking/base_tracker.h"
 #include "framepoint_generation/depth_framepoint_generator.h"
 
 namespace proslam {

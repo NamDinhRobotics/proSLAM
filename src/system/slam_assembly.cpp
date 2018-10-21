@@ -24,6 +24,13 @@ SLAMAssembly::SLAMAssembly(ParameterCollection* parameters_): _parameters(parame
                                                               _is_viewer_open(false) {
   _synchronizer.reset();
   _processing_times_seconds.clear();
+
+  //ds reset all static object counters
+  Frame::reset();
+  FramePoint::reset();
+  LocalMap::reset();
+  Landmark::reset();
+
   LOG_DEBUG(std::cerr << "SLAMAssembly::SLAMAssembly|constructed" << std::endl)
 }
 
@@ -250,8 +257,8 @@ void SLAMAssembly::initializeGUI(QApplication* ui_server_) {
 
     //ds orientation flip for proper camera following
     TransformMatrix3D orientation_correction(TransformMatrix3D::Identity());
-    orientation_correction.matrix() << 0, -1, 0, 0,
-                                       -1, 0, 0, 0,
+    orientation_correction.matrix() << 1, 0, 0, 0,
+                                       0, -1, 0, 0,
                                        0, 0, -1, 0,
                                        0, 0, 0, 1;
     _map_viewer->setRotationRobotView(orientation_correction);
@@ -322,10 +329,10 @@ void SLAMAssembly::draw() {
 //    if (_new_image_available) {
 //
 //      //ds save images to disk
-//      _map_viewer->setSnapshotFileName("map.jpg");
+//      _map_viewer->setSnapshotFileName("images/map.jpg");
 //      _map_viewer->saveSnapshot();
 //      if (_minimap_viewer) {
-//        _minimap_viewer->setSnapshotFileName("minimap.jpg");
+//        _minimap_viewer->setSnapshotFileName("images/minimap.jpg");
 //        _minimap_viewer->saveSnapshot();
 //      }
 //      _image_viewer->saveToDisk();
@@ -488,7 +495,6 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
 
   //ds call the tracker
   _tracker->setIntensityImageLeft(&intensity_image_left_);
-  _tracker->setTimestamp(timestamp_image_left_seconds_);
 
   //ds depending on tracking mode
   switch (_parameters->command_line_parameters->tracker_mode){
@@ -515,8 +521,11 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
   //ds track framepoints and derive new robot pose
   _tracker->compute();
 
-  //ds if we have a valid frame
+  //ds if we generated a valid frame
   if (_world_map->currentFrame()) {
+
+    //ds set additional fields
+    _world_map->currentFrame()->setTimestampImageLeftSeconds(timestamp_image_left_seconds_);
 
     //ds if relocalization is not disabled
     if (!_parameters->command_line_parameters->option_disable_relocalization) {
@@ -589,9 +598,9 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
       }
     } else if (_parameters->command_line_parameters->option_drop_framepoints) {
 
-      //ds free framepoints if available (previous is still required to draw the optical flow from current to previous point in the gui)
-      if (_world_map->currentFrame()->previous() && _world_map->currentFrame()->previous()->previous()) {
-        _world_map->currentFrame()->previous()->previous()->clear();
+      //ds free disconnected framepoints if available
+      if (_world_map->frames().size() >= 100) {
+        _world_map->frames().at(_world_map->frames().size()-100)->clear();
       }
     }
   }
@@ -637,10 +646,12 @@ void SLAMAssembly::printReport() const {
   std::cerr << "            average velocity (km/h): " << 3.6*trajectory_length/_processing_time_total_seconds << std::endl;
   std::cerr << "     mean processing time (s/frame): " << processing_time_mean_seconds
             << " (standard deviation: " << processing_time_standard_deviation_seconds << ")" << std::endl;
-  std::cerr << "  average landmarks close per frame: " << _tracker->totalNumberOfLandmarksClose()/_number_of_processed_frames << std::endl;
-  std::cerr << "    average landmarks far per frame: " << _tracker->totalNumberOfLandmarksFar()/_number_of_processed_frames << std::endl;
-  std::cerr << "           average tracks per frame: " << _tracker->totalNumberOfTrackedPoints()/_number_of_processed_frames << std::endl;
-  std::cerr << "          average tracks per second: " << _tracker->totalNumberOfTrackedPoints()/_processing_time_total_seconds << std::endl;
+  std::cerr << "           mean number of keypoints: " << _tracker->meanNumberOfKeypoints() << std::endl;
+  std::cerr << "         mean number of framepoints: " << _tracker->meanNumberOfFramepoints() << std::endl;
+  std::cerr << "           mean landmarks per frame: " << _tracker->totalNumberOfLandmarks()/_number_of_processed_frames << std::endl;
+  std::cerr << "              mean tracks per frame: " << _tracker->totalNumberOfTrackedPoints()/_number_of_processed_frames << std::endl;
+  std::cerr << "             mean tracks per second: " << _tracker->totalNumberOfTrackedPoints()/_processing_time_total_seconds << std::endl;
+  std::cerr << "  number of recursive registrations: " << _tracker->numberOfRecursiveRegistrations() << std::endl;
 
   //ds display further information depending on tracking mode
   switch (_parameters->command_line_parameters->tracker_mode){

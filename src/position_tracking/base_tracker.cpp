@@ -1,12 +1,12 @@
 #include "base_tracker.h"
+#include "aligners/stereouv_aligner.h"
 
 namespace proslam {
 using namespace srrg_core;
 
 BaseTracker::BaseTracker(BaseTrackerParameters* parameters_): _parameters(parameters_),
                                                               _camera_left(0),
-                                                              _number_of_rows_image(0),
-                                                              _number_of_cols_image(0),
+                                                              _projection_tracking_distance_pixels(parameters_->maximum_projection_tracking_distance_pixels),
                                                               _intensity_image_left(0),
                                                               _context(0),
                                                               _pose_optimizer(0),
@@ -22,19 +22,16 @@ void BaseTracker::configure() {
   LOG_DEBUG(std::cerr << "BaseTracker::configure|configuring" << std::endl)
   assert(_camera_left);
   assert(_pose_optimizer);
-  _number_of_rows_image = _camera_left->numberOfImageRows();
-  _number_of_cols_image = _camera_left->numberOfImageCols();
-  _motion_previous_to_current_robot.setIdentity();
+  _previous_to_current_camera.setIdentity();
   _pose_optimizer->setMaximumDepthNearMeters(_framepoint_generator->maximumDepthNearMeters());
   _pose_optimizer->setMaximumDepthFarMeters(_framepoint_generator->maximumDepthFarMeters());
 
   //ds clear buffers
   _lost_points.clear();
-  _projected_image_coordinates_left.clear();
 
   //ds binning configuration
-  _number_of_cols_bin = std::floor(static_cast<real>(_number_of_cols_image)/_parameters->bin_size_pixels)+1;
-  _number_of_rows_bin = std::floor(static_cast<real>(_number_of_rows_image)/_parameters->bin_size_pixels)+1;
+  _number_of_cols_bin = std::floor(static_cast<real>(_camera_left->numberOfImageCols())/_parameters->bin_size_pixels)+1;
+  _number_of_rows_bin = std::floor(static_cast<real>(_camera_left->numberOfImageRows())/_parameters->bin_size_pixels)+1;
   _framepoint_generator->setTargetNumberOfKeyoints(_parameters->ratio_keypoints_to_bins*_number_of_cols_bin*_number_of_rows_bin);
 
   //ds allocate and initialize bin grid
@@ -47,6 +44,8 @@ void BaseTracker::configure() {
   }
 
   //ds print tracker configuration (with dynamic type of parameters)
+  LOG_DEBUG(std::cerr << "BaseTracker::configure|number of horizontal bins: " << _number_of_cols_bin << " size: " << _parameters->bin_size_pixels << std::endl)
+  LOG_DEBUG(std::cerr << "BaseTracker::configure|number of vertical bins: " << _number_of_rows_bin << " size: " << _parameters->bin_size_pixels << std::endl)
   LOG_DEBUG(std::cerr << "BaseTracker::configure|configured" << std::endl)
 }
 
@@ -56,7 +55,6 @@ BaseTracker::~BaseTracker() {
 
   //ds clear buffers
   _lost_points.clear();
-  _projected_image_coordinates_left.clear();
 
   //ds free bin map
   for (Count row = 0; row < _number_of_rows_bin; ++row) {
@@ -76,69 +74,96 @@ void BaseTracker::compute() {
   assert(_intensity_image_left);
 
   //ds reset point configurations
-  _number_of_tracked_points        = 0;
-  _number_of_lost_points           = 0;
-  _number_of_lost_points_recovered = 0;
+  _number_of_tracked_points   = 0;
+  _number_of_lost_points      = 0;
+  _number_of_recovered_points = 0;
   for (Landmark* landmark: _context->currentlyTrackedLandmarks()) {
     landmark->setIsCurrentlyTracked(false);
   }
   _context->currentlyTrackedLandmarks().clear();
 
-  //gg if we have an odometry we use it as initial guess
-  if (_has_odometry) {
-    if (!_context->currentFrame()){
-      _previous_odometry = _odometry;
-    }
-    TransformMatrix3D odom_delta = _previous_odometry.inverse()*_odometry;
-    _motion_previous_to_current_robot = odom_delta;
-    _previous_odometry = _odometry;
-  }
+  //ds relative camera motion guess
+  TransformMatrix3D previous_to_current = TransformMatrix3D::Identity();
 
-  //ds retrieve estimate by applying the constant velocity motion model
-  if (_context->currentFrame()) {
-    _context->setRobotToWorld(_context->robotToWorld()*_motion_previous_to_current_robot);
+  //ds check if initial guess can be refined with a motion model or other input
+  switch(_parameters->motion_model) {
+
+    //ds use previous motion as initial guess for current motion
+    case Parameters::MotionModel::CONSTANT_VELOCITY: {
+      previous_to_current = _previous_to_current_camera;
+      break;
+    }
+
+    //ds camera odometry as motion guess
+    case Parameters::MotionModel::CAMERA_ODOMETRY: {
+      if (!_context->currentFrame()){
+        _previous_odometry = _odometry;
+      }
+      TransformMatrix3D odom_delta = _odometry.inverse()*_previous_odometry;
+      _previous_odometry           = _odometry;
+      previous_to_current          = odom_delta;
+      break;
+    }
+
+    //ds no guess (identity)
+    case Parameters::MotionModel::NONE: {
+      previous_to_current = TransformMatrix3D::Identity();
+      break;
+    }
+
+    //ds invalid setting
+    default: {
+      throw std::runtime_error("motion model undefined");
+    }
   }
 
   //ds create new frame
   Frame* current_frame = _createFrame();
+  current_frame->setStatus(_status);
 
-  //ds compute full sensory prior for the current frame
+  //ds compute all framepoints in the current frame
   _framepoint_generator->compute(current_frame);
   _number_of_potential_points = _framepoint_generator->numberOfAvailablePoints();
 
   //ds if available - attempt to track the points from the previous frame
-  if (current_frame->previous()) {
+  Frame* previous_frame = current_frame->previous();
+  if (previous_frame) {
 
-    //ds enable binning by default
+    //ds see if we're tracking by appearance (expecting large photometric displacements between images)
+    //ds always do it for the first 2 frames (repeats after track is lost)
+    bool track_by_appearance = (_status == Frame::Localizing);
+
+    //ds search point tracks
     CHRONOMETER_START(tracking);
-    _trackFramepoints(current_frame->previous(), current_frame);
+    _track(previous_frame, current_frame, previous_to_current, track_by_appearance);
     CHRONOMETER_STOP(tracking);
   }
 
-  //ds check tracker status
+  //ds check previous tracker status
   switch(_status) {
 
-    //ds track lost - localizing
+    //ds localization mode - always running on tracking by appearance with maximum window size
     case Frame::Localizing: {
-      LOG_INFO(std::cerr << "BaseTracker::compute|STATE: LOCALIZING|current tracks: " << _number_of_tracked_points << std::endl)
+      LOG_INFO(std::cerr << "BaseTracker::compute|STATE: LOCALIZING|current tracks: "
+                         << _number_of_tracked_points << "/" << _number_of_potential_points << "/" << _framepoint_generator->numberOfDetectedKeypoints()
+                         << " at image: " << current_frame->identifier() << std::endl)
 
       //ds if we got not enough tracks to evaluate for position tracking
-      if (_number_of_tracked_points < _parameters->minimum_number_of_framepoints_to_track) {
+      if (_number_of_tracked_points < _parameters->minimum_number_of_landmarks_to_track) {
 
-        //ds reset state
+        //ds reset state and stick to previous solution
         LOG_WARNING(std::printf("BaseTracker::compute|skipping position tracking due to insufficient number of tracks: %lu\n", _number_of_tracked_points))
-
-        //ds stick to previous solution
-        _motion_previous_to_current_robot = TransformMatrix3D::Identity();
+        _previous_to_current_camera = TransformMatrix3D::Identity();
         break;
       }
 
       //ds if we have a previous frame
-      if (current_frame->previous()) {
+      if (previous_frame) {
 
         //ds solve pose on frame points only
         CHRONOMETER_START(pose_optimization);
-        _pose_optimizer->initialize(current_frame, current_frame->robotToWorld());
+        _pose_optimizer->setEnableWeightsTranslation(false);
+        _pose_optimizer->initialize(previous_frame, current_frame, previous_to_current);
         _pose_optimizer->converge();
         CHRONOMETER_STOP(pose_optimization);
 
@@ -146,22 +171,24 @@ void BaseTracker::compute() {
         if (_pose_optimizer->numberOfInliers() > _parameters->minimum_number_of_landmarks_to_track) {
 
           //ds compute resulting motion
-          _motion_previous_to_current_robot = current_frame->previous()->worldToRobot()*_pose_optimizer->robotToWorld();
-          const real delta_angular          = WorldMap::toOrientationRodrigues(_motion_previous_to_current_robot.linear()).norm();
-          const real delta_translational    = _motion_previous_to_current_robot.translation().norm();
+          _previous_to_current_camera = _pose_optimizer->previousToCurrent();
+          const real delta_angular          = WorldMap::toOrientationRodrigues(_previous_to_current_camera.linear()).norm();
+          const real delta_translational    = _previous_to_current_camera.translation().norm();
 
             //ds if the posit result is significant enough
           if (delta_angular > _parameters->minimum_delta_angular_for_movement || delta_translational > _parameters->minimum_delta_translational_for_movement) {
 
-            //ds update tracker
-            current_frame->setRobotToWorld(_pose_optimizer->robotToWorld());
+            //ds update tracker - TODO purge this transform chaos
+            const TransformMatrix3D world_to_camera_current = _previous_to_current_camera*previous_frame->worldToCameraLeft();
+            const TransformMatrix3D world_to_robot_current  = _camera_left->cameraToRobot()*world_to_camera_current;
+            current_frame->setRobotToWorld(world_to_robot_current.inverse());
             LOG_WARNING(std::cerr << "BaseTracker::compute|using posit on frame points (experimental) inliers: " << _pose_optimizer->numberOfInliers()
                       << " outliers: " << _pose_optimizer->numberOfOutliers() << " average error: " << _pose_optimizer->totalError()/_pose_optimizer->numberOfInliers() <<  std::endl)
           } else {
 
             //ds keep previous solution
-            current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
-            _motion_previous_to_current_robot = TransformMatrix3D::Identity();
+            current_frame->setRobotToWorld(previous_frame->robotToWorld());
+            _previous_to_current_camera = TransformMatrix3D::Identity();
           }
 
           //ds update context position
@@ -174,7 +201,7 @@ void BaseTracker::compute() {
       if (number_of_good_points > _parameters->minimum_number_of_landmarks_to_track) {
 
         //ds trigger landmark creation and framepoint update
-        _updateLandmarks(_context, current_frame);
+        _updatePoints(_context, current_frame);
         _status_previous = _status;
         _status = Frame::Tracking;
       } else {
@@ -187,155 +214,91 @@ void BaseTracker::compute() {
 
     //ds on the track
     case Frame::Tracking: {
-
-      //ds if we got not enough tracks to evaluate for position tracking
-      if (_number_of_tracked_points < _parameters->minimum_number_of_framepoints_to_track) {
-        breakTrack(current_frame);
-        break;
-      }
-
-      //ds current number of tracked landmarks
-      const Count number_of_tracked_landmarks = _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close;
-
-      //ds compute ratio between landmarks and tracked points
-      const real percentage_landmarks = static_cast<real>(number_of_tracked_landmarks)/_number_of_tracked_points;
-      if (percentage_landmarks < 0.1) {
-        LOG_WARNING(std::cerr << "BaseTracker::compute|low percentage of tracked landmarks over framepoints: " << percentage_landmarks
-                  << " (landmarks/framepoints: " << number_of_tracked_landmarks << "/" << _number_of_tracked_points << ")" << std::endl)
-      }
-
-      //ds compute ratio between close and far landmarks
-      const real percentage_of_close_landmarks = _number_of_tracked_landmarks_close/static_cast<real>(number_of_tracked_landmarks);
-      if (percentage_of_close_landmarks < 0.1) {
-        LOG_WARNING(std::cerr << "BaseTracker::compute|low percentage of close landmarks available: " << percentage_of_close_landmarks
-                  << " (close/total: " << _number_of_tracked_landmarks_close << "/" << number_of_tracked_landmarks << ")" << std::endl)
-      }
-
-      //ds call pose solver
-      CHRONOMETER_START(pose_optimization)
-      _pose_optimizer->initialize(current_frame, current_frame->robotToWorld());
-      _pose_optimizer->converge();
-      CHRONOMETER_STOP(pose_optimization)
-
-      //ds solver deltas
-      const Count& number_of_inliers = _pose_optimizer->numberOfInliers();
-
-      _motion_previous_to_current_robot = current_frame->previous()->worldToRobot()*_pose_optimizer->robotToWorld();
-      const real delta_angular          = WorldMap::toOrientationRodrigues(_motion_previous_to_current_robot.linear()).norm();
-      const real delta_translational    = _motion_previous_to_current_robot.translation().norm();
-
-      //ds if we have enough inliers in the pose optimization
-      if (number_of_inliers > _parameters->minimum_number_of_landmarks_to_track) {
-
-        //ds if the posit result is significant enough
-        if (delta_angular > _parameters->minimum_delta_angular_for_movement || delta_translational > _parameters->minimum_delta_translational_for_movement) {
-
-          //ds update robot pose with posit result
-          current_frame->setRobotToWorld(_pose_optimizer->robotToWorld());
-        } else {
-
-          //ds keep previous solution
-          current_frame->setRobotToWorld(current_frame->previous()->robotToWorld());
-          _motion_previous_to_current_robot = TransformMatrix3D::Identity();
-        }
-
-        //ds visualization only (we need to clear and push_back in order to not crash the gui since its decoupled - otherwise we could use resize)
-        _context->currentlyTrackedLandmarks().reserve(_number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
-
-        //ds prune current frame points
-        _pruneFramepoints(current_frame);
-        assert(_context->currentlyTrackedLandmarks().size() <= _number_of_tracked_landmarks_far+_number_of_tracked_landmarks_close);
-        assert(_number_of_tracked_points >= number_of_inliers);
-
-        //ds recover lost points based on refined pose
-        if (_parameters->enable_landmark_recovery) {
-          CHRONOMETER_START(point_recovery)
-          _recoverPoints(current_frame);
-          CHRONOMETER_STOP(point_recovery)
-        }
-
-        //ds update tracks
-        _context->setRobotToWorld(current_frame->robotToWorld());
-        CHRONOMETER_START(landmark_optimization)
-        _updateLandmarks(_context, current_frame);
-        CHRONOMETER_STOP(landmark_optimization)
-
-        //ds tracking
-        _status_previous = _status;
-        _status          = Frame::Tracking;
-      } else {
-        breakTrack(current_frame);
-      }
+      _registerRecursive(previous_frame, current_frame, previous_to_current);
       break;
     }
-
     default: {
-      assert(false);
+      throw std::runtime_error("invalid tracker state");
       break;
     }
-  }
-
-  //ds update track count accordingly
-  if (_status == Frame::Tracking) {
-    ++_number_of_subsequently_tracked_frames;
-  } else {
-    _number_of_subsequently_tracked_frames = 0;
   }
 
   //ds add new framepoints
   assert(current_frame != 0);
   CHRONOMETER_START(track_creation)
-  _addNewFramepoints(current_frame);
+  _addPoints(current_frame);
   CHRONOMETER_STOP(track_creation)
   current_frame->setStatus(_status);
+  current_frame->setProjectionTrackingDistancePixels(_projection_tracking_distance_pixels);
 
-  //ds done
-  _total_number_of_tracked_points += _number_of_tracked_points;
+  //ds update bookkeeping
+  _number_of_tracked_landmarks_previous = _context->currentlyTrackedLandmarks().size();
+  _total_number_of_tracked_points      += _number_of_tracked_points;
+
+  //ds update stats
+  _mean_number_of_keypoints   = (_mean_number_of_keypoints*(_context->frames().size()-1)+current_frame->_number_of_detected_keypoints)/_context->frames().size();
+  _mean_number_of_framepoints = (_mean_number_of_framepoints*(_context->frames().size()-1)+current_frame->points().size())/_context->frames().size();
 }
 
 //ds retrieves framepoint correspondences between previous and current frame
-void BaseTracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame_) {
+void BaseTracker::_track(const Frame* previous_frame_,
+                         Frame* current_frame_,
+                         const TransformMatrix3D& previous_to_current_,
+                         const bool& track_by_appearance_) {
   assert(previous_frame_);
   assert(current_frame_);
-  const bool track_by_appearance = (_number_of_subsequently_tracked_frames < _parameters->minimum_number_of_subsequently_tracked_frames);
 
   //ds control variables
   current_frame_->points().resize(_number_of_potential_points);
-  _number_of_tracked_points          = 0;
-  _number_of_tracked_landmarks_close = 0;
-  _number_of_tracked_landmarks_far   = 0;
-  _number_of_lost_points             = 0;
+  _number_of_tracked_points    = 0;
+  _number_of_tracked_landmarks = 0;
+  _number_of_lost_points       = 0;
 
-  //ds retrieve point predictions on current image plane
-  _getImageCoordinates(_projected_image_coordinates_left, previous_frame_, current_frame_);
+  //ds retrieve point predictions on current image plane and candidates to track for
+  ImageCoordinatesVector projected_image_coordinates_left(0);
+  FramePointPointerVector previous_points(0);
+  _project(projected_image_coordinates_left,
+           previous_points,
+           previous_frame_,
+           current_frame_,
+           previous_to_current_);
 
   //ds prepare lost buffer
-  _lost_points.resize(previous_frame_->points().size());
+  _lost_points.resize(previous_points.size());
 
   //ds check state for current framepoint tracking configuration
-  int32_t pixel_distance_tracking_threshold;
-  if (track_by_appearance) {
+  if (track_by_appearance_) {
 
-    //ds for localization mode we have a more relaxed tracking condition
-    pixel_distance_tracking_threshold = _parameters->maximum_threshold_distance_tracking_pixels;
+    //ds disable binning
+    _enable_keypoint_binning = false;
+
+    //ds maximimize tracking window
+    _projection_tracking_distance_pixels = _parameters->maximum_projection_tracking_distance_pixels;
   } else {
 
-    //ds narrow search limit closer to projection when we're in tracking mode
-    pixel_distance_tracking_threshold = _parameters->minimum_threshold_distance_tracking_pixels;
+    //ds enable binning if set (otherwise remains false)
+    _enable_keypoint_binning = _parameters->enable_keypoint_binning;
   }
 
-  //ds obtain currently active tracking distance
-  const real maximum_matching_distance_tracking = _framepoint_generator->matchingDistanceTrackingThreshold();
+  //ds set resulting absolute distance (which is the square)
+  const int32_t projection_tracking_distance_absolute_pixels = _projection_tracking_distance_pixels*_projection_tracking_distance_pixels;
+
+  //ds adjust pose optimization kernel to current precision
+  _pose_optimizer->parameters()->maximum_error_kernel = projection_tracking_distance_absolute_pixels;
 
   //ds get a fresh track candidate buffer
   TrackCandidateMap track_candidates;
 
+  //ds readability
+  const real maximum_distance_appearance = _framepoint_generator->parameters()->matching_distance_tracking_threshold;
+  FramePointMatrix current_points        = _framepoint_generator->framepointsInImage();
+
   //ds loop over all past points
-  for (Index index_point_previous = 0; index_point_previous < previous_frame_->points().size(); ++index_point_previous) {
+  for (Index index_point_previous = 0; index_point_previous < previous_points.size(); ++index_point_previous) {
 
     //ds compute current projection points
-    FramePoint* previous_point = previous_frame_->points()[index_point_previous];
-    const ImageCoordinates& projection_left(_projected_image_coordinates_left[index_point_previous]);
+    FramePoint* previous_point = previous_points[index_point_previous];
+    const ImageCoordinates& projection_left(projected_image_coordinates_left[index_point_previous]);
 
     //ds prior grid location
     const int32_t row_projection = std::round(projection_left.y());
@@ -344,8 +307,8 @@ void BaseTracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame
     const int32_t col_previous   = std::round(previous_point->imageCoordinatesLeft().x());
 
     //ds exhaustive search
-    int32_t pixel_distance_best = pixel_distance_tracking_threshold;
-    real matching_distance_best = maximum_matching_distance_tracking;
+    int32_t pixel_distance_best = projection_tracking_distance_absolute_pixels;
+    real matching_distance_best = maximum_distance_appearance;
     int32_t row_best = -1;
     int32_t col_best = -1;
 
@@ -357,15 +320,15 @@ void BaseTracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame
     const int32_t col_end_point   = std::min(col_projection+_parameters->range_point_tracking, static_cast<int32_t>(_framepoint_generator->numberOfColsImage()));
 
     //ds check state
-    if (track_by_appearance) {
+    if (track_by_appearance_) {
 
       //ds locate best match in appearance
       for (int32_t row_point = row_start_point; row_point < row_end_point; ++row_point) {
         for (int32_t col_point = col_start_point; col_point < col_end_point; ++col_point) {
-          if (_framepoint_generator->framepointsInImage()[row_point][col_point]) {
+          if (current_points[row_point][col_point]) {
             const int32_t pixel_distance = std::fabs(row_projection-row_point)+std::fabs(col_projection-col_point);
             const real matching_distance = cv::norm(previous_point->descriptorLeft(),
-                                                    _framepoint_generator->framepointsInImage()[row_point][col_point]->descriptorLeft(),
+                                                    current_points[row_point][col_point]->descriptorLeft(),
                                                     SRRG_PROSLAM_DESCRIPTOR_NORM);
 
             if (matching_distance < matching_distance_best) {
@@ -382,13 +345,13 @@ void BaseTracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame
       //ds locate best match in motion
       for (int32_t row_point = row_start_point; row_point < row_end_point; ++row_point) {
         for (int32_t col_point = col_start_point; col_point < col_end_point; ++col_point) {
-          if (_framepoint_generator->framepointsInImage()[row_point][col_point]) {
+          if (current_points[row_point][col_point]) {
             const int32_t pixel_distance = std::fabs(row_projection-row_point)+std::fabs(col_projection-col_point);
             const real matching_distance = cv::norm(previous_point->descriptorLeft(),
-                                                    _framepoint_generator->framepointsInImage()[row_point][col_point]->descriptorLeft(),
+                                                    current_points[row_point][col_point]->descriptorLeft(),
                                                     SRRG_PROSLAM_DESCRIPTOR_NORM);
 
-            if (pixel_distance < pixel_distance_best && matching_distance < maximum_matching_distance_tracking) {
+            if (pixel_distance < pixel_distance_best && matching_distance < maximum_distance_appearance) {
               pixel_distance_best    = pixel_distance;
               matching_distance_best = matching_distance;
               row_best = row_point;
@@ -399,15 +362,12 @@ void BaseTracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame
       }
     }
 
-    //ds if we found a match that satisfies the current and original descriptor distance (drift resistance)
-    if ((row_best != -1) &&
-        (cv::norm(previous_point->origin()->descriptorLeft(),
-                 _framepoint_generator->framepointsInImage()[row_best][col_best]->descriptorLeft(),
-                 SRRG_PROSLAM_DESCRIPTOR_NORM) < _parameters->maximum_threshold_distance_tracking_pixels)) {
+    //ds if we found
+    if (row_best != -1) {
 
       //ds check if track is consistent
       if ((row_best-row_previous)*(row_best-row_previous)+(col_best-col_previous)*(col_best-col_previous) < _parameters->maximum_distance_tracking_pixels) {
-        FramePoint* current_point = _framepoint_generator->framepointsInImage()[row_best][col_best];
+        FramePoint* current_point = current_points[row_best][col_best];
         try {
           track_candidates.at(current_point->identifier()).push_back(TrackCandidate(previous_point, row_best, col_best, pixel_distance_best, matching_distance_best));
         } catch (const std::out_of_range& /**/) {
@@ -418,21 +378,24 @@ void BaseTracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame
     }
 
     //ds ------------------------------------------- STAGE 2: REGIONAL TRACKING
-    pixel_distance_best = pixel_distance_tracking_threshold;
+    pixel_distance_best    = projection_tracking_distance_absolute_pixels;
+    matching_distance_best = maximum_distance_appearance;
+    row_best               = -1;
+    col_best               = -1;
 
     //ds compute borders
-    const int32_t row_start_region = std::max(row_projection-pixel_distance_tracking_threshold, static_cast<int32_t>(0));
-    const int32_t row_end_region   = std::min(row_projection+pixel_distance_tracking_threshold, static_cast<int32_t>(_framepoint_generator->numberOfRowsImage()));
-    const int32_t col_start_region = std::max(col_projection-pixel_distance_tracking_threshold, static_cast<int32_t>(0));
-    const int32_t col_end_region   = std::min(col_projection+pixel_distance_tracking_threshold, static_cast<int32_t>(_framepoint_generator->numberOfColsImage()));
+    const int32_t row_start_region = std::max(row_projection-projection_tracking_distance_absolute_pixels, static_cast<int32_t>(0));
+    const int32_t row_end_region   = std::min(row_projection+projection_tracking_distance_absolute_pixels, static_cast<int32_t>(_framepoint_generator->numberOfRowsImage()));
+    const int32_t col_start_region = std::max(col_projection-projection_tracking_distance_absolute_pixels, static_cast<int32_t>(0));
+    const int32_t col_end_region   = std::min(col_projection+projection_tracking_distance_absolute_pixels, static_cast<int32_t>(_framepoint_generator->numberOfColsImage()));
 
     //ds check state
-    if (track_by_appearance) {
+    if (track_by_appearance_) {
 
       //ds locate best match in appearance
       for (int32_t row_region = row_start_region; row_region < row_end_region; ++row_region) {
         for (int32_t col_region = col_start_region; col_region < col_end_region; ++col_region) {
-          if (_framepoint_generator->framepointsInImage()[row_region][col_region]) {
+          if (current_points[row_region][col_region]) {
 
             //ds if area has not been already evaluated in previous stage
             if (row_region < row_start_point||
@@ -442,7 +405,7 @@ void BaseTracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame
 
               const int32_t pixel_distance = std::fabs(row_projection-row_region)+std::fabs(col_projection-col_region);
               const real matching_distance = cv::norm(previous_point->descriptorLeft(),
-                                                      _framepoint_generator->framepointsInImage()[row_region][col_region]->descriptorLeft(),
+                                                      current_points[row_region][col_region]->descriptorLeft(),
                                                       SRRG_PROSLAM_DESCRIPTOR_NORM);
 
               if (matching_distance < matching_distance_best) {
@@ -460,7 +423,7 @@ void BaseTracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame
       //ds locate best match in motion
       for (int32_t row_region = row_start_region; row_region < row_end_region; ++row_region) {
         for (int32_t col_region = col_start_region; col_region < col_end_region; ++col_region) {
-          if (_framepoint_generator->framepointsInImage()[row_region][col_region]) {
+          if (current_points[row_region][col_region]) {
 
             //ds if area has not been already evaluated in previous stage
             if (row_region < row_start_point||
@@ -470,10 +433,10 @@ void BaseTracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame
 
               const int32_t pixel_distance = std::fabs(row_projection-row_region)+std::fabs(col_projection-col_region);
               const real matching_distance = cv::norm(previous_point->descriptorLeft(),
-                                                      _framepoint_generator->framepointsInImage()[row_region][col_region]->descriptorLeft(),
+                                                      current_points[row_region][col_region]->descriptorLeft(),
                                                       SRRG_PROSLAM_DESCRIPTOR_NORM);
 
-              if (pixel_distance < pixel_distance_best && matching_distance < maximum_matching_distance_tracking) {
+              if (pixel_distance < pixel_distance_best && matching_distance < maximum_distance_appearance) {
                 pixel_distance_best    = pixel_distance;
                 matching_distance_best = matching_distance;
                 row_best = row_region;
@@ -485,15 +448,12 @@ void BaseTracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame
       }
     }
 
-    //ds if we found a match that satisfies the current and original descriptor distance (drift resistance)
-    if ((row_best != -1) &&
-        (cv::norm(previous_point->origin()->descriptorLeft(),
-                 _framepoint_generator->framepointsInImage()[row_best][col_best]->descriptorLeft(),
-                 SRRG_PROSLAM_DESCRIPTOR_NORM) < _parameters->maximum_threshold_distance_tracking_pixels)) {
+    //ds if we found a match
+    if (row_best != -1) {
 
       //ds check if track is consistent
       if ((row_best-row_previous)*(row_best-row_previous)+(col_best-col_previous)*(col_best-col_previous) < _parameters->maximum_distance_tracking_pixels) {
-        FramePoint* current_point = _framepoint_generator->framepointsInImage()[row_best][col_best];
+        FramePoint* current_point = current_points[row_best][col_best];
         try {
           track_candidates.at(current_point->identifier()).push_back(TrackCandidate(previous_point, row_best, col_best, pixel_distance_best, matching_distance_best));
         } catch (const std::out_of_range& /**/) {
@@ -518,17 +478,17 @@ void BaseTracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame
     if (candidates.size() > 1) {
 
       //ds find best in appearance
-      if (track_by_appearance) {
+      if (track_by_appearance_) {
 
         //ds best distance so far - appearance
         TrackCandidate& candidate_best = candidates.front();
         real distance_best             = candidates.front().descriptor_distance;
 
-        //ds loop over the candidates
-        for (TrackCandidate& candidate: candidates) {
-          if (candidate.descriptor_distance < distance_best) {
-            distance_best  = candidate.descriptor_distance;
-            candidate_best = candidate;
+        //ds loop over the remaining candidates
+        for (uint32_t u = 1; u < candidates.size(); ++u) {
+          if (candidates[u].descriptor_distance < distance_best) {
+            distance_best  = candidates[u].descriptor_distance;
+            candidate_best = candidates[u];
           }
         }
 
@@ -542,11 +502,11 @@ void BaseTracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame
         TrackCandidate& candidate_best = candidates.front();
         real distance_best             = candidates.front().pixel_distance;
 
-        //ds loop over the candidates
-        for (TrackCandidate& candidate: candidates) {
-          if (candidate.pixel_distance < distance_best) {
-            distance_best  = candidate.pixel_distance;
-            candidate_best = candidate;
+        //ds loop over the remaining candidates
+        for (uint32_t u = 1; u < candidates.size(); ++u) {
+          if (candidates[u].pixel_distance < distance_best) {
+            distance_best  = candidates[u].pixel_distance;
+            candidate_best = candidates[u];
           }
         }
 
@@ -561,17 +521,157 @@ void BaseTracker::_trackFramepoints(Frame* previous_frame_, Frame* current_frame
     }
   }
 
+//  std::cerr << " tracks: " << _number_of_tracked_points << "/" << previous_frame_->points().size()
+//            << " : " << static_cast<real>(_number_of_tracked_points)/previous_frame_->points().size()
+//            << " of which landmarks: " << _number_of_tracked_landmarks  << "/" << _number_of_tracked_landmarks_previous
+//            << " : " << static_cast<real>(_number_of_tracked_landmarks)/_number_of_tracked_landmarks_previous << std::endl;
+//  getchar();
+  _tracking_ratio = static_cast<real>(_number_of_tracked_points)/previous_frame_->points().size();
+  if (_tracking_ratio < 0.1) {
+    LOG_WARNING(std::cerr << "BaseTracker::_trackFramepoints|low point tracking ratio: " << _tracking_ratio
+              << " (" << _number_of_tracked_points << "/" << previous_frame_->points().size() << ")" << std::endl)
+  }
+
+  //ds stats
+  _mean_tracking_ratio = (_number_of_tracked_frames*_mean_tracking_ratio+_tracking_ratio)/(1+_number_of_tracked_frames);
+  ++_number_of_tracked_frames;
+
   //ds update frame with current points
   current_frame_->points().resize(_number_of_tracked_points);
   _lost_points.resize(_number_of_lost_points);
+  _total_number_of_landmarks+= _number_of_tracked_landmarks;
+}
 
-  //    //ds info
-  //    std::cerr << "BaseTracker::trackFeatures|tracks: " << _number_of_tracked_points << "/" << previous_frame_->points().size()
-  //              << " landmarks close: " << _number_of_tracked_landmarks_close
-  //              << " landmarks far: " << _number_of_tracked_landmarks_far
-  //              << std::endl;
-  _total_number_of_landmarks_close += _number_of_tracked_landmarks_close;
-  _total_number_of_landmarks_far   += _number_of_tracked_landmarks_far;
+void BaseTracker::_registerRecursive(Frame* frame_previous_,
+                                     Frame* frame_current_,
+                                     TransformMatrix3D previous_to_current_,
+                                     const Count& recursion_) {
+  assert(_number_of_tracked_landmarks_previous != 0);
+
+  //ds if we're below the target - raise tracking window
+  if (_tracking_ratio < 0.1) {
+
+    //ds if we still can increase the tracking window size
+    if (_projection_tracking_distance_pixels < _parameters->maximum_projection_tracking_distance_pixels) {
+      ++_projection_tracking_distance_pixels;
+    }
+  } else {
+
+    //ds if we still can reduce the tracking window size
+    if (_projection_tracking_distance_pixels > _parameters->minimum_projection_tracking_distance_pixels) {
+      --_projection_tracking_distance_pixels;
+    }
+  }
+
+  //ds current number of tracked landmarks
+  real relative_number_of_tracked_landmarks_to_previous = static_cast<real>(_number_of_tracked_landmarks)/_number_of_tracked_landmarks_previous;
+
+  //ds if we got not enough tracks to evaluate for position tracking: robustness
+  if (_number_of_tracked_landmarks == 0 || relative_number_of_tracked_landmarks_to_previous < 0.1) {
+
+    //ds if we have recursions left (currently only two)
+    if (recursion_ < 2) {
+
+      //ds fallback to no motion model
+      previous_to_current_ = TransformMatrix3D::Identity();
+
+      //ds attempt tracking by appearance (maximum window size)
+      _track(frame_previous_, frame_current_, previous_to_current_, true);
+      _registerRecursive(frame_previous_, frame_current_, previous_to_current_, recursion_+1);
+      ++_number_of_recursive_registrations;
+      return;
+    } else {
+
+      //ds failed
+      breakTrack(frame_current_);
+      return;
+    }
+  }
+
+  //ds compute ratio between landmarks and tracked points: informative only
+  const real percentage_landmarks = static_cast<real>(_number_of_tracked_landmarks)/_number_of_tracked_points;
+  if (percentage_landmarks < 0.1) {
+    LOG_WARNING(std::cerr << "BaseTracker::compute|low percentage of tracked landmarks over framepoints: " << percentage_landmarks
+              << " (landmarks/framepoints: " << _number_of_tracked_landmarks << "/" << _number_of_tracked_points << ")" << std::endl)
+  }
+
+  //ds call pose solver
+  CHRONOMETER_START(pose_optimization)
+  _pose_optimizer->setEnableWeightsTranslation(true);
+  _pose_optimizer->initialize(frame_previous_, frame_current_, previous_to_current_);
+  _pose_optimizer->converge();
+  CHRONOMETER_STOP(pose_optimization)
+
+  //ds solver deltas
+  const Count number_of_inliers = _pose_optimizer->numberOfInliers();
+  const real average_error      = _pose_optimizer->totalError()/number_of_inliers;
+
+  //ds if we have enough inliers in the pose optimization
+  if (number_of_inliers > _parameters->minimum_number_of_landmarks_to_track) {
+    _previous_to_current_camera = _pose_optimizer->previousToCurrent();
+    const real delta_angular          = WorldMap::toOrientationRodrigues(_previous_to_current_camera.linear()).norm();
+    const real delta_translational    = _previous_to_current_camera.translation().norm();
+
+    //ds if the posit result is significant enough
+    if (delta_angular > _parameters->minimum_delta_angular_for_movement || delta_translational > _parameters->minimum_delta_translational_for_movement) {
+
+      //ds update tracker - TODO purge this transform chaos
+      const TransformMatrix3D world_to_camera_current = _previous_to_current_camera*frame_previous_->worldToCameraLeft();
+      const TransformMatrix3D world_to_robot_current  = _camera_left->cameraToRobot()*world_to_camera_current;
+      frame_current_->setRobotToWorld(world_to_robot_current.inverse());
+    } else {
+
+      //ds keep previous solution
+      frame_current_->setRobotToWorld(frame_previous_->robotToWorld());
+      _previous_to_current_camera = TransformMatrix3D::Identity();
+    }
+
+    //ds visualization only (we need to clear and push_back in order to not crash the gui since its decoupled - otherwise we could use resize)
+    _context->currentlyTrackedLandmarks().reserve(_number_of_tracked_landmarks);
+
+    //ds prune current frame points
+    _prunePoints(frame_current_);
+    assert(_context->currentlyTrackedLandmarks().size() <= _number_of_tracked_landmarks);
+    assert(_number_of_tracked_points >= number_of_inliers);
+
+    //ds recover lost points based on refined pose
+    if (_parameters->enable_landmark_recovery) {
+      CHRONOMETER_START(point_recovery)
+      _recoverPoints(frame_current_);
+      CHRONOMETER_STOP(point_recovery)
+    }
+
+    //ds update tracks
+    _context->setRobotToWorld(frame_current_->robotToWorld());
+    CHRONOMETER_START(landmark_optimization)
+    _updatePoints(_context, frame_current_);
+    CHRONOMETER_STOP(landmark_optimization)
+
+    //ds tracking
+    _status_previous = _status;
+    _status          = Frame::Tracking;
+  } else {
+    LOG_WARNING(std::cerr << frame_current_->identifier() << "|BaseTracker::_registerRecursive|inliers: " << number_of_inliers
+                          << " average error: " << average_error << std::endl)
+
+    //ds if we have recursions left (currently only two)
+    if (recursion_ < 2) {
+
+      //ds if we still can increase the tracking window size
+      if (_projection_tracking_distance_pixels < _parameters->maximum_projection_tracking_distance_pixels) {
+        ++_projection_tracking_distance_pixels;
+      }
+
+      //ds attempt new tracking with the increased window size
+      _track(frame_previous_, frame_current_, previous_to_current_);
+      _registerRecursive(frame_previous_, frame_current_, previous_to_current_, recursion_+1);
+      ++_number_of_recursive_registrations;
+    } else {
+
+      //ds failed
+      breakTrack(frame_current_);
+    }
+  }
 }
 
 void BaseTracker::_addTrack(TrackCandidate& track_candidate_, Frame* current_frame_) {
@@ -583,38 +683,25 @@ void BaseTracker::_addTrack(TrackCandidate& track_candidate_, Frame* current_fra
   //ds set the point to the control structure
   current_frame_->points()[_number_of_tracked_points] = current_point;
   if (current_point->landmark()) {
-    if (current_point->isNear()) {
-      ++_number_of_tracked_landmarks_close;
-    } else {
-      ++_number_of_tracked_landmarks_far;
-    }
+    ++_number_of_tracked_landmarks;
   }
   ++_number_of_tracked_points;
-
-  //ds determine bin index of the current point
-  const Count row_bin = std::floor(static_cast<real>(track_candidate_.row)/_parameters->bin_size_pixels);
-  const Count col_bin = std::floor(static_cast<real>(track_candidate_.col)/_parameters->bin_size_pixels);
-
-  //ds occupy corresponding bin for keypoint binning
-  _bin_map_left[row_bin][col_bin] = current_point;
-
-  //ds remove from framepoint grid so the binning will not add this point as a new one
-  _framepoint_generator->framepointsInImage()[track_candidate_.row][track_candidate_.col] = 0;
 }
 
 //! @breaks the track at the current frame
 void BaseTracker::breakTrack(Frame* frame_) {
 
   //ds reset state
-  LOG_WARNING(std::printf("BaseTracker::breakTrack|LOST TRACK at frame [%06lu]\n", frame_->identifier()))
+  LOG_WARNING(std::printf("BaseTracker::breakTrack|LOST TRACK at frame [%06lu] with tracks: %lu\n", frame_->identifier(), _number_of_tracked_points))
   _status_previous = Frame::Localizing;
   _status          = Frame::Localizing;
+  _enable_keypoint_binning = false;
 
   //ds stick to previous solution - simulating a fresh start
   frame_->setRobotToWorld(frame_->previous()->robotToWorld());
-  _motion_previous_to_current_robot = TransformMatrix3D::Identity();
-  _number_of_lost_points_recovered = 0;
-  _number_of_tracked_points        = 0;
+  _previous_to_current_camera = TransformMatrix3D::Identity();
+  _number_of_recovered_points = 0;
+  _number_of_tracked_points   = 0;
 
   //ds reset frame in world context, triggering a restart of the pipeline
   _context->breakTrack(frame_);
@@ -628,27 +715,40 @@ void BaseTracker::breakTrack(Frame* frame_) {
 }
 
 //ds adds new framepoints to the provided frame (picked from the pool of the _framepoint_generator)
-void BaseTracker::_addNewFramepoints(Frame* frame_) {
+void BaseTracker::_addPoints(Frame* frame_) {
+  const TransformMatrix3D& robot_to_world = frame_->robotToWorld();
+  FramePointMatrix current_points         = _framepoint_generator->framepointsInImage();
+
+  //ds clear tracked points in the framepoint matrix ("masking")
+  for (FramePoint* frame_point: frame_->points()) {
+
+    //ds determine bin index of the current point
+    const Count row_bin = std::rint(static_cast<real>(frame_point->row)/_parameters->bin_size_pixels);
+    const Count col_bin = std::rint(static_cast<real>(frame_point->col)/_parameters->bin_size_pixels);
+
+    //ds occupy corresponding bin for keypoint binning
+    _bin_map_left[row_bin][col_bin] = frame_point;
+
+    //ds free point from framepoint matrix
+    current_points[frame_point->row][frame_point->col] = 0;
+  }
 
   //ds make space for all remaining points
-  frame_->points().resize(_number_of_potential_points+_number_of_lost_points_recovered);
+  frame_->points().resize(_number_of_potential_points+_number_of_recovered_points);
   Index index_point_new = _number_of_tracked_points;
 
-  //ds buffer current pose
-  const TransformMatrix3D& frame_to_world = frame_->robotToWorld();
-
-  //ds if binning is desired and we're tracking
-  if (_parameters->enable_keypoint_binning && _status == Frame::Tracking) {
+  //ds if binning is enabled
+  if (_enable_keypoint_binning) {
 
     //ds check triangulation map for unmatched points and fill them into the bin map
     for (Index row = 0; row < _framepoint_generator->numberOfRowsImage(); ++row) {
       for (Index col = 0; col < _framepoint_generator->numberOfColsImage(); ++col) {
-        if (_framepoint_generator->framepointsInImage()[row][col]) {
-          FramePoint* frame_point = _framepoint_generator->framepointsInImage()[row][col];
+        if (current_points[row][col]) {
+          FramePoint* frame_point = current_points[row][col];
 
           //ds determine bin index of the current point
-          const Index row_bin = std::floor(static_cast<real>(row)/_parameters->bin_size_pixels);
-          const Index col_bin = std::floor(static_cast<real>(col)/_parameters->bin_size_pixels);
+          const Index row_bin = std::rint(static_cast<real>(row)/_parameters->bin_size_pixels);
+          const Index col_bin = std::rint(static_cast<real>(col)/_parameters->bin_size_pixels);
           assert(row_bin < _number_of_rows_bin);
           assert(col_bin < _number_of_cols_bin);
 
@@ -667,12 +767,12 @@ void BaseTracker::_addNewFramepoints(Frame* frame_) {
           }
 
           //ds always free point from input grid
-          _framepoint_generator->framepointsInImage()[row][col] = 0;
+          current_points[row][col] = 0;
         }
       }
     }
 
-    //ds collect new framepoints from bin map and clear it simultaneously - TODO this could be done faster using bookkeeping
+    //ds collect new framepoints from bin map and clear it simultaneously - TODO this could be done much faster using bookkeeping
     for (Index row_bin = 0; row_bin < _number_of_rows_bin; ++row_bin) {
       for (Index col_bin = 0; col_bin < _number_of_cols_bin; ++col_bin) {
         if (_bin_map_left[row_bin][col_bin]) {
@@ -684,7 +784,7 @@ void BaseTracker::_addNewFramepoints(Frame* frame_) {
             frame_->points()[index_point_new] = _bin_map_left[row_bin][col_bin];
 
             //ds update framepoint world position using the current pose estimate
-            frame_->points()[index_point_new]->setWorldCoordinates(frame_to_world*frame_->points()[index_point_new]->robotCoordinates());
+            frame_->points()[index_point_new]->setWorldCoordinates(robot_to_world*frame_->points()[index_point_new]->robotCoordinates());
             ++index_point_new;
           }
 
@@ -698,119 +798,112 @@ void BaseTracker::_addNewFramepoints(Frame* frame_) {
     //ds check triangulation map for unmatched points and add them directly
     for (Index row = 0; row < _framepoint_generator->numberOfRowsImage(); ++row) {
       for (Index col = 0; col < _framepoint_generator->numberOfColsImage(); ++col) {
-        if (_framepoint_generator->framepointsInImage()[row][col]) {
+        if (current_points[row][col]) {
 
           //ds assign the new point
-          frame_->points()[index_point_new] = _framepoint_generator->framepointsInImage()[row][col];
+          frame_->points()[index_point_new] = current_points[row][col];
 
           //ds update framepoint world position using the current pose estimate
-          frame_->points()[index_point_new]->setWorldCoordinates(frame_to_world*frame_->points()[index_point_new]->robotCoordinates());
+          frame_->points()[index_point_new]->setWorldCoordinates(robot_to_world*frame_->points()[index_point_new]->robotCoordinates());
           ++index_point_new;
 
           //ds free point from input grid
-          _framepoint_generator->framepointsInImage()[row][col] = 0;
+          current_points[row][col] = 0;
         }
       }
     }
   }
   frame_->points().resize(index_point_new);
-//    std::cerr << "BaseTracker::extractFeatures|new points: " << index_point_new-_number_of_tracked_points << " (tracked: " << _number_of_tracked_points << ")" << std::endl;
 }
 
 //ds retrieves framepoint projections as image coordinates in a vector (at the same time removing points with invalid projections)
-void BaseTracker::_getImageCoordinates(ImageCoordinatesVector& projected_image_coordinates_left_, Frame* previous_frame_, const Frame* current_frame_) const {
-  assert(previous_frame_ != 0);
-  assert(current_frame_ != 0);
+void BaseTracker::_project(ImageCoordinatesVector& projected_image_coordinates_left_,
+                           FramePointPointerVector& previous_points_,
+                           const Frame* previous_frame_,
+                           const Frame* current_frame_,
+                           const TransformMatrix3D& previous_to_current_) const {
+  const Matrix3& camera_calibration_matrix = current_frame_->cameraLeft()->cameraMatrix();
+  ASSERT(previous_frame_ != 0, "previous frame not set")
+  ASSERT(current_frame_ != 0,"previous frame not set")
 
-  //ds preallocation
+  //ds preallocation of output structures
   projected_image_coordinates_left_.resize(previous_frame_->points().size());
-  const TransformMatrix3D world_to_camera = current_frame_->cameraLeft()->robotToCamera()*current_frame_->worldToRobot();
+  previous_points_.resize(previous_frame_->points().size());
 
-  //ds compute predictions for all previous frame points
-  Count number_of_visible_points = 0;
-  for (FramePoint* previous_frame_point: previous_frame_->points()) {
-    assert(previous_frame_point->imageCoordinatesLeft().x() >= 0);
-    assert(previous_frame_point->imageCoordinatesLeft().x() <= _number_of_cols_image);
-    assert(previous_frame_point->imageCoordinatesLeft().y() >= 0);
-    assert(previous_frame_point->imageCoordinatesLeft().y() <= _number_of_rows_image);
+  //ds compute projections for all previous frame points into the image plane of the current image
+  Count number_of_valid_projected_points = 0;
+  for (FramePoint* previous_point: previous_frame_->points()) {
+    assert(previous_point->imageCoordinatesLeft().x() >= 0);
+    assert(previous_point->imageCoordinatesLeft().x() <= _camera_left->numberOfImageCols());
+    assert(previous_point->imageCoordinatesLeft().y() >= 0);
+    assert(previous_point->imageCoordinatesLeft().y() <= _camera_left->numberOfImageRows());
 
     //ds get point into current camera - based on last track
-    Vector3 point_in_camera;
+    ImageCoordinates point_in_image_left;
 
-    //ds if we have a valid landmark at hand
-    if (previous_frame_point->landmark() && previous_frame_point->landmark()->areCoordinatesValidated()) {
-
-      //ds get point in camera frame based on landmark coordinates
-      point_in_camera = world_to_camera*previous_frame_point->landmark()->coordinates();
+    //ds if we have a valid landmark at hand - prefer the position estimate over the raw measurement
+    if (previous_point->landmark()) {
+      point_in_image_left = camera_calibration_matrix*previous_to_current_*previous_point->cameraCoordinatesLeftLandmark();
     } else {
-
-      //ds reproject based on last track
-      point_in_camera = world_to_camera*previous_frame_point->worldCoordinates();
+      point_in_image_left = camera_calibration_matrix*previous_to_current_*previous_point->cameraCoordinatesLeft();
     }
-
-    //ds obtain point projection on camera image plane
-    PointCoordinates point_in_image_left = current_frame_->cameraLeft()->cameraMatrix()*point_in_camera;
 
     //ds normalize point and update prediction based on landmark position: LEFT
     point_in_image_left /= point_in_image_left.z();
 
-    //ds check for invalid projections
-    if (point_in_image_left.x() < 0 || point_in_image_left.x() > _number_of_cols_image||
-        point_in_image_left.y() < 0 || point_in_image_left.y() > _number_of_rows_image) {
-
-      //ds out of FOV
+    //ds check for invalid projections (out of FOV) and skip if so
+    if (point_in_image_left.x() < 0 || point_in_image_left.x() > _camera_left->numberOfImageCols()||
+        point_in_image_left.y() < 0 || point_in_image_left.y() > _camera_left->numberOfImageRows()) {
       continue;
     }
 
-    //ds update predictions
-    projected_image_coordinates_left_[number_of_visible_points] = point_in_image_left;
-    previous_frame_->points()[number_of_visible_points] = previous_frame_point;
-    ++number_of_visible_points;
+    //ds update result containers
+    projected_image_coordinates_left_[number_of_valid_projected_points] = point_in_image_left;
+    previous_points_[number_of_valid_projected_points]                  = previous_point;
+    ++number_of_valid_projected_points;
   }
-  previous_frame_->points().resize(number_of_visible_points);
-  projected_image_coordinates_left_.resize(number_of_visible_points);
+
+  //ds trim containers
+  previous_points_.resize(number_of_valid_projected_points);
+  projected_image_coordinates_left_.resize(number_of_valid_projected_points);
 }
 
-//ds prunes invalid framespoints after pose optimization
-void BaseTracker::_pruneFramepoints(Frame* frame_) {
+//ds prunes invalid points after pose optimization
+void BaseTracker::_prunePoints(Frame* frame_) {
 
-  //ds update current frame points
+  //ds filter invalid points of pose optimization
   _number_of_tracked_points = 0;
   for (Index index_point = 0; index_point < frame_->points().size(); index_point++) {
     assert(frame_->points()[index_point]->previous());
 
-    //ds buffer current landmark
-    Landmark* landmark = frame_->points()[index_point]->landmark();
+    //ds keep points which were not suppressed in the optimization
+    if (_pose_optimizer->errors()[index_point] != -1) {
 
-    //ds points without landmarks are always kept
-    if (landmark == 0) {
-      frame_->points()[_number_of_tracked_points] = frame_->points()[index_point];
-      ++_number_of_tracked_points;
-    }
+      //ds if we have a new point keep it
+      //if (!frame_->points()[index_point]->landmark()) {
+        frame_->points()[_number_of_tracked_points] = frame_->points()[index_point];
+        ++_number_of_tracked_points;
 
-    //ds keep the point if it has been skipped (due to insufficient maturity or invalidity) or is an inlier
-    else if (_pose_optimizer->errors()[index_point] == -1 || _pose_optimizer->inliers()[index_point]) {
-
-      //ds reset recovery count
-      landmark->setNumberOfRecoveries(0);
-
-      //ds add the point
-      frame_->points()[_number_of_tracked_points] = frame_->points()[index_point];
-      ++_number_of_tracked_points;
+      //ds keep landmarks only if they were inliers
+      //} else if (_pose_optimizer->inliers()[index_point]) {
+      //  frame_->points()[_number_of_tracked_points] = frame_->points()[index_point];
+      //  ++_number_of_tracked_points;
+      //}
     }
   }
+//  std::cerr << "dropped points REGISTRATION: " << frame_->points().size()-_number_of_tracked_points << "/" << frame_->points().size() << std::endl;
   frame_->points().resize(_number_of_tracked_points);
 }
 
 //ds updates existing or creates new landmarks for framepoints of the provided frame
-void BaseTracker::_updateLandmarks(WorldMap* context_, Frame* frame_) {
+void BaseTracker::_updatePoints(WorldMap* context_, Frame* frame_) {
 
   //ds buffer current pose
-  const TransformMatrix3D& frame_to_world = frame_->robotToWorld();
+  const TransformMatrix3D& robot_to_world = frame_->robotToWorld();
 
   //ds start landmark generation/update
   for (FramePoint* point: frame_->points()) {
-    point->setWorldCoordinates(frame_to_world*point->robotCoordinates());
+    point->setWorldCoordinates(robot_to_world*point->robotCoordinates());
 
     //ds skip point if tracking and not mature enough to be a landmark - for localizing state this is skipped
     if (point->trackLength() < _parameters->minimum_track_length_for_landmark_creation) {
@@ -829,17 +922,10 @@ void BaseTracker::_updateLandmarks(WorldMap* context_, Frame* frame_) {
       point->setLandmark(landmark);
     }
 
-    //ds check if the current landmark position is near or far to the camera
-    if (point->isNear()) {
-      landmark->setIsNear(true);
-    } else {
-      landmark->setIsNear(false);
-    }
+    //ds update landmark position based on current point (triggered as we linked the landmark to the point)
+    point->updateLandmark();
 
-    //ds update landmark position based on current point
-    landmark->update(point);
-
-    //ds add landmarks to currently visible ones
+    //ds VISUALIZATION ONLY: add landmarks to currently visible ones
     landmark->setIsCurrentlyTracked(true);
     context_->currentlyTrackedLandmarks().push_back(landmark);
   }

@@ -7,18 +7,19 @@ namespace proslam {
                                                                                                     _number_of_rows_image(0),
                                                                                                     _number_of_cols_image(0),
                                                                                                     _target_number_of_keypoints(1000),
+                                                                                                    _target_number_of_keypoints_per_detector(1000),
+                                                                                                    _number_of_detected_keypoints(0),
                                                                                                     _number_of_available_points(0),
                                                                                                     _focal_length_pixels(0),
                                                                                                     _principal_point_offset_u_pixels(0),
                                                                                                     _principal_point_offset_v_pixels(0),
                                                                                                     _maximum_depth_near_meters(0),
                                                                                                     _maximum_depth_far_meters(0),
-                                                                                                    _framepoints_in_image(0)
-#if CV_MAJOR_VERSION == 2
-                                                                                                    ,_keypoint_detector(0), _descriptor_extractor(0) {
-#else
-                                                                                                    {
-#endif
+                                                                                                    _detectors(0),
+                                                                                                    _detector_thresholds(0),
+                                                                                                    _number_of_detectors(0),
+                                                                                                    _detector_regions(0),
+                                                                                                    _framepoints_in_image(0) {
     LOG_DEBUG(std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|constructed" << std::endl)
   }
 
@@ -33,14 +34,37 @@ namespace proslam {
     _principal_point_offset_v_pixels = _camera_left->cameraMatrix()(1,2);
 
 #if CV_MAJOR_VERSION == 2
-    _keypoint_detector    = new cv::FastFeatureDetector(_parameters->detector_threshold);
     _descriptor_extractor = new cv::BriefDescriptorExtractor(DESCRIPTOR_SIZE_BYTES);
 #elif CV_MAJOR_VERSION == 3
-    _keypoint_detector    = cv::FastFeatureDetector::create(_parameters->detector_threshold);
     _descriptor_extractor = cv::xfeatures2d::BriefDescriptorExtractor::create(DESCRIPTOR_SIZE_BYTES);
 #else
 #error OpenCV version not supported
 #endif
+
+    //ds allocate and initialize detector grid structure
+    _detectors           = new cv::Ptr<cv::FastFeatureDetector>*[_parameters->number_of_detectors_vertical];
+    _detector_regions    = new cv::Rect*[_parameters->number_of_detectors_vertical];
+    _detector_thresholds = new real*[_parameters->number_of_detectors_vertical];
+    const real pixel_rows_per_detector = static_cast<real>(_number_of_rows_image)/_parameters->number_of_detectors_vertical;
+    const real pixel_cols_per_detector = static_cast<real>(_number_of_cols_image)/_parameters->number_of_detectors_horizontal;
+    for (uint32_t r = 0; r < _parameters->number_of_detectors_vertical; ++r) {
+      _detectors[r]           = new cv::Ptr<cv::FastFeatureDetector>[_parameters->number_of_detectors_horizontal];
+      _detector_regions[r]    = new cv::Rect[_parameters->number_of_detectors_horizontal];
+      _detector_thresholds[r] = new real[_parameters->number_of_detectors_horizontal];
+      for (uint32_t c = 0; c < _parameters->number_of_detectors_horizontal; ++c) {
+#if CV_MAJOR_VERSION == 2
+        _detectors[r][c] = new cv::FastFeatureDetector(_parameters->detector_threshold_initial);
+#else
+        _detectors[r][c] = cv::FastFeatureDetector::create(_parameters->detector_threshold_initial);
+#endif
+        _detector_regions[r][c] = cv::Rect(std::round(c*pixel_cols_per_detector),
+                                           std::round(r*pixel_rows_per_detector),
+                                           pixel_cols_per_detector,
+                                           pixel_rows_per_detector);
+        _detector_thresholds[r][c] = _parameters->detector_threshold_initial;
+      }
+    }
+    _number_of_detectors = _parameters->number_of_detectors_vertical*_parameters->number_of_detectors_horizontal;
 
     //ds allocate and initialize framepoint map
     _framepoints_in_image = new FramePoint**[_number_of_rows_image];
@@ -62,63 +86,97 @@ namespace proslam {
   BaseFramePointGenerator::~BaseFramePointGenerator() {
     LOG_DEBUG(std::cerr << "BaseFramePointGenerator::~BaseFramePointGenerator|destroying" << std::endl)
 
-    //ds deallocate dynamic data structures
+    //ds deallocate dynamic data structures: detectors
+    for (uint32_t r = 0; r < _parameters->number_of_detectors_vertical; ++r) {
+      delete[] _detectors[r];
+      delete[] _detector_regions[r];
+      delete[] _detector_thresholds[r];
+    }
+    delete [] _detectors;
+    delete [] _detector_regions;
+    delete [] _detector_thresholds;
+
+    //ds deallocate framepoint grid
     for (Index row = 0; row < _number_of_rows_image; ++row) {
       delete[] _framepoints_in_image[row];
     }
     delete[] _framepoints_in_image;
 
-    //ds cleanup opencv
-#if CV_MAJOR_VERSION == 2
-    delete _keypoint_detector;
-    delete _descriptor_extractor;
-#endif
-
     LOG_DEBUG(std::cerr << "BaseFramePointGenerator::~BaseFramePointGenerator|destroyed" << std::endl)
+  }
+
+  void BaseFramePointGenerator::setTargetNumberOfKeyoints(const Count& target_number_of_keypoints_) {
+    _target_number_of_keypoints = target_number_of_keypoints_;
+    LOG_INFO(std::cerr << "BaseFramePointGenerator::setTargetNumberOfKeyoints|current target number of points: " << _target_number_of_keypoints << std::endl)
+
+    //ds compute target points per detector region
+    _target_number_of_keypoints_per_detector = static_cast<real>(_target_number_of_keypoints)/_number_of_detectors;
+    LOG_INFO(std::cerr << "BaseFramePointGenerator::setTargetNumberOfKeyoints|current target number of points per image region: " << _target_number_of_keypoints_per_detector << std::endl)
   }
 
   void BaseFramePointGenerator::detectKeypoints(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_) {
     CHRONOMETER_START(keypoint_detection)
 
-    //ds detect new keypoints
-    _keypoint_detector->detect(intensity_image_, keypoints_);
+    //ds detect new keypoints in each image region
+    for (uint32_t r = 0; r < _parameters->number_of_detectors_vertical; ++r) {
+      for (uint32_t c = 0; c < _parameters->number_of_detectors_horizontal; ++c) {
 
-    //ds compute point delta
-    const real delta = (static_cast<real>(keypoints_.size())-_target_number_of_keypoints)/keypoints_.size();
+        //ds detect keypoints in current region
+        std::vector<cv::KeyPoint> keypoints_per_detector(0);
+        _detectors[r][c]->detect(intensity_image_(_detector_regions[r][c]), keypoints_per_detector);
 
-    //ds check if there's a significant loss of target points
-    if (delta < -_parameters->target_number_of_keypoints_tolerance) {
+        //ds current threshold for this detector
+#if CV_MAJOR_VERSION == 2
+        real detector_threshold = _detectors[r][c]->getInt("threshold");
+#else
+        real detector_threshold = _detectors[r][c]->getThreshold();
+#endif
 
-      //ds compute new threshold
-      _parameters->detector_threshold += std::max(std::ceil(delta*_parameters->detector_threshold_step_size), -_parameters->detector_threshold_step_size);
+        //ds compute point delta: 100% loss > -1, 100% gain > +1
+        const real delta = (static_cast<real>(keypoints_per_detector.size())-_target_number_of_keypoints_per_detector)/_target_number_of_keypoints_per_detector;
 
-      //ds cap the minimum value
-      if (_parameters->detector_threshold < _parameters->detector_threshold_minimum) {
-        _parameters->detector_threshold = _parameters->detector_threshold_minimum;
-      }
-      setDetectorThreshold(_parameters->detector_threshold);
+        //ds check if there's a significant loss of target points (delta is negative)
+        if (delta < -_parameters->target_number_of_keypoints_tolerance) {
 
-      //ds increase allowed matching distance if possible
-      if (_parameters->matching_distance_tracking_threshold < _parameters->matching_distance_tracking_threshold_maximum) {
-        _parameters->matching_distance_tracking_threshold += _parameters->matching_distance_tracking_step_size;
+          //ds compute new, lower threshold, capped and damped
+          const real change = std::max(delta, -_parameters->detector_threshold_maximum_change);
+
+          //ds always lower threshold by at least 1
+          detector_threshold += std::min(change*detector_threshold, -1.0);
+
+          //ds check minimum threshold
+          if (detector_threshold < _parameters->detector_threshold_minimum) {
+            detector_threshold = _parameters->detector_threshold_minimum;
+          }
+        }
+
+        //ds or if there's a significant gain of target points (delta is positive)
+        else if (delta > _parameters->target_number_of_keypoints_tolerance) {
+
+          //ds compute new, higher threshold - capped and damped
+          const real change = std::min(delta, _parameters->detector_threshold_maximum_change);
+
+          //ds always increase threshold by at least 1
+          detector_threshold += std::max(change*detector_threshold, 1.0);
+
+          //ds check maximum threshold
+          if (detector_threshold > _parameters->detector_threshold_maximum) {
+            detector_threshold = _parameters->detector_threshold_maximum;
+          }
+        }
+
+        //ds set treshold (no effect if not changed)
+        _detector_thresholds[r][c] = detector_threshold;
+
+        //ds shift keypoint coordinates to whole image region
+        const cv::Point2f& offset = _detector_regions[r][c].tl();
+        std::for_each(keypoints_per_detector.begin(), keypoints_per_detector.end(), [&offset](cv::KeyPoint& keypoint_) {keypoint_.pt += offset;});
+
+        //ds add to complete vector
+        keypoints_.insert(keypoints_.end(), keypoints_per_detector.begin(), keypoints_per_detector.end());
       }
     }
-
-    //ds or if there's a significant gain of target points
-    else if (delta > _parameters->target_number_of_keypoints_tolerance) {
-
-      //ds compute new threshold
-      _parameters->detector_threshold += std::min(std::ceil(delta*_parameters->detector_threshold_step_size), _parameters->detector_threshold_step_size);
-
-      //ds raise threshold (uncapped)
-      setDetectorThreshold(_parameters->detector_threshold);
-
-      //ds lower allowed matching distance if possible
-      if (_parameters->matching_distance_tracking_threshold > _parameters->matching_distance_tracking_threshold_minimum) {
-        _parameters->matching_distance_tracking_threshold -= _parameters->matching_distance_tracking_step_size;
-      }
-    }
-
+    _number_of_detected_keypoints = keypoints_.size();
     CHRONOMETER_STOP(keypoint_detection)
   }
 
@@ -128,15 +186,15 @@ namespace proslam {
     CHRONOMETER_STOP(descriptor_extraction)
   }
 
-  void BaseFramePointGenerator::setDetectorThreshold(const int32_t& detector_threshold_) {
-    _parameters->detector_threshold = detector_threshold_;
-
+  void BaseFramePointGenerator::adjustDetectorThresholds() {
+    for (uint32_t r = 0; r < _parameters->number_of_detectors_vertical; ++r) {
+      for (uint32_t c = 0; c < _parameters->number_of_detectors_horizontal; ++c) {
 #if CV_MAJOR_VERSION == 2
-    _keypoint_detector->setInt("threshold", _parameters->detector_threshold);
-#elif CV_MAJOR_VERSION == 3
-    _keypoint_detector->setThreshold(_parameters->detector_threshold);
+        _detectors[r][c]->setInt("threshold", _detector_thresholds[r][c]);
 #else
-#error OpenCV version not supported
+        _detectors[r][c]->setThreshold(_detector_thresholds[r][c]);
 #endif
+      }
+    }
   }
 }

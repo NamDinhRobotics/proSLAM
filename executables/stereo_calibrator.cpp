@@ -628,12 +628,10 @@ int32_t main (int32_t argc_, char** argv_) {
       std::vector<proslam::BaseFramePointGenerator::KeypointWithDescriptor> features_left(keypoints_left.size());
       std::vector<proslam::BaseFramePointGenerator::KeypointWithDescriptor> features_right(keypoints_right.size());
       for (uint64_t index = 0; index < features_left.size(); ++index) {
-        features_left[index].available  = true;
         features_left[index].keypoint   = keypoints_left[index];
         features_left[index].descriptor = descriptors_left.row(index);
       }
       for (uint64_t index = 0; index < features_right.size(); ++index) {
-        features_right[index].available  = true;
         features_right[index].keypoint   = keypoints_right[index];
         features_right[index].descriptor = descriptors_right.row(index);
       }
@@ -656,9 +654,6 @@ int32_t main (int32_t argc_, char** argv_) {
       //ds loop over all left keypoints
       for (uint64_t idx_L = 0; idx_L < features_left.size(); idx_L++) {
 
-        //ds if the point is not yet matched
-        if (features_left[idx_L].available) {
-
           //ds if there are no more points on the right to match against - stop
           if (index_R == features_right.size()) {break;}
           //the right keypoints are on an lower row - skip left
@@ -680,16 +675,12 @@ int32_t main (int32_t argc_, char** argv_) {
             //zero disparity stop condition
             if (features_right[index_search_R].keypoint.pt.x >= features_left[idx_L].keypoint.pt.x) {break;}
 
-            //ds if the point is not yet matched
-            if (features_right[index_search_R].available) {
-
               //ds compute descriptor distance for the stereo match candidates
               const double distance_hamming = cv::norm(features_left[idx_L].descriptor, features_right[index_search_R].descriptor, SRRG_PROSLAM_DESCRIPTOR_NORM);
               if(distance_hamming < distance_best) {
                 distance_best = distance_hamming;
                 index_best_R  = index_search_R;
               }
-            }
             index_search_R++; if (index_search_R == features_right.size()) {break;}
           }
           //check if something was found
@@ -697,30 +688,17 @@ int32_t main (int32_t argc_, char** argv_) {
 
             //ds reduce search space
             index_R = index_best_R+1;
-
-            //ds set as matched (required for multi-line stereo matching)
-            features_left[idx_L].available         = false;
-            features_right[index_best_R].available = false;
             ++number_of_epipolar_matches;
           }
-        }
       }
 
       //ds visual info
       if (option_use_gui) {
         for (const proslam::BaseFramePointGenerator::KeypointWithDescriptor& feature: features_left) {
-          if (feature.available) {
-            cv::circle(image_display_left, feature.keypoint.pt, 2, cv::Scalar(255, 0, 0), -1);
-          } else {
-            cv::circle(image_display_left, feature.keypoint.pt, 2, cv::Scalar(0, 255, 0), -1);
-          }
+          cv::circle(image_display_left, feature.keypoint.pt, 2, cv::Scalar(255, 0, 0), -1);
         }
         for (const proslam::BaseFramePointGenerator::KeypointWithDescriptor& feature: features_right) {
-          if (feature.available) {
-            cv::circle(image_display_right, feature.keypoint.pt, 2, cv::Scalar(255, 0, 0), -1);
-          } else {
-            cv::circle(image_display_right, feature.keypoint.pt, 2, cv::Scalar(0, 255, 0), -1);
-          }
+          cv::circle(image_display_right, feature.keypoint.pt, 2, cv::Scalar(255, 0, 0), -1);
         }
 
         cv::Mat image_stereo;

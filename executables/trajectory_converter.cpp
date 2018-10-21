@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <vector>
 #include <Eigen/Geometry>
 
 int32_t main(int32_t argc_, char** argv_) {

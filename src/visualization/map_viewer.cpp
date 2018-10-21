@@ -85,11 +85,7 @@ void MapViewer::_drawLandmarks() const {
 
   //ds highlight the currently seen landmarks
   for (const Landmark* landmark: _world_map->currentlyTrackedLandmarks()) {
-    if (landmark->isNear()) {
-      glColor3f(0, 0, 1);
-    } else {
-      glColor3f(1, 0, 1);
-    }
+    glColor3f(0, 0, 1);
     glVertex3f(landmark->coordinates().x(), landmark->coordinates().y(), landmark->coordinates().z());
   }
 
@@ -177,7 +173,7 @@ void MapViewer::draw(){
 }
 
 void MapViewer::keyPressEvent(QKeyEvent* event_){
-  switch( event_->key( ) ) {
+  switch (event_->key()) {
     case Qt::Key_1: {
       if(_parameters->landmarks_drawn) {
         _parameters->landmarks_drawn = false;

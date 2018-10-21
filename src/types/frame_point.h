@@ -71,17 +71,34 @@ public:
   inline const PointCoordinates worldCoordinates() const {return _world_coordinates;}
   void setWorldCoordinates(const PointCoordinates& world_coordinates_) {_world_coordinates = world_coordinates_;}
 
+  //! @brief associated landmark coordinates in current camera frame
+  inline const PointCoordinates cameraCoordinatesLeftLandmark() const {return _camera_coordinates_left_landmark;}
+
+  //! @brief updates associated landmark (if any) according to set frame and framepoint coordinates
+  void updateLandmark();
+
+  //ds measured properties
   inline const cv::KeyPoint& keypointLeft() const {return _keypoint_left;}
   inline const cv::KeyPoint& keypointRight() const {return _keypoint_right;}
-
   inline const cv::Mat& descriptorLeft() const {return _descriptor_left;}
   inline const cv::Mat& descriptorRight() const {return _descriptor_right;}
+  inline const real& disparityPixels() const {return _disparity_pixels;}
+
+  //ds reset allocated object counter
+  static void reset() {_instances = 0;}
 
   //ds visualization only
   inline const PointCoordinates reprojectionCoordinatesLeft() const {return _reprojection_coordinates_left;}
   void setReprojectionCoordinatesLeft(const PointCoordinates& reprojection_coordinates_) {_reprojection_coordinates_left = reprojection_coordinates_; }
   inline const PointCoordinates reprojectionCoordinatesRight() const {return _reprojection_coordinates_right;}
   void setReprojectionCoordinatesRight(const PointCoordinates& reprojection_coordinates_) {_reprojection_coordinates_right = reprojection_coordinates_;}
+
+//ds constant properties
+public:
+
+  //! @brief the framepoints position in the framepoint matrix (corresponds to keypoint position left)
+  const uint32_t row;
+  const uint32_t col;
 
 //ds attributes
 protected:
@@ -100,6 +117,7 @@ protected:
   const cv::KeyPoint _keypoint_right;
   const cv::Mat _descriptor_left;
   const cv::Mat _descriptor_right;
+  const real _disparity_pixels;
 
   //ds spatial properties
   PointCoordinates _image_coordinates_left;
@@ -108,6 +126,9 @@ protected:
   PointCoordinates _robot_coordinates       = PointCoordinates::Zero(); //ds 3D point in robot coordinate frame
   PointCoordinates _world_coordinates       = PointCoordinates::Zero(); //ds 3D point in world coordinate frame (make sure they are updated!)
   real _depth_meters = -1;
+
+  //! @brief associated landmark coordinates in local camera frame (if any - CHECK)
+  PointCoordinates _camera_coordinates_left_landmark = PointCoordinates::Zero();
 
   //ds connected landmark (if any)
   Landmark* _landmark = 0;

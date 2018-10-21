@@ -51,8 +51,6 @@ LocalMap::LocalMap(FramePointerVector& frames_,
 
       //ds context item requirements
       if (landmark                                  &&
-          landmark->areCoordinatesValidated()       &&
-          landmark->isNear()                        &&
           !landmarks_added_to_context.count(landmark)) {
 
         //ds bucket the item and transfer ownership from landmark to current context

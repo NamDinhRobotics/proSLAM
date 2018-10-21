@@ -140,7 +140,7 @@ void Relocalizer::detect() {
       }
       assert(0 < correspondences.size());
 
-//ds update closures
+      //ds update closures
       _closures.push_back(new Closure(_query->local_map,
         reference->local_map,
         absolute_number_of_matches,
@@ -219,6 +219,7 @@ const LandmarkCorrespondence* Relocalizer::_getCorrespondenceNN(const LandmarkCo
     }
   }
 
+  //ds if a match was found with sufficient confidence
   if(match_best != 0 && count_best > _parameters->minimum_matches_per_correspondence ) {
 
     //ds block matching against this point by adding it to the mask

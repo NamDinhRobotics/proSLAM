@@ -21,6 +21,11 @@ public:
 
   //! @brief log level (for all components)
   LoggingLevel logging_level;
+
+  //! @brief SLAM system motion models
+  enum MotionModel {NONE,
+                    CONSTANT_VELOCITY,
+                    CAMERA_ODOMETRY};
 };
 
 //! @class command line parameters
@@ -61,6 +66,7 @@ public:
   bool option_use_odometry              = false;
   bool option_recover_landmarks         = true;
   bool option_disable_bundle_adjustment = true;
+  bool option_save_pose_graph           = false;
 };
 
 //! @class generic aligner parameters, present in modules with aligner units
@@ -83,7 +89,7 @@ public:
   real damping                       = 1;
 
   //! @brief alignment iteration cap
-  Count maximum_number_of_iterations = 100;
+  Count maximum_number_of_iterations = 1000;
 
   //! @brief the minimum number of inliers required for a valid alignment
   Count minimum_number_of_inliers    = 25;
@@ -103,10 +109,7 @@ public:
   virtual void print() const;
 
   //! @brief minimum number of measurements before optimization is filtering
-  Count minimum_number_of_forced_updates        = 2;
-
-  //! @brief maximum allowed measurement divergence
-  real maximum_translation_error_to_depth_ratio = 1;
+  Count minimum_number_of_forced_updates = 2;
 };
 
 //! @class local map parameters
@@ -165,15 +168,20 @@ public:
 
   //! @brief dynamic thresholds for feature detection
   real target_number_of_keypoints_tolerance = 0.1;
-  int32_t detector_threshold                = 10;
-  int32_t detector_threshold_minimum        = 5;
-  real detector_threshold_step_size         = 5;
+  uint32_t detector_threshold_initial       = 25;
+  uint32_t detector_threshold_minimum       = 10;
+  uint32_t detector_threshold_maximum       = 100;
+  real detector_threshold_maximum_change    = 0.25;
+
+  //! @brief detector number per image dimension
+  uint32_t number_of_detectors_vertical   = 1;
+  uint32_t number_of_detectors_horizontal = 1;
+
+  //! @brief number of camera image streams (required for detector regions)
+  uint32_t number_of_cameras = 1;
 
   //! @brief dynamic thresholds for descriptor matching
-  int32_t matching_distance_tracking_threshold         = 50;
-  int32_t matching_distance_tracking_threshold_maximum = 50;
-  int32_t matching_distance_tracking_threshold_minimum = 10;
-  int32_t matching_distance_tracking_step_size         = 1;
+  int32_t matching_distance_tracking_threshold = 50;
 };
 
 //! @class framepoint generation parameters for a stereo camera setup
@@ -188,7 +196,6 @@ public:
 
   //! @brief stereo: triangulation
   int32_t maximum_matching_distance_triangulation = 50;
-  real baseline_factor                            = 50;
   real minimum_disparity_pixels                   = 1;
   uint32_t epipolar_line_thickness_pixels         = 0;
 };
@@ -226,18 +233,12 @@ public:
   //! @brief this criteria is used for the decision of whether creating a landmark or not from a track of framepoints
   Count minimum_track_length_for_landmark_creation = 3;
 
-  //! @brief minimum number of subsequently tracked frames for narrowing the framepoint tracking
-  Count minimum_number_of_subsequently_tracked_frames = 10;
-
   //! @brief tracking criteria for landmarks, required to perform position tracking
-  Count minimum_number_of_landmarks_to_track = 5;
-
-  //! @brief tracking criteria for framepoints, required to perform position tracking
-  Count minimum_number_of_framepoints_to_track = 10;
+  Count minimum_number_of_landmarks_to_track = 10;
 
   //! @brief point tracking thresholds
-  int32_t minimum_threshold_distance_tracking_pixels = 5*5;
-  int32_t maximum_threshold_distance_tracking_pixels = 7*7;
+  int32_t minimum_projection_tracking_distance_pixels = 3;
+  int32_t maximum_projection_tracking_distance_pixels = 10;
 
   //! @brief pixel search range width for point vicinity tracking
   int32_t range_point_tracking = 2;
@@ -246,8 +247,8 @@ public:
   int32_t maximum_distance_tracking_pixels = 150*150;
 
   //! @brief framepoint track recovery
-  bool enable_landmark_recovery               = false;
-  Count maximum_number_of_landmark_recoveries = 3;
+  bool enable_landmark_recovery               = true;
+  Count maximum_number_of_landmark_recoveries = 10;
 
   //! @brief feature density regularization
   bool enable_keypoint_binning = true;
@@ -257,6 +258,9 @@ public:
   //! @brief pose optimization
   real minimum_delta_angular_for_movement       = 0.001;
   real minimum_delta_translational_for_movement = 0.01;
+
+  //! @brief desired motion model (if any)
+  MotionModel motion_model = MotionModel::NONE;
 
   //! @brief parameters of aligner unit
   AlignerParameters* aligner;
@@ -340,16 +344,16 @@ public:
   real base_information_frame = 1e5;
 
   //! @brief free translation for pose to pose measurements
-  bool free_translation_for_pose_measurements = true;
+  bool free_translation_for_poses = true;
 
   //! @brief translational frame weight reduction in pose graph
   real base_information_frame_factor_for_translation = 1e-5;
 
   //! @brief enable robust kernel for loop closure measurements
-  bool enable_robust_kernel_for_loop_closure_measurements = true;
+  bool enable_robust_kernel_for_poses = true;
 
   //! @brief enable robust kernel for landmark measurements
-  bool enable_robust_kernel_for_landmark_measurements = false;
+  bool enable_robust_kernel_for_landmarks = false;
 };
 
 //! @class image viewer parameters

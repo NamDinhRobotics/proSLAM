@@ -53,6 +53,10 @@ const Count Frame::countPoints(const Count& min_track_length_,
 void Frame::setRobotToWorld(const TransformMatrix3D& robot_to_world_) {
   _robot_to_world = robot_to_world_;
   _world_to_robot = _robot_to_world.inverse();
+  if (_camera_left) {
+    _camera_left_to_world = robot_to_world_*_camera_left->cameraToRobot();
+    _world_to_camera_left = _camera_left_to_world.inverse();
+  }
 
   //ds if the frame is a keyframe
   if (_is_keyframe) {
@@ -95,8 +99,11 @@ FramePoint* Frame::createFramepoint(const cv::KeyPoint& keypoint_left_,
     frame_point->setPrevious(previous_point_);
   }
 
+  //ds update depth statistics for this frame
+  const real depth_meters = camera_coordinates_left_.z();
+
   //ds update depth based on quality
-  frame_point->setDepthMeters(camera_coordinates_left_.z());
+  frame_point->setDepthMeters(depth_meters);
   if (frame_point->depthMeters() < _maximum_depth_near) {
     frame_point->setIsNear(true);
   }

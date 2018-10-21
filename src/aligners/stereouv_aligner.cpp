@@ -1,33 +1,78 @@
 #include "stereouv_aligner.h"
-
 #include "types/landmark.h"
 
 namespace proslam {
   using namespace srrg_core;
 
-  StereoUVAligner::StereoUVAligner(AlignerParameters* parameters_): BaseFrameAligner(parameters_) {
-    //ds nothing to do
-  }
+  StereoUVAligner::StereoUVAligner(AlignerParameters* parameters_): BaseFrameAligner(parameters_) {}
 
-  StereoUVAligner::~StereoUVAligner() {
-    //ds nothing to do
-  }
+  StereoUVAligner::~StereoUVAligner() {}
 
   //ds initialize aligner with minimal entity
-  void StereoUVAligner::initialize(Frame* frame_, const TransformMatrix3D& robot_to_world_) {
-    _frame = frame_;
-    _errors.resize(_frame->points().size());
-    _inliers.resize(_frame->points().size());
-    _robot_to_world = robot_to_world_;
-    _world_to_robot = _robot_to_world.inverse();
+  void StereoUVAligner::initialize(const Frame* frame_previous_,
+                                   const Frame* frame_current_,
+                                   const TransformMatrix3D& previous_to_current_) {
+    _frame_previous      = frame_previous_;
+    _frame_current       = frame_current_;
+    _previous_to_current = previous_to_current_;
+
+    //ds prepare buffers
+    _number_of_measurements = _frame_current->points().size();
+    _errors.resize(_number_of_measurements);
+    _inliers.resize(_number_of_measurements);
+    _information_vector.resize(_number_of_measurements);
+    _weights_translation.resize(_number_of_measurements, 1);
+    _moving.resize(_number_of_measurements);
+    _fixed.resize(_number_of_measurements);
+
+    //ds fill buffers
+    for (Index u = 0; u < _number_of_measurements; ++u) {
+      const FramePoint* frame_point = _frame_current->points()[u];
+      _information_vector[u].setIdentity();
+
+      assert(_frame_current->cameraLeft()->isInFieldOfView(frame_point->imageCoordinatesLeft()));
+      assert(_frame_current->cameraRight()->isInFieldOfView(frame_point->imageCoordinatesRight()));
+      assert(frame_point->previous());
+
+      //ds set fixed part
+      _fixed[u] = Vector3(frame_point->imageCoordinatesLeft().x(),
+                          frame_point->imageCoordinatesLeft().y(),
+                          frame_point->imageCoordinatesRight().x());
+
+      //ds if we have a landmark
+      if (frame_point->landmark()) {
+
+        //ds prefer landmark estimate
+        _moving[u] = frame_point->previous()->cameraCoordinatesLeftLandmark();
+
+        //ds increase weight linear in the number of updates
+        _information_vector[u] *= (1+frame_point->landmark()->numberOfUpdates());
+      } else {
+        _moving[u] = frame_point->previous()->cameraCoordinatesLeft();
+      }
+
+      //ds since we consider the vertical contribution only once in the jacobian/error
+      //ds but in fact the contribution corresponds to two measurements
+      //ds we simply weight the single vertical contribution twice to correct for this
+      _information_vector[u](1,1) *= 2;
+
+      //ds scale information proportional to disparity of the measurement (the bigger, the closer, the better the triangulation)
+      _information_vector[u] *= std::log(1+frame_point->disparityPixels());
+    }
+
+    //ds if individual weighting is desired
+    if (_enable_weights_translation) {
+      const real maximum_reliable_depth_meters = 15;
+      for (Index u = 0; u < _number_of_measurements; ++u) {
+        _weights_translation[u] = maximum_reliable_depth_meters/_moving[u].z();
+      }
+    }
 
     //ds wrappers for optimization
-    _camera_to_world = _robot_to_world*_frame->cameraLeft()->cameraToRobot();
-    _world_to_camera = _camera_to_world.inverse();
-    _projection_matrix_left  = _frame->cameraLeft()->projectionMatrix();
-    _projection_matrix_right = _frame->cameraRight()->projectionMatrix();
-    _number_of_rows_image    = _frame->cameraLeft()->numberOfImageRows();
-    _number_of_cols_image    = _frame->cameraLeft()->numberOfImageCols();
+    _camera_calibration_matrix = _frame_current->cameraLeft()->cameraMatrix();
+    _offset_camera_right       = _frame_current->cameraRight()->projectionMatrix().block<3,1>(0,3);
+    _number_of_rows_image      = _frame_current->cameraLeft()->numberOfImageRows();
+    _number_of_cols_image      = _frame_current->cameraLeft()->numberOfImageCols();
   }
 
   //ds linearize the system: to be called inside oneRound
@@ -36,35 +81,18 @@ namespace proslam {
     //ds initialize setup
     _H.setZero();
     _b.setZero();
-    _number_of_inliers  = 0;
-    _number_of_outliers = 0;
-    _total_error        = 0;
+    _number_of_inliers = 0;
+    _total_error       = 0;
 
     //ds loop over all current framepoints (assuming that each of them has a previous one)
-    for (Index index_point = 0; index_point < _frame->points().size(); index_point++) {
-      _errors[index_point]  = -1;
-      _inliers[index_point] = false;
-      _omega.setIdentity();
-
-      //ds buffer framepoint
-      FramePoint* frame_point = _frame->points()[index_point];
-      assert(_frame->cameraLeft()->isInFieldOfView(frame_point->imageCoordinatesLeft()));
-      assert(_frame->cameraRight()->isInFieldOfView(frame_point->imageCoordinatesRight()));
-      assert(frame_point->previous());
-
-      //ds buffer landmark
-      const Landmark* landmark = frame_point->landmark();
+    for (Index u = 0; u < _number_of_measurements; ++u) {
+      _errors[u]  = -1;
+      _inliers[u] = false;
+      _omega      = _information_vector[u];
 
       //ds compute the point in the camera frame - prefering a landmark estimate if available
-      PointCoordinates sampled_point_in_camera_left = PointCoordinates::Zero();
-      if (landmark && landmark->areCoordinatesValidated()) {
-        sampled_point_in_camera_left = _world_to_camera*landmark->coordinates();
-        _omega *= (1+landmark->numberOfUpdates());
-      } else {
-        sampled_point_in_camera_left = _world_to_camera*frame_point->previous()->worldCoordinates();
-      }
-      const real& depth_meters = sampled_point_in_camera_left.z();
-      if (depth_meters <= 0 || depth_meters > _maximum_depth_far_meters) {
+      const PointCoordinates sampled_point_in_camera_left = _previous_to_current*_moving[u];
+      if (sampled_point_in_camera_left.z() <= _minimum_depth) {
         continue;
       }
 
@@ -73,8 +101,8 @@ namespace proslam {
                                                              sampled_point_in_camera_left.y(),
                                                              sampled_point_in_camera_left.z(),
                                                              1);
-      const PointCoordinates sampled_abc_in_camera_left  = _projection_matrix_left*sampled_point_in_camera_left_homogeneous;
-      const PointCoordinates sampled_abc_in_camera_right = _projection_matrix_right*sampled_point_in_camera_left_homogeneous;
+      const PointCoordinates sampled_abc_in_camera_left  = _camera_calibration_matrix*sampled_point_in_camera_left;
+      const PointCoordinates sampled_abc_in_camera_right = sampled_abc_in_camera_left+_offset_camera_right;
       const real& sampled_c_left  = sampled_abc_in_camera_left.z();
       const real& sampled_c_right = sampled_abc_in_camera_right.z();
 
@@ -91,8 +119,51 @@ namespace proslam {
           sampled_point_in_image_right.y() < 0 || sampled_point_in_image_right.y() > _number_of_rows_image) {
         continue;
       }
-      assert(_frame->cameraLeft()->isInFieldOfView(sampled_point_in_image_left));
-      assert(_frame->cameraRight()->isInFieldOfView(sampled_point_in_image_right));
+      assert(_frame_current->cameraLeft()->isInFieldOfView(sampled_point_in_image_left));
+      assert(_frame_current->cameraRight()->isInFieldOfView(sampled_point_in_image_right));
+
+      //ds compute error (we compute the vertical error only once, since we assume rectified cameras)
+      const Vector3 error(sampled_point_in_image_left.x()-_fixed[u](0),
+                          sampled_point_in_image_left.y()-_fixed[u](1),
+                          sampled_point_in_image_right.x()-_fixed[u](2));
+
+      //ds weight all measurements proportional to their distance to the sensor (squared to damp the effect)
+      //const real weight_translation = 1/std::sqrt(depth_meters);
+      //const real weight_translation = _maximum_reliable_depth_meters/depth_meters;
+      //const real weight_translation = exp(-depth_meters/_maximum_reliable_depth_meters);
+      //const real weight_translation = 1; //std::sqrt(frame_point->disparityPixels());
+
+      //ds compute squared error
+      const real chi = error.transpose()*_omega*error;
+
+      //ds update error stats
+      _errors[u] = chi;
+
+      //ds check if outlier
+      if (chi > _parameters->maximum_error_kernel) {
+        if (ignore_outliers_) {
+          continue;
+        }
+
+        //ds proportionally reduce information value of the measurement
+        _omega *= _parameters->maximum_error_kernel/chi;
+      } else {
+        _inliers[u] = true;
+        ++_number_of_inliers;
+      }
+
+      //ds update total error
+      _total_error += _errors[u];
+
+      //ds compute the jacobian of the transformation
+      Matrix3_6 jacobian_transform;
+
+      //ds translation contribution (will be scaled with omega)
+//      const real translation_weight = _maximum_reliable_depth_meters/sampled_point_in_camera_left.z();
+      jacobian_transform.block<3,3>(0,0) = _weights_translation[u]*Matrix3::Identity();
+
+      //ds rotation contribution - compensate for inverse depth (far points should have an equally strong contribution as close ones)
+      jacobian_transform.block<3,3>(0,3) = -2*skew(sampled_point_in_camera_left);
 
       //ds precompute
       const real inverse_sampled_c_left  = 1/sampled_c_left;
@@ -100,78 +171,34 @@ namespace proslam {
       const real inverse_sampled_c_squared_left  = inverse_sampled_c_left*inverse_sampled_c_left;
       const real inverse_sampled_c_squared_right = inverse_sampled_c_right*inverse_sampled_c_right;
 
-      //ds visualization only
-      frame_point->setReprojectionCoordinatesLeft(sampled_point_in_image_left);
-      frame_point->setReprojectionCoordinatesRight(sampled_point_in_image_right);
-
-      //ds compute error
-      const Vector4 error(sampled_point_in_image_left.x()-frame_point->imageCoordinatesLeft().x(),
-                          sampled_point_in_image_left.y()-frame_point->imageCoordinatesLeft().y(),
-                          sampled_point_in_image_right.x()-frame_point->imageCoordinatesRight().x(),
-                          sampled_point_in_image_right.y()-frame_point->imageCoordinatesRight().y());
-      assert(error(1) == error(3));
-
-      //ds compute squared error
-      const real chi = error.transpose()*error;
-
-      //ds update error stats
-      _errors[index_point] = chi;
-
-      //ds if outlier
-      if (chi > _parameters->maximum_error_kernel) {
-        ++_number_of_outliers;
-        if (ignore_outliers_) {
-          continue;
-        }
-
-        //ds include kernel in omega
-        _omega *= _parameters->maximum_error_kernel/chi;
-      } else {
-        _inliers[index_point] = true;
-        ++_number_of_inliers;
-      }
-
-      //ds update total error
-      _total_error += _errors[index_point];
-
-      //ds compute the jacobian of the transformation
-      Matrix4_6 jacobian_transform;
-      jacobian_transform.setZero();
-
-      //ds if the point is near enough - we consider translation
-      if (depth_meters < _maximum_depth_near_meters) {
-        jacobian_transform.block<3,3>(0,0).setIdentity();
-      }
-
-      //ds always consider rotation
-      jacobian_transform.block<3,3>(0,3) = -2*skew(sampled_point_in_camera_left);
-
-      //ds jacobian parts of the homogeneous division
+      //ds jacobian parts of the homogeneous division: left
       Matrix2_3 jacobian_left;
       jacobian_left << inverse_sampled_c_left, 0, -sampled_abc_in_camera_left.x()*inverse_sampled_c_squared_left,
                        0, inverse_sampled_c_left, -sampled_abc_in_camera_left.y()*inverse_sampled_c_squared_left;
-      Matrix2_3 jacobian_right;
-      jacobian_right << inverse_sampled_c_right, 0, -sampled_abc_in_camera_right.x()*inverse_sampled_c_squared_right,
-                        0, inverse_sampled_c_right, -sampled_abc_in_camera_right.y()*inverse_sampled_c_squared_right;
+
+      //ds we compute only the contribution for the horizontal error: right
+      Matrix1_3 jacobian_right;
+      jacobian_right << inverse_sampled_c_right, 0, -sampled_abc_in_camera_right.x()*inverse_sampled_c_squared_right;
 
       //ds assemble final jacobian
       _jacobian.setZero();
-      _jacobian.block<2,6>(0,0) = jacobian_left*_projection_matrix_left*jacobian_transform;
-      _jacobian.block<2,6>(2,0) = jacobian_right*_projection_matrix_right*jacobian_transform;
+
+      //ds we have to compute the full block
+      _jacobian.block<2,6>(0,0) = jacobian_left*_camera_calibration_matrix*jacobian_transform;
+
+      //ds we only have to compute the horizontal block
+      _jacobian.block<1,6>(2,0) = jacobian_right*_camera_calibration_matrix*jacobian_transform;
 
       //ds precompute transposed
-      const Matrix6_4 jacobian_transposed(_jacobian.transpose());
-
-      if (depth_meters < _maximum_depth_near_meters) {
-        _omega *= (_maximum_depth_near_meters-depth_meters)/_maximum_depth_near_meters;
-      } else {
-        _omega *= (_maximum_depth_far_meters-depth_meters)/_maximum_depth_far_meters;
-      }
+      const Matrix6_3 jacobian_transposed(_jacobian.transpose());
 
       //ds update H and b
       _H += jacobian_transposed*_omega*_jacobian;
       _b += jacobian_transposed*_omega*error;
     }
+
+    //ds update statistics
+    _number_of_outliers = _number_of_measurements-_number_of_inliers;
   }
 
   //ds solve alignment problem for one round
@@ -180,18 +207,18 @@ namespace proslam {
     //ds linearize system once
     linearize(ignore_outliers_);
 
-    //ds always damp
-    _H += _parameters->damping*Matrix6::Identity();
+    //ds damping
+    _H += _parameters->damping*_number_of_measurements*Matrix6::Identity();
 
-    //ds compute solution transformation
-    const Vector6 dx = _H.ldlt().solve(-_b);
-    _world_to_camera = v2t(dx)*_world_to_camera;
+    //ds compute solution transformation after perturbation
+    const Vector6 dx     = _H.fullPivLu().solve(-_b);
+    _previous_to_current = v2t(dx)*_previous_to_current;
 
     //ds enforce proper rotation matrix
-    const Matrix3 rotation = _world_to_camera.linear();
+    const Matrix3 rotation               = _previous_to_current.linear();
     Matrix3 rotation_squared             = rotation.transpose() * rotation;
     rotation_squared.diagonal().array() -= 1;
-    _world_to_camera.linear()           -= 0.5*rotation*rotation_squared;
+    _previous_to_current.linear()       -= 0.5*rotation*rotation_squared;
   }
 
   //ds solve alignment problem until convergence is reached
@@ -206,12 +233,21 @@ namespace proslam {
 
       //ds check if converged (no descent required)
       if (_parameters->error_delta_for_convergence > std::fabs(total_error_previous-_total_error)) {
+        total_error_previous = _total_error;
 
-        //ds trigger 3 inlier only runs - only if there are enough correspondences available
-        if (_number_of_inliers > 100) {
-          oneRound(true);
-          oneRound(true);
-          oneRound(true);
+        //ds if we have at least a certain number of inliers and more inliers than outliers - trigger inlier only runs
+        if (_number_of_inliers > 100 && _number_of_inliers > _number_of_outliers) {
+          for (Count iteration_inlier = 0; iteration_inlier < _parameters->maximum_number_of_iterations; ++iteration_inlier) {
+            oneRound(true);
+
+            //ds check for convergence
+            if (std::fabs(total_error_previous-_total_error) < _parameters->error_delta_for_convergence) {
+              total_error_previous = _total_error;
+              break;
+            } else {
+              total_error_previous = _total_error;
+            }
+          }
         }
 
         //ds compute information matrix
@@ -232,10 +268,5 @@ namespace proslam {
                   << " inliers: " << _number_of_inliers << " outliers: " << _number_of_outliers << std::endl)
       }
     }
-
-    //ds update wrapped structures
-    _camera_to_world = _world_to_camera.inverse();
-    _robot_to_world  = _camera_to_world*_frame->cameraLeft()->robotToCamera();
-    _world_to_robot  = _robot_to_world.inverse();
   }
 }

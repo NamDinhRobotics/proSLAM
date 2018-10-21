@@ -116,13 +116,23 @@ namespace proslam {
 
         //ds if the solution is acceptable
         if (_number_of_inliers > _parameters->minimum_number_of_inliers && inlier_ratio > _parameters->minimum_inlier_ratio) {
-          LOG_INFO(std::printf( "XYZAligner::converge|found   alignment for local maps [%06lu] > [%06lu] (correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu)\n",
-          _context->identifier_query, _context->identifier_reference, _context->correspondences.size( ), iteration, inlier_ratio, _number_of_inliers))
+          LOG_INFO(std::printf("XYZAligner::converge|found   alignment for local maps [%06lu:{%06lu-%06lu}] > [%06lu:{%06lu-%06lu}] "
+                               "(correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu)\n",
+          _context->identifier_query,
+          _context->local_map_query->frames().front()->identifier(), _context->local_map_query->frames().back()->identifier(),
+          _context->identifier_reference,
+          _context->local_map_reference->frames().front()->identifier(), _context->local_map_reference->frames().back()->identifier(),
+          _context->correspondences.size(), iteration, inlier_ratio, _number_of_inliers))
           _context->is_valid = true;
           break;
         } else {
-          LOG_INFO(std::printf( "XYZAligner::converge|dropped alignment for local maps [%06lu] > [%06lu] (correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu)\n",
-          _context->identifier_query, _context->identifier_reference, _context->correspondences.size( ), iteration, inlier_ratio, _number_of_inliers))
+          LOG_INFO(std::printf("XYZAligner::converge|dropped alignment for local maps [%06lu:{%06lu-%06lu}] > [%06lu:{%06lu-%06lu}] "
+                               "(correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu)\n",
+          _context->identifier_query,
+          _context->local_map_query->frames().front()->identifier(), _context->local_map_query->frames().back()->identifier(),
+          _context->identifier_reference,
+          _context->local_map_reference->frames().front()->identifier(), _context->local_map_reference->frames().back()->identifier(),
+          _context->correspondences.size(), iteration, inlier_ratio, _number_of_inliers))
           _context->is_valid = false;
           break;
         }

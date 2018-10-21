@@ -13,7 +13,9 @@ PROSLAM_MAKE_PROCESSING_SUBCLASS(UVDAligner, AlignerParameters)
 public:
 
   //ds initialize aligner with minimal entity
-  virtual void initialize(Frame* context_, const TransformMatrix3D& robot_to_world_ = TransformMatrix3D::Identity());
+  virtual void initialize(const Frame* frame_previous_,
+                          const Frame* frame_current_,
+                          const TransformMatrix3D& previous_to_current_);
 
   //ds linearize the system: to be called inside oneRound
   virtual void linearize(const bool& ignore_outliers_);

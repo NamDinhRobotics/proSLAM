@@ -80,7 +80,6 @@ void AlignerParameters::print() const {
 
 void LandmarkParameters::print() const {
   std::cerr << "LandmarkParameters::print|minimum_number_of_forced_updates: " << minimum_number_of_forced_updates << std::endl;
-  std::cerr << "LandmarkParameters::print|maximum_translation_error_to_depth_ratio: " << maximum_translation_error_to_depth_ratio << std::endl;
 }
 
 void LocalMapParameters::print() const {
@@ -97,18 +96,14 @@ void WorldMapParameters::print() const {
 
 void BaseFramePointGeneratorParameters::print() const {
   std::cerr << "BaseFramepointGeneratorParameters::print|target_number_of_keypoints_tolerance: " << target_number_of_keypoints_tolerance << std::endl;
-  std::cerr << "BaseFramepointGeneratorParameters::print|detector_threshold: " << detector_threshold << std::endl;
+  std::cerr << "BaseFramepointGeneratorParameters::print|detector_threshold: " << detector_threshold_initial << std::endl;
   std::cerr << "BaseFramepointGeneratorParameters::print|detector_threshold_minimum: " << detector_threshold_minimum << std::endl;
-  std::cerr << "BaseFramepointGeneratorParameters::print|detector_threshold_step_size: " << detector_threshold_step_size << std::endl;
+  std::cerr << "BaseFramepointGeneratorParameters::print|detector_threshold_maximum_change: " << detector_threshold_maximum_change << std::endl;
   std::cerr << "BaseFramepointGeneratorParameters::print|matching_distance_tracking_threshold: " << matching_distance_tracking_threshold << std::endl;
-  std::cerr << "BaseFramepointGeneratorParameters::print|matching_distance_tracking_threshold_maximum: " << matching_distance_tracking_threshold_maximum << std::endl;
-  std::cerr << "BaseFramepointGeneratorParameters::print|matching_distance_tracking_threshold_minimum: " << matching_distance_tracking_threshold_minimum << std::endl;
-  std::cerr << "BaseFramepointGeneratorParameters::print|matching_distance_tracking_step_size: " << matching_distance_tracking_step_size << std::endl;
 }
 
 void StereoFramePointGeneratorParameters::print() const {
   std::cerr << "StereoFramepointGeneratorParameters::print|maximum_matching_distance_triangulation: " << maximum_matching_distance_triangulation << std::endl;
-  std::cerr << "StereoFramepointGeneratorParameters::print|baseline_factor: " << baseline_factor << std::endl;
   std::cerr << "StereoFramepointGeneratorParameters::print|minimum_disparity_pixels: " << minimum_disparity_pixels << std::endl;
   BaseFramePointGeneratorParameters::print();
 }
@@ -128,8 +123,8 @@ BaseTrackerParameters::BaseTrackerParameters(const LoggingLevel& logging_level_)
 
 void BaseTrackerParameters::print() const {
   std::cerr << "BaseTrackerParameters::print|minimum_number_of_landmarks_to_track: " << minimum_number_of_landmarks_to_track << std::endl;
-  std::cerr << "BaseTrackerParameters::print|minimum_threshold_distance_tracking_pixels: " << minimum_threshold_distance_tracking_pixels << std::endl;
-  std::cerr << "BaseTrackerParameters::print|maximum_threshold_distance_tracking_pixels: " << maximum_threshold_distance_tracking_pixels << std::endl;
+  std::cerr << "BaseTrackerParameters::print|minimum_projection_tracking_distance_pixels: " << minimum_projection_tracking_distance_pixels << std::endl;
+  std::cerr << "BaseTrackerParameters::print|maximum_projection_tracking_distance_pixels: " << maximum_projection_tracking_distance_pixels << std::endl;
   std::cerr << "BaseTrackerParameters::print|range_point_tracking: " << range_point_tracking << std::endl;
   std::cerr << "BaseTrackerParameters::print|maximum_distance_tracking_pixels: " << maximum_distance_tracking_pixels << std::endl;
   std::cerr << "BaseTrackerParameters::print|maximum_number_of_landmark_recoveries: " << maximum_number_of_landmark_recoveries << std::endl;
@@ -158,7 +153,7 @@ void GraphOptimizerParameters::print() const {
   std::cerr << "GraphOptimizerParameters::print|identifier_space: " << identifier_space << std::endl;
   std::cerr << "GraphOptimizerParameters::print|number_of_frames_per_bundle_adjustment: " << number_of_frames_per_bundle_adjustment << std::endl;
   std::cerr << "GraphOptimizerParameters::print|base_information_frame: " << base_information_frame << std::endl;
-  std::cerr << "GraphOptimizerParameters::print|enable_robust_kernel_for_landmark_measurements: " << enable_robust_kernel_for_landmark_measurements << std::endl;
+  std::cerr << "GraphOptimizerParameters::print|enable_robust_kernel_for_landmark_measurements: " << enable_robust_kernel_for_landmarks << std::endl;
 }
 
 void ImageViewerParameters::print() const {
@@ -306,6 +301,7 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
 
     //ds parse desired tracker mode as string
     const std::string& tracker_mode = configuration["command_line"]["tracker_mode"].as<std::string>();
+    ++number_of_parameters_detected;
     if (tracker_mode == "RGB_STEREO") {
       command_line_parameters->tracker_mode = CommandLineParameters::TrackerMode::RGB_STEREO;
     } else if (tracker_mode == "RGB_DEPTH") {
@@ -314,6 +310,7 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
       LOG_ERROR(std::cerr << "ParameterCollection::parseFromFile|invalid tracker mode: " << tracker_mode << std::endl)
       throw std::runtime_error("invalid tracker mode");
     }
+    ++number_of_parameters_parsed;
 
     //ds generate tracker mode specific parameters
     setMode(command_line_parameters->tracker_mode);
@@ -339,83 +336,29 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     PARSE_PARAMETER(configuration, world_map, world_map_parameters, minimum_number_of_frames_for_local_map, Count)
     PARSE_PARAMETER(configuration, world_map, world_map_parameters, merge_landmarks, bool)
     PARSE_PARAMETER(configuration, landmark, world_map_parameters->landmark, minimum_number_of_forced_updates, Count)
-    PARSE_PARAMETER(configuration, landmark, world_map_parameters->landmark, maximum_translation_error_to_depth_ratio, real)
     PARSE_PARAMETER(configuration, local_map, world_map_parameters->local_map, minimum_number_of_landmarks, Count)
 
     //ds mode specific parameters
+    BaseFramePointGeneratorParameters* framepoint_generation_parameters = 0;
+    BaseTrackerParameters* tracker_parameters = 0;
     switch (command_line_parameters->tracker_mode) {
       case CommandLineParameters::TrackerMode::RGB_STEREO: {
+        framepoint_generation_parameters = stereo_framepoint_generator_parameters;
+        tracker_parameters               = stereo_tracker_parameters;
 
-        //FramepointGeneration
-        PARSE_PARAMETER(configuration, base_framepoint_generation, stereo_framepoint_generator_parameters, target_number_of_keypoints_tolerance, real)
-        PARSE_PARAMETER(configuration, base_framepoint_generation, stereo_framepoint_generator_parameters, detector_threshold, int32_t)
-        PARSE_PARAMETER(configuration, base_framepoint_generation, stereo_framepoint_generator_parameters, detector_threshold_minimum, int32_t)
-        PARSE_PARAMETER(configuration, base_framepoint_generation, stereo_framepoint_generator_parameters, detector_threshold_step_size, real)
-        PARSE_PARAMETER(configuration, base_framepoint_generation, stereo_framepoint_generator_parameters, matching_distance_tracking_threshold, int32_t)
-        PARSE_PARAMETER(configuration, base_framepoint_generation, stereo_framepoint_generator_parameters, matching_distance_tracking_threshold_maximum, int32_t)
-        PARSE_PARAMETER(configuration, base_framepoint_generation, stereo_framepoint_generator_parameters, matching_distance_tracking_threshold_minimum, int32_t)
-        PARSE_PARAMETER(configuration, base_framepoint_generation, stereo_framepoint_generator_parameters, matching_distance_tracking_step_size, int32_t)
+        //FramepointGeneration (SPECIFIC)
         PARSE_PARAMETER(configuration, stereo_framepoint_generation, stereo_framepoint_generator_parameters, maximum_matching_distance_triangulation, int32_t)
-        PARSE_PARAMETER(configuration, stereo_framepoint_generation, stereo_framepoint_generator_parameters, baseline_factor, real)
         PARSE_PARAMETER(configuration, stereo_framepoint_generation, stereo_framepoint_generator_parameters, minimum_disparity_pixels, real)
         PARSE_PARAMETER(configuration, stereo_framepoint_generation, stereo_framepoint_generator_parameters, epipolar_line_thickness_pixels, int32_t)
-
-        //MotionEstimation
-        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, minimum_track_length_for_landmark_creation, Count)
-        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, minimum_number_of_landmarks_to_track, Count)
-        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, minimum_number_of_framepoints_to_track, Count)
-        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, maximum_threshold_distance_tracking_pixels, int32_t)
-        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, minimum_threshold_distance_tracking_pixels, int32_t)
-        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, range_point_tracking, int32_t)
-        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, maximum_distance_tracking_pixels, int32_t)
-        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, maximum_number_of_landmark_recoveries, Count)
-        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, enable_keypoint_binning, bool)
-        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, bin_size_pixels, Count)
-        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, ratio_keypoints_to_bins, real)
-        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, minimum_delta_angular_for_movement, real)
-        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, minimum_delta_translational_for_movement, real)
-        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, aligner->error_delta_for_convergence, real)
-        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, aligner->maximum_error_kernel, real)
-        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, aligner->damping, real)
-        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, aligner->maximum_number_of_iterations, Count)
-        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, aligner->minimum_number_of_inliers, Count)
-        PARSE_PARAMETER(configuration, base_tracking, stereo_tracker_parameters, aligner->minimum_inlier_ratio, real)
         break;
       }
       case CommandLineParameters::TrackerMode::RGB_DEPTH: {
+        framepoint_generation_parameters = depth_framepoint_generator_parameters;
+        tracker_parameters               = depth_tracker_parameters;
 
-        //FramepointGeneration
-        PARSE_PARAMETER(configuration, base_framepoint_generation, depth_framepoint_generator_parameters, target_number_of_keypoints_tolerance, real)
-        PARSE_PARAMETER(configuration, base_framepoint_generation, depth_framepoint_generator_parameters, detector_threshold, int32_t)
-        PARSE_PARAMETER(configuration, base_framepoint_generation, depth_framepoint_generator_parameters, detector_threshold_minimum, int32_t)
-        PARSE_PARAMETER(configuration, base_framepoint_generation, depth_framepoint_generator_parameters, detector_threshold_step_size, real)
-        PARSE_PARAMETER(configuration, base_framepoint_generation, depth_framepoint_generator_parameters, matching_distance_tracking_threshold, int32_t)
-        PARSE_PARAMETER(configuration, base_framepoint_generation, depth_framepoint_generator_parameters, matching_distance_tracking_threshold_maximum, int32_t)
-        PARSE_PARAMETER(configuration, base_framepoint_generation, depth_framepoint_generator_parameters, matching_distance_tracking_threshold_minimum, int32_t)
-        PARSE_PARAMETER(configuration, base_framepoint_generation, depth_framepoint_generator_parameters, matching_distance_tracking_step_size, int32_t)
+        //FramepointGeneration (SPECIFIC)
         PARSE_PARAMETER(configuration, depth_framepoint_generation, depth_framepoint_generator_parameters, maximum_depth_near_meters, real)
         PARSE_PARAMETER(configuration, depth_framepoint_generation, depth_framepoint_generator_parameters, maximum_depth_far_meters, real)
-
-        //MotionEstimation
-        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, minimum_track_length_for_landmark_creation, Count)
-        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, minimum_number_of_landmarks_to_track, Count)
-        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, minimum_number_of_framepoints_to_track, Count)
-        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, maximum_threshold_distance_tracking_pixels, int32_t)
-        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, minimum_threshold_distance_tracking_pixels, int32_t)
-        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, range_point_tracking, int32_t)
-        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, maximum_distance_tracking_pixels, int32_t)
-        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, maximum_number_of_landmark_recoveries, Count)
-        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, enable_keypoint_binning, bool)
-        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, bin_size_pixels, Count)
-        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, ratio_keypoints_to_bins, real)
-        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, minimum_delta_angular_for_movement, real)
-        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, minimum_delta_translational_for_movement, real)
-        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, aligner->error_delta_for_convergence, real)
-        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, aligner->maximum_error_kernel, real)
-        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, aligner->damping, real)
-        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, aligner->maximum_number_of_iterations, Count)
-        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, aligner->minimum_number_of_inliers, Count)
-        PARSE_PARAMETER(configuration, base_tracking, depth_tracker_parameters, aligner->minimum_inlier_ratio, real)
         break;
       }
       default: {
@@ -424,7 +367,50 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
       }
     }
 
-    //Relocalization
+    //FramepointGeneration (GENERIC)
+    PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, target_number_of_keypoints_tolerance, real)
+    PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, detector_threshold_initial, int32_t)
+    PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, detector_threshold_minimum, int32_t)
+    PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, detector_threshold_maximum, int32_t)
+    PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, detector_threshold_maximum_change, real)
+    PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, number_of_detectors_vertical, int32_t)
+    PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, number_of_detectors_horizontal, int32_t)
+    PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, matching_distance_tracking_threshold, int32_t)
+
+    //MotionEstimation (GENERIC)
+    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, minimum_track_length_for_landmark_creation, Count)
+    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, minimum_number_of_landmarks_to_track, Count)
+    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, minimum_projection_tracking_distance_pixels, int32_t)
+    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, maximum_projection_tracking_distance_pixels, int32_t)
+    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, range_point_tracking, int32_t)
+    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, maximum_distance_tracking_pixels, int32_t)
+    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, maximum_number_of_landmark_recoveries, Count)
+    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, enable_keypoint_binning, bool)
+    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, bin_size_pixels, Count)
+    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, ratio_keypoints_to_bins, real)
+    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, minimum_delta_angular_for_movement, real)
+    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, minimum_delta_translational_for_movement, real)
+    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->error_delta_for_convergence, real)
+    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->maximum_error_kernel, real)
+    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->damping, real)
+    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->maximum_number_of_iterations, Count)
+    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->minimum_number_of_inliers, Count)
+    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->minimum_inlier_ratio, real)
+
+    //ds parse desired motion model as string
+    const std::string& motion_model = configuration["base_tracking"]["motion_model"].as<std::string>();
+    ++number_of_parameters_detected;
+    if (motion_model == "NONE") {
+      tracker_parameters->motion_model = Parameters::MotionModel::NONE;
+    } else if (motion_model == "CONSTANT_VELOCITY") {
+      tracker_parameters->motion_model = Parameters::MotionModel::CONSTANT_VELOCITY;
+    } else {
+      LOG_ERROR(std::cerr << "ParameterCollection::parseFromFile|invalid motion model: " << motion_model << std::endl)
+      throw std::runtime_error("invalid motion model");
+    }
+    ++number_of_parameters_parsed;
+
+    //Relocalization (GENERIC)
     PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, preliminary_minimum_interspace_queries, Count)
     PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, preliminary_minimum_matching_ratio, real)
     PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, minimum_number_of_matches_per_landmark, Count)
@@ -441,10 +427,10 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, identifier_space, real)
     PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, number_of_frames_per_bundle_adjustment, Count)
     PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, base_information_frame, real)
-    PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, free_translation_for_pose_measurements, bool)
+    PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, free_translation_for_poses, bool)
     PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, base_information_frame_factor_for_translation, real)
-    PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, enable_robust_kernel_for_loop_closure_measurements, bool)
-    PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, enable_robust_kernel_for_landmark_measurements, bool)
+    PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, enable_robust_kernel_for_poses, bool)
+    PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, enable_robust_kernel_for_landmarks, bool)
 
     //ds done
     LOG_INFO(std::cerr << "ParameterCollection::parseFromFile|successfully loaded configuration from file: " << filename_ << std::endl)
