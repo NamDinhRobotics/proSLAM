@@ -243,6 +243,10 @@ void SLAMAssembly::loadCameras(Camera* camera_left_, Camera* camera_right_) {
     }
   }
 
+  //ds set system handles
+  _camera_left  = camera_left_;
+  _camera_right = camera_right_;
+
   LOG_INFO(std::cerr << "SLAMAssembly::loadCameras|loaded cameras: " << 2 << std::endl)
   LOG_INFO(std::cerr << "SLAMAssembly::loadCameras|LEFT resolution: " << camera_left_->numberOfImageCols() << " x " << camera_left_->numberOfImageRows()
             << ", aspect ratio: " << static_cast<real>(camera_left_->numberOfImageCols())/camera_left_->numberOfImageRows() << std::endl)

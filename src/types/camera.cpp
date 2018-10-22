@@ -30,4 +30,12 @@ void Camera::setCameraToRobot(const TransformMatrix3D& camera_to_robot_) {
   _camera_to_robot = camera_to_robot_;
   _robot_to_camera = _camera_to_robot.inverse();
 }
+
+void Camera::writeConfiguration(std::ostream& stream_) const {
+  stream_ << "ID: " << _identifier << " resolution: [rows = " << _number_of_image_rows << "] x [cols = " << _number_of_image_cols << "]" << std::endl;
+  stream_ << "camera calibration matrix: K = \n" << _camera_matrix << std::endl;
+  stream_ << "camera projection matrix: P = \n" << _projection_matrix << std::endl;
+  stream_ << "distortion coefficients: D = \n" << _distortion_coefficients.transpose() << std::endl;
+  stream_ << "rectification matrix: R = \n" << _rectification_matrix << std::endl;
+}
 }

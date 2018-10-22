@@ -29,9 +29,9 @@ public:
 //ds getters/setters
 public:
 
-  inline const Identifier identifier() const {return _identifier;}
-  inline const Count numberOfImageRows() const {return _number_of_image_rows;}
-  inline const Count numberOfImageCols() const {return _number_of_image_cols;}
+  inline const Identifier& identifier() const {return _identifier;}
+  inline const Count& numberOfImageRows() const {return _number_of_image_rows;}
+  inline const Count& numberOfImageCols() const {return _number_of_image_cols;}
 
   //! @brief check whether an image point is contained in the current image dimensions or not
   //! @param[in] image_coordinates_ 2D pixel coordinates of the point to evaluate
@@ -51,6 +51,9 @@ public:
   void setRectificationMatrix(const Matrix3& rectification_matrix_) {_rectification_matrix = rectification_matrix_;}
   inline const Vector5& distortionCoefficients() const {return _distortion_coefficients;}
   void setDistortionCoefficients(const Vector5& distortion_coefficients_) {_distortion_coefficients = distortion_coefficients_;}
+
+  //! @brief write object configuration to stream
+  void writeConfiguration(std::ostream& stream_) const;
 
 //ds attributes
 protected:

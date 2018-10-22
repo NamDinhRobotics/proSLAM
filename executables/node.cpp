@@ -12,9 +12,9 @@
 #include "types/parameters.h"
 #include "system/slam_assembly.h"
 
-//ds lazy globals
-proslam::Camera* camera_left  = 0;
-proslam::Camera* camera_right = 0;
+//ds lazy and ugly, ugly globals
+proslam::Camera* camera_left;
+proslam::Camera* camera_right;
 
 //ds ground truth handle (set if available)
 proslam::TransformMatrix3D ground_truth(proslam::TransformMatrix3D::Identity());
@@ -24,7 +24,8 @@ cv::Mat image_left;
 cv::Mat image_right;
 bool found_image_pair = false;
 
-//ds ros synchronization
+
+
 void callbackCameraInfoLeft(const sensor_msgs::CameraInfoConstPtr& message_) {
 
   //ds if not set yet
@@ -37,14 +38,17 @@ void callbackCameraInfoLeft(const sensor_msgs::CameraInfoConstPtr& message_) {
     const proslam::Vector5 distortion_coefficients(message_->D.data());
 
     //ds allocate a new camera
-    camera_left = new proslam::Camera(message_->height,
-                                      message_->width,
-                                      camera_matrix_transposed.transpose());
+    camera_left = new proslam::Camera(message_->height, message_->width, camera_matrix_transposed.transpose());
     camera_left->setProjectionMatrix(projection_matrix_transposed.transpose());
     camera_left->setDistortionCoefficients(distortion_coefficients);
     camera_left->setRectificationMatrix(rectification_matrix_transposed.transpose());
+    std::cerr << BAR << std::endl;
+    std::cerr << "LEFT camera configuration" << std::endl;
+    camera_left->writeConfiguration(std::cerr);
+    std::cerr << BAR << std::endl;
   }
 }
+
 void callbackCameraInfoRight(const sensor_msgs::CameraInfoConstPtr& message_) {
 
   //ds if not set yet
@@ -52,21 +56,29 @@ void callbackCameraInfoRight(const sensor_msgs::CameraInfoConstPtr& message_) {
 
     //ds obtain eigen formatted data
     const proslam::Matrix3 camera_matrix_transposed(message_->K.elems);
-    const proslam::Matrix4_3 projection_matrix_transposed(message_->P.elems);
+    proslam::Matrix4_3 projection_matrix_transposed(message_->P.elems);
     const proslam::Matrix3 rectification_matrix_transposed(message_->R.elems);
     const proslam::Vector5 distortion_coefficients(message_->D.data());
 
+    //ds check if camera is upside-down
+    if(projection_matrix_transposed(3,0) > 0) {
+      std::cerr << "WARNING: detected upside-down stereo camera configuration - check if this is desired" << std::endl;
+      projection_matrix_transposed(3,0) = -projection_matrix_transposed(3,0);
+    }
+
     //ds allocate a new camera
-    camera_right = new proslam::Camera(message_->height,
-                                       message_->width,
-                                       camera_matrix_transposed.transpose());
+    camera_right = new proslam::Camera(message_->height, message_->width, camera_matrix_transposed.transpose());
     camera_right->setProjectionMatrix(projection_matrix_transposed.transpose());
     camera_right->setDistortionCoefficients(distortion_coefficients);
     camera_right->setRectificationMatrix(rectification_matrix_transposed.transpose());
+    std::cerr << BAR << std::endl;
+    std::cerr << "RIGHT camera configuration" << std::endl;
+    camera_right->writeConfiguration(std::cerr);
+    std::cerr << BAR << std::endl;
   }
 }
 
-//ds stereo image retrieval
+//ds stereo image acquisition
 void callbackStereoImage(const sensor_msgs::ImageConstPtr& image_left_, const sensor_msgs::ImageConstPtr& image_right_){
   found_image_pair = false;
 
@@ -95,7 +107,7 @@ void callbackStereoImage(const sensor_msgs::ImageConstPtr& image_left_, const se
   found_image_pair = true;
 }
 
-//mc left and depth image retrival
+//mc monocular camera and depth image acquisition
 void callbackDepthImage(const sensor_msgs::ImageConstPtr& image_left_, const sensor_msgs::ImageConstPtr& image_right_) {
   found_image_pair = false;
 
@@ -237,7 +249,7 @@ int32_t main(int32_t argc_, char** argv_) {
   //ds allocate SLAM modules
   proslam::SLAMAssembly slam_system(parameters);
 
-  //ds set cameras
+  //ds set cameras TODO clean interface
   slam_system.loadCameras(camera_left, camera_right);
 
   //ds allocate a qt UI server in the main scope (required)
@@ -291,17 +303,18 @@ int32_t main(int32_t argc_, char** argv_) {
         }
 
         //ds process images
-	slam_system.process(image_left, image_right);
+        slam_system.process(image_left, image_right);
 	
         //ds add ground truth if available
-	//      slam_system.addGroundTruthMeasurement(orientation_correction*ground_truth);
+//      slam_system.addGroundTruthMeasurement(orientation_correction*ground_truth);
         ++number_of_frames_current_window;
-      //ds update ui
-      slam_system.updateGUI();
-      found_image_pair = false;
-	
+
+        //ds update ui
+        slam_system.updateGUI();
+        slam_system.draw();
+        found_image_pair = false;
       } else {
-	continue;
+        continue;
       }
 
       //ds display stats after each interval
@@ -309,8 +322,7 @@ int32_t main(int32_t argc_, char** argv_) {
       if (total_duration_seconds_current > measurement_interval_seconds) {
 
         //ds runtime info - depending on set modes
-
-	//      std::cerr << "fps: " << number_of_frames_current_window/total_duration_seconds_current << std::endl;
+//      std::cerr << "fps: " << number_of_frames_current_window/total_duration_seconds_current << std::endl;
 
         number_of_frames_current_window   = 0;
         start_time_current_window_seconds = srrg_core::getTime();

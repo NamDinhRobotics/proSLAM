@@ -8,21 +8,21 @@ set(CMAKE_MODULE_PATH ${srrg_cmake_modules_INCLUDE_DIRS})
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
-message("build type: '${CMAKE_BUILD_TYPE}'")
+message("${PROJECT_NAME}|build type: '${CMAKE_BUILD_TYPE}'")
 
 #ds specify target binary descriptor bit size (256 if not defined)
 add_definitions(-DSRRG_PROSLAM_DESCRIPTOR_SIZE_BITS=256)
 
 #ds OpenCV - OpenCV_DIR might be overwritten by user
 find_package(OpenCV REQUIRED)
-message("using OpenCV version: '${OpenCV_VERSION}' (${OpenCV_DIR})")
+message("${PROJECT_NAME}|using OpenCV version: '${OpenCV_VERSION}' (${OpenCV_DIR})")
 
 #ds enable OpenCV for HBST
 add_definitions(-DSRRG_HBST_HAS_OPENCV)
 
 #ds load Eigen library
 find_package(Eigen3 REQUIRED)
-message("using Eigen version: '3' (${EIGEN3_INCLUDE_DIR})")
+message("${PROJECT_NAME}|using Eigen version: '3' (${EIGEN3_INCLUDE_DIR})")
 
 #ds enable Eigen for HBST
 add_definitions(-DSRRG_HBST_HAS_EIGEN)
@@ -35,7 +35,7 @@ set(SRRG_PROSLAM_HAS_ROS false)
 if("$ENV{ROS_DISTRO}" STREQUAL "kinetic" OR "$ENV{ROS_DISTRO}" STREQUAL "indigo")
 
   #ds ROS support enabled
-  message("using ROS version: '$ENV{ROS_DISTRO}' (building nodes)")
+  message("${PROJECT_NAME}|using ROS version: '$ENV{ROS_DISTRO}' (building nodes)")
   set(SRRG_PROSLAM_HAS_ROS true)
   find_package(catkin REQUIRED COMPONENTS
     srrg_core
@@ -67,11 +67,11 @@ if (${CMAKE_MAJOR_VERSION} GREATER 2)
 
   #ds (comment this line if you're using an older g2o version but cmake 3+)
   add_definitions(-DSRRG_PROSLAM_G2O_HAS_NEW_OWNERSHIP_MODEL)
-  message("found CMake 3+: assuming new g2o ownership model")
+  message("${PROJECT_NAME}|found CMake 3+: assuming new g2o ownership model")
 else()
 
   #ds old g2o ownership model is used
-  message("found CMake 2: assuming old g2o ownership model")
+  message("${PROJECT_NAME}|found CMake 2: assuming old g2o ownership model")
 endif()
 
 #ds check if a custom g2o library is installed
@@ -84,17 +84,17 @@ if("${G2O_SRRG_DIR}" STREQUAL "")
   if("$ENV{G2O_ROOT}" STREQUAL "")
   
     #ds no custom g2o installation found, fallback to catkin g2o
-    message("using catkin g2o")
+    message("${PROJECT_NAME}|using catkin g2o")
   else()
   
     #ds use custom g2o
-    message("using custom g2o: '$ENV{G2O_ROOT}'")
+    message("${PROJECT_NAME}|using custom g2o: '$ENV{G2O_ROOT}'")
     set(SRRG_PROSLAM_HAS_OWN_G2O true)
   endif()
 else()
 
   #ds use srrg g2o
-  message("using SRRG g2o: '${G2O_SRRG_DIR}'")
+  message("${PROJECT_NAME}|using SRRG g2o: '${G2O_SRRG_DIR}'")
   set(SRRG_PROSLAM_HAS_OWN_G2O true)
 endif()
 
@@ -121,17 +121,17 @@ find_package(SuiteSparse REQUIRED)
 #ds check flags for release build
 if("${CMAKE_BUILD_TYPE}" STREQUAL "Release" OR "${CMAKE_BUILD_TYPE}" STREQUAL "RELEASE")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=gnu++11 -march=native -Wall -Ofast -DNDEBUG -fPIC")
-  message("adding flags for '${CMAKE_BUILD_TYPE}': '--std=gnu++11 -march=native -Wall -Ofast -DNDEBUG -fPIC'")
+  message("${PROJECT_NAME}|adding flags for '${CMAKE_BUILD_TYPE}': '--std=gnu++11 -march=native -Wall -Ofast -DNDEBUG -fPIC'")
 else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=gnu++11 -march=native -Wall -O0 -g -fPIC -fstack-check")
-  message("adding flags for '${CMAKE_BUILD_TYPE}': '--std=gnu++11 -march=native -Wall -O0 -g -fPIC -fstack-check'")
+  message("${PROJECT_NAME}|adding flags for '${CMAKE_BUILD_TYPE}': '--std=gnu++11 -march=native -Wall -O0 -g -fPIC -fstack-check'")
 endif()
 
 #ds enable ARM flags if applicable
 if("${CMAKE_HOST_SYSTEM_PROCESSOR}" STREQUAL "armv7l")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -funsafe-math-optimizations")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -funsafe-math-optimizations")
-  message("enabling ARM neon optimizations")
+  message("${PROJECT_NAME}|enabling ARM neon optimizations")
 endif()
 
 #ds specify additional locations of header files
