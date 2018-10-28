@@ -96,6 +96,7 @@ namespace proslam {
   typedef srrg_hbst::BinaryTree<HBSTNode> HBSTTree;
 
   //ds cv colors
+  #define CV_COLOR_CODE_RANDOM cv::Scalar(rand()%255, rand()%255, rand()%255)
   #define CV_COLOR_CODE_GREEN cv::Scalar(0, 200, 0)
   #define CV_COLOR_CODE_BLUE cv::Scalar(255, 0, 0)
   #define CV_COLOR_CODE_DARKBLUE cv::Scalar(150, 0, 0)
@@ -135,18 +136,39 @@ namespace proslam {
   #define ASSERT(ASSERTION, INFO) \
     assert(ASSERTION && INFO);
 
+  //ds log level
+#ifndef SRRG_PROSLAM_LOG_LEVEL
+  #define SRRG_PROSLAM_LOG_LEVEL 2
+#endif
+
   //ds generic logging macro - called by each implemented logging function
   #define LOG_GENERIC(LOGGING_LEVEL, LOGGING_LEVEL_DESCRIPTION, EXPRESSION) \
-    if (LOGGING_LEVEL >= _parameters->logging_level) { \
-      std::cerr << srrg_core::getTimestamp() << "|" << LOGGING_LEVEL_DESCRIPTION << "|"; \
-      EXPRESSION; \
-    }
+    std::cerr << srrg_core::getTimestamp() << "|" << LOGGING_LEVEL_DESCRIPTION << "|"; \
+    EXPRESSION;
+
+  //ds log levels (defined at compile time)
+#if SRRG_PROSLAM_LOG_LEVEL > 2
   #define LOG_DEBUG(EXPRESSION) \
     LOG_GENERIC(LoggingLevel::Debug, "DEBUG  ", EXPRESSION)
+#else
+  #define LOG_DEBUG(EXPRESSION)
+#endif
+
+#if SRRG_PROSLAM_LOG_LEVEL > 1
   #define LOG_INFO(EXPRESSION) \
     LOG_GENERIC(LoggingLevel::Info, "INFO   ", EXPRESSION)
+#else
+  #define LOG_INFO(EXPRESSION)
+#endif
+
+#if SRRG_PROSLAM_LOG_LEVEL > 0
   #define LOG_WARNING(EXPRESSION) \
     LOG_GENERIC(LoggingLevel::Warning, "WARNING", EXPRESSION)
+#else
+  #define LOG_WARNING(EXPRESSION)
+#endif
+
   #define LOG_ERROR(EXPRESSION) \
     LOG_GENERIC(LoggingLevel::Error, "ERROR  ", EXPRESSION)
+
 };

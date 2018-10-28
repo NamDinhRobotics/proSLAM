@@ -171,6 +171,10 @@ Detailed notes coming soon!
 ### It doesn't work? ###
 [Open an issue](https://gitlab.com/srrg-software/srrg_proslam/issues) or contact the maintainer (see package.xml)
 
+Instant troubleshooting:
+ - 3D viewer issues (Qt) on Ubuntu 18.04? Set the enviroment variable: `QT_QPA_PLATFORMTHEME="gtk"` and try again
+
+---
 ## Related publications
 Please cite our most recent article when using the ProSLAM system: <br>
 

@@ -159,22 +159,7 @@ namespace proslam {
 
   //ds solve alignment problem for one round
   void UVDAligner::oneRound(const bool& ignore_outliers_) {
-
-    //ds linearize system once
-    linearize(ignore_outliers_);
-
-    //ds always damp
-    _H += _parameters->damping*Matrix6::Identity();
-
-    //ds compute solution transformation
-    const Vector6 dx = _H.ldlt().solve(-_b);
-//    _world_to_camera = v2t(dx)*_world_to_camera;
-
-    //ds enforce proper rotation matrix
-//    const Matrix3 rotation = _world_to_camera.linear();
-//    Matrix3 rotation_squared             = rotation.transpose() * rotation;
-//    rotation_squared.diagonal().array() -= 1;
-//    _world_to_camera.linear()      -= 0.5*rotation*rotation_squared;
+    throw std::runtime_error("UVDAligner::oneRound|TODO: sanitize");
   }
 
   //ds solve alignment problem until convergence is reached

@@ -20,3 +20,7 @@ target_link_libraries(stereo_calibrator ${OpenCV_LIBS} srrg_messages_library)
 #ds euroc trajectory analyzer (e.g. RMSE computation)
 add_executable(trajectory_analyzer trajectory_analyzer.cpp)
 target_link_libraries(trajectory_analyzer ${OpenCV_LIBS} srrg_core_types_library)
+
+#ds stereo triangulation and tracking test
+add_executable(test_stereo_frontend test_stereo_frontend.cpp)
+target_link_libraries(test_stereo_frontend ${OpenCV_LIBS})

@@ -552,7 +552,11 @@ int32_t main (int32_t argc_, char** argv_) {
   cv::DescriptorExtractor* descriptor_extractor = new cv::BriefDescriptorExtractor();
 #elif CV_MAJOR_VERSION == 3
   cv::Ptr<cv::FastFeatureDetector> keypoint_detector    = cv::FastFeatureDetector::create();
-  cv::Ptr<cv::DescriptorExtractor> descriptor_extractor = cv::xfeatures2d::BriefDescriptorExtractor::create();
+  #ifdef SRRG_PROSLAM_HAS_OPENCV_CONTRIB
+    cv::Ptr<cv::DescriptorExtractor> descriptor_extractor = cv::xfeatures2d::BriefDescriptorExtractor::create();
+  #else
+    cv::Ptr<cv::DescriptorExtractor> descriptor_extractor = cv::ORB::create();
+  #endif
 #else
   #error OpenCV version not supported
 #endif

@@ -13,12 +13,8 @@ message("${PROJECT_NAME}|build type: '${CMAKE_BUILD_TYPE}'")
 #ds specify target binary descriptor bit size (256 if not defined)
 add_definitions(-DSRRG_PROSLAM_DESCRIPTOR_SIZE_BITS=256)
 
-#ds OpenCV - OpenCV_DIR might be overwritten by user
-find_package(OpenCV REQUIRED)
-message("${PROJECT_NAME}|using OpenCV version: '${OpenCV_VERSION}' (${OpenCV_DIR})")
-
-#ds enable OpenCV for HBST
-add_definitions(-DSRRG_HBST_HAS_OPENCV)
+#ds specify target log level: 0 ERROR, 1 WARNING, 2 INFO, 3 DEBUG (defaults to 2 if not defined)
+add_definitions(-DSRRG_PROSLAM_LOG_LEVEL=2)
 
 #ds load Eigen library
 find_package(Eigen3 REQUIRED)
@@ -27,12 +23,9 @@ message("${PROJECT_NAME}|using Eigen version: '3' (${EIGEN3_INCLUDE_DIR})")
 #ds enable Eigen for HBST
 add_definitions(-DSRRG_HBST_HAS_EIGEN)
 
-#ds load QGLViewer library - inherently also loads a matching Qt version
-find_package(QGLViewer REQUIRED)
-
 #ds check if a supported ros version is installed to determine which packages we include
 set(SRRG_PROSLAM_HAS_ROS false)
-if("$ENV{ROS_DISTRO}" STREQUAL "kinetic" OR "$ENV{ROS_DISTRO}" STREQUAL "indigo")
+if("$ENV{ROS_DISTRO}" STREQUAL "kinetic" OR "$ENV{ROS_DISTRO}" STREQUAL "indigo" OR "$ENV{ROS_DISTRO}" STREQUAL "melodic")
 
   #ds ROS support enabled
   message("${PROJECT_NAME}|using ROS version: '$ENV{ROS_DISTRO}' (building nodes)")
@@ -47,7 +40,14 @@ if("$ENV{ROS_DISTRO}" STREQUAL "kinetic" OR "$ENV{ROS_DISTRO}" STREQUAL "indigo"
     cv_bridge
     nav_msgs
     message_filters
+    image_geometry
   )
+  
+  #ds switch to ROS opencv libraries without calling find_package to avoid conflicts with other existing OpenCV installations
+  set(OpenCV_DIR "ROS")
+  set(OpenCV_LIBS ${catkin_LIBRARIES})
+  message("${PROJECT_NAME}|using ROS OpenCV version: '${OpenCV_VERSION}' (${OpenCV_DIR})")
+  add_definitions(-DSRRG_HBST_HAS_OPENCV)
 else()
 
   #ds build proslam without ROS components
@@ -57,7 +57,24 @@ else()
     srrg_core_viewers
     srrg_hbst
   )
+  
+  #ds OpenCV - OpenCV_DIR might be overwritten by user
+  find_package(OpenCV REQUIRED)
+  message("${PROJECT_NAME}|using OpenCV version: '${OpenCV_VERSION}' (${OpenCV_DIR})")
+  add_definitions(-DSRRG_HBST_HAS_OPENCV)
 endif()
+
+#ds check for OpenCV contrib library (optional)
+string(FIND "${OpenCV_LIBS}" "xfeatures2d" FOUND_OPENCV_CONTRIB)
+if(NOT ${FOUND_OPENCV_CONTRIB} EQUAL -1)
+  message("${PROJECT_NAME}|found xfeatures2d library, building contributed OpenCV components")
+  add_definitions(-DSRRG_PROSLAM_HAS_OPENCV_CONTRIB)
+else()
+  message("${PROJECT_NAME}|xfeatures2d library not found, using ORB instead of BRIEF descriptors")
+endif()
+
+#ds load QGLViewer library
+find_package(QGLViewer REQUIRED)
 
 #ds attempt to locate a g2o package through cmake modules
 find_package(G2O QUIET)

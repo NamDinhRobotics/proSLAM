@@ -19,7 +19,7 @@ public:
   //! @brief parameter printing function
   virtual void print() const = 0;
 
-  //! @brief log level (for all components)
+  //! @brief log level (for all components) - currently disabled and defined at compile time for all components
   LoggingLevel logging_level;
 
   //! @brief SLAM system motion models
@@ -166,12 +166,15 @@ public:
   //! @brief parameter printing function
   virtual void print() const;
 
+  //! @brief desired descriptor type (OpenCV string): BRIEF, ORB, BRISK, FREAK, A-KAZE, BinBoost, .. - TODO activate
+  std::string descriptor_type = "ORB";
+
   //! @brief dynamic thresholds for feature detection
   real target_number_of_keypoints_tolerance = 0.1;
-  uint32_t detector_threshold_initial       = 25;
+  uint32_t detector_threshold_initial       = 10;
   uint32_t detector_threshold_minimum       = 10;
   uint32_t detector_threshold_maximum       = 100;
-  real detector_threshold_maximum_change    = 0.25;
+  real detector_threshold_maximum_change    = 0.5;
 
   //! @brief detector number per image dimension
   uint32_t number_of_detectors_vertical   = 1;
@@ -181,7 +184,7 @@ public:
   uint32_t number_of_cameras = 1;
 
   //! @brief dynamic thresholds for descriptor matching
-  int32_t matching_distance_tracking_threshold = 50;
+  int32_t matching_distance_tracking_threshold = 0.2*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS;
 };
 
 //! @class framepoint generation parameters for a stereo camera setup
@@ -195,7 +198,7 @@ public:
   virtual void print() const;
 
   //! @brief stereo: triangulation
-  int32_t maximum_matching_distance_triangulation = 50;
+  int32_t maximum_matching_distance_triangulation = 0.2*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS;
   real minimum_disparity_pixels                   = 1;
   uint32_t epipolar_line_thickness_pixels         = 0;
 };
@@ -231,7 +234,7 @@ public:
   virtual void print() const;
 
   //! @brief this criteria is used for the decision of whether creating a landmark or not from a track of framepoints
-  Count minimum_track_length_for_landmark_creation = 3;
+  Count minimum_track_length_for_landmark_creation = 2;
 
   //! @brief tracking criteria for landmarks, required to perform position tracking
   Count minimum_number_of_landmarks_to_track = 10;
@@ -260,7 +263,7 @@ public:
   real minimum_delta_translational_for_movement = 0.01;
 
   //! @brief desired motion model (if any)
-  MotionModel motion_model = MotionModel::NONE;
+  MotionModel motion_model = MotionModel::CONSTANT_VELOCITY;
 
   //! @brief parameters of aligner unit
   AlignerParameters* aligner;
