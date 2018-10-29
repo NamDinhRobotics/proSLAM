@@ -375,7 +375,8 @@ int32_t main(int32_t argc_, char** argv_) {
             cv::circle(image_display_depth, feature_left->keypoint.pt, 4, CV_COLOR_CODE_GREEN, 1);
             cv::circle(image_display_depth, feature_right->keypoint.pt+shift_horizontal, 6, CV_COLOR_CODE_GREEN, 1);
 
-            //ds display right point with (green) and without correction (blue)
+            //ds display left/right point with (green) and without correction (blue)
+            cv::circle(image_display_depth, cv::Point2f(col_projection_left, row_projection_left), 4, CV_COLOR_CODE_BLUE, 1);
             cv::circle(image_display_depth, cv::Point2f(col_projection_right, row_projection_right)+shift_horizontal, 4, CV_COLOR_CODE_GREEN, 1);
             cv::circle(image_display_depth, cv::Point2f(point_in_image_right.x()/point_in_image_right.z(), point_in_image_right.y()/point_in_image_right.z())+shift_horizontal, 4, CV_COLOR_CODE_BLUE, 1);
           }
