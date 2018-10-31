@@ -18,7 +18,7 @@ command_line:
   #ds options
   option_use_gui:                   false
   option_use_odometry:              false
-  option_disable_relocalization:    true
+  option_disable_relocalization:    false
   option_show_top_viewer:           false
   option_drop_framepoints:          false
   option_equalize_histogram:        false
@@ -46,8 +46,11 @@ world_map:
 
 base_framepoint_generation:
 
+  #ds feature descriptor type (BRIEF-128/256/512, ORB-256, BRISK-512, FREAK-512, A-KAZE-486, BinBoost-064)
+  descriptor_type: BRIEF
+
   #ds dynamic thresholds for feature detection
-  target_number_of_keypoints_tolerance: 0.1
+  target_number_of_keypoints_tolerance: 0.25
   detector_threshold_maximum_change:    0.1
   detector_threshold_initial:           20
   detector_threshold_minimum:           20
@@ -57,11 +60,14 @@ base_framepoint_generation:
 
   #ds dynamic thresholds for descriptor matching
   matching_distance_tracking_threshold: 35
+  
+  #ds maximum reliable depth with chosen sensor
+  maximum_reliable_depth_meters: 15.0
 
 stereo_framepoint_generation:
 
   #ds stereo: triangulation
-  maximum_matching_distance_triangulation: 100
+  maximum_matching_distance_triangulation: 70
   minimum_disparity_pixels:                1
   epipolar_line_thickness_pixels:          0
 
@@ -103,7 +109,7 @@ base_tracking:
   #pose optimization: aligner unit configuration
   aligner->error_delta_for_convergence:  1e-3
   aligner->maximum_error_kernel:         9
-  aligner->damping:                      1000
+  aligner->damping:                      0
   aligner->maximum_number_of_iterations: 1000
   aligner->minimum_number_of_inliers:    0
   aligner->minimum_inlier_ratio:         0

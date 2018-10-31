@@ -185,6 +185,9 @@ public:
 
   //! @brief dynamic thresholds for descriptor matching
   int32_t matching_distance_tracking_threshold = 0.2*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS;
+
+  //! @brief maximum reliable depth with chosen sensor
+  real maximum_reliable_depth_meters = 15;
 };
 
 //! @class framepoint generation parameters for a stereo camera setup

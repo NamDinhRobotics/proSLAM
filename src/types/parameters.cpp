@@ -368,6 +368,7 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     }
 
     //FramepointGeneration (GENERIC)
+    PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, descriptor_type, std::string)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, target_number_of_keypoints_tolerance, real)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, detector_threshold_initial, int32_t)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, detector_threshold_minimum, int32_t)
@@ -376,6 +377,7 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, number_of_detectors_vertical, int32_t)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, number_of_detectors_horizontal, int32_t)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, matching_distance_tracking_threshold, int32_t)
+    PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, maximum_reliable_depth_meters, real)
 
     //MotionEstimation (GENERIC)
     PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, minimum_track_length_for_landmark_creation, Count)

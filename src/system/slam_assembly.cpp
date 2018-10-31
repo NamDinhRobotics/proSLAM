@@ -30,7 +30,6 @@ SLAMAssembly::SLAMAssembly(ParameterCollection* parameters_): _parameters(parame
   FramePoint::reset();
   LocalMap::reset();
   Landmark::reset();
-
   LOG_DEBUG(std::cerr << "SLAMAssembly::SLAMAssembly|constructed" << std::endl)
 }
 
@@ -48,8 +47,8 @@ SLAMAssembly::~SLAMAssembly() {
   delete _image_viewer;
   delete _map_viewer;
   delete _minimap_viewer;
-  delete _ui_server;
   _synchronizer.reset();
+  LOG_DEBUG(std::cerr << "SLAMAssembly::~SLAMAssembly|destroyed" << std::endl)
 }
 
 void SLAMAssembly::_createStereoTracker(Camera* camera_left_, Camera* camera_right_){
@@ -72,6 +71,7 @@ void SLAMAssembly::_createStereoTracker(Camera* camera_left_, Camera* camera_rig
 
   //ds allocate and configure the aligner for motion estimation
   StereoUVAligner* pose_optimizer = new StereoUVAligner(_parameters->stereo_tracker_parameters->aligner);
+  pose_optimizer->setMaximumReliableDepthMeters(_parameters->stereo_framepoint_generator_parameters->maximum_reliable_depth_meters);
   pose_optimizer->configure();
 
   //ds allocate and configure the tracker

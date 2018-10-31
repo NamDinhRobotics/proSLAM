@@ -62,9 +62,8 @@ namespace proslam {
 
     //ds if individual weighting is desired
     if (_enable_weights_translation) {
-      const real maximum_reliable_depth_meters = 15;
       for (Index u = 0; u < _number_of_measurements; ++u) {
-        _weights_translation[u] = maximum_reliable_depth_meters/_moving[u].z();
+        _weights_translation[u] = _maximum_reliable_depth_meters/_moving[u].z();
       }
     }
 

@@ -46,6 +46,9 @@ world_map:
 
 base_framepoint_generation:
 
+  #ds feature descriptor type (BRIEF-128/256/512, ORB-256, BRISK-512, FREAK-512, A-KAZE-486, BinBoost-064)
+  descriptor_type: BRIEF
+
   #ds dynamic thresholds for feature detection
   target_number_of_keypoints_tolerance: 0.2
   detector_threshold_maximum_change:    0.5
@@ -57,6 +60,9 @@ base_framepoint_generation:
 
   #ds dynamic thresholds for descriptor matching
   matching_distance_tracking_threshold: 35
+  
+  #ds maximum reliable depth with chosen sensor
+  maximum_reliable_depth_meters: 15.0
 
 stereo_framepoint_generation:
 
