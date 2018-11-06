@@ -77,9 +77,6 @@ void BaseTracker::compute() {
   _number_of_tracked_points   = 0;
   _number_of_lost_points      = 0;
   _number_of_recovered_points = 0;
-  for (Landmark* landmark: _context->currentlyTrackedLandmarks()) {
-    landmark->setIsCurrentlyTracked(false);
-  }
   _context->currentlyTrackedLandmarks().clear();
 
   //ds relative camera motion guess
@@ -539,7 +536,7 @@ void BaseTracker::_track(const Frame* previous_frame_,
   //ds update frame with current points
   current_frame_->points().resize(_number_of_tracked_points);
   _lost_points.resize(_number_of_lost_points);
-  _total_number_of_landmarks+= _number_of_tracked_landmarks;
+  _total_number_of_landmarks += _number_of_tracked_landmarks;
 }
 
 void BaseTracker::_registerRecursive(Frame* frame_previous_,
@@ -922,8 +919,24 @@ void BaseTracker::_updatePoints(WorldMap* context_, Frame* frame_) {
       point->setLandmark(landmark);
     }
 
+    //ds sanity check TODO check with g2o and purge
+    try {
+      if (landmark != context_->landmarks().at(landmark->identifier())) {
+        LOG_DEBUG(std::cerr << "BaseTracker::_updatePoints|skipping invalid landmark with ID: " << landmark->identifier()
+                            << " (suspected memory corruption)" << std::endl)
+        point->setLandmark(nullptr);
+        continue;
+      }
+    } catch (const std::out_of_range& /*ex*/) {
+      LOG_DEBUG(std::cerr << "BaseTracker::_updatePoints|skipping invalid landmark with ID: " << landmark->identifier()
+                          << " (suspected memory corruption)" << std::endl)
+      point->setLandmark(nullptr);
+      continue;
+    }
+
     //ds update landmark position based on current point (triggered as we linked the landmark to the point)
-    point->updateLandmark();
+    landmark->update(point);
+    point->setCameraCoordinatesLeftLandmark(frame_->worldToCameraLeft()*landmark->coordinates());
 
     //ds VISUALIZATION ONLY: add landmarks to currently visible ones
     landmark->setIsCurrentlyTracked(true);

@@ -124,6 +124,9 @@ public:
 
   //! @brief target minimum number of landmarks for local map creation
   Count minimum_number_of_landmarks = 50;
+
+  //! @brief target maximum number of landmarks for local map creation
+  Count maximum_number_of_landmarks = 1000;
 };
 
 //! @class world map parameters
@@ -151,9 +154,6 @@ public:
 
   //! @brief local map generation parameters
   LocalMapParameters* local_map;
-
-  //! @brief enable identical landmarks (determined e.g. by relocalization)
-  bool merge_landmarks = false;
 };
 
 //! @class framepoint generation parameters
@@ -166,8 +166,8 @@ public:
   //! @brief parameter printing function
   virtual void print() const;
 
-  //! @brief desired descriptor type (OpenCV string): BRIEF, ORB, BRISK, FREAK, A-KAZE, BinBoost, .. - TODO activate
-  std::string descriptor_type = "ORB";
+  //! @brief desired descriptor type (OpenCV string + bit size): BRIEF-256, ORB-256, BRISK-512, FREAK-512, ..
+  std::string descriptor_type = "ORB-256";
 
   //! @brief dynamic thresholds for feature detection
   real target_number_of_keypoints_tolerance = 0.1;

@@ -156,11 +156,11 @@ namespace proslam {
 
           //ds allocate a new point connected to the previous one
           FramePoint* current_point = current_frame_->createFramepoint(keypoint_buffer_left[0],
-                                                             descriptor_left,
-                                                             keypoint_buffer_right[0],
-                                                             descriptor_right,
-                                                             camera_coordinates,
-                                                             point_previous);
+                                                                       descriptor_left,
+                                                                       keypoint_buffer_right[0],
+                                                                       descriptor_right,
+                                                                       camera_coordinates,
+                                                                       point_previous);
 
           //ds set the point to the control structure
           current_frame_->points()[index_lost_point_recovered] = current_point;

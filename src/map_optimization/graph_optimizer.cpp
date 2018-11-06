@@ -36,6 +36,7 @@ void GraphOptimizer::configure() {
   //ds clean bookkeeping
   _vertex_frame_last_added = 0;
   _frames_in_pose_graph.clear();
+  _local_maps_in_graph.clear();
   _landmarks_in_pose_graph.clear();
 
   //ds clean pose graph
@@ -153,29 +154,6 @@ void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std:
                      _parameters->base_information_frame,
                      _parameters->free_translation_for_poses,
                      _parameters->enable_robust_kernel_for_poses);
-
-        //ds merge landmarks - if not already done online
-        if (!world_map_->parameters()->merge_landmarks) {
-          for (const LandmarkCorrespondence* landmark_correspondence: closure.landmark_correspondences) {
-            try {
-
-              //ds retrieve query and reference vertices
-              g2o::VertexPointXYZ* vertex_query     = landmarks_in_pose_graph.at(landmark_correspondence->query->landmark);
-              g2o::VertexPointXYZ* vertex_reference = landmarks_in_pose_graph.at(landmark_correspondence->reference->landmark);
-
-              //ds if not already merged
-              if (vertex_query != vertex_reference) {
-
-                //ds merge query into reference
-                pose_graph->mergeVertices(vertex_reference, vertex_query, true);
-
-                //ds update bookkeeping
-                landmarks_in_pose_graph.at(landmark_correspondence->query->landmark) = vertex_reference;
-              }
-            }
-            catch (const std::out_of_range& /*exception*/) {}
-          }
-        }
       }
     }
   }
@@ -228,42 +206,48 @@ void GraphOptimizer::addFrame(Frame* frame_) {
                 _parameters->enable_robust_kernel_for_poses);
   }
 
-  //ds if the frame carries loop closures
-  if (frame_->localMap() && frame_->localMap()->closures().size() > 0) {
+  //ds if the frame is part of a local map
+  LocalMap* local_map = frame_->localMap();
+  if (local_map) {
 
-    //ds for all linked loop closures
-    for (const LocalMap::Closure& closure: frame_->localMap()->closures()) {
+    //ds if the local map has not been checked in a previous frame
+    if (_local_maps_in_graph.find(local_map->identifier()) == _local_maps_in_graph.end()) {
+      _local_maps_in_graph.insert(std::make_pair(local_map->identifier(), local_map));
 
-      //ds reference frame
-      Frame* reference_frame = closure.local_map->keyframe();
+      //ds for all linked loop closures
+      for (const LocalMap::Closure& closure: local_map->closures()) {
 
-      //ds check if the reference frame is not contained in the current graph
-      if (_frames_in_pose_graph.find(reference_frame) == _frames_in_pose_graph.end()) {
+        //ds reference frame
+        Frame* reference_frame = closure.local_map->keyframe();
 
-        //ds the vertex was not found - we have to add it to the graph again and fix it
-        g2o::VertexSE3* vertex_reference = new g2o::VertexSE3();
-        vertex_reference->setId(reference_frame->identifier());
-        vertex_reference->setEstimate(reference_frame->robotToWorld().cast<double>());
-        vertex_reference->setFixed(true);
-        _optimizer->addVertex(vertex_reference);
-        _frames_in_pose_graph.insert(std::make_pair(reference_frame, vertex_reference));
-      } else {
+        //ds check if the reference frame is not contained in the current graph
+        if (_frames_in_pose_graph.find(reference_frame) == _frames_in_pose_graph.end()) {
 
-        //ds fix reference vertex
-        _optimizer->vertex(reference_frame->identifier())->setFixed(true);
+          //ds the vertex was not found - we have to add it to the graph again and fix it
+          g2o::VertexSE3* vertex_reference = new g2o::VertexSE3();
+          vertex_reference->setId(reference_frame->identifier());
+          vertex_reference->setEstimate(reference_frame->robotToWorld().cast<double>());
+          vertex_reference->setFixed(true);
+          _optimizer->addVertex(vertex_reference);
+          _frames_in_pose_graph.insert(std::make_pair(reference_frame, vertex_reference));
+        } else {
+
+          //ds fix reference vertex
+          _optimizer->vertex(reference_frame->identifier())->setFixed(true);
+        }
+
+        //ds compute information value
+        const real information_factor = _parameters->base_information_frame*closure.omega;
+
+        //ds retrieve closure edge
+        _setPoseEdge(_optimizer,
+                     _optimizer->vertex(local_map->keyframe()->identifier()),
+                     _optimizer->vertex(reference_frame->identifier()),
+                     closure.relation,
+                     information_factor,
+                     _parameters->free_translation_for_poses,
+                     _parameters->enable_robust_kernel_for_poses);
       }
-
-      //ds compute information value
-      const real information_factor = _parameters->base_information_frame*closure.omega;
-
-      //ds retrieve closure edge
-      _setPoseEdge(_optimizer,
-                   _optimizer->vertex(frame_->localMap()->keyframe()->identifier()),
-                   _optimizer->vertex(reference_frame->identifier()),
-                   closure.relation,
-                   information_factor,
-                   _parameters->free_translation_for_poses,
-                   _parameters->enable_robust_kernel_for_poses);
     }
   }
 
@@ -373,18 +357,15 @@ void GraphOptimizer::optimizeFrames(WorldMap* world_map_) {
   _optimizer->initializeOptimization();
   _optimizer->optimize(_parameters->maximum_number_of_iterations);
 
-  //ds directly backpropagate solution to frames
+  //ds directly backpropagate solution to frames - without updating the local maps (we want to keep the fine-grained, frame-wise g2o estimate)
   for(std::pair<Frame*, g2o::VertexSE3*> frame_in_pose_graph: _frames_in_pose_graph) {
     frame_in_pose_graph.first->setRobotToWorld(frame_in_pose_graph.second->estimate().cast<real>());
   }
 
-  //ds update all active landmark positions based on their last local map presence
-  for (const LocalMap* local_map: world_map_->localMaps()) {
-
-    //ds update landmark position rigidly
-    for (Landmark::State* landmark_state: local_map->landmarks()) {
-      landmark_state->landmark->setCoordinates(local_map->localMapToWorld()*landmark_state->coordinates_in_local_map);
-    }
+  //ds update all active landmark positions based on their last local map presence TODO make this more efficient
+  for (std::pair<const Identifier, LocalMap*>& local_map_entry: _local_maps_in_graph) {
+    LocalMap* local_map = local_map_entry.second;
+    local_map->setLocalMapToWorld(local_map->keyframe()->robotToWorld(), true);
   }
   world_map_->setRobotToWorld(world_map_->currentFrame()->robotToWorld());
   ++_number_of_optimizations;
@@ -393,6 +374,7 @@ void GraphOptimizer::optimizeFrames(WorldMap* world_map_) {
   _optimizer->clear();
   _vertex_frame_last_added = 0;
   _frames_in_pose_graph.clear();
+  _local_maps_in_graph.clear();
   _landmarks_in_pose_graph.clear();
   CHRONOMETER_STOP(optimization)
 }

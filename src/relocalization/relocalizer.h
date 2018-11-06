@@ -16,14 +16,15 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     Query(const LocalMap* local_map_): local_map(local_map_),
                                        matchables(local_map_->appearances()),
-                                       hbst_tree(new HBSTTree(local_map_->identifier(), matchables)) {}
-    ~Query() {delete hbst_tree;}
+                                       database(new HBSTTree(local_map_->identifier(), matchables)) {}
+    Query() = delete;
+    ~Query() {delete database;}
 
     const LocalMap* local_map;
-    const HBSTNode::MatchableVector matchables;
-    const HBSTTree* hbst_tree;
+    const AppearanceVector matchables;
+    const HBSTTree* database;
   };
-  typedef std::vector<Query*, Eigen::aligned_allocator<Query*>> QueryVector;
+  typedef std::vector<Query*> QueryVector;
   typedef std::queue<Query*> QueryQueue;
 
 //ds object management
@@ -56,7 +57,7 @@ public:
 protected:
 
   //ds retrieve correspondences from matches
-  inline const LandmarkCorrespondence* _getCorrespondenceNN(const LandmarkCorrespondence::MatchPointerVector& matches_);
+  inline LandmarkCorrespondence* _getCorrespondenceNN(const LandmarkCorrespondence::MatchPointerVector& matches_);
 
 protected:
 
@@ -64,19 +65,19 @@ protected:
   ClosurePointerVector _closures;
 
   //ds active query for closure search
-  Query* _query;
+  Query* _query = nullptr;
 
   //ds intermediate buffer for query frames before they enter the history
   QueryQueue _query_history_queue;
 
-  //ds frame-wise descriptor point clouds
+  //ds localization queries to database
   QueryVector _query_history;
 
   //ds correspondence retrieval
   std::set<Identifier> _mask_id_references_for_correspondences;
 
   //ds local map to local map alignment
-  XYZAligner* _aligner = 0;
+  XYZAligner* _aligner = nullptr;
 
 private:
 

@@ -162,45 +162,6 @@ void WorldMap::addLoopClosure(LocalMap* query_,
   query_->addCorrespondence(reference_, query_to_reference_, landmark_correspondences_, information_);
   _relocalized = true;
 
-  //ds if merging of corresponding landmarks is desired
-  if (_parameters->merge_landmarks) {
-    CHRONOMETER_START(landmark_merging)
-
-    //ds for all correspondences
-    for (const LandmarkCorrespondence* landmark_correspondence: landmark_correspondences_) {
-
-      //ds merge components
-      Landmark* landmark_query     = landmark_correspondence->query->landmark;
-      Landmark* landmark_reference = landmark_correspondence->reference->landmark;
-
-      //ds check if not already merged (case can appear as previous local maps carry "at that time not" merged landmarks
-      if (landmark_query != landmark_reference) {
-
-          //ds merge query with reference (original) landmark
-          landmark_reference->merge(landmark_query);
-
-          //ds check if the landmark is in the currently tracked ones and update it accordingly
-          for (uint64_t index = 0; index < _currently_tracked_landmarks.size(); ++index) {
-            if (_currently_tracked_landmarks[index] == landmark_query) {
-              _currently_tracked_landmarks[index] = landmark_reference;
-
-              //ds update reference for framepoint - TODO move to landmark merge method
-              for (FramePoint* framepoint: _current_frame->points()) {
-                if (framepoint->landmark() == landmark_query) {
-                  framepoint->setLandmark(landmark_reference);
-                }
-              }
-            }
-          }
-
-        //ds free input landmark from bookkeeping
-        _landmarks.erase(landmark_query->identifier());
-        delete landmark_query;
-      }
-    }
-    CHRONOMETER_STOP(landmark_merging)
-  }
-
   //ds informative only
   ++_number_of_closures;
 }
@@ -324,6 +285,65 @@ void WorldMap::setTrack(Frame* frame_) {
 
   _last_frame_before_track_break     = 0;
   _last_local_map_before_track_break = 0;
+}
+
+void WorldMap::mergeLandmarks(const std::map<Identifier, std::pair<Identifier, Count>>& landmarks_to_merge_) {
+  CHRONOMETER_START(landmark_merging)
+
+  //ds map of merged landmark identfiers in case of multi-merges
+  std::map<Identifier, Identifier> merged_landmark_identifiers;
+
+  //ds for each entry: <query, reference>
+  for (const std::pair<Identifier, std::pair<Identifier, Count>>& pair: landmarks_to_merge_) {
+    Landmark* landmark_query     = nullptr;
+    Landmark* landmark_reference = nullptr;
+
+    //ds try to retrieve landmarks from map, falling back to merge information on failure
+    try {
+      landmark_query = _landmarks.at(pair.first);
+    } catch (const std::out_of_range& /*ex*/) {
+
+      //ds this means the query has already been merged, we skip further processing
+      LOG_WARNING(std::cerr << "WorldMap::mergeLandmarks|already merged landmark ID: " << landmark_query->identifier() << std::endl)
+      continue;
+    }
+    try {
+      landmark_reference = _landmarks.at(pair.second.first);
+    } catch (const std::out_of_range& /*ex*/) {
+      landmark_reference = _landmarks.at(merged_landmark_identifiers.at(pair.second.first));
+    }
+
+    //ds skip processing for identical calls
+    if (landmark_query->identifier() == landmark_reference->identifier()) {
+      continue;
+    }
+
+    //ds check if the landmark is in the currently tracked ones and update it accordingly
+    for (Index index = 0; index < _currently_tracked_landmarks.size(); ++index) {
+      const Identifier& tracked_identifier = _currently_tracked_landmarks[index]->identifier();
+      if (tracked_identifier == landmark_query->identifier()    ||
+          tracked_identifier == landmark_reference->identifier()) {
+        _currently_tracked_landmarks[index] = landmark_reference;
+      }
+    }
+
+    //ds perform merge (does not free landmark memory)
+    landmark_reference->merge(landmark_query);
+
+    //ds update bookkeeping and free absorbed landmark
+    merged_landmark_identifiers.insert(std::make_pair(landmark_query->identifier(), landmark_reference->identifier()));
+    if (1 != _landmarks.erase(landmark_query->identifier())) {
+
+      //ds do not free landmark memory
+      LOG_WARNING(std::cerr << "WorldMap::mergeLandmarks|invalid erase of landmark ID: " << landmark_query->identifier() << std::endl)
+    } else {
+
+      //ds free landmark memory
+      delete landmark_query;
+    }
+  }
+  LOG_DEBUG(std::cerr << "WorldMap::mergeLandmarks|merged landmarks: " << landmarks_to_merge_.size() << std::endl)
+  CHRONOMETER_STOP(landmark_merging)
 }
 }
 

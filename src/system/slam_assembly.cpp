@@ -34,6 +34,7 @@ SLAMAssembly::SLAMAssembly(ParameterCollection* parameters_): _parameters(parame
 }
 
 SLAMAssembly::~SLAMAssembly() {
+  LOG_DEBUG(std::cerr << "SLAMAssembly::~SLAMAssembly|destroying assembly" << std::endl)
   delete _tracker;
   delete _graph_optimizer;
   delete _relocalizer;
@@ -455,7 +456,7 @@ void SLAMAssembly::playbackMessageFile() {
       if (processing_time_seconds_current > runtime_info_update_frequency_seconds) {
 
         //ds runtime info - depending on set modes and available information
-        if (!_parameters->command_line_parameters->option_disable_relocalization && _world_map->localMaps().size() > 1) {
+        if (!_parameters->command_line_parameters->option_disable_relocalization && !_world_map->localMaps().empty()) {
           LOG_INFO(std::printf("SLAMAssembly::playbackMessageFile|frames: %5lu <FPS: %6.2f>|landmarks: %6lu|local maps: %4lu (%3.2f)|closures: %3lu (%3.2f)\n",
                       _number_of_processed_frames,
                       number_of_processed_frames_current/processing_time_seconds_current,
@@ -537,9 +538,12 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
     if (!_parameters->command_line_parameters->option_disable_relocalization) {
 
       //ds local map generation - regardless of tracker state
-      if (_world_map->createLocalMap(_parameters->command_line_parameters->option_drop_framepoints)) {
+      if (_map_viewer) {_map_viewer->lock();}
+      const bool created_local_map = _world_map->createLocalMap(_parameters->command_line_parameters->option_drop_framepoints);
+      if (_map_viewer) {_map_viewer->unlock();}
+      if (created_local_map) {
 
-        //ds trigger relocalization
+        //ds localize in database (not yet optimizing the graph)
         _relocalizer->initialize(_world_map->currentLocalMap());
         _relocalizer->detect();
         _relocalizer->compute();
@@ -557,8 +561,8 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
                                        closure->icp_inlier_ratio);
             if (_parameters->command_line_parameters->option_use_gui) {
               for (const LandmarkCorrespondence* match: closure->correspondences) {
-                _world_map->landmarks().at(match->query->landmark->identifier())->setIsInLoopClosureQuery(true);
-                _world_map->landmarks().at(match->reference->landmark->identifier())->setIsInLoopClosureReference(true);
+                _world_map->landmarks().at(match->query->identifier())->setIsInLoopClosureQuery(true);
+                _world_map->landmarks().at(match->reference->identifier())->setIsInLoopClosureReference(true);
               }
             }
           }
@@ -589,24 +593,59 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
         //ds just add the frame to the pose graph
         _graph_optimizer->addFrame(_world_map->currentFrame());
 
-        //ds if we closed a local map
+        //ds if we closed a local map - otherwise there is no need to optimize the pose graph
         if (_world_map->relocalized()) {
 
           //ds check if we're running with a GUI and lock the GUI before the critical phase
           if (_map_viewer) {_map_viewer->lock();}
 
-          //ds optimize graph
+          //ds optimize pose graph with the loop closure constraint
           _graph_optimizer->optimizeFrames(_world_map);
 
-          //ds reenable the GUI
+          //ds merge inlier landmark correspondences
+          std::map<Identifier, std::pair<Identifier, Count>> landmark_queries_to_references;
+          for(Closure* closure: _relocalizer->closures()) {
+            if (closure->is_valid) {
+              for (const LandmarkCorrespondence* correspondence: closure->correspondences) {
+                Identifier identifier_query     = correspondence->query->identifier();
+                Identifier identifier_reference = correspondence->reference->identifier();
+
+                //ds query is always greater than reference (merging into old landmarks)
+                if (identifier_query < identifier_reference) {
+                  std::swap(identifier_query, identifier_reference);
+                }
+
+                //ds if the correspondence is valid and not a redundant merge for an aleardy merged landmark
+                if (correspondence->is_inlier && identifier_query != identifier_reference) {
+                  std::pair<Identifier, Count> merge_candidate(identifier_reference, correspondence->matching_count);
+                  std::map<Identifier, std::pair<Identifier, Count>>::iterator iterator = landmark_queries_to_references.find(identifier_query);
+
+                  //ds if there is already a merge for this query
+                  if (iterator != landmark_queries_to_references.end()) {
+
+                    //ds check if current correspondence is more suitable than existing one
+                    if (correspondence->matching_count > iterator->second.second) {
+                      iterator->second = merge_candidate;
+                    }
+                  } else {
+                    landmark_queries_to_references.insert(std::make_pair(identifier_query, merge_candidate));
+                  }
+                }
+              }
+            }
+          }
+          _world_map->mergeLandmarks(landmark_queries_to_references);
+          _relocalizer->clear();
+
+          //ds re-enable the GUI
           if (_map_viewer) {_map_viewer->unlock();}
         }
       }
     } else if (_parameters->command_line_parameters->option_drop_framepoints) {
 
-      //ds free disconnected framepoints if available
-      if (_world_map->frames().size() >= 100) {
-        _world_map->frames().at(_world_map->frames().size()-100)->clear();
+      //ds free disconnected framepoints if available: TODO safe window
+      if (_world_map->frames().size() >= 500) {
+        _world_map->frames().at(_world_map->frames().size()-500)->clear();
       }
     }
   }
@@ -710,7 +749,7 @@ void SLAMAssembly::printReport() const {
   std::printf("         relocalization | %f | %f\n", _relocalizer->getTimeConsumptionSeconds_overall()/_processing_time_total_seconds, _relocalizer->getTimeConsumptionSeconds_overall());
   std::printf("    pose graph addition | %f | %f\n", _graph_optimizer->getTimeConsumptionSeconds_addition()/_processing_time_total_seconds, _graph_optimizer->getTimeConsumptionSeconds_addition());
   std::printf("pose graph optimization | %f | %f\n", _graph_optimizer->getTimeConsumptionSeconds_optimization()/_processing_time_total_seconds, _graph_optimizer->getTimeConsumptionSeconds_optimization());
-  if (_parameters->world_map_parameters->merge_landmarks) {std::printf("       landmark merging | %f | %f\n", _world_map->getTimeConsumptionSeconds_landmark_merging()/_processing_time_total_seconds, _world_map->getTimeConsumptionSeconds_landmark_merging());}
+  std::printf("       landmark merging | %f | %f\n", _world_map->getTimeConsumptionSeconds_landmark_merging()/_processing_time_total_seconds, _world_map->getTimeConsumptionSeconds_landmark_merging());
   std::cerr << DOUBLE_BAR << std::endl;
 }
 

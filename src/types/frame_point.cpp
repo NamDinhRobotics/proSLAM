@@ -34,15 +34,4 @@ namespace proslam {
     setTrackLength(previous_->trackLength()+1);
     setOrigin(previous_->origin());
   }
-
-  void FramePoint::updateLandmark() {
-    if (_landmark) {
-
-      //ds refine landmark with this measurement
-      _landmark->update(this);
-
-      //ds update position in the linked frame (as an alternative to raw measurement)
-      _camera_coordinates_left_landmark = _frame->worldToCameraLeft()*_landmark->coordinates();
-    }
-  }
 }

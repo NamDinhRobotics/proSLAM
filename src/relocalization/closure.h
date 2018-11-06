@@ -58,5 +58,5 @@ public:
   bool is_valid                  = false;
 };
 
-typedef std::vector<Closure*, Eigen::aligned_allocator<Closure*>> ClosurePointerVector;
+typedef std::vector<Closure*> ClosurePointerVector;
 }

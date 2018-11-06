@@ -80,6 +80,12 @@ int32_t main(int32_t argc_, char** argv_) {
       //ds disable opencv multithreading
       cv::setNumThreads(0);
 
+      //ds wait for start
+      std::cerr << BAR << std::endl;
+      std::cerr << "main|ready for processing - check configuration and press [ENTER] to start" << std::endl;
+      std::cerr << BAR << std::endl;
+      std::getchar();
+
       //ds plain full-speed message playback in the main thread (blocking)
       slam_system->playbackMessageFile();
     }

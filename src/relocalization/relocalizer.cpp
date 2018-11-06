@@ -3,7 +3,6 @@
 namespace proslam {
 
 Relocalizer::Relocalizer(RelocalizerParameters* parameters_): _parameters(parameters_),
-                                                              _query(0),
                                                               _aligner(new XYZAligner(parameters_->aligner)) {
   LOG_DEBUG(std::cerr << "Relocalizer::Relocalizer|constructed" << std::endl)
 }
@@ -40,9 +39,7 @@ Relocalizer::~Relocalizer() {
   }
 
   //ds free active query - if available
-  if (_query) {
-    delete _query;
-  }
+  delete _query;
 
   //ds free aligner
   delete _aligner;
@@ -52,6 +49,9 @@ Relocalizer::~Relocalizer() {
 //ds initialize relocalization module for a new local map
 void Relocalizer::initialize(const LocalMap* local_map_) {
   CHRONOMETER_START(overall)
+  if (_query) {
+    delete _query;
+  }
   _query = new Query(local_map_);
   CHRONOMETER_STOP(overall)
 }
@@ -62,9 +62,6 @@ void Relocalizer::detect() {
   if (!_query) {
     return;
   }
-
-  //ds clear output buffers
-  clear();
 
   //ds evaluate all past queries
   for (const Query* reference: _query_history) {
@@ -80,17 +77,6 @@ void Relocalizer::detect() {
       continue;
     }
 
-    //gg drop if angular distance is too big
-    const Eigen::AngleAxis<real> distance_angular(transform_estimate_query_to_reference.linear());
-    if( std::fabs(distance_angular.angle()) > 1) {
-      continue;
-    }
-
-    //ds skip the candidate if the minimum number of matches is not guaranteed
-    if (reference->hbst_tree->getMatchingRatio(_query->matchables) < _parameters->preliminary_minimum_matching_ratio) {
-      continue;
-    }
-
     //ds matches within the current reference
     HBSTTree::MatchVector matches_unfiltered;
     LandmarkCorrespondence::MatchMap matches_per_landmark;
@@ -98,17 +84,20 @@ void Relocalizer::detect() {
     //ds get matches
     assert(0 < _query->matchables.size());
     assert(0 < reference->matchables.size());
-    reference->hbst_tree->match(_query->matchables, matches_unfiltered);
+    reference->database->match(_query->matchables, matches_unfiltered);
     assert(0 < matches_unfiltered.size());
     const Count& absolute_number_of_matches = matches_unfiltered.size();
+    if (absolute_number_of_matches < 250) {
+      continue;
+    }
 
     //ds loop over all matches
     for (const HBSTTree::Match match: matches_unfiltered) {
 
       //ds buffer landmark identifier
-      const Landmark::State* landmark_query       = reinterpret_cast<const Landmark::State*>(match.pointer_query);
-      const Landmark::State* landmark_reference   = reinterpret_cast<const Landmark::State*>(match.pointer_reference);
-      const Identifier& query_landmark_identifier = landmark_query->landmark->identifier();
+      Landmark* landmark_query       = static_cast<Landmark*>(match.pointer_query);
+      Landmark* landmark_reference   = static_cast<Landmark*>(match.pointer_reference);
+      const Identifier& query_landmark_identifier = landmark_query->identifier();
 
       try{
 
@@ -133,7 +122,7 @@ void Relocalizer::detect() {
 
       //ds compute point-to-point correspondences for all matches
       for(const LandmarkCorrespondence::MatchMapElement matches_per_point: matches_per_landmark){
-        const LandmarkCorrespondence* correspondence = _getCorrespondenceNN(matches_per_point.second);
+        LandmarkCorrespondence* correspondence = _getCorrespondenceNN(matches_per_point.second);
         if (correspondence != 0) {
           correspondences.push_back(correspondence);
         }
@@ -142,11 +131,11 @@ void Relocalizer::detect() {
 
       //ds update closures
       _closures.push_back(new Closure(_query->local_map,
-        reference->local_map,
-        absolute_number_of_matches,
-        relative_number_of_matches,
-        matches_per_landmark,
-        correspondences));
+                                      reference->local_map,
+                                      absolute_number_of_matches,
+                                      relative_number_of_matches,
+                                      matches_per_landmark,
+                                      correspondences));
     }
   }
   CHRONOMETER_STOP(overall)
@@ -155,6 +144,9 @@ void Relocalizer::detect() {
 //ds geometric verification and determination of spatial relation between set closures
 void Relocalizer::compute() {
   CHRONOMETER_START(overall)
+  if (!_query) {
+    return;
+  }
   for(Closure* closure: _closures) {
     _aligner->initialize(closure);
     _aligner->converge();
@@ -165,26 +157,28 @@ void Relocalizer::compute() {
 //ds integrate frame into loop closing pool
 void Relocalizer::train() {
   CHRONOMETER_START(overall)
+  if (!_query) {
+    return;
+  }
 
-  //ds if query is valid
-  if (0 != _query && 0 < _query->matchables.size()) {
+  //ds add the active query to our database structure
+  _query_history_queue.push(_query);
 
-    //ds add the active query to our database structure
-    _query_history_queue.push(_query);
-
-    //ds check if we can pop the first element of the buffer into our history
-    if (_query_history_queue.size() > _parameters->preliminary_minimum_interspace_queries) {
-      _query_history.push_back(_query_history_queue.front());
-      _query_history_queue.pop();
-    }
+  //ds check if we can pop the first element of the buffer into our history
+  if (_query_history_queue.size() > _parameters->preliminary_minimum_interspace_queries) {
+    _query_history.push_back(_query_history_queue.front());
+    _query_history_queue.pop();
   }
 
   //ds reset handles
-  _query = 0;
+  _query = nullptr;
   CHRONOMETER_STOP(overall)
 }
 
 void Relocalizer::clear() {
+  if (_query) {
+    delete _query;
+  }
   for(const Closure* closure: _closures) {
     delete closure;
   }
@@ -193,7 +187,7 @@ void Relocalizer::clear() {
 }
 
 //ds retrieve correspondences from matches
-const LandmarkCorrespondence* Relocalizer::_getCorrespondenceNN(const LandmarkCorrespondence::MatchPointerVector& matches_) {
+LandmarkCorrespondence* Relocalizer::_getCorrespondenceNN(const LandmarkCorrespondence::MatchPointerVector& matches_) {
   assert(0 < matches_.size());
 
   //ds point counts
@@ -201,15 +195,15 @@ const LandmarkCorrespondence* Relocalizer::_getCorrespondenceNN(const LandmarkCo
 
   //ds best match and count so far
   const LandmarkCorrespondence::Match* match_best = 0;
-  Count count_best        = 0;
+  Count count_best = 0;
 
   //ds loop over the list and count entries
   for(const LandmarkCorrespondence::Match* match: matches_){
 
     //ds update count - if not in the mask
-    if(0 == _mask_id_references_for_correspondences.count(match->reference->landmark->identifier())) {
-      counts.insert(match->reference->landmark->identifier());
-      const Count count_current = counts.count(match->reference->landmark->identifier());
+    if(0 == _mask_id_references_for_correspondences.count(match->reference->identifier())) {
+      counts.insert(match->reference->identifier());
+      const Count count_current = counts.count(match->reference->identifier());
 
       //ds if we get a better count
       if( count_best < count_current ){
@@ -220,17 +214,18 @@ const LandmarkCorrespondence* Relocalizer::_getCorrespondenceNN(const LandmarkCo
   }
 
   //ds if a match was found with sufficient confidence
-  if(match_best != 0 && count_best > _parameters->minimum_matches_per_correspondence ) {
+  if(match_best && count_best > _parameters->minimum_matches_per_correspondence ) {
 
     //ds block matching against this point by adding it to the mask
-    _mask_id_references_for_correspondences.insert(match_best->reference->landmark->identifier());
+    _mask_id_references_for_correspondences.insert(match_best->reference->identifier());
 
     //ds return the found correspondence
     return new LandmarkCorrespondence(match_best->query,
-                              match_best->reference,
-                              count_best, static_cast<real>(count_best)/matches_.size());
+                                      match_best->reference,
+                                      count_best, static_cast<real>(count_best)/matches_.size());
   }
 
-  return 0;
+  //ds no match was found
+  return nullptr;
 }
 }

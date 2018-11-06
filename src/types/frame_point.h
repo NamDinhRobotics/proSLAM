@@ -73,9 +73,7 @@ public:
 
   //! @brief associated landmark coordinates in current camera frame
   inline const PointCoordinates cameraCoordinatesLeftLandmark() const {return _camera_coordinates_left_landmark;}
-
-  //! @brief updates associated landmark (if any) according to set frame and framepoint coordinates
-  void updateLandmark();
+  void setCameraCoordinatesLeftLandmark(const PointCoordinates& camera_coordinates_) {_camera_coordinates_left_landmark = camera_coordinates_;}
 
   //ds measured properties
   inline const cv::KeyPoint& keypointLeft() const {return _keypoint_left;}
@@ -153,6 +151,6 @@ private:
   static Count _instances;
 };
 
-typedef std::vector<FramePoint*, Eigen::aligned_allocator<FramePoint*>> FramePointPointerVector;
+typedef std::vector<FramePoint*> FramePointPointerVector;
 typedef FramePoint*** FramePointMatrix;
 }

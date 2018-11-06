@@ -107,10 +107,11 @@ public:
   const Frame* previousFrame() const {return _previous_frame;}
   void setPreviousFrame(Frame* previous_frame_) {_previous_frame = previous_frame_;}
 
-  LandmarkPointerMap& landmarks() {return _landmarks;}
+//  LandmarkPointerMap& landmarks() {return _landmarks;}
   const LandmarkPointerMap& landmarks() const {return _landmarks;}
   LandmarkPointerVector& currentlyTrackedLandmarks() {return _currently_tracked_landmarks;}
   const LandmarkPointerVector& currentlyTrackedLandmarks() const {return _currently_tracked_landmarks;}
+  void mergeLandmarks(const std::map<Identifier, std::pair<Identifier, Count>>& landmarks_to_merge_);
 
   LocalMap* currentLocalMap() {return _current_local_map;}
   const LocalMapPointerVector& localMaps() const {return _local_maps;}

@@ -35,34 +35,45 @@ void  BaseFramePointGenerator::configure(){
 
   //ds allocate descriptor extractor TODO enable further support and check BIT SIZES
 #if CV_MAJOR_VERSION == 2
-  if (_parameters->descriptor_type == "BRIEF") {
+  if (_parameters->descriptor_type == "BRIEF-256") {
     _descriptor_extractor = new cv::BriefDescriptorExtractor(DESCRIPTOR_SIZE_BYTES);
-  } else if (_parameters->descriptor_type == "ORB") {
+  } else if (_parameters->descriptor_type == "ORB-256") {
     _descriptor_extractor        = cv::ORB();
-    _parameters->descriptor_type = "ORB";
+    _parameters->descriptor_type = "ORB-256";
   } else {
     LOG_WARNING(std::cerr << "BaseFramePointGenerator::configure|descriptor_type: " << _parameters->descriptor_type
-                          << " is not implemented, defaulting to ORB" << std::endl)
+                          << " is not implemented, defaulting to ORB-256" << std::endl)
     _descriptor_extractor        = cv::ORB();
-    _parameters->descriptor_type = "ORB";
+    _parameters->descriptor_type = "ORB-256";
   }
 #elif CV_MAJOR_VERSION == 3
-  if (_parameters->descriptor_type == "BRIEF") {
+  if (_parameters->descriptor_type == "BRIEF-256") {
     #ifdef SRRG_PROSLAM_HAS_OPENCV_CONTRIB
       _descriptor_extractor = cv::xfeatures2d::BriefDescriptorExtractor::create(DESCRIPTOR_SIZE_BYTES);
     #else
-      LOG_WARNING(std::cerr << "BaseFramePointGenerator::configure|descriptor_type: BRIEF"
-                            << " is not available in current build, defaulting to ORB" << std::endl)
+      LOG_WARNING(std::cerr << "BaseFramePointGenerator::configure|descriptor_type: BRIEF-256"
+                            << " is not available in current build, defaulting to ORB-256" << std::endl)
       _descriptor_extractor        = cv::ORB::create();
-      _parameters->descriptor_type = "ORB";
+      _parameters->descriptor_type = "ORB-256";
     #endif
-  } else if (_parameters->descriptor_type == "ORB") {
+  } else if (_parameters->descriptor_type == "ORB-256") {
     _descriptor_extractor = cv::ORB::create();
+  } else if (_parameters->descriptor_type == "BRISK-512") {
+    _descriptor_extractor = cv::BRISK::create();
+  } else if (_parameters->descriptor_type == "FREAK-512") {
+    #ifdef SRRG_PROSLAM_HAS_OPENCV_CONTRIB
+        _descriptor_extractor = cv::xfeatures2d::FREAK::create();
+    #else
+        LOG_WARNING(std::cerr << "BaseFramePointGenerator::configure|descriptor_type: FREAK-512"
+                              << " is not available in current build, defaulting to ORB-256" << std::endl)
+        _descriptor_extractor        = cv::ORB::create();
+        _parameters->descriptor_type = "ORB-256";
+    #endif
   } else {
     LOG_WARNING(std::cerr << "BaseFramePointGenerator::configure|descriptor_type: " << _parameters->descriptor_type
-                          << " is not implemented, defaulting to ORB" << std::endl)
+                          << " is not implemented, defaulting to ORB-256" << std::endl)
     _descriptor_extractor        = cv::ORB::create();
-    _parameters->descriptor_type = "ORB";
+    _parameters->descriptor_type = "ORB-256";
   }
 #endif
 

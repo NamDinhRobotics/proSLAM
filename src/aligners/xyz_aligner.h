@@ -23,5 +23,14 @@ public:
 
   //ds solve alignment problem until convergence is reached
   virtual void converge();
+
+//ds attributes
+protected:
+
+  //ds solver setup (TODO port solver)
+  Count _number_of_measurements = 0;
+  std::vector<DimensionMatrix, Eigen::aligned_allocator<DimensionMatrix> > _information_vector;
+  std::vector<Vector3> _moving;
+  std::vector<Vector3> _fixed;
 };
 }

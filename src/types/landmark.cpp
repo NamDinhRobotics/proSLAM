@@ -1,4 +1,5 @@
 #include "landmark.h"
+#include "local_map.h"
 
 namespace proslam {
 
@@ -9,53 +10,46 @@ Landmark::Landmark(FramePoint* origin_, const LandmarkParameters* parameters_): 
                                                                                 _parameters(parameters_) {
   ++_instances;
   _measurements.clear();
+  _appearances.clear();
+  _states_in_local_maps.clear();
 
   //ds compute initial position estimate as rude average of the track
   //ds we do not weight the measurements with disparity/inverse depth here
   //ds since invalid, small depths can lead to a fatal initial guess
-  PointCoordinates world_coordinates(PointCoordinates::Zero());
+  _world_coordinates.setZero();
   FramePoint* framepoint = origin_;
   while (framepoint) {
     _measurements.push_back(Measurement(framepoint));
     _origin = framepoint;
-    world_coordinates += framepoint->worldCoordinates();
+    _world_coordinates += framepoint->worldCoordinates();
     framepoint = framepoint->previous();
   }
-  world_coordinates /= _measurements.size();
+  _world_coordinates /= _measurements.size();
   _number_of_updates = _measurements.size();
-
-  //ds allocate fresh state (trading construction correctness for enclosed generation)
-  _states.clear();
-  _state = new State(this, world_coordinates);
 }
 
 Landmark::~Landmark() {
-
-  //ds if the current state is not connected to a local map yet free it
-  if (!_state->local_map) {
-    delete _state;
+  for (const HBSTNode::Matchable* appearance: _appearances) {
+    delete appearance;
   }
-  _states.clear();
 }
 
-void Landmark::renewState() {
-
-  //ds bookkeep the old state
-  _states.push_back(_state);
-
-  //ds allocate a new state
-  _state = new State(this, _state->world_coordinates);
+void Landmark::addState(State* landmark_state_) {
+  _states_in_local_maps.push_back(landmark_state_);
+  _appearances.clear();
 }
 
 void Landmark::update(const FramePoint* point_) {
+  if (!point_) {
+    return;
+  }
 
-  //ds update appearance history
-  _state->appearances.push_back(new HBSTMatchable(reinterpret_cast<const void*>(_state), point_->descriptorLeft()));
-  _state->appearances.push_back(new HBSTMatchable(reinterpret_cast<const void*>(_state), point_->descriptorRight()));
+  //ds update appearance history (left descriptors only)
+  _appearances.push_back(new HBSTMatchable(static_cast<void*>(this), point_->descriptorLeft()));
   _measurements.push_back(Measurement(point_));
 
   //ds trigger classic ICP in camera update of landmark coordinates - setup
-  Vector3 world_coordinates(_state->world_coordinates);
+  Vector3 world_coordinates(_world_coordinates);
   Matrix3 H(Matrix3::Zero());
   Vector3 b(Vector3::Zero());
   Matrix3 jacobian;
@@ -65,7 +59,6 @@ void Landmark::update(const FramePoint* point_) {
   const real maximum_error_squared_meters = 5*5;
 
   //ds gauss newton descent
-  //std::cerr << "[ ] x = " << world_coordinates.transpose() << std::endl;
   for (uint32_t iteration = 0; iteration < 1000; ++iteration) {
     H.setZero();
     b.setZero();
@@ -85,7 +78,6 @@ void Landmark::update(const FramePoint* point_) {
 
       //ds compute error
       const Vector3 error(camera_coordinates_sampled-measurement.camera_coordinates);
-      //std::cerr << camera_coordinates_sampled.transpose() << " - " << camera_coordinates_measured.transpose() << " = " << error.transpose() << std::endl;
 
       //ds weight inverse depth
       omega *= measurement.inverse_depth_meters;
@@ -113,9 +105,6 @@ void Landmark::update(const FramePoint* point_) {
 
     //ds update state
     world_coordinates += H.fullPivLu().solve(-b);
-//    std::cerr << "[" << u << "] x = " << world_coordinates.transpose()
-//                          << " average error: " << total_error_squared/_measurements.size()
-//                          << " outliers: " << number_of_outliers << "/" << _measurements.size() <<  std::endl;
 
     //ds check convergence
     if (std::fabs(total_error_squared-total_error_squared_previous) < 1e-5 || iteration == 999) {
@@ -125,7 +114,7 @@ void Landmark::update(const FramePoint* point_) {
       if (number_of_inliers > _number_of_updates) {
 
         //ds update landmark state
-        _state->world_coordinates = world_coordinates;
+        _world_coordinates = world_coordinates;
         _number_of_updates        = number_of_inliers;
 
       //ds if optimization failed and we have less inliers than outliers - reset initial guess
@@ -138,7 +127,7 @@ void Landmark::update(const FramePoint* point_) {
         }
 
         //ds set landmark state without increasing update count
-        _state->world_coordinates = world_coordinates_accumulated/_measurements.size();
+        _world_coordinates = world_coordinates_accumulated/_measurements.size();
       }
       break;
     }
@@ -151,17 +140,33 @@ void Landmark::update(const FramePoint* point_) {
 void Landmark::merge(Landmark* landmark_) {
   assert(landmark_ != this);
 
-  //ds update active state
-  _state->appearances.insert(_state->appearances.end(), landmark_->_state->appearances.begin(), landmark_->_state->appearances.end());
-  _state->coordinates_in_local_map = landmark_->_state->coordinates_in_local_map;
-  _state->world_coordinates        = (_number_of_updates*_state->world_coordinates+
-                                      landmark_->_number_of_updates*landmark_->_state->world_coordinates)
-                                     /(_number_of_updates+landmark_->_number_of_updates);
+  //ds update recent appearances and add them to this appearances
+  for (HBSTMatchable* appearance: landmark_->_appearances) {
+    appearance->pointers.begin()->second = static_cast<void*>(this);
+  }
+  _appearances.insert(_appearances.end(), landmark_->_appearances.begin(), landmark_->_appearances.end());
+  landmark_->_appearances.clear();
 
-  //ds update information filter
-  _total_weight         += landmark_->_total_weight;
+  //ds update states of absorbed landmark and add them to this states
+  for (State* state: landmark_->_states_in_local_maps) {
+    for (HBSTMatchable* appearance: state->appearances) {
+      appearance->pointers.begin()->second = static_cast<void*>(this);
+    }
+    state->landmark = this;
+  }
+  _states_in_local_maps.insert(_states_in_local_maps.end(), landmark_->_states_in_local_maps.begin(), landmark_->_states_in_local_maps.end());
+  landmark_->_states_in_local_maps.clear();
+
+  //ds compute new merged world coordinates
+  _world_coordinates = (_number_of_updates*_world_coordinates+
+                       landmark_->_number_of_updates*landmark_->_world_coordinates)
+                       /(_number_of_updates+landmark_->_number_of_updates);
+
+  //ds update measurements
   _number_of_updates    += landmark_->_number_of_updates;
   _number_of_recoveries += landmark_->_number_of_recoveries;
+  _measurements.insert(_measurements.end(), landmark_->_measurements.begin(), landmark_->_measurements.end());
+  landmark_->_measurements.clear();
 
   //ds update past framepoint pointers
   FramePoint* framepoint = landmark_->_origin;
@@ -169,14 +174,5 @@ void Landmark::merge(Landmark* landmark_) {
     framepoint->setLandmark(this);
     framepoint = framepoint->next();
   }
-
-  //ds update pointer in the linked local maps
-  landmark_->_state->landmark = this;
-  for (State* state: landmark_->_states) {
-    state->landmark = this;
-  }
-
-  //ds merge states from input landmark
-  _states.insert(_states.end(), landmark_->_states.begin(), landmark_->_states.end());
 }
 }

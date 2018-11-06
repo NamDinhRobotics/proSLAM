@@ -93,6 +93,7 @@ namespace proslam {
   //ds HBST: readability
   typedef srrg_hbst::BinaryMatchable<SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS> HBSTMatchable;
   typedef srrg_hbst::BinaryNode<HBSTMatchable, real> HBSTNode;
+  typedef HBSTNode::MatchableVector AppearanceVector;
   typedef srrg_hbst::BinaryTree<HBSTNode> HBSTTree;
 
   //ds cv colors

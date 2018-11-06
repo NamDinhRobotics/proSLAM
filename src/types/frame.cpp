@@ -50,7 +50,7 @@ const Count Frame::countPoints(const Count& min_track_length_,
   return count;
 }
 
-void Frame::setRobotToWorld(const TransformMatrix3D& robot_to_world_) {
+void Frame::setRobotToWorld(const TransformMatrix3D& robot_to_world_, const bool update_local_map_) {
   _robot_to_world = robot_to_world_;
   _world_to_robot = _robot_to_world.inverse();
   if (_camera_left) {
@@ -59,7 +59,7 @@ void Frame::setRobotToWorld(const TransformMatrix3D& robot_to_world_) {
   }
 
   //ds if the frame is a keyframe
-  if (_is_keyframe) {
+  if (_is_keyframe && update_local_map_) {
     assert(_local_map);
 
     //ds update the local map position

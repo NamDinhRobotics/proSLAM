@@ -72,7 +72,7 @@ public:
   void setCameraRight(const Camera* camera_) {_camera_right = camera_;}
 
   inline const TransformMatrix3D& robotToWorld() const {return _robot_to_world;}
-  void setRobotToWorld(const TransformMatrix3D& robot_to_world_);
+  void setRobotToWorld(const TransformMatrix3D& robot_to_world_, const bool update_local_map_ = false);
   inline const TransformMatrix3D& worldToRobot() const {return _world_to_robot;}
   inline const TransformMatrix3D& cameraLeftToWorld() const {return _camera_left_to_world;}
   inline const TransformMatrix3D& worldToCameraLeft() const {return _world_to_camera_left;}
@@ -206,7 +206,7 @@ protected:
     static Count _instances;
 };
 
-typedef std::vector<Frame*, Eigen::aligned_allocator<Frame*>> FramePointerVector;
+typedef std::vector<Frame*> FramePointerVector;
 typedef std::pair<const Identifier, Frame*> FramePointerMapElement;
-typedef std::map<const Identifier, Frame*, std::less<const Identifier>, Eigen::aligned_allocator<FramePointerMapElement>> FramePointerMap;
+typedef std::map<const Identifier, Frame*> FramePointerMap;
 }

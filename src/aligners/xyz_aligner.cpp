@@ -11,13 +11,32 @@ namespace proslam {
   }
 
   void XYZAligner::initialize(Closure* context_, const TransformMatrix3D& current_to_reference_) {
+
+    //ds initialize base components
     _context              = context_;
     _current_to_reference = current_to_reference_;
-
-    //ds unused
-    _errors.clear();
-    _inliers.clear();
     _parameters->damping = 0;
+    _number_of_measurements = _context->correspondences.size();
+    _errors.resize(_number_of_measurements);
+    _inliers.resize(_number_of_measurements);
+
+    //ds construct point cloud registration problem - compute landmark coordinates in local maps
+    _information_vector.resize(_number_of_measurements);
+    _moving.resize(_number_of_measurements);
+    _fixed.resize(_number_of_measurements);
+    const TransformMatrix3D& world_to_reference_local_map(context_->local_map_reference->worldToLocalMap());
+    const TransformMatrix3D& world_to_query_local_map(context_->local_map_query->worldToLocalMap());
+    for (Index u = 0; u < _number_of_measurements; ++u) {
+      const LandmarkCorrespondence* correspondence = _context->correspondences[u];
+
+      //ds point coordinates to register
+      _fixed[u]  = world_to_reference_local_map*correspondence->reference->coordinates();
+      _moving[u] = world_to_query_local_map*correspondence->query->coordinates();
+
+      //ds set information matrix
+      _information_vector[u].setIdentity();
+      _information_vector[u] *= correspondence->matching_ratio;
+    }
   }
 
   void XYZAligner::linearize(const bool& ignore_outliers_) {
@@ -30,29 +49,28 @@ namespace proslam {
     _total_error        = 0;
 
     //ds for all the points
-    for (const LandmarkCorrespondence* correspondence: _context->correspondences) {
-      _omega.setIdentity();
+    for (Index u = 0; u < _number_of_measurements; ++u) {
+      _omega = _information_vector[u];
 
       //ds compute error based on items: local map merging
-      const PointCoordinates& measured_point_in_reference = correspondence->reference->coordinates_in_local_map;
-      const PointCoordinates sampled_point_in_reference   = _current_to_reference*correspondence->query->coordinates_in_local_map;
-      const Vector3 error                                 = sampled_point_in_reference-measured_point_in_reference;
-
-      //ds adjust omega to inverse depth value (the further away the point, the less weight)
-      _omega(2,2) *= 1/sampled_point_in_reference.z();
+      const PointCoordinates sampled_point_in_reference   = _current_to_reference*_moving[u];
+      const Vector3 error                                 = sampled_point_in_reference-_fixed[u];
 
       //ds update chi
-      const real error_squared = error.transpose()*error;
+      const real error_squared = error.transpose()*_omega*error;
 
       //ds check if outlier
-      real weight = 1.0;
       if (error_squared > _parameters->maximum_error_kernel) {
+        _inliers[u] = false;
         ++_number_of_outliers;
         if (ignore_outliers_) {
           continue;
         }
-        weight=_parameters->maximum_error_kernel/error_squared;
+
+        //ds proportionally reduce information value of the measurement
+        _omega *= _parameters->maximum_error_kernel/error_squared;
       } else {
+        _inliers[u] = true;
         ++_number_of_inliers;
       }
       _total_error += error_squared;
@@ -65,8 +83,8 @@ namespace proslam {
       const Matrix6_3 jacobian_transposed(_jacobian.transpose( ));
 
       //ds accumulate
-      _H += weight*jacobian_transposed*_omega*_jacobian;
-      _b += weight*jacobian_transposed*_omega*error;
+      _H += jacobian_transposed*_omega*_jacobian;
+      _b += jacobian_transposed*_omega*error;
     }
   }
 
@@ -123,7 +141,15 @@ namespace proslam {
           _context->identifier_reference,
           _context->local_map_reference->frames().front()->identifier(), _context->local_map_reference->frames().back()->identifier(),
           _context->correspondences.size(), iteration, inlier_ratio, _number_of_inliers))
+
+          //ds enable closure
           _context->is_valid = true;
+
+          //ds set inlier status
+          for (Index u = 0; u < _number_of_measurements; ++u) {
+            _context->correspondences[u]->is_inlier = _inliers[u];
+          }
+
           break;
         } else {
           LOG_INFO(std::printf("XYZAligner::converge|dropped alignment for local maps [%06lu:{%06lu-%06lu}] > [%06lu:{%06lu-%06lu}] "

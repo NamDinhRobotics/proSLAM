@@ -334,7 +334,6 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     PARSE_PARAMETER(configuration, world_map, world_map_parameters, minimum_distance_traveled_for_local_map, real)
     PARSE_PARAMETER(configuration, world_map, world_map_parameters, minimum_degrees_rotated_for_local_map, real)
     PARSE_PARAMETER(configuration, world_map, world_map_parameters, minimum_number_of_frames_for_local_map, Count)
-    PARSE_PARAMETER(configuration, world_map, world_map_parameters, merge_landmarks, bool)
     PARSE_PARAMETER(configuration, landmark, world_map_parameters->landmark, minimum_number_of_forced_updates, Count)
     PARSE_PARAMETER(configuration, local_map, world_map_parameters->local_map, minimum_number_of_landmarks, Count)
 

@@ -42,12 +42,11 @@ world_map:
   minimum_distance_traveled_for_local_map: 0.5
   minimum_degrees_rotated_for_local_map:   0.5
   minimum_number_of_frames_for_local_map:  4
-  merge_landmarks:                         false
 
 base_framepoint_generation:
 
   #ds feature descriptor type (BRIEF-128/256/512, ORB-256, BRISK-512, FREAK-512, A-KAZE-486, BinBoost-064)
-  descriptor_type: BRIEF
+  descriptor_type: BRIEF-256
 
   #ds dynamic thresholds for feature detection
   target_number_of_keypoints_tolerance: 0.25
@@ -120,7 +119,7 @@ relocalization:
   preliminary_minimum_interspace_queries: 50
 
   #minimum relative number of matches
-  preliminary_minimum_matching_ratio: 0.1
+  preliminary_minimum_matching_ratio: 0.25
 
   #minimum absolute number of matches
   minimum_number_of_matches_per_landmark: 5
@@ -130,11 +129,11 @@ relocalization:
   
   #icp: aligner unit configuration
   aligner->error_delta_for_convergence:  1e-5
-  aligner->maximum_error_kernel:         0.5
+  aligner->maximum_error_kernel:         5.0
   aligner->damping:                      0.0
-  aligner->maximum_number_of_iterations: 1000
-  aligner->minimum_number_of_inliers:    25
-  aligner->minimum_inlier_ratio:         0.2
+  aligner->maximum_number_of_iterations: 100
+  aligner->minimum_number_of_inliers:    20
+  aligner->minimum_inlier_ratio:         0.25
 
 graph_optimization:
 

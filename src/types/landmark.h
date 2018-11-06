@@ -10,36 +10,22 @@ public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 //ds exported types
 public:
 
-  //ds container describing the landmark at the time of local map construction
+  //ds snapshot of the landmark in an arbitrary context (e.g. LocalMap)
   struct State {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     State(Landmark* landmark_,
-          const PointCoordinates& world_coordinates_,
-          LocalMap* local_map_ = 0): landmark(landmark_),
-                                     coordinates_in_local_map(Vector3::Zero()),
-                                     world_coordinates(world_coordinates_),
-                                     local_map(local_map_) {
-      appearances.clear();
-    }
-    ~State() {
-
-      //ds if theres no local map attached free the states appearances! (as they are not owned by an HBST tree)
-      if (!local_map) {
-        for (const HBSTNode::Matchable* appearance: appearances) {
-          delete appearance;
-        }
-      }
-      appearances.clear();
-    }
+          const AppearanceVector& appearances_,
+          const PointCoordinates& coordinates_): landmark(landmark_),
+                                                 appearances(appearances_),
+                                                 coordinates(coordinates_) {}
 
     Landmark* landmark;
-    HBSTNode::MatchableVector appearances;
-    PointCoordinates coordinates_in_local_map;
-    PointCoordinates world_coordinates;
-    LocalMap* local_map;
+    AppearanceVector appearances;
+    PointCoordinates coordinates;
   };
-  typedef std::vector<State*, Eigen::aligned_allocator<State*>> StatePointerVector;
+  typedef std::vector<State*> StatePointerVector;
 
+  //ds a landmark measurement (used for position optimization)
   struct Measurement {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Measurement(const FramePoint* framepoint_): world_to_camera(framepoint_->frame()->worldToCameraLeft()),
@@ -80,12 +66,11 @@ public:
   //ds framepoint in an image at the time when the landmark was created
   inline FramePoint* origin() const {return _origin;}
 
-  inline const PointCoordinates& coordinates() const {return _state->world_coordinates;}
-  inline void setCoordinates(const PointCoordinates& coordinates_) {_state->world_coordinates = coordinates_;}
+  inline const PointCoordinates& coordinates() const {return _world_coordinates;}
+  void setCoordinates(const PointCoordinates& coordinates_) {_world_coordinates = coordinates_;}
 
-  //ds landmark state - locked inside a local map and refreshed afterwards
-  inline State* state() {return _state;}
-  void renewState();
+  const AppearanceVector& appearances() const {return _appearances;}
+  void addState(State* landmark_state_);
 
   //ds position related
   const Count numberOfUpdates() const {return _number_of_updates;}
@@ -97,7 +82,6 @@ public:
   //ds landmark coordinates update with visual information (tracking)
   void update(const FramePoint* point_);
 
-  const real& totalWeight() const {return _total_weight;}
   const Count& numberOfRecoveries() const {return _number_of_recoveries;}
   void incrementNumberOfRecoveries() {++_number_of_recoveries;}
   void setNumberOfRecoveries(const Count& number_of_recoveries_) {_number_of_recoveries = number_of_recoveries_;}
@@ -124,18 +108,20 @@ protected:
   //ds linked FramePoint in an image at the time of creation of this instance
   FramePoint* _origin;
 
-  //ds the current connected state handle (links the landmark to the local map)
-  State* _state;
+  //ds world coordinates of the landmark
+  PointCoordinates _world_coordinates;
 
-  //! @brief history of states (enables access to local maps)
-  StatePointerVector _states;
+  //ds currently active appearances of this landmark (not yet in local map)
+  AppearanceVector _appearances;
+
+  //ds landmark states captured in local maps
+  StatePointerVector _states_in_local_maps;
 
   //ds flags
   bool _is_currently_tracked = false; //ds set if the landmark is visible (=tracked) in the current image
 
   //ds landmark coordinates optimization
   MeasurementVector _measurements;
-  real _total_weight          = 0;
   Count _number_of_updates    = 0;
   Count _number_of_recoveries = 0;
 
@@ -156,8 +142,8 @@ private:
   static Count _instances;
 };
 
-typedef std::vector<Landmark*, Eigen::aligned_allocator<Landmark*>> LandmarkPointerVector;
+typedef std::vector<Landmark*> LandmarkPointerVector;
 typedef std::pair<const Identifier, Landmark*> LandmarkPointerMapElement;
-typedef std::map<const Identifier, Landmark*, std::less<const Identifier>, Eigen::aligned_allocator<LandmarkPointerMapElement>> LandmarkPointerMap;
-typedef std::set<const Landmark*, std::less<const Landmark*>, Eigen::aligned_allocator<const Landmark*>> LandmarkPointerSet;
+typedef std::map<const Identifier, Landmark*> LandmarkPointerMap;
+typedef std::set<const Landmark*> LandmarkPointerSet;
 }

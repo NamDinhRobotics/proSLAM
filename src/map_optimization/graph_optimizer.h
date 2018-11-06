@@ -88,10 +88,13 @@ protected:
   g2o::VertexSE3* _vertex_frame_last_added;
 
   //! @brief bookkeeping: added frames
-  std::map<Frame*, g2o::VertexSE3*, std::less<Frame*>, Eigen::aligned_allocator<std::pair<Frame*, g2o::VertexSE3*>>> _frames_in_pose_graph;
+  std::map<Frame*, g2o::VertexSE3*> _frames_in_pose_graph;
+
+  //! @brief bookkeeping: added local maps
+  std::map<const Identifier, LocalMap*> _local_maps_in_graph;
 
   //! @brief bookkeeping: added landmarks
-  std::map<Landmark*, g2o::VertexPointXYZ*, std::less<Landmark*>, Eigen::aligned_allocator<std::pair<Landmark*, g2o::VertexSE3*>>> _landmarks_in_pose_graph;
+  std::map<Landmark*, g2o::VertexPointXYZ*> _landmarks_in_pose_graph;
 
   //ds informative only
   CREATE_CHRONOMETER(addition)

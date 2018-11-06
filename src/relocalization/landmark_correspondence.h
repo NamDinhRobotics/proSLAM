@@ -12,17 +12,17 @@ public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   //ds match information between two landmark states
   struct Match {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-    Match(const Landmark::State* landmark_query_,
-          const Landmark::State* landmark_reference_,
+    Match(Landmark* landmark_query_,
+          Landmark* landmark_reference_,
           const Count& matching_distance_hamming_): query(landmark_query_),
                                                     reference(landmark_reference_),
                                                     matching_distance_hamming(matching_distance_hamming_) {}
 
-    const Landmark::State* query;
-    const Landmark::State* reference;
+    Landmark* query;
+    Landmark* reference;
     const Count matching_distance_hamming;
   };
-  typedef std::vector<const Match*, Eigen::aligned_allocator<const Match*>> MatchPointerVector;
+  typedef std::vector<const Match*> MatchPointerVector;
   typedef std::pair<const Identifier, MatchPointerVector> MatchMapElement;
   typedef std::map<const Identifier, MatchPointerVector, std::less<Identifier>, Eigen::aligned_allocator<MatchMapElement>> MatchMap;
 
@@ -30,8 +30,8 @@ public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 public:
 
   //ds ctor
-  LandmarkCorrespondence(const Landmark::State* landmark_query_,
-                         const Landmark::State* landmark_reference_,
+  LandmarkCorrespondence(Landmark* landmark_query_,
+                         Landmark* landmark_reference_,
                          const Count& matching_count_,
                          const real& matching_ratio_): query(landmark_query_),
                                                        reference(landmark_reference_),
@@ -44,11 +44,14 @@ public:
 //ds attributes
 public:
 
-  const Landmark::State* query;
-  const Landmark::State* reference;
+  Landmark* query;
+  Landmark* reference;
   const Count matching_count;
   const real matching_ratio;
+
+  //ds determined as inlier in registration algorithm (e.g. ICP)
+  bool is_inlier = false;
 };
 
-typedef std::vector<const LandmarkCorrespondence*, Eigen::aligned_allocator<const LandmarkCorrespondence*>> CorrespondencePointerVector;
+typedef std::vector<LandmarkCorrespondence*> CorrespondencePointerVector;
 }

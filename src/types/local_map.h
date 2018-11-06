@@ -9,7 +9,7 @@ class LocalMap {
 //ds exported types
 public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  //ds loop closure constraint element between 2 local maps
+  //ds loop closure constraint element between 2 local maps TODO move to relocalizer
   struct Closure {
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Closure(const LocalMap* local_map_,
@@ -37,8 +37,8 @@ protected:
   //! @param[in] minimum_number_of_landmarks_ target minimum number of landmarks to contain in local map
   LocalMap(FramePointerVector& frames_,
            const LocalMapParameters* parameters_,
-           LocalMap* local_map_root_ = 0,
-           LocalMap* local_map_previous_ = 0);
+           LocalMap* local_map_root_ = nullptr,
+           LocalMap* local_map_previous_ = nullptr);
 
   //ds cleanup of dynamic structures
   ~LocalMap();
@@ -73,8 +73,7 @@ public:
 
   inline const TransformMatrix3D& localMapToWorld() const {return _local_map_to_world;}
   inline const TransformMatrix3D& worldToLocalMap() const {return _world_to_local_map;}
-  void setLocalMapToWorld(const TransformMatrix3D& local_map_to_world_) {_local_map_to_world = local_map_to_world_; _world_to_local_map = _local_map_to_world.inverse();}
-  void setWorldToLocalMap(const TransformMatrix3D& world_to_local_map_) {_world_to_local_map = world_to_local_map_; _local_map_to_world = _world_to_local_map.inverse();}
+  void setLocalMapToWorld(const TransformMatrix3D& local_map_to_world_, const bool update_landmark_world_coordinates_ = false);
 
   inline LocalMap* root() {return _root;}
   void setRoot(LocalMap* root_) {_root = root_;}
@@ -84,10 +83,10 @@ public:
   void setNext(LocalMap* local_map_) {_next = local_map_;}
   inline Frame* keyframe() const {return _keyframe;}
   inline const FramePointerVector& frames() const {return _frames;}
+  inline Landmark::StatePointerVector& landmarks() {return _landmarks;}
+  inline const AppearanceVector& appearances() const {return _appearances;}
 
-  inline const HBSTNode::MatchableVector& appearances() const {return _appearances;}
-  inline const Landmark::StatePointerVector& landmarks() const {return _landmarks;}
-
+  //ds TODO purge this
   inline const ClosureVector& closures() const {return _closures;}
 
   //ds reset allocated object counter
@@ -119,8 +118,8 @@ protected:
   //ds landmarks in the configuration at the time of the creation of the local map
   Landmark::StatePointerVector _landmarks;
 
-  //ds one merged pool of all corresponding landmark appearances
-  HBSTNode::MatchableVector _appearances;
+  //ds appearance vector, corresponding to the union of all appearences stored in _landmarks
+  AppearanceVector _appearances;
 
   //ds loop closures for the local map
   ClosureVector _closures;
@@ -138,5 +137,5 @@ private:
   static Count _instances;
 };
 
-typedef std::vector<LocalMap*, Eigen::aligned_allocator<LocalMap*>> LocalMapPointerVector;
+typedef std::vector<LocalMap*> LocalMapPointerVector;
 }

@@ -42,12 +42,11 @@ world_map:
   minimum_distance_traveled_for_local_map: 0.5
   minimum_degrees_rotated_for_local_map:   0.5
   minimum_number_of_frames_for_local_map:  4
-  merge_landmarks:                         false
 
 base_framepoint_generation:
 
   #ds feature descriptor type (BRIEF-128/256/512, ORB-256, BRISK-512, FREAK-512, A-KAZE-486, BinBoost-064)
-  descriptor_type: BRIEF
+  descriptor_type: BRIEF-256
 
   #ds dynamic thresholds for feature detection
   target_number_of_keypoints_tolerance: 0.25
