@@ -87,7 +87,7 @@ void Relocalizer::detect() {
     reference->database->match(_query->matchables, matches_unfiltered);
     assert(0 < matches_unfiltered.size());
     const Count& absolute_number_of_matches = matches_unfiltered.size();
-    if (absolute_number_of_matches < 250) {
+    if (static_cast<real>(absolute_number_of_matches)/_query->matchables.size() < _parameters->preliminary_minimum_matching_ratio) {
       continue;
     }
 

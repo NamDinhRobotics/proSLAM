@@ -122,17 +122,17 @@ relocalization:
   preliminary_minimum_matching_ratio: 0.25
 
   #minimum absolute number of matches
-  minimum_number_of_matches_per_landmark: 5
+  minimum_number_of_matches_per_landmark: 25
 
   #correspondence retrieval
-  minimum_matches_per_correspondence: 0
+  minimum_matches_per_correspondence: 1
   
   #icp: aligner unit configuration
   aligner->error_delta_for_convergence:  1e-5
-  aligner->maximum_error_kernel:         5.0
+  aligner->maximum_error_kernel:         2.0
   aligner->damping:                      0.0
   aligner->maximum_number_of_iterations: 100
-  aligner->minimum_number_of_inliers:    20
+  aligner->minimum_number_of_inliers:    25
   aligner->minimum_inlier_ratio:         0.25
 
 graph_optimization:
