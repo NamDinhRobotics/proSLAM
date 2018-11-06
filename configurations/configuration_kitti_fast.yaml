@@ -49,16 +49,16 @@ base_framepoint_generation:
   descriptor_type: BRIEF-256
 
   #ds dynamic thresholds for feature detection
-  target_number_of_keypoints_tolerance: 0.1
-  detector_threshold_maximum_change:    0.7
+  target_number_of_keypoints_tolerance: 0.25
+  detector_threshold_maximum_change:    0.1
   detector_threshold_initial:           20
   detector_threshold_minimum:           20
   detector_threshold_maximum:           100
-  number_of_detectors_vertical:         3
-  number_of_detectors_horizontal:       3
+  number_of_detectors_vertical:         1
+  number_of_detectors_horizontal:       1
 
   #ds dynamic thresholds for descriptor matching
-  matching_distance_tracking_threshold: 40
+  matching_distance_tracking_threshold: 35
   
   #ds maximum reliable depth with chosen sensor
   maximum_reliable_depth_meters: 15.0
@@ -66,7 +66,7 @@ base_framepoint_generation:
 stereo_framepoint_generation:
 
   #ds stereo: triangulation
-  maximum_matching_distance_triangulation: 90
+  maximum_matching_distance_triangulation: 35
   minimum_disparity_pixels:                1
   epipolar_line_thickness_pixels:          0
 
@@ -95,7 +95,7 @@ base_tracking:
 
   #feature density regularization
   enable_keypoint_binning: true
-  bin_size_pixels:         14
+  bin_size_pixels:         24
   ratio_keypoints_to_bins: 1
   
   #ds motion model for initial pose guess (select one: NONE, CONSTANT_VELOCITY, CAMERA_ODOMETRY)
@@ -108,7 +108,7 @@ base_tracking:
   #pose optimization: aligner unit configuration
   aligner->error_delta_for_convergence:  1e-3
   aligner->maximum_error_kernel:         9
-  aligner->damping:                      1000
+  aligner->damping:                      0
   aligner->maximum_number_of_iterations: 1000
   aligner->minimum_number_of_inliers:    0
   aligner->minimum_inlier_ratio:         0
@@ -119,21 +119,21 @@ relocalization:
   preliminary_minimum_interspace_queries: 50
 
   #minimum relative number of matches
-  preliminary_minimum_matching_ratio: 0.1
+  preliminary_minimum_matching_ratio: 0.25
 
   #minimum absolute number of matches
-  minimum_number_of_matches_per_landmark: 5
+  minimum_number_of_matches_per_landmark: 25
 
   #correspondence retrieval
-  minimum_matches_per_correspondence: 0
+  minimum_matches_per_correspondence: 1
   
   #icp: aligner unit configuration
   aligner->error_delta_for_convergence:  1e-5
-  aligner->maximum_error_kernel:         0.5
+  aligner->maximum_error_kernel:         2.0
   aligner->damping:                      0.0
-  aligner->maximum_number_of_iterations: 1000
+  aligner->maximum_number_of_iterations: 100
   aligner->minimum_number_of_inliers:    25
-  aligner->minimum_inlier_ratio:         0.2
+  aligner->minimum_inlier_ratio:         0.25
 
 graph_optimization:
 
