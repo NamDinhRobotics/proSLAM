@@ -919,21 +919,6 @@ void BaseTracker::_updatePoints(WorldMap* context_, Frame* frame_) {
       point->setLandmark(landmark);
     }
 
-    //ds sanity check TODO check with g2o and purge
-    try {
-      if (landmark != context_->landmarks().at(landmark->identifier())) {
-        LOG_DEBUG(std::cerr << "BaseTracker::_updatePoints|skipping invalid landmark with ID: " << landmark->identifier()
-                            << " (suspected memory corruption)" << std::endl)
-        point->setLandmark(nullptr);
-        continue;
-      }
-    } catch (const std::out_of_range& /*ex*/) {
-      LOG_DEBUG(std::cerr << "BaseTracker::_updatePoints|skipping invalid landmark with ID: " << landmark->identifier()
-                          << " (suspected memory corruption)" << std::endl)
-      point->setLandmark(nullptr);
-      continue;
-    }
-
     //ds update landmark position based on current point (triggered as we linked the landmark to the point)
     landmark->update(point);
     point->setCameraCoordinatesLeftLandmark(frame_->worldToCameraLeft()*landmark->coordinates());

@@ -602,8 +602,13 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
           //ds optimize pose graph with the loop closure constraint
           _graph_optimizer->optimizeFrames(_world_map);
 
+          //ds keep track of the best merged references
+          //ds we need to do this since we're processing multiple closures here,
+          //ds which possibly contain different query-reference correspondences
+          std::map<Identifier, std::pair<Identifier, Count>> landmark_queries_to_references_filtered;
+          std::map<Identifier, std::pair<Identifier, Count>> landmark_references_to_queries_filtered;
+
           //ds merge inlier landmark correspondences
-          std::map<Identifier, std::pair<Identifier, Count>> landmark_queries_to_references;
           for(Closure* closure: _relocalizer->closures()) {
             if (closure->is_valid) {
               for (const LandmarkCorrespondence* correspondence: closure->correspondences) {
@@ -615,32 +620,69 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
                   std::swap(identifier_query, identifier_reference);
                 }
 
-                //ds if the correspondence is valid and not a redundant merge for an aleardy merged landmark
+                //ds if the correspondence is valid and not a redundant merge for an already merged landmark
                 if (correspondence->is_inlier && identifier_query != identifier_reference) {
-                  std::pair<Identifier, Count> merge_candidate(identifier_reference, correspondence->matching_count);
-                  std::map<Identifier, std::pair<Identifier, Count>>::iterator iterator = landmark_queries_to_references.find(identifier_query);
 
-                  //ds if there is already a merge for this query
-                  if (iterator != landmark_queries_to_references.end()) {
+                  //ds potential correspondance candidates
+                  const Count& matching_count = correspondence->matching_count;
+                  std::pair<Identifier, Count> candidate_query(identifier_query, matching_count);
+                  std::pair<Identifier, Count> candidate_reference(identifier_reference, matching_count);
 
-                    //ds check if current correspondence is more suitable than existing one
-                    if (correspondence->matching_count > iterator->second.second) {
-                      iterator->second = merge_candidate;
+                  //ds evaluate current situation for the proposed query-reference pair
+                  std::map<Identifier, std::pair<Identifier, Count>>::iterator iterator_query     = landmark_queries_to_references_filtered.find(identifier_query);
+                  std::map<Identifier, std::pair<Identifier, Count>>::iterator iterator_reference = landmark_references_to_queries_filtered.find(identifier_reference);
+
+                  //ds if there is not entry for the query nor the reference
+                  if (iterator_query == landmark_queries_to_references_filtered.end() &&
+                      iterator_reference == landmark_references_to_queries_filtered.end()) {
+
+                    //ds we add new entries
+                    landmark_queries_to_references_filtered.insert(std::make_pair(identifier_query, candidate_query));
+                    landmark_references_to_queries_filtered.insert(std::make_pair(identifier_reference, candidate_reference));
+                  }
+
+                  //ds if we have a new reference for an already added query
+                  else if (iterator_query != landmark_queries_to_references_filtered.end() &&
+                           iterator_reference == landmark_references_to_queries_filtered.end()) {
+
+                    //ds check if the reference is better than the added one
+                    if (matching_count > iterator_query->second.second) {
+
+                      //ds remove previous entry
+                      landmark_references_to_queries_filtered.erase(iterator_query->second.first);
+
+                      //ds update entries
+                      iterator_query->second = candidate_query;
+                      landmark_references_to_queries_filtered.insert(std::make_pair(identifier_reference, candidate_reference));
                     }
-                  } else {
-                    landmark_queries_to_references.insert(std::make_pair(identifier_query, merge_candidate));
+                  }
+
+                  //ds if we have a new query for and already added reference
+                  else if (iterator_query == landmark_queries_to_references_filtered.end() &&
+                           iterator_reference != landmark_references_to_queries_filtered.end()) {
+
+                    //ds check if the query is better than the added one
+                    if (matching_count > iterator_reference->second.second) {
+
+                      //ds remove previous entry
+                      landmark_queries_to_references_filtered.erase(iterator_reference->second.first);
+
+                      //ds update entries
+                      iterator_reference->second = candidate_reference;
+                      landmark_queries_to_references_filtered.insert(std::make_pair(identifier_query, candidate_query));
+                    }
                   }
                 }
               }
             }
           }
-          _world_map->mergeLandmarks(landmark_queries_to_references);
-          _relocalizer->clear();
+          _world_map->mergeLandmarks(landmark_queries_to_references_filtered);
 
           //ds re-enable the GUI
           if (_map_viewer) {_map_viewer->unlock();}
         }
       }
+      _relocalizer->clear();
     } else if (_parameters->command_line_parameters->option_drop_framepoints) {
 
       //ds free disconnected framepoints if available: TODO safe window

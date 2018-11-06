@@ -168,8 +168,10 @@ namespace proslam {
 
       //ds check last iteration
       if(iteration == _parameters->maximum_number_of_iterations-1) {
+        _context->is_valid = false;
         _has_system_converged = false;
-        LOG_WARNING(std::cerr << "XYZAligner::converge|system did not converge - inlier ratio: " << static_cast<real>(_number_of_inliers)/_context->correspondences.size() << std::endl)
+        LOG_WARNING(std::cerr << "XYZAligner::converge|system did not converge - inlier ratio: " << static_cast<real>(_number_of_inliers)/_context->correspondences.size()
+                              << "[" << _context->local_map_query->identifier() << "][" << _context->local_map_reference->identifier() << "]" << std::endl)
       }
     }
   }
