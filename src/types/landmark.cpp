@@ -45,7 +45,7 @@ void Landmark::update(const FramePoint* point_) {
   }
 
   //ds update appearance history (left descriptors only)
-  _appearances.push_back(new HBSTMatchable(static_cast<void*>(this), point_->descriptorLeft()));
+  _appearances.push_back(new HBSTMatchable(this, point_->descriptorLeft()));
   _measurements.push_back(Measurement(point_));
 
   //ds trigger classic ICP in camera update of landmark coordinates - setup
@@ -142,7 +142,7 @@ void Landmark::merge(Landmark* landmark_) {
 
   //ds update recent appearances and add them to this appearances
   for (HBSTMatchable* appearance: landmark_->_appearances) {
-    appearance->pointers.begin()->second = static_cast<void*>(this);
+    appearance->objects.begin()->second = this;
   }
   _appearances.insert(_appearances.end(), landmark_->_appearances.begin(), landmark_->_appearances.end());
   landmark_->_appearances.clear();
@@ -150,7 +150,7 @@ void Landmark::merge(Landmark* landmark_) {
   //ds update states of absorbed landmark and add them to this states
   for (State* state: landmark_->_states_in_local_maps) {
     for (HBSTMatchable* appearance: state->appearances) {
-      appearance->pointers.begin()->second = static_cast<void*>(this);
+      appearance->objects.begin()->second = this;
     }
     state->landmark = this;
   }

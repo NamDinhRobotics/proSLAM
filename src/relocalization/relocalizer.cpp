@@ -95,8 +95,8 @@ void Relocalizer::detect() {
     for (const HBSTTree::Match match: matches_unfiltered) {
 
       //ds buffer landmark identifier
-      Landmark* landmark_query       = static_cast<Landmark*>(match.pointer_query);
-      Landmark* landmark_reference   = static_cast<Landmark*>(match.pointer_reference);
+      Landmark* landmark_query       = match.object_query;
+      Landmark* landmark_reference   = match.object_reference;
       const Identifier& query_landmark_identifier = landmark_query->identifier();
 
       try{

@@ -1,11 +1,18 @@
 #pragma once
 #include "definitions.h"
+#include "srrg_hbst_types/binary_tree.hpp"
 
 namespace proslam {
   
 //ds forward declarations
 class Landmark;
 class Frame;
+
+//ds HBST: readability
+typedef srrg_hbst::BinaryMatchable<Landmark*, SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS> HBSTMatchable;
+typedef srrg_hbst::BinaryNode<HBSTMatchable, real> HBSTNode;
+typedef HBSTNode::MatchableVector AppearanceVector;
+typedef srrg_hbst::BinaryTree<HBSTNode> HBSTTree;
 
 //ds this class encapsulates the triangulation information of a salient point in the image and can be linked to a previous FramePoint instance and a Landmark
 class FramePoint {

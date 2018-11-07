@@ -17,7 +17,6 @@
 #endif
 
 #include "srrg_system_utils/system_utils.h"
-#include "srrg_hbst_types/binary_tree.hpp"
 #include "srrg_types/types.hpp"
 
 namespace proslam {
@@ -89,12 +88,6 @@ namespace proslam {
   typedef Eigen::Matrix<real, 6, 4> Matrix6_4;
   typedef Eigen::Matrix<real, 3, 4> Matrix3_4;
   typedef Eigen::Matrix<real, 4, 3> Matrix4_3;
-
-  //ds HBST: readability
-  typedef srrg_hbst::BinaryMatchable<SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS> HBSTMatchable;
-  typedef srrg_hbst::BinaryNode<HBSTMatchable, real> HBSTNode;
-  typedef HBSTNode::MatchableVector AppearanceVector;
-  typedef srrg_hbst::BinaryTree<HBSTNode> HBSTTree;
 
   //ds cv colors
   #define CV_COLOR_CODE_RANDOM cv::Scalar(rand()%255, rand()%255, rand()%255)
