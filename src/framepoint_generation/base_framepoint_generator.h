@@ -1,19 +1,13 @@
 #pragma once
 #include "types/frame.h"
+#include "intensity_feature_matcher.h"
+
+
 
 namespace proslam {
 
-//ds this class computes potential framepoints in a stereo image pair by triangulation
+//! @class this class computes potential framepoints in a stereo image pair by triangulation
 class BaseFramePointGenerator {
-
-//ds exported types
-public:
-
-  //ds container holding spatial and appearance information (used in findStereoKeypoints)
-  struct KeypointWithDescriptor {
-    cv::KeyPoint keypoint;
-    cv::Mat descriptor;
-  };
 
 //ds object handling
 PROSLAM_MAKE_PROCESSING_CLASS(BaseFramePointGenerator)
@@ -43,7 +37,7 @@ public:
   FramePointMatrix framepointsInImage() {return _framepoints_in_image;}
 
   //ds other properties
-  void setCameraLeft(const Camera* camera_left_) {_camera_left=camera_left_;}
+  void setCameraLeft(const Camera* camera_left_) {_camera_left = camera_left_;}
   const Count& numberOfRowsImage() const {return _number_of_rows_image;}
   const Count& numberOfColsImage() const {return _number_of_cols_image;}
   const real maximumDepthNearMeters() const {return _maximum_depth_near_meters;}
@@ -55,10 +49,10 @@ public:
   const Count numberOfAvailablePoints() const {return _number_of_available_points;}
   const Count numberOfDetectedKeypoints() const {return _number_of_detected_keypoints;}
 
-  //ds settings
+//ds settings
 protected:
 
-  const Camera* _camera_left;
+  const Camera* _camera_left = nullptr;
 
   //ds input properties
   Count _number_of_rows_image;
@@ -78,8 +72,8 @@ protected:
   real _maximum_depth_far_meters;
 
   //! @brief grid of detectors (equally distributed over the image with size=number_of_detectors_per_dimension*number_of_detectors_per_dimension)
-  cv::Ptr<cv::FastFeatureDetector>** _detectors;
-  real** _detector_thresholds;
+  cv::Ptr<cv::FastFeatureDetector>** _detectors = nullptr;
+  real** _detector_thresholds                   = nullptr;
 
   //! @brief number of detectors
   //! @brief the same for all image streams
@@ -87,22 +81,23 @@ protected:
 
   //! @brief image region for each detector
   //! @brief the same for all image streams
-  cv::Rect** _detector_regions;
+  cv::Rect** _detector_regions = nullptr;
 
   //! @brief currently triangulated framepoints stored in a image-like matrix (pixel access) for easy tracking
-  FramePointMatrix _framepoints_in_image;
+  FramePointMatrix _framepoints_in_image = nullptr;
 
   //ds descriptor extraction
   cv::Ptr<cv::DescriptorExtractor> _descriptor_extractor;
 
   //ds inner memory buffers (operated on in compute)
-  std::vector<KeypointWithDescriptor> _keypoints_with_descriptors_left;
+  std::vector<IntensityFeature> _keypoints_with_descriptors_left;
 
 private:
 
   //ds informative only
   CREATE_CHRONOMETER(keypoint_detection)
   CREATE_CHRONOMETER(descriptor_extraction)
+
 };
 
 //ds custom exception (thrown in getCoordinatesInCamera if no triangulation could be achieved)
@@ -119,5 +114,6 @@ public:
 private:
 
   const std::string _what;
+
 };
-}
+} //namespace proslam

@@ -1,90 +1,12 @@
-#include "types/definitions.h"
+#include "framepoint_generation/stereo_framepoint_generator.h"
+using namespace proslam;
 
 
-
-//ds map objects
-struct KeypointWithDescriptor {
-  KeypointWithDescriptor(const cv::KeyPoint& keypoint_,
-                         const cv::Mat& descriptor_,
-                         const uint32_t& index_in_vector_): keypoint(keypoint_),
-                                                            descriptor(descriptor_),
-                                                            row(keypoint_.pt.y),
-                                                            col(keypoint_.pt.x),
-                                                            index_in_vector(index_in_vector_) {}
-  cv::KeyPoint keypoint;    //ds geometric: feature location in 2D
-  cv::Mat descriptor;       //ds appearance: feature descriptor
-  int32_t row;              //ds pixel column coordinate (v)
-  int32_t col;              //ds pixel row coordinate (u)
-  uint32_t index_in_vector; //ds inverted index for vector containing this
-};
-
-struct KeypointWithDescriptorLattice {
-  ~KeypointWithDescriptorLattice() {
-    for (uint32_t r = 0; r < number_of_rows; ++r) {
-      delete[] feature_lattice[r];
-    }
-    delete[] feature_lattice;
-  }
-
-  void setLattice(const int32_t& rows_, const int32_t& cols_) {
-    if (rows_ <= 0 || cols_ <= 0) {
-      throw std::runtime_error("setStereoMatchCandidateGrid|invalid image dimensions");
-    }
-    if (feature_lattice) {
-      throw std::runtime_error("setStereoMatchCandidateGrid|lattice already allocated");
-    }
-
-    //ds initialize empty lattice
-    feature_lattice = new KeypointWithDescriptor**[rows_];
-    for (int32_t r = 0; r < rows_; ++r) {
-      feature_lattice[r] = new KeypointWithDescriptor*[cols_];
-      for (int32_t c = 0; c < cols_; ++c) {
-        feature_lattice[r][c] = nullptr;
-      }
-    }
-    number_of_rows = rows_;
-    number_of_cols = cols_;
-  }
-
-  void setFeatures(const std::vector<cv::KeyPoint>& keypoints_, const cv::Mat& descriptors_) {
-    if (keypoints_.size() != static_cast<size_t>(descriptors_.rows)) {
-      throw std::runtime_error("setFeatures|mismatching keypoints and descriptor numbers");
-    }
-
-    //ds clear the lattice
-    for (uint32_t r = 0; r < number_of_rows; ++r) {
-      for (uint32_t c = 0; c < number_of_cols; ++c) {
-        feature_lattice[r][c] = nullptr;
-      }
-    }
-
-    //ds fill in features
-    number_of_features = 0;
-    feature_vector.resize(keypoints_.size());
-    for (uint32_t index = 0; index < keypoints_.size(); ++index) {
-      KeypointWithDescriptor* feature = new KeypointWithDescriptor(keypoints_[index], descriptors_.row(index), index);
-      feature_vector[index] = feature;
-      feature_lattice[feature->row][feature->col] = feature;
-      ++number_of_features;
-    }
-
-    //ds sort all input vectors by ascending row positions
-    std::sort(feature_vector.begin(), feature_vector.end(),  [](const KeypointWithDescriptor* a_, const KeypointWithDescriptor* b_){
-      return ((a_->row < b_->row) || (a_->row == b_->row && a_->col < b_->col));
-    });
-  }
-
-  uint32_t number_of_rows = 0;
-  uint32_t number_of_cols = 0;
-  std::vector<KeypointWithDescriptor*> feature_vector;
-  KeypointWithDescriptor*** feature_lattice = nullptr;
-  uint32_t number_of_features               = 0;
-};
 
 struct Framepoint {
   Framepoint(const uint32_t& identifer_,
-             const KeypointWithDescriptor* feature_left_,
-             const KeypointWithDescriptor* feature_right_,
+             const IntensityFeature* feature_left_,
+             const IntensityFeature* feature_right_,
              const int32_t& epipolar_offset_,
              const Eigen::Vector3d& position_in_camera_left_): identifer(identifer_),
                                                                feature_left(feature_left_),
@@ -98,8 +20,8 @@ struct Framepoint {
   }
 
   uint32_t identifer;
-  const KeypointWithDescriptor* feature_left;
-  const KeypointWithDescriptor* feature_right;
+  const IntensityFeature* feature_left;
+  const IntensityFeature* feature_right;
   int32_t epipolar_offset;
 
   Eigen::Vector3d position_in_camera_left;
@@ -108,8 +30,8 @@ typedef std::vector<Framepoint*> FramepointVector;
 
 //ds helpers
 Eigen::Matrix3d getCameraCalibrationMatrixKITTI(const std::string& file_name_calibration_, Eigen::Vector3d& baseline_pixels_);
-void stereoMatchExhaustive(const KeypointWithDescriptorLattice& candidates_left_,
-                           const KeypointWithDescriptorLattice& candidates_right_,
+void stereoMatchExhaustive(IntensityFeatureMatcher& candidates_left_,
+                           IntensityFeatureMatcher& candidates_right_,
                            FramepointVector& stereo_framepoints_,
                            uint32_t& number_of_stereo_matches_,
                            const double& descriptor_distance_maximum_,
@@ -117,16 +39,6 @@ void stereoMatchExhaustive(const KeypointWithDescriptorLattice& candidates_left_
                            const double& f_x, const double& f_y,
                            const double& c_x, const double& c_y,
                            const double& b_x_);
-void prune(std::vector<KeypointWithDescriptor*>& elements_, const std::set<uint32_t>& matched_indices_);
-KeypointWithDescriptor* getMatchingFeatureInRegion(const int32_t& row_reference_,
-                                                   const int32_t& col_reference_,
-                                                   const cv::Mat& descriptor_reference_,
-                                                   const int32_t& range_point_tracking_pixels_rows_,
-                                                   const int32_t& range_point_tracking_pixels_cols_,
-                                                   const int32_t& image_rows_,
-                                                   const int32_t& image_cols_,
-                                                   KeypointWithDescriptor*** candidates_,
-                                                   const double& maximum_descriptor_distance_tracking_);
 Eigen::Vector3d getPointInLeftCamera(const double& u_L, const double v_L,
                                      const double& u_R, const double v_R,
                                      const double& f_x, const double& f_y,
@@ -186,6 +98,12 @@ int32_t main(int32_t argc_, char** argv_) {
   }
   std::cerr << BAR << std::endl;
 
+  //ds allocate stereo framepoint generator parameters
+  StereoFramePointGeneratorParameters* parameters = new StereoFramePointGeneratorParameters(LoggingLevel::Debug);
+
+  //ds allocate and configure a stereo framepoint generator unit
+  StereoFramePointGenerator* framepoint_generator = new StereoFramePointGenerator(parameters);
+
   //ds load camera matrix and stereo configuration (offset to camera right)
   Eigen::Vector3d baseline_pixels_(Eigen::Vector3d::Zero());
   const Eigen::Matrix3d camera_calibration_matrix(getCameraCalibrationMatrixKITTI(file_name_calibration, baseline_pixels_));
@@ -233,9 +151,9 @@ int32_t main(int32_t argc_, char** argv_) {
   cv::Mat image_right               = cv::imread(file_name_image_right, CV_LOAD_IMAGE_GRAYSCALE);
 
   //ds helper structure: lattice of keypoints with descriptors (for convenience)
-  KeypointWithDescriptorLattice candidates_left;
+  IntensityFeatureMatcher candidates_left;
   candidates_left.setLattice(image_left.rows, image_left.cols);
-  KeypointWithDescriptorLattice candidates_right;
+  IntensityFeatureMatcher candidates_right;
   candidates_right.setLattice(image_right.rows, image_right.cols);
 
   //ds structure from previous frame (for tracking test)
@@ -313,15 +231,14 @@ int32_t main(int32_t argc_, char** argv_) {
         }
 
         //ds TRACKING obtain matching feature in left image (if any)
-        KeypointWithDescriptor* feature_left = getMatchingFeatureInRegion(row_projection_left,
-                                                                          col_projection_left,
-                                                                          point_previous->feature_left->descriptor,
-                                                                          range_point_tracking_pixels,
-                                                                          range_point_tracking_pixels,
-                                                                          rows,
-                                                                          cols,
-                                                                          candidates_left.feature_lattice,
-                                                                          maximum_descriptor_distance_tracking);
+        IntensityFeature* feature_left = candidates_left.getMatchingFeatureInRectangularRegion(row_projection_left,
+                                                                                                     col_projection_left,
+                                                                                                     point_previous->feature_left->descriptor,
+                                                                                                     range_point_tracking_pixels,
+                                                                                                     range_point_tracking_pixels,
+                                                                                                     rows,
+                                                                                                     cols,
+                                                                                                     maximum_descriptor_distance_tracking);
 
         //ds if we found a match
         if (feature_left) {
@@ -342,15 +259,14 @@ int32_t main(int32_t argc_, char** argv_) {
           //ds TRIANGULATION: obtain matching feature in right image (if any)
           //ds we reduce the vertical matching space to the epipolar range
           //ds we increase the matching tolerance (2x) since we have a strong prior on location
-          KeypointWithDescriptor* feature_right = getMatchingFeatureInRegion(row_projection_right,
-                                                                             col_projection_right,
-                                                                             feature_left->descriptor,
-                                                                             epipolar_search_height,
-                                                                             range_point_tracking_pixels,
-                                                                             rows,
-                                                                             cols,
-                                                                             candidates_right.feature_lattice,
-                                                                             2*maximum_descriptor_distance_triangulation);
+          IntensityFeature* feature_right = candidates_right.getMatchingFeatureInRectangularRegion(row_projection_right,
+                                                                                                         col_projection_right,
+                                                                                                         feature_left->descriptor,
+                                                                                                         epipolar_search_height,
+                                                                                                         range_point_tracking_pixels,
+                                                                                                         rows,
+                                                                                                         cols,
+                                                                                                         2*maximum_descriptor_distance_triangulation);
 
           //ds if we found a match
           if (feature_right) {
@@ -390,8 +306,8 @@ int32_t main(int32_t argc_, char** argv_) {
       }
 
       //ds remove matched indices from candidate pools
-      prune(candidates_left.feature_vector, matched_indices_left);
-      prune(candidates_right.feature_vector, matched_indices_right);
+      candidates_left.prune(matched_indices_left);
+      candidates_right.prune(matched_indices_right);
       std::cerr << "trackAndStereoMatch|found tracks with matches total: " << number_of_stereo_matches << "/" << candidates_left.number_of_features << std::endl;
       std::cerr << "trackAndStereoMatch|number of unmatched features L: "
                 << candidates_left.feature_vector.size() << " R: " << candidates_right.feature_vector.size() << std::endl;
@@ -414,10 +330,10 @@ int32_t main(int32_t argc_, char** argv_) {
     cv::hconcat(image_left, image_right, image_display_stereo);
     cv::cvtColor(image_display_stereo, image_display_stereo, CV_GRAY2RGB);
     const cv::Point2f shift_horizontal(cols, 0);
-    for (const KeypointWithDescriptor* feature: candidates_left.feature_vector) {
+    for (const IntensityFeature* feature: candidates_left.feature_vector) {
       cv::circle(image_display_stereo, cv::Point2f(feature->col, feature->row), 2, CV_COLOR_CODE_BLUE, -1);
     }
-    for (const KeypointWithDescriptor* feature: candidates_right.feature_vector) {
+    for (const IntensityFeature* feature: candidates_right.feature_vector) {
       cv::circle(image_display_stereo, cv::Point2f(feature->col, feature->row)+shift_horizontal, 2, CV_COLOR_CODE_BLUE, -1);
     }
     const cv::Point2f shift_text(shift_horizontal+cv::Point2f(5, 5));
@@ -473,7 +389,7 @@ int32_t main(int32_t argc_, char** argv_) {
       for (Framepoint* point: stereo_points) {
         delete point;
       }
-      return 0;
+      break;
     }
 
     //ds update previous with current
@@ -496,6 +412,11 @@ int32_t main(int32_t argc_, char** argv_) {
     image_left  = cv::imread(file_name_image_left, CV_LOAD_IMAGE_GRAYSCALE);
     image_right = cv::imread(file_name_image_right, CV_LOAD_IMAGE_GRAYSCALE);
   }
+
+
+  //ds clean up
+  delete framepoint_generator;
+  delete parameters;
   return 0;
 }
 
@@ -532,8 +453,8 @@ Eigen::Matrix3d getCameraCalibrationMatrixKITTI(const std::string& file_name_cal
   return camera_calibration_matrix;
 }
 
-void stereoMatchExhaustive(const KeypointWithDescriptorLattice& candidates_left_,
-                           const KeypointWithDescriptorLattice& candidates_right_,
+void stereoMatchExhaustive(IntensityFeatureMatcher& candidates_left_,
+                           IntensityFeatureMatcher& candidates_right_,
                            FramepointVector& stereo_framepoints_,
                            uint32_t& number_of_stereo_matches_,
                            const double& descriptor_distance_maximum_,
@@ -544,9 +465,13 @@ void stereoMatchExhaustive(const KeypointWithDescriptorLattice& candidates_left_
   std::cerr << BAR << std::endl;
   const uint32_t number_of_stereo_matches_initial = number_of_stereo_matches_;
 
+  //ds prepare for fast stereo matching
+  candidates_left_.sortFeatureVector();
+  candidates_right_.sortFeatureVector();
+
   //ds working buffers (for each checked epipolar line they shrink as matches are found)
-  std::vector<KeypointWithDescriptor*> features_left(candidates_left_.feature_vector);
-  std::vector<KeypointWithDescriptor*> features_right(candidates_right_.feature_vector);
+  IntensityFeaturePointerVector& features_left(candidates_left_.feature_vector);
+  IntensityFeaturePointerVector& features_right(candidates_right_.feature_vector);
 
   //ds configure epipolar search ranges (in v in the right image)
   std::vector<int32_t> epipolar_offsets = {0};
@@ -576,7 +501,7 @@ void stereoMatchExhaustive(const KeypointWithDescriptorLattice& candidates_left_
         index_L++; if (index_L == features_left.size()) {break;}
       }
       if (index_L == features_left.size()) {break;}
-      KeypointWithDescriptor* feature_left = features_left[index_L];
+      IntensityFeature* feature_left = features_left[index_L];
 
       //ds the right keypoints are on an upper row - skip right
       while (feature_left->row > features_right[index_R]->row+epipolar_offset) {
@@ -606,7 +531,7 @@ void stereoMatchExhaustive(const KeypointWithDescriptorLattice& candidates_left_
 
       //ds check if something was found
       if (descriptor_distance_best < descriptor_distance_maximum_) {
-        KeypointWithDescriptor* feature_right = features_right[index_best_R];
+        IntensityFeature* feature_right = features_right[index_best_R];
 
         //ds register match
         stereo_framepoints_[number_of_stereo_matches_] = new Framepoint(number_of_stereo_matches_,
@@ -628,8 +553,8 @@ void stereoMatchExhaustive(const KeypointWithDescriptorLattice& candidates_left_
     }
 
     //ds remove matched indices from candidate pools
-    prune(features_left, matched_indices_left);
-    prune(features_right, matched_indices_right);
+    candidates_left_.prune(matched_indices_left);
+    candidates_right_.prune(matched_indices_right);
     std::cerr << "stereoMatchExhaustive|epipolar offset: " << epipolar_offset << " number of unmatched features L: "
               << features_left.size() << " R: " << features_right.size() << std::endl;
   }
@@ -637,67 +562,6 @@ void stereoMatchExhaustive(const KeypointWithDescriptorLattice& candidates_left_
   stereo_framepoints_.resize(number_of_stereo_matches_);
   std::cerr << "stereoMatchExhaustive|found matches total: " << number_of_stereo_matches_-number_of_stereo_matches_initial << "/" << candidates_left_.number_of_features << std::endl;
   std::cerr << BAR << std::endl;
-}
-
-void prune(std::vector<KeypointWithDescriptor*>& elements_, const std::set<uint32_t>& matched_indices_) {
-
-  //ds remove matched indices from candidate pools
-  uint32_t number_of_unmatched_elements = 0;
-  for (uint32_t index = 0; index < elements_.size(); ++index) {
-
-    //ds if we haven't matched this index yet
-    if (matched_indices_.count(index) == 0) {
-
-      //ds keep the element (this operation is not problemenatic since we do not loop reversely here)
-      elements_[number_of_unmatched_elements] = elements_[index];
-      ++number_of_unmatched_elements;
-    }
-  }
-  elements_.resize(number_of_unmatched_elements);
-}
-
-KeypointWithDescriptor* getMatchingFeatureInRegion(const int32_t& row_reference_,
-                                                   const int32_t& col_reference_,
-                                                   const cv::Mat& descriptor_reference_,
-                                                   const int32_t& range_point_tracking_pixels_rows_,
-                                                   const int32_t& range_point_tracking_pixels_cols_,
-                                                   const int32_t& image_rows_,
-                                                   const int32_t& image_cols_,
-                                                   KeypointWithDescriptor*** candidates_,
-                                                   const double& maximum_descriptor_distance_tracking_) {
-  double descriptor_distance_best = maximum_descriptor_distance_tracking_;
-  int32_t row_best = -1;
-  int32_t col_best = -1;
-
-  //ds current tracking region
-  const int32_t row_start_point = std::max(row_reference_-range_point_tracking_pixels_rows_, 0);
-  const int32_t row_end_point   = std::min(row_reference_+range_point_tracking_pixels_rows_+1, image_rows_);
-  const int32_t col_start_point = std::max(col_reference_-range_point_tracking_pixels_cols_, 0);
-  const int32_t col_end_point   = std::min(col_reference_+range_point_tracking_pixels_cols_+1, image_cols_);
-
-  //ds locate best match in appearance
-  for (int32_t row = row_start_point; row < row_end_point; ++row) {
-    for (int32_t col = col_start_point; col < col_end_point; ++col) {
-      if (candidates_[row][col]) {
-        const double descriptor_distance = cv::norm(descriptor_reference_,
-                                                    candidates_[row][col]->descriptor,
-                                                    SRRG_PROSLAM_DESCRIPTOR_NORM);
-
-        if (descriptor_distance < descriptor_distance_best) {
-          descriptor_distance_best = descriptor_distance;
-          row_best = row;
-          col_best = col;
-        }
-      }
-    }
-  }
-
-  //ds if we found a match
-  if (row_best != -1) {
-    return candidates_[row_best][col_best];
-  } else {
-    return nullptr;
-  }
 }
 
 Eigen::Vector3d getPointInLeftCamera(const double& u_L, const double v_L,

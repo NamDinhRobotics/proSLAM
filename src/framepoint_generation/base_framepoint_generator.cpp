@@ -3,7 +3,6 @@
 namespace proslam {
 
 BaseFramePointGenerator::BaseFramePointGenerator(BaseFramePointGeneratorParameters* parameters_): _parameters(parameters_),
-                                                                                                  _camera_left(0),
                                                                                                   _number_of_rows_image(0),
                                                                                                   _number_of_cols_image(0),
                                                                                                   _target_number_of_keypoints(1000),
@@ -15,11 +14,7 @@ BaseFramePointGenerator::BaseFramePointGenerator(BaseFramePointGeneratorParamete
                                                                                                   _principal_point_offset_v_pixels(0),
                                                                                                   _maximum_depth_near_meters(0),
                                                                                                   _maximum_depth_far_meters(0),
-                                                                                                  _detectors(0),
-                                                                                                  _detector_thresholds(0),
-                                                                                                  _number_of_detectors(0),
-                                                                                                  _detector_regions(0),
-                                                                                                  _framepoints_in_image(0) {
+                                                                                                  _number_of_detectors(0) {
   LOG_DEBUG(std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|constructed" << std::endl)
 }
 
@@ -127,20 +122,24 @@ BaseFramePointGenerator::~BaseFramePointGenerator() {
   LOG_DEBUG(std::cerr << "BaseFramePointGenerator::~BaseFramePointGenerator|destroying" << std::endl)
 
   //ds deallocate dynamic data structures: detectors
-  for (uint32_t r = 0; r < _parameters->number_of_detectors_vertical; ++r) {
-    delete[] _detectors[r];
-    delete[] _detector_regions[r];
-    delete[] _detector_thresholds[r];
+  if (_detectors && _detector_regions && _detector_thresholds) {
+    for (uint32_t r = 0; r < _parameters->number_of_detectors_vertical; ++r) {
+      delete[] _detectors[r];
+      delete[] _detector_regions[r];
+      delete[] _detector_thresholds[r];
+    }
+    delete [] _detectors;
+    delete [] _detector_regions;
+    delete [] _detector_thresholds;
   }
-  delete [] _detectors;
-  delete [] _detector_regions;
-  delete [] _detector_thresholds;
 
   //ds deallocate framepoint grid
-  for (Index row = 0; row < _number_of_rows_image; ++row) {
-    delete[] _framepoints_in_image[row];
+  if (_framepoints_in_image) {
+    for (Index row = 0; row < _number_of_rows_image; ++row) {
+      delete[] _framepoints_in_image[row];
+    }
+    delete[] _framepoints_in_image;
   }
-  delete[] _framepoints_in_image;
 
   LOG_DEBUG(std::cerr << "BaseFramePointGenerator::~BaseFramePointGenerator|destroyed" << std::endl)
 }

@@ -23,4 +23,4 @@ target_link_libraries(trajectory_analyzer ${OpenCV_LIBS} srrg_core_types_library
 
 #ds stereo triangulation and tracking test
 add_executable(test_stereo_frontend test_stereo_frontend.cpp)
-target_link_libraries(test_stereo_frontend ${OpenCV_LIBS})
+target_link_libraries(test_stereo_frontend ${OpenCV_LIBS} srrg_proslam_framepoint_generation_library)

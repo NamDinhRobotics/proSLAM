@@ -629,8 +629,8 @@ int32_t main (int32_t argc_, char** argv_) {
       descriptor_extractor->compute(image_right_undistorted_rectified, keypoints_right, descriptors_right);
 
       //ds assemble feature vectors
-      std::vector<proslam::BaseFramePointGenerator::KeypointWithDescriptor> features_left(keypoints_left.size());
-      std::vector<proslam::BaseFramePointGenerator::KeypointWithDescriptor> features_right(keypoints_right.size());
+      std::vector<proslam::IntensityFeature> features_left(keypoints_left.size());
+      std::vector<proslam::IntensityFeature> features_right(keypoints_right.size());
       for (uint64_t index = 0; index < features_left.size(); ++index) {
         features_left[index].keypoint   = keypoints_left[index];
         features_left[index].descriptor = descriptors_left.row(index);
@@ -642,12 +642,12 @@ int32_t main (int32_t argc_, char** argv_) {
 
       //ds sort all input vectors by ascending row positions
       std::sort(features_left.begin(), features_left.end(),
-                [](const proslam::BaseFramePointGenerator::KeypointWithDescriptor& a_,
-                   const proslam::BaseFramePointGenerator::KeypointWithDescriptor& b_){return ((a_.keypoint.pt.y < b_.keypoint.pt.y) ||
+                [](const proslam::IntensityFeature& a_,
+                   const proslam::IntensityFeature& b_){return ((a_.keypoint.pt.y < b_.keypoint.pt.y) ||
                                                                                                (a_.keypoint.pt.y == b_.keypoint.pt.y && a_.keypoint.pt.x < b_.keypoint.pt.x));});
       std::sort(features_right.begin(), features_right.end(),
-                [](const proslam::BaseFramePointGenerator::KeypointWithDescriptor& a_,
-                   const proslam::BaseFramePointGenerator::KeypointWithDescriptor& b_){return ((a_.keypoint.pt.y < b_.keypoint.pt.y) ||
+                [](const proslam::IntensityFeature& a_,
+                   const proslam::IntensityFeature& b_){return ((a_.keypoint.pt.y < b_.keypoint.pt.y) ||
                                                                                                (a_.keypoint.pt.y == b_.keypoint.pt.y && a_.keypoint.pt.x < b_.keypoint.pt.x));});
 
       //ds running variables
@@ -698,10 +698,10 @@ int32_t main (int32_t argc_, char** argv_) {
 
       //ds visual info
       if (option_use_gui) {
-        for (const proslam::BaseFramePointGenerator::KeypointWithDescriptor& feature: features_left) {
+        for (const proslam::IntensityFeature& feature: features_left) {
           cv::circle(image_display_left, feature.keypoint.pt, 2, cv::Scalar(255, 0, 0), -1);
         }
-        for (const proslam::BaseFramePointGenerator::KeypointWithDescriptor& feature: features_right) {
+        for (const proslam::IntensityFeature& feature: features_right) {
           cv::circle(image_display_right, feature.keypoint.pt, 2, cv::Scalar(255, 0, 0), -1);
         }
 

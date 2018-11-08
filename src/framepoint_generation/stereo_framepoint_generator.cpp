@@ -112,10 +112,10 @@ void StereoFramePointGenerator::findStereoKeypoints(Frame* frame_) {
 
   //ds sort all input vectors by ascending row positions
   std::sort(_keypoints_with_descriptors_left.begin(), _keypoints_with_descriptors_left.end(),
-            [](const KeypointWithDescriptor& a_, const KeypointWithDescriptor& b_){return ((a_.keypoint.pt.y < b_.keypoint.pt.y) ||
+            [](const IntensityFeature& a_, const IntensityFeature& b_){return ((a_.keypoint.pt.y < b_.keypoint.pt.y) ||
                                                                                            (a_.keypoint.pt.y == b_.keypoint.pt.y && a_.keypoint.pt.x < b_.keypoint.pt.x));});
   std::sort(_keypoints_with_descriptors_right.begin(), _keypoints_with_descriptors_right.end(),
-            [](const KeypointWithDescriptor& a_, const KeypointWithDescriptor& b_){return ((a_.keypoint.pt.y < b_.keypoint.pt.y) ||
+            [](const IntensityFeature& a_, const IntensityFeature& b_){return ((a_.keypoint.pt.y < b_.keypoint.pt.y) ||
                                                                                            (a_.keypoint.pt.y == b_.keypoint.pt.y && a_.keypoint.pt.x < b_.keypoint.pt.x));});
 
   //ds number of stereo matches

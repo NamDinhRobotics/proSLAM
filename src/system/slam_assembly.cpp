@@ -477,7 +477,6 @@ void SLAMAssembly::playbackMessageFile() {
         processing_time_seconds_current    = 0;
         number_of_processed_frames_current = 0;
       }
-
       image_message_left->release();
       image_message_right->release();
       _synchronizer.reset();

@@ -22,6 +22,9 @@ void ImageViewer::update(const Frame* frame_) {
   //ds start data transfer (this will lock the calling thread if the GUI is busy) - released when the function is quit
   std::lock_guard<std::mutex> lock(_mutex_data_exchange);
 
+  //ds release previous image
+  _current_image.release();
+
   //ds update handle
   _current_frame = frame_;
 

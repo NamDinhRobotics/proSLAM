@@ -43,7 +43,7 @@ protected:
   real _baseline_meters       = 0;
 
   //! @brief inner memory buffers (operated on in compute, kept here for readability)
-  std::vector<KeypointWithDescriptor> _keypoints_with_descriptors_right;
+  std::vector<IntensityFeature> _keypoints_with_descriptors_right;
 
   //! @brief information only: average triangulation success ratio
   real _mean_triangulation_success_ratio = 1;
