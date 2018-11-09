@@ -89,9 +89,6 @@ namespace proslam {
       const real inverse_predicted_d  = 1/depth_meters;
       const real inverse_predicted_d_squared  = inverse_predicted_d*inverse_predicted_d;
 
-      //ds visualization only
-      frame_point->setReprojectionCoordinatesLeft(predicted_point_in_image);
-
       //ds compute error
       const Vector3 error(predicted_point_in_image.x()-frame_point->imageCoordinatesLeft().x(),
                           predicted_point_in_image.y()-frame_point->imageCoordinatesLeft().y(),

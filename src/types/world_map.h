@@ -21,10 +21,8 @@ public:
 
   //! @brief creates a new frame living in this instance at the provided pose
   //! @param[in] robot_to_world_ robot to world transform
-  //! @param[in] maximum_depth_near_ maximum depth for a near framepoint
   //! @param[in] timestamp_image_left_seconds_ optional timestamp information
   Frame* createFrame(const TransformMatrix3D& robot_to_world_,
-                     const real& maximum_depth_near_,
                      const double& timestamp_image_left_seconds_ = 0);
 
   //! @brief creates a new landmark living in this instance, using the provided framepoint as origin

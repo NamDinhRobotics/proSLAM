@@ -18,22 +18,21 @@ public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   //ds defines one of the two tracker states
   enum Status {Localizing, Tracking};
 
+  //ds prohibit default construction
+  Frame() = delete;
+
 //ds object handling
-protected:
+public: //ds TODO protect for factory
 
   //ds frame construction in the WorldMap context
   Frame(const WorldMap* context_,
         Frame* previous_,
         Frame* next_,
         const TransformMatrix3D& robot_to_world_,
-        const real& maximum_depth_near_,
         const double& timestamp_image_left_seconds_);
 
   //ds FramePoints cleanup
   ~Frame();
-
-  //ds prohibit default construction
-  Frame() = delete;
 
 //ds getters/setters
 public:
@@ -95,6 +94,12 @@ public:
                      const PointCoordinates& camera_coordinates_left_,
                      FramePoint* previous_point_ = 0);
 
+  //ds request a new framepoint instance with an optional link to a previous point (track)
+  FramePoint* createFramepoint(const IntensityFeature* feature_left_,
+                               const IntensityFeature* feature_right_,
+                               const PointCoordinates& camera_coordinates_left_,
+                               FramePoint* previous_point_ = 0);
+
   //! @brief created framepoints by this factory
   inline const FramePointPointerVector& createdPoints() const {return _created_points;}
 
@@ -106,9 +111,6 @@ public:
 
   inline const Status& status() const {return _status;}
   void setStatus(const Status& status_) {_status = status_;}
-
-  //ds the maximum allowed depth for framepoints to become classified as near - everything above is far
-  inline const real maximumDepthNear() const {return _maximum_depth_near;}
 
   void setLocalMap(LocalMap* local_map_) {_local_map = local_map_;}
   inline LocalMap* localMap() {return _local_map;}
@@ -184,9 +186,6 @@ protected:
   //ds to support arbitrary number of rgb/depth image combinations
   const IntensityImage* _intensity_image_left;
   const IntensityImage* _intensity_image_right;
-
-  //ds the maximum allowed depth for framepoints to become classified as near - everything above is far
-  const real _maximum_depth_near;
 
   //ds link to a local map if the frame is part of one
   LocalMap* _local_map;

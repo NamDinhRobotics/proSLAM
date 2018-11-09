@@ -68,7 +68,7 @@ stereo_framepoint_generation:
   #ds stereo: triangulation
   maximum_matching_distance_triangulation: 50
   minimum_disparity_pixels:                1
-  epipolar_line_thickness_pixels:          0
+  maximum_epipolar_search_offset_pixels:   0
 
 depth_framepoint_generation:
 

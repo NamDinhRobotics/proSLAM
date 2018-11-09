@@ -96,7 +96,6 @@ void WorldMapParameters::print() const {
 
 void BaseFramePointGeneratorParameters::print() const {
   std::cerr << "BaseFramepointGeneratorParameters::print|target_number_of_keypoints_tolerance: " << target_number_of_keypoints_tolerance << std::endl;
-  std::cerr << "BaseFramepointGeneratorParameters::print|detector_threshold: " << detector_threshold_initial << std::endl;
   std::cerr << "BaseFramepointGeneratorParameters::print|detector_threshold_minimum: " << detector_threshold_minimum << std::endl;
   std::cerr << "BaseFramepointGeneratorParameters::print|detector_threshold_maximum_change: " << detector_threshold_maximum_change << std::endl;
   std::cerr << "BaseFramepointGeneratorParameters::print|matching_distance_tracking_threshold: " << matching_distance_tracking_threshold << std::endl;
@@ -348,7 +347,7 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
         //FramepointGeneration (SPECIFIC)
         PARSE_PARAMETER(configuration, stereo_framepoint_generation, stereo_framepoint_generator_parameters, maximum_matching_distance_triangulation, int32_t)
         PARSE_PARAMETER(configuration, stereo_framepoint_generation, stereo_framepoint_generator_parameters, minimum_disparity_pixels, real)
-        PARSE_PARAMETER(configuration, stereo_framepoint_generation, stereo_framepoint_generator_parameters, epipolar_line_thickness_pixels, int32_t)
+        PARSE_PARAMETER(configuration, stereo_framepoint_generation, stereo_framepoint_generator_parameters, maximum_epipolar_search_offset_pixels, int32_t)
         break;
       }
       case CommandLineParameters::TrackerMode::RGB_DEPTH: {
@@ -369,7 +368,6 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     //FramepointGeneration (GENERIC)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, descriptor_type, std::string)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, target_number_of_keypoints_tolerance, real)
-    PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, detector_threshold_initial, int32_t)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, detector_threshold_minimum, int32_t)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, detector_threshold_maximum, int32_t)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, detector_threshold_maximum_change, real)

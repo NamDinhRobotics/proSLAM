@@ -3,47 +3,8 @@ using namespace proslam;
 
 
 
-struct Framepoint {
-  Framepoint(const uint32_t& identifer_,
-             const IntensityFeature* feature_left_,
-             const IntensityFeature* feature_right_,
-             const int32_t& epipolar_offset_,
-             const Eigen::Vector3d& position_in_camera_left_): identifer(identifer_),
-                                                               feature_left(feature_left_),
-                                                               feature_right(feature_right_),
-                                                               epipolar_offset(epipolar_offset_),
-                                                               position_in_camera_left(position_in_camera_left_) {}
-
-  ~Framepoint() {
-    delete feature_left;
-    delete feature_right;
-  }
-
-  uint32_t identifer;
-  const IntensityFeature* feature_left;
-  const IntensityFeature* feature_right;
-  int32_t epipolar_offset;
-
-  Eigen::Vector3d position_in_camera_left;
-};
-typedef std::vector<Framepoint*> FramepointVector;
-
 //ds helpers
 Eigen::Matrix3d getCameraCalibrationMatrixKITTI(const std::string& file_name_calibration_, Eigen::Vector3d& baseline_pixels_);
-void stereoMatchExhaustive(IntensityFeatureMatcher& candidates_left_,
-                           IntensityFeatureMatcher& candidates_right_,
-                           FramepointVector& stereo_framepoints_,
-                           uint32_t& number_of_stereo_matches_,
-                           const double& descriptor_distance_maximum_,
-                           const uint32_t& epipolar_search_height_,
-                           const double& f_x, const double& f_y,
-                           const double& c_x, const double& c_y,
-                           const double& b_x_);
-Eigen::Vector3d getPointInLeftCamera(const double& u_L, const double v_L,
-                                     const double& u_R, const double v_R,
-                                     const double& f_x, const double& f_y,
-                                     const double& c_x, const double& c_y,
-                                     const double& b_x_);
 
 
 
@@ -129,19 +90,16 @@ int32_t main(int32_t argc_, char** argv_) {
   }
   std::cerr << extension << "'" << std::endl;
 
-  //ds miscellaneous configuration
-  const uint32_t maximum_descriptor_distance_tracking      = 25; //ds number of mismatching bits
-  const uint32_t maximum_descriptor_distance_triangulation = 35; //ds number of mismatching bits
-  const uint32_t epipolar_search_height                    = 3;  //ds number of horizontal epipolar lines to check for triangulation
-
-  //ds feature handling
-#if CV_MAJOR_VERSION == 2
-  cv::Ptr<cv::FeatureDetector> keypoint_detector        = new cv::FastFeatureDetector(fast_detector_threshold);
-  cv::Ptr<cv::DescriptorExtractor> descriptor_extractor = new cv::ORB();
-#elif CV_MAJOR_VERSION == 3
-  cv::Ptr<cv::FeatureDetector> keypoint_detector        = cv::FastFeatureDetector::create(fast_detector_threshold);
-  cv::Ptr<cv::DescriptorExtractor> descriptor_extractor = cv::ORB::create();
-#endif
+  //ds configure stereo framepoint generator
+  parameters->number_of_detectors_horizontal          = 1;
+  parameters->number_of_detectors_vertical            = 1;
+  parameters->detector_threshold_minimum              = fast_detector_threshold;
+  parameters->detector_threshold_maximum              = fast_detector_threshold;
+  parameters->minimum_projection_tracking_distance_pixels = range_point_tracking_pixels;
+  parameters->maximum_projection_tracking_distance_pixels = range_point_tracking_pixels;
+  parameters->matching_distance_tracking_threshold    = 25; //ds number of mismatching bits
+  parameters->maximum_matching_distance_triangulation = 35; //ds number of mismatching bits
+  parameters->maximum_epipolar_search_offset_pixels   = 3;  //ds number of horizontal epipolar lines to check for triangulation
 
   //ds load initial images in monochrome
   uint32_t number_of_processed_images = 0;
@@ -150,14 +108,16 @@ int32_t main(int32_t argc_, char** argv_) {
   cv::Mat image_left                = cv::imread(file_name_image_left, CV_LOAD_IMAGE_GRAYSCALE);
   cv::Mat image_right               = cv::imread(file_name_image_right, CV_LOAD_IMAGE_GRAYSCALE);
 
-  //ds helper structure: lattice of keypoints with descriptors (for convenience)
-  IntensityFeatureMatcher candidates_left;
-  candidates_left.setLattice(image_left.rows, image_left.cols);
-  IntensityFeatureMatcher candidates_right;
-  candidates_right.setLattice(image_right.rows, image_right.cols);
+  //ds allocate cameras and configure stereo point generator
+  Camera* camera_left  = new Camera(image_left.rows, image_left.cols, camera_calibration_matrix);
+  Camera* camera_right = new Camera(image_right.rows, image_right.cols, camera_calibration_matrix);
+  camera_right->setBaselineHomogeneous(baseline_pixels_);
+  framepoint_generator->setCameraLeft(camera_left);
+  framepoint_generator->setCameraRight(camera_right);
+  framepoint_generator->configure();
 
   //ds structure from previous frame (for tracking test)
-  FramepointVector stereo_points_previous;
+  Frame* frame_previous = nullptr;
   cv::Mat image_left_previous;
   bool enable_auto_playback = false;
 
@@ -167,41 +127,30 @@ int32_t main(int32_t argc_, char** argv_) {
     const int32_t rows = image_left.rows;
     const int32_t cols = image_left.cols;
 
-    //ds detect FAST keypoints
+    //ds allocate a new, empty frame
+    Frame* frame = new Frame(nullptr, frame_previous, nullptr, TransformMatrix3D::Identity(), 0);
+    frame->setCameraLeft(camera_left);
+    frame->setCameraRight(camera_right);
+
+    //ds detect keypoints in left and right image
     std::vector<cv::KeyPoint> keypoints_left;
     std::vector<cv::KeyPoint> keypoints_right;
-    keypoint_detector->detect(image_left, keypoints_left);
-    keypoint_detector->detect(image_right, keypoints_right);
+    framepoint_generator->detectKeypoints(image_left, keypoints_left);
+    framepoint_generator->detectKeypoints(image_right, keypoints_right);
 
-    //ds compute BRIEF descriptors
+    //ds compute descriptors of left and right keypoints
     cv::Mat descriptors_left;
     cv::Mat descriptors_right;
-    descriptor_extractor->compute(image_left, keypoints_left, descriptors_left);
-    descriptor_extractor->compute(image_right, keypoints_right, descriptors_right);
+    framepoint_generator->computeDescriptors(image_left, keypoints_left, descriptors_left);
+    framepoint_generator->computeDescriptors(image_right, keypoints_right, descriptors_right);
 
-    //ds connect keypoints with descriptors in a feature object and store it in our working lattice
-    candidates_left.setFeatures(keypoints_left, descriptors_left);
-    candidates_right.setFeatures(keypoints_right, descriptors_right);
-
-    //ds grab next pose from ground truth
-    Eigen::Isometry3d pose_current(Eigen::Isometry3f::Identity());
-
-    //ds stereo points of current stereo frames
-    FramepointVector stereo_points(keypoints_left.size());
-    uint32_t number_of_stereo_matches = 0;
+    //ds initialize matchers for current measurements
+    framepoint_generator->featureMatcherLeft().setFeatures(keypoints_left, descriptors_left);
+    framepoint_generator->featureMatcherRight().setFeatures(keypoints_right, descriptors_right);
 
     //ds if we can track (i.e. have a previous image with points)
-    cv::Mat image_display_tracks;
-    cv::Mat image_display_depth;
-    cv::hconcat(image_left, image_right, image_display_depth);
-    cv::cvtColor(image_display_depth, image_display_depth, CV_GRAY2RGB);
-    image_display_depth.setTo(0);
-    if (!stereo_points_previous.empty()) {
+    if (frame_previous) {
       std::cerr << BAR << std::endl;
-      cv::vconcat(image_left, image_left_previous, image_display_tracks);
-      cv::cvtColor(image_display_tracks, image_display_tracks, CV_GRAY2RGB);
-      const cv::Point2f shift_vertical(0, rows);
-      const cv::Point2f shift_horizontal(cols, 0);
 
       //ds retrieve relative motion (usually obtained through ICP) - identity if not available
       Eigen::Isometry3d camera_left_previous_in_current(Eigen::Isometry3d::Identity());
@@ -210,164 +159,94 @@ int32_t main(int32_t argc_, char** argv_) {
                                           poses_left_camera_in_world[number_of_processed_images-1];
       }
 
-      //ds tracked and triangulated features (to not consider them in the exhaustive stereo matching)
-      std::set<uint32_t> matched_indices_left;
-      std::set<uint32_t> matched_indices_right;
-
-      //ds for each previous point
-      for (Framepoint* point_previous: stereo_points_previous) {
-
-        //ds transform the point into the current camera frame
-        const Eigen::Vector3d point_in_camera_left(camera_left_previous_in_current*point_previous->position_in_camera_left);
-
-        //ds project the point into the current left image plane
-        const Eigen::Vector3d point_in_image_left(camera_calibration_matrix*point_in_camera_left);
-        const int32_t col_projection_left = point_in_image_left.x()/point_in_image_left.z();
-        const int32_t row_projection_left = point_in_image_left.y()/point_in_image_left.z();
-
-        //ds skip point if not in image plane
-        if (col_projection_left < 0 || col_projection_left > cols || row_projection_left < 0 || row_projection_left > rows) {
-          continue;
-        }
-
-        //ds TRACKING obtain matching feature in left image (if any)
-        IntensityFeature* feature_left = candidates_left.getMatchingFeatureInRectangularRegion(row_projection_left,
-                                                                                                     col_projection_left,
-                                                                                                     point_previous->feature_left->descriptor,
-                                                                                                     range_point_tracking_pixels,
-                                                                                                     range_point_tracking_pixels,
-                                                                                                     rows,
-                                                                                                     cols,
-                                                                                                     maximum_descriptor_distance_tracking);
-
-        //ds if we found a match
-        if (feature_left) {
-
-          //ds compute projection offset (i.e. prediction error > optical flow)
-          const cv::Point2f projection_offset(col_projection_left-feature_left->keypoint.pt.x, row_projection_left-feature_left->keypoint.pt.y);
-
-          //ds project point into the right image - correcting by the predicition error
-          const Eigen::Vector3d point_in_image_right(point_in_image_left+baseline_pixels_);
-          const int32_t col_projection_right = point_in_image_right.x()/point_in_image_right.z()-projection_offset.x;
-          const int32_t row_projection_right = point_in_image_right.y()/point_in_image_right.z()-projection_offset.y;
-
-          //ds skip point if not in image plane
-          if (col_projection_right < 0 || col_projection_right > cols || row_projection_right < 0 || row_projection_right > rows) {
-            continue;
-          }
-
-          //ds TRIANGULATION: obtain matching feature in right image (if any)
-          //ds we reduce the vertical matching space to the epipolar range
-          //ds we increase the matching tolerance (2x) since we have a strong prior on location
-          IntensityFeature* feature_right = candidates_right.getMatchingFeatureInRectangularRegion(row_projection_right,
-                                                                                                         col_projection_right,
-                                                                                                         feature_left->descriptor,
-                                                                                                         epipolar_search_height,
-                                                                                                         range_point_tracking_pixels,
-                                                                                                         rows,
-                                                                                                         cols,
-                                                                                                         2*maximum_descriptor_distance_triangulation);
-
-          //ds if we found a match
-          if (feature_right) {
-
-            //ds create a stereo match
-            stereo_points[number_of_stereo_matches] = new Framepoint(number_of_stereo_matches,
-                                                                     feature_left,
-                                                                     feature_right,
-                                                                     0,
-                                                                     getPointInLeftCamera(feature_left->col, feature_left->row,
-                                                                                          feature_right->col, feature_right->row,
-                                                                                          camera_calibration_matrix(0,0), camera_calibration_matrix(1,1),
-                                                                                          camera_calibration_matrix(0,2), camera_calibration_matrix(1,2),
-                                                                                          baseline_pixels_(0)));
-            ++number_of_stereo_matches;
-
-            //ds block matching in exhaustive matching (later)
-            matched_indices_left.insert(feature_left->index_in_vector);
-            matched_indices_right.insert(feature_right->index_in_vector);
-
-            //ds remove feature from lattices
-            candidates_left.feature_lattice[feature_left->row][feature_left->col]    = nullptr;
-            candidates_right.feature_lattice[feature_right->row][feature_right->col] = nullptr;
-
-            //ds visualization
-            cv::line(image_display_tracks, feature_left->keypoint.pt, point_previous->feature_left->keypoint.pt+shift_vertical, CV_COLOR_CODE_BLUE);
-            cv::line(image_display_tracks, feature_left->keypoint.pt, feature_left->keypoint.pt+projection_offset, CV_COLOR_CODE_RED);
-            cv::circle(image_display_depth, feature_left->keypoint.pt, 4, CV_COLOR_CODE_GREEN, 1);
-            cv::circle(image_display_depth, feature_right->keypoint.pt+shift_horizontal, 6, CV_COLOR_CODE_GREEN, 1);
-
-            //ds display left/right point with (green) and without correction (blue)
-            cv::circle(image_display_depth, cv::Point2f(col_projection_left, row_projection_left), 4, CV_COLOR_CODE_BLUE, 1);
-            cv::circle(image_display_depth, cv::Point2f(col_projection_right, row_projection_right)+shift_horizontal, 4, CV_COLOR_CODE_GREEN, 1);
-            cv::circle(image_display_depth, cv::Point2f(point_in_image_right.x()/point_in_image_right.z(), point_in_image_right.y()/point_in_image_right.z())+shift_horizontal, 4, CV_COLOR_CODE_BLUE, 1);
-          }
-        }
-      }
+      framepoint_generator->_setFramepoints(frame,
+                                            frame_previous,
+                                            camera_left_previous_in_current);
 
       //ds remove matched indices from candidate pools
-      candidates_left.prune(matched_indices_left);
-      candidates_right.prune(matched_indices_right);
-      std::cerr << "trackAndStereoMatch|found tracks with matches total: " << number_of_stereo_matches << "/" << candidates_left.number_of_features << std::endl;
+      std::cerr << "trackAndStereoMatch|found tracks with matches total: " << frame->points().size() << "/" << framepoint_generator->featureMatcherLeft().number_of_features << std::endl;
       std::cerr << "trackAndStereoMatch|number of unmatched features L: "
-                << candidates_left.feature_vector.size() << " R: " << candidates_right.feature_vector.size() << std::endl;
+                << framepoint_generator->featureMatcherLeft().feature_vector.size() << " R: " << framepoint_generator->featureMatcherRight().feature_vector.size() << std::endl;
       std::cerr << BAR << std::endl;
     }
 
     //ds find stereo matches and triangulate -> create Framepoints
-    stereoMatchExhaustive(candidates_left,
-                          candidates_right,
-                          stereo_points,
-                          number_of_stereo_matches,
-                          maximum_descriptor_distance_triangulation,
-                          epipolar_search_height,
-                          camera_calibration_matrix(0,0), camera_calibration_matrix(1,1),
-                          camera_calibration_matrix(0,2), camera_calibration_matrix(1,2),
-                          baseline_pixels_(0));
+    std::cerr << BAR << std::endl;
+    framepoint_generator->_setFramepoints(frame);
+    std::cerr << BAR << std::endl;
 
     //ds display current points
     cv::Mat image_display_stereo;
     cv::hconcat(image_left, image_right, image_display_stereo);
     cv::cvtColor(image_display_stereo, image_display_stereo, CV_GRAY2RGB);
     const cv::Point2f shift_horizontal(cols, 0);
-    for (const IntensityFeature* feature: candidates_left.feature_vector) {
+    for (const IntensityFeature* feature: framepoint_generator->featureMatcherLeft().feature_vector) {
       cv::circle(image_display_stereo, cv::Point2f(feature->col, feature->row), 2, CV_COLOR_CODE_BLUE, -1);
     }
-    for (const IntensityFeature* feature: candidates_right.feature_vector) {
+    for (const IntensityFeature* feature: framepoint_generator->featureMatcherRight().feature_vector) {
       cv::circle(image_display_stereo, cv::Point2f(feature->col, feature->row)+shift_horizontal, 2, CV_COLOR_CODE_BLUE, -1);
     }
     const cv::Point2f shift_text(shift_horizontal+cv::Point2f(5, 5));
-    for (const Framepoint* point: stereo_points) {
+    for (const FramePoint* point: frame->points()) {
       const cv::Scalar color = CV_COLOR_CODE_RANDOM;
-      cv::circle(image_display_stereo, point->feature_left->keypoint.pt, 4, color, 1);
-      cv::circle(image_display_stereo, point->feature_right->keypoint.pt+shift_horizontal, 4, color, 1);
-      cv::putText(image_display_stereo, std::to_string(point->identifer)+" | "+std::to_string(point->epipolar_offset),
-                  point->feature_left->keypoint.pt+cv::Point2f(5, 5), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.25, CV_COLOR_CODE_RED);
-      cv::putText(image_display_stereo, std::to_string(point->identifer)+" | "+std::to_string(point->epipolar_offset),
-                  point->feature_right->keypoint.pt+shift_text, cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.25, CV_COLOR_CODE_RED);
+      cv::circle(image_display_stereo, point->keypointLeft().pt, 4, color, 1);
+      cv::circle(image_display_stereo, point->keypointRight().pt+shift_horizontal, 4, color, 1);
+      cv::putText(image_display_stereo, std::to_string(point->identifier())+" | "+std::to_string(point->epipolarOffset()),
+                  point->keypointLeft().pt+cv::Point2f(5, 5), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.25, CV_COLOR_CODE_RED);
+      cv::putText(image_display_stereo, std::to_string(point->identifier())+" | "+std::to_string(point->epipolarOffset()),
+                  point->keypointRight().pt+shift_text, cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.25, CV_COLOR_CODE_RED);
     }
     std::cerr << "processed images: " << file_name_image_left << " - " << file_name_image_right << " (" << number_of_processed_images << ")"
-              << " features L: " << candidates_left.number_of_features << " R: " << candidates_right.number_of_features << std::endl;
+              << " features L: " << framepoint_generator->featureMatcherLeft().number_of_features << " R: " << framepoint_generator->featureMatcherRight().number_of_features << std::endl;
 
     //ds display projected depth
-    for (const Framepoint* point: stereo_points) {
+    cv::Mat image_display_depth;
+    cv::hconcat(image_left, image_right, image_display_depth);
+    cv::cvtColor(image_display_depth, image_display_depth, CV_GRAY2RGB);
+    image_display_depth.setTo(0);
+    for (const FramePoint* point: frame->points()) {
 
       //ds project in left and right camera
-      Eigen::Vector3d uv_L(camera_calibration_matrix*point->position_in_camera_left);
+      Eigen::Vector3d uv_L(camera_calibration_matrix*point->cameraCoordinatesLeft());
       Eigen::Vector3d uv_R(uv_L+baseline_pixels_);
       uv_R /= uv_R.z();
       uv_L /= uv_L.z();
 
       //ds brighten color the closer to the camera the measurement is (based on maximum depth)
-      const cv::Scalar color = cv::Scalar(0, 0, 255*(1+point->position_in_camera_left.z()/baseline_pixels_.x()));
+      const cv::Scalar color = cv::Scalar(0, 0, 255*(1+point->depthMeters()/baseline_pixels_.x()));
       cv::circle(image_display_depth, cv::Point2f(uv_L(0), uv_L(1)), 2, color, -1);
       cv::circle(image_display_depth, cv::Point2f(uv_R(0), uv_R(1))+shift_horizontal, 2, color, -1);
     }
-    cv::imshow("feature extraction", image_display_stereo);
-    cv::imshow("stereo depth", image_display_depth);
-    if (!stereo_points_previous.empty()) {
+    if (frame_previous) {
+      cv::Mat image_display_tracks;
+      cv::vconcat(image_left, image_left_previous, image_display_tracks);
+      cv::cvtColor(image_display_tracks, image_display_tracks, CV_GRAY2RGB);
+      const cv::Point2f shift_vertical(0, rows);
+      const cv::Point2f shift_horizontal(cols, 0);
+
+      //ds for each point
+      for (const FramePoint* point: frame->points()) {
+
+        //ds that is tracked (i.e. has a previous point)
+        const FramePoint* point_previous = point->previous();
+        if (point_previous) {
+
+          //ds highlight tracks
+          const cv::Point2f projection_offset(point->keypointLeft().pt-point_previous->keypointLeft().pt);
+          cv::line(image_display_tracks, point->keypointLeft().pt, point_previous->keypointLeft().pt+shift_vertical, CV_COLOR_CODE_BLUE);
+          cv::line(image_display_tracks, point->keypointLeft().pt, point->keypointLeft().pt+projection_offset, CV_COLOR_CODE_RED);
+
+          //ds highlight stereo match prediction and projection error compensation
+          cv::circle(image_display_depth, point->projectionEstimateLeft(), 4, CV_COLOR_CODE_BLUE, 1);
+          cv::circle(image_display_depth, point->projectionEstimateRight()+shift_horizontal, 4, CV_COLOR_CODE_BLUE, 1);
+          cv::circle(image_display_depth, point->projectionEstimateRightCorrected()+shift_horizontal, 4, CV_COLOR_CODE_GREEN, 1);
+          cv::line(image_display_depth, point->projectionEstimateRight()+shift_horizontal, point->projectionEstimateRightCorrected()+shift_horizontal, CV_COLOR_CODE_RED);
+        }
+      }
       cv::imshow("left image tracks [top: current, bot: previous]", image_display_tracks);
     }
+    cv::imshow("feature extraction", image_display_stereo);
+    cv::imshow("stereo depth", image_display_depth);
 
     //ds check if we have to switch to playback mode or escape
     int key = cv::waitKey(1);
@@ -379,22 +258,18 @@ int32_t main(int32_t argc_, char** argv_) {
     }
 
     //ds release previous
-    for (Framepoint* point: stereo_points_previous) {
-      delete point;
-    }
+    delete frame_previous;
 
     //ds if termination is requested
     if (key == 27) {
       std::cerr << "termination requested" << std::endl;
-      for (Framepoint* point: stereo_points) {
-        delete point;
-      }
+      delete frame;
       break;
     }
 
     //ds update previous with current
-    stereo_points_previous = stereo_points;
-    image_left_previous    = image_left;
+    frame_previous      = frame;
+    image_left_previous = image_left;
 
     //ds compute file name for next images
     ++number_of_processed_images;
@@ -413,8 +288,9 @@ int32_t main(int32_t argc_, char** argv_) {
     image_right = cv::imread(file_name_image_right, CV_LOAD_IMAGE_GRAYSCALE);
   }
 
-
   //ds clean up
+  delete camera_left;
+  delete camera_right;
   delete framepoint_generator;
   delete parameters;
   return 0;
@@ -451,143 +327,4 @@ Eigen::Matrix3d getCameraCalibrationMatrixKITTI(const std::string& file_name_cal
   std::cerr << "loaded camera calibration matrix: \n" << camera_calibration_matrix << std::endl;
   std::cerr << "with baseline (pixels): " << baseline_pixels_.transpose() << std::endl;
   return camera_calibration_matrix;
-}
-
-void stereoMatchExhaustive(IntensityFeatureMatcher& candidates_left_,
-                           IntensityFeatureMatcher& candidates_right_,
-                           FramepointVector& stereo_framepoints_,
-                           uint32_t& number_of_stereo_matches_,
-                           const double& descriptor_distance_maximum_,
-                           const uint32_t& epipolar_search_height_,
-                           const double& f_x, const double& f_y,
-                           const double& c_x, const double& c_y,
-                           const double& b_x_) {
-  std::cerr << BAR << std::endl;
-  const uint32_t number_of_stereo_matches_initial = number_of_stereo_matches_;
-
-  //ds prepare for fast stereo matching
-  candidates_left_.sortFeatureVector();
-  candidates_right_.sortFeatureVector();
-
-  //ds working buffers (for each checked epipolar line they shrink as matches are found)
-  IntensityFeaturePointerVector& features_left(candidates_left_.feature_vector);
-  IntensityFeaturePointerVector& features_right(candidates_right_.feature_vector);
-
-  //ds configure epipolar search ranges (in v in the right image)
-  std::vector<int32_t> epipolar_offsets = {0};
-  for (uint32_t u = 1; u <= epipolar_search_height_; ++u) {
-    epipolar_offsets.push_back(u);
-    epipolar_offsets.push_back(-u);
-  }
-
-  //ds start stereo matching for all epipolar offsets
-  for (const int32_t& epipolar_offset: epipolar_offsets) {
-
-    //ds matched features (to not consider them for the next offset search)
-    std::set<uint32_t> matched_indices_left;
-    std::set<uint32_t> matched_indices_right;
-
-    //ds running variable
-    uint32_t index_R = 0;
-
-    //ds loop over all left keypoints
-    for (uint32_t index_L = 0; index_L < features_left.size(); index_L++) {
-
-      //ds if there are no more points on the right to match against - stop
-      if (index_R == features_right.size()) {break;}
-
-      //ds the right keypoints are on an lower row - skip left
-      while (features_left[index_L]->row < features_right[index_R]->row+epipolar_offset) {
-        index_L++; if (index_L == features_left.size()) {break;}
-      }
-      if (index_L == features_left.size()) {break;}
-      IntensityFeature* feature_left = features_left[index_L];
-
-      //ds the right keypoints are on an upper row - skip right
-      while (feature_left->row > features_right[index_R]->row+epipolar_offset) {
-        index_R++; if (index_R == features_right.size()) {break;}
-      }
-      if (index_R == features_right.size()) {break;}
-
-      //ds search bookkeeping
-      uint32_t index_search_R         = index_R;
-      double descriptor_distance_best = descriptor_distance_maximum_;
-      uint32_t index_best_R           = 0;
-
-      //ds scan epipolar line for current keypoint at idx_L - exhaustive
-      while (feature_left->row == features_right[index_search_R]->row+epipolar_offset) {
-
-        //ds invalid disparity stop condition
-        if (feature_left->col-features_right[index_search_R]->col < 0) {break;}
-
-        //ds compute descriptor distance for the stereo match candidates
-        const double descriptor_distance = cv::norm(feature_left->descriptor, features_right[index_search_R]->descriptor, SRRG_PROSLAM_DESCRIPTOR_NORM);
-        if(descriptor_distance < descriptor_distance_best) {
-          descriptor_distance_best = descriptor_distance;
-          index_best_R             = index_search_R;
-        }
-        index_search_R++; if (index_search_R == features_right.size()) {break;}
-      }
-
-      //ds check if something was found
-      if (descriptor_distance_best < descriptor_distance_maximum_) {
-        IntensityFeature* feature_right = features_right[index_best_R];
-
-        //ds register match
-        stereo_framepoints_[number_of_stereo_matches_] = new Framepoint(number_of_stereo_matches_,
-                                                                        feature_left,
-                                                                        feature_right,
-                                                                        epipolar_offset,
-                                                                        getPointInLeftCamera(feature_left->col, feature_left->row,
-                                                                                             feature_right->col, feature_right->row,
-                                                                                             f_x, f_y, c_x, c_y, b_x_));
-        ++number_of_stereo_matches_;
-
-        //ds block further matching against features_right[index_best_R] in a search on offset epipolar lines
-        matched_indices_left.insert(index_L);
-        matched_indices_right.insert(index_best_R);
-
-        //ds reduce search space (this eliminates all structurally conflicting matches)
-        index_R = index_best_R+1;
-      }
-    }
-
-    //ds remove matched indices from candidate pools
-    candidates_left_.prune(matched_indices_left);
-    candidates_right_.prune(matched_indices_right);
-    std::cerr << "stereoMatchExhaustive|epipolar offset: " << epipolar_offset << " number of unmatched features L: "
-              << features_left.size() << " R: " << features_right.size() << std::endl;
-  }
-
-  stereo_framepoints_.resize(number_of_stereo_matches_);
-  std::cerr << "stereoMatchExhaustive|found matches total: " << number_of_stereo_matches_-number_of_stereo_matches_initial << "/" << candidates_left_.number_of_features << std::endl;
-  std::cerr << BAR << std::endl;
-}
-
-Eigen::Vector3d getPointInLeftCamera(const double& u_L, const double v_L,
-                                     const double& u_R, const double v_R,
-                                     const double& f_x, const double& f_y,
-                                     const double& c_x, const double& c_y,
-                                     const double& b_x_) {
-
-  //ds point coordinates in camera frame
-  Eigen::Vector3d position_in_left_camera(Eigen::Vector3d::Zero());
-
-  //ds check for zero disparity
-  if (u_L == u_R) {
-
-    //ds set infinity depth (here maximum baseline)
-    position_in_left_camera.z() = -b_x_;
-  } else {
-
-    //ds triangulate point normally
-    position_in_left_camera.z() = b_x_/(u_R-u_L);
-  }
-
-  //ds compute x in camera (regular)
-  position_in_left_camera.x() = 1/f_x*(u_L-c_x)*position_in_left_camera.z();
-
-  //ds average in case we have an epipolar offset in v
-  position_in_left_camera.y() = 1/f_y*((v_L+v_R)/2.0-c_y)*position_in_left_camera.z();
-  return position_in_left_camera;
 }

@@ -13,7 +13,7 @@ PROSLAM_MAKE_PROCESSING_CLASS(DepthFramePointGenerator)
 public:
 
   //ds computes framepoints stored in a image-like matrix (_framepoints_in_image) for provided stereo images
-  virtual void compute(Frame* frame_);
+  virtual void compute(Frame* frame_, Frame* frame_previous_ = nullptr);
 
   void computeCoordinatesFromDepth(Frame* frame_, std::vector<cv::KeyPoint>& keypoints_, cv::Mat& descriptors_);
 
@@ -30,6 +30,8 @@ protected:
 protected:
 
   const Camera* _camera_right;
+
+  const real _maximum_reliable_depth_far_meters = 5;
 
   //ds inner memory buffers (operated on in compute)
   cv::Mat _space_map_left_meters; // xyz coordinates of every pixel of the left image in meters

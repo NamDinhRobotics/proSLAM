@@ -171,7 +171,6 @@ public:
 
   //! @brief dynamic thresholds for feature detection
   real target_number_of_keypoints_tolerance = 0.1;
-  uint32_t detector_threshold_initial       = 10;
   uint32_t detector_threshold_minimum       = 10;
   uint32_t detector_threshold_maximum       = 100;
   real detector_threshold_maximum_change    = 0.5;
@@ -183,10 +182,14 @@ public:
   //! @brief number of camera image streams (required for detector regions)
   uint32_t number_of_cameras = 1;
 
+  //! @brief point tracking thresholds
+  int32_t minimum_projection_tracking_distance_pixels = 3;
+  int32_t maximum_projection_tracking_distance_pixels = 10;
+
   //! @brief dynamic thresholds for descriptor matching
   int32_t matching_distance_tracking_threshold = 0.2*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS;
 
-  //! @brief maximum reliable depth with chosen sensor
+  //! @brief maximum reliable depth with chosen sensor (stereo, depth, sonar, ..)
   real maximum_reliable_depth_meters = 15;
 };
 
@@ -200,10 +203,14 @@ public:
   //! @brief parameter printing function
   virtual void print() const;
 
-  //! @brief stereo: triangulation
+  //! @brief stereo: triangulation configuration
   int32_t maximum_matching_distance_triangulation = 0.2*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS;
-  real minimum_disparity_pixels                   = 1;
-  uint32_t epipolar_line_thickness_pixels         = 0;
+
+  //! @brief minimum considered disparity for triangulation
+  real minimum_disparity_pixels = 1;
+
+  //! @brief maximum checked epipolar line offsets
+  uint32_t maximum_epipolar_search_offset_pixels  = 1;
 };
 
 //! @class framepoint generation parameters for a rgbd camera setup

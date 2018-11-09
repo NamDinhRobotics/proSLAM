@@ -23,8 +23,6 @@ void BaseTracker::configure() {
   assert(_camera_left);
   assert(_pose_optimizer);
   _previous_to_current_camera.setIdentity();
-  _pose_optimizer->setMaximumDepthNearMeters(_framepoint_generator->maximumDepthNearMeters());
-  _pose_optimizer->setMaximumDepthFarMeters(_framepoint_generator->maximumDepthFarMeters());
 
   //ds clear buffers
   _lost_points.clear();
@@ -117,13 +115,12 @@ void BaseTracker::compute() {
   //ds create new frame
   Frame* current_frame = _createFrame();
   current_frame->setStatus(_status);
+  Frame* previous_frame = current_frame->previous();
 
   //ds compute all framepoints in the current frame
-  _framepoint_generator->compute(current_frame);
-  _number_of_potential_points = _framepoint_generator->numberOfAvailablePoints();
+  _framepoint_generator->compute(current_frame, previous_frame);
 
   //ds if available - attempt to track the points from the previous frame
-  Frame* previous_frame = current_frame->previous();
   if (previous_frame) {
 
     //ds see if we're tracking by appearance (expecting large photometric displacements between images)
@@ -137,6 +134,7 @@ void BaseTracker::compute() {
   }
 
   //ds check previous tracker status
+  _number_of_potential_points = _framepoint_generator->numberOfAvailablePoints();
   switch(_status) {
 
     //ds localization mode - always running on tracking by appearance with maximum window size
@@ -738,8 +736,8 @@ void BaseTracker::_addPoints(Frame* frame_) {
   if (_enable_keypoint_binning) {
 
     //ds check triangulation map for unmatched points and fill them into the bin map
-    for (Index row = 0; row < _framepoint_generator->numberOfRowsImage(); ++row) {
-      for (Index col = 0; col < _framepoint_generator->numberOfColsImage(); ++col) {
+    for (int32_t row = 0; row < _framepoint_generator->numberOfRowsImage(); ++row) {
+      for (int32_t col = 0; col < _framepoint_generator->numberOfColsImage(); ++col) {
         if (current_points[row][col]) {
           FramePoint* frame_point = current_points[row][col];
 
@@ -793,8 +791,8 @@ void BaseTracker::_addPoints(Frame* frame_) {
   } else {
 
     //ds check triangulation map for unmatched points and add them directly
-    for (Index row = 0; row < _framepoint_generator->numberOfRowsImage(); ++row) {
-      for (Index col = 0; col < _framepoint_generator->numberOfColsImage(); ++col) {
+    for (int32_t row = 0; row < _framepoint_generator->numberOfRowsImage(); ++row) {
+      for (int32_t col = 0; col < _framepoint_generator->numberOfColsImage(); ++col) {
         if (current_points[row][col]) {
 
           //ds assign the new point

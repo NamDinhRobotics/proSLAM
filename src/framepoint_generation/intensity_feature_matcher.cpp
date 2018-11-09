@@ -1,26 +1,32 @@
 #include "intensity_feature_matcher.h"
-#include "types/definitions.h"
+#include "types/frame_point.h"
 
 
 
 namespace proslam {
 
-IntensityFeatureMatcher::IntensityFeatureMatcher() {feature_vector.clear();}
+IntensityFeatureMatcher::IntensityFeatureMatcher() {
+  feature_vector.clear();
+  LOG_DEBUG(std::cerr << "IntensityFeatureMatcher::IntensityFeatureMatcher|constructed" << std::endl)
+}
 
 IntensityFeatureMatcher::~IntensityFeatureMatcher() {
-  for (uint32_t r = 0; r < number_of_rows; ++r) {
+  LOG_DEBUG(std::cerr << "IntensityFeatureMatcher::~IntensityFeatureMatcher|destroying" << std::endl)
+  for (int32_t r = 0; r < number_of_rows; ++r) {
     delete[] feature_lattice[r];
   }
   delete[] feature_lattice;
   feature_vector.clear();
+  LOG_DEBUG(std::cerr << "IntensityFeatureMatcher::~IntensityFeatureMatcher|destroyed" << std::endl)
 }
 
-void IntensityFeatureMatcher::setLattice(const int32_t& rows_, const int32_t& cols_) {
+void IntensityFeatureMatcher::configure(const int32_t& rows_, const int32_t& cols_) {
+  LOG_DEBUG(std::cerr << "IntensityFeatureMatcher::configure|configuring" << std::endl)
   if (rows_ <= 0 || cols_ <= 0) {
-    throw std::runtime_error("KeypointWithDescriptorLattice::setStereoMatchCandidateGrid|invalid image dimensions");
+    throw std::runtime_error("KeypointWithDescriptorLattice::configure|invalid image dimensions");
   }
   if (feature_lattice) {
-    throw std::runtime_error("KeypointWithDescriptorLattice::setStereoMatchCandidateGrid|lattice already allocated");
+    throw std::runtime_error("KeypointWithDescriptorLattice::configure|lattice already allocated");
   }
 
   //ds initialize empty lattice
@@ -33,6 +39,7 @@ void IntensityFeatureMatcher::setLattice(const int32_t& rows_, const int32_t& co
   }
   number_of_rows = rows_;
   number_of_cols = cols_;
+  LOG_DEBUG(std::cerr << "IntensityFeatureMatcher::configure|configured" << std::endl)
 }
 
 void IntensityFeatureMatcher::setFeatures(const std::vector<cv::KeyPoint>& keypoints_, const cv::Mat& descriptors_) {
@@ -41,8 +48,8 @@ void IntensityFeatureMatcher::setFeatures(const std::vector<cv::KeyPoint>& keypo
   }
 
   //ds clear the lattice - freeing remaining features
-  for (uint32_t r = 0; r < number_of_rows; ++r) {
-    for (uint32_t c = 0; c < number_of_cols; ++c) {
+  for (int32_t r = 0; r < number_of_rows; ++r) {
+    for (int32_t c = 0; c < number_of_cols; ++c) {
       feature_lattice[r][c] = nullptr;
     }
   }
@@ -68,22 +75,20 @@ void IntensityFeatureMatcher::sortFeatureVector() {
 }
 
 IntensityFeature* IntensityFeatureMatcher::getMatchingFeatureInRectangularRegion(const int32_t& row_reference_,
-                                                              const int32_t& col_reference_,
-                                                              const cv::Mat& descriptor_reference_,
-                                                              const int32_t& range_point_tracking_pixels_rows_,
-                                                              const int32_t& range_point_tracking_pixels_cols_,
-                                                              const int32_t& image_rows_,
-                                                              const int32_t& image_cols_,
-                                                              const real& maximum_descriptor_distance_tracking_) {
+                                                                                 const int32_t& col_reference_,
+                                                                                 const cv::Mat& descriptor_reference_,
+                                                                                 const int32_t& range_point_tracking_pixels_rows_,
+                                                                                 const int32_t& range_point_tracking_pixels_cols_,
+                                                                                 const real& maximum_descriptor_distance_tracking_) {
   real descriptor_distance_best = maximum_descriptor_distance_tracking_;
   int32_t row_best = -1;
   int32_t col_best = -1;
 
   //ds current tracking region
   const int32_t row_start_point = std::max(row_reference_-range_point_tracking_pixels_rows_, 0);
-  const int32_t row_end_point   = std::min(row_reference_+range_point_tracking_pixels_rows_+1, image_rows_);
+  const int32_t row_end_point   = std::min(row_reference_+range_point_tracking_pixels_rows_+1, number_of_rows);
   const int32_t col_start_point = std::max(col_reference_-range_point_tracking_pixels_cols_, 0);
-  const int32_t col_end_point   = std::min(col_reference_+range_point_tracking_pixels_cols_+1, image_cols_);
+  const int32_t col_end_point   = std::min(col_reference_+range_point_tracking_pixels_cols_+1, number_of_cols);
 
   //ds locate best match in appearance
   for (int32_t row = row_start_point; row < row_end_point; ++row) {
@@ -113,8 +118,8 @@ IntensityFeature* IntensityFeatureMatcher::getMatchingFeatureInRectangularRegion
 void IntensityFeatureMatcher::prune(const std::set<uint32_t>& matched_indices_) {
 
   //ds remove matched indices from candidate pools
-  uint32_t number_of_unmatched_elements = 0;
-  for (uint32_t index = 0; index < feature_vector.size(); ++index) {
+  size_t number_of_unmatched_elements = 0;
+  for (size_t index = 0; index < feature_vector.size(); ++index) {
 
     //ds if we haven't matched this index yet
     if (matched_indices_.count(index) == 0) {

@@ -14,8 +14,6 @@ namespace proslam {
     assert(_camera_right);
 
     //ds update base
-    _maximum_depth_near_meters = _parameters->maximum_depth_near_meters;
-    _maximum_depth_far_meters  = _parameters->maximum_depth_far_meters;
     BaseFramePointGenerator::configure();
 
     //ds info
@@ -35,9 +33,9 @@ namespace proslam {
 
     //ds allocate new space map and initialize fields
     _space_map_left_meters.create(_number_of_rows_image,_number_of_cols_image, CV_32FC3);
-    for (Index row = 0; row < _number_of_rows_image; ++row) {
-      for (Index col = 0; col < _number_of_cols_image; ++col) {
-        _space_map_left_meters.at<cv::Vec3f>(row, col) = cv::Vec3f(0,0,_maximum_depth_far_meters);
+    for (int32_t row = 0; row < _number_of_rows_image; ++row) {
+      for (int32_t col = 0; col < _number_of_cols_image; ++col) {
+        _space_map_left_meters.at<cv::Vec3f>(row, col) = cv::Vec3f(0,0,_maximum_reliable_depth_far_meters);
       }
     }
 
@@ -51,9 +49,9 @@ namespace proslam {
     const float _depth_pixel_to_meters=1e-3;
     
     TransformMatrix3D right_to_left_transform=_camera_left->robotToCamera()*_camera_right->cameraToRobot();
-    for (Count r=0; r<_number_of_rows_image; ++r){
+    for (int32_t r=0; r<_number_of_rows_image; ++r){
       const unsigned short* raw_depth=right_depth_image.ptr<const unsigned short>(r);
-      for (Count c=0; c<_number_of_cols_image; ++c, raw_depth++){
+      for (int32_t c=0; c<_number_of_cols_image; ++c, raw_depth++){
         if (!*raw_depth)
           continue;
         // retrieve depth
@@ -71,8 +69,8 @@ namespace proslam {
         point_in_left_camera_pixels *= 1./point_in_left_camera_pixels.z();
 
         // round to int
-        const Count dest_r=round(point_in_left_camera_pixels.y());
-        const Count dest_c=round(point_in_left_camera_pixels.x());
+        const int32_t dest_r=round(point_in_left_camera_pixels.y());
+        const int32_t dest_c=round(point_in_left_camera_pixels.x());
 
         // if outside skip
         if (dest_r<0 ||
@@ -96,7 +94,7 @@ namespace proslam {
   }
 
   //ds computes framepoints stored in a image-like matrix (_framepoints_in_image) for provided stereo images
-  void DepthFramePointGenerator::compute(Frame* frame_) {
+  void DepthFramePointGenerator::compute(Frame* frame_, Frame* frame_previous_) {
     assert(frame_->intensityImageRight().type() == CV_16UC1);
 
     //ds detect new features
@@ -107,7 +105,7 @@ namespace proslam {
     CHRONOMETER_STOP(depth_map_generation)
 
     //ds extract descriptors for detected features
-    extractDescriptors(frame_->intensityImageLeft(), frame_->keypointsLeft(), frame_->descriptorsLeft());
+    computeDescriptors(frame_->intensityImageLeft(), frame_->keypointsLeft(), frame_->descriptorsLeft());
 
     //ds prepare and execute stereo keypoint search
     CHRONOMETER_START(depth_assignment)
@@ -125,7 +123,7 @@ namespace proslam {
       const Index r_left=keypoint_left.pt.y;
       const Index c_left=keypoint_left.pt.x;
       const cv::Vec3f& p=_space_map_left_meters.at<const cv::Vec3f>(r_left, c_left);
-      if (p[2]>=_maximum_depth_far_meters)
+      if (p[2]>=_maximum_reliable_depth_far_meters)
         continue;
 
       assert(_framepoints_in_image[r_left][c_left] == 0);

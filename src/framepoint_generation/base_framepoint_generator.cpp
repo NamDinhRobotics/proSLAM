@@ -12,8 +12,6 @@ BaseFramePointGenerator::BaseFramePointGenerator(BaseFramePointGeneratorParamete
                                                                                                   _focal_length_pixels(0),
                                                                                                   _principal_point_offset_u_pixels(0),
                                                                                                   _principal_point_offset_v_pixels(0),
-                                                                                                  _maximum_depth_near_meters(0),
-                                                                                                  _maximum_depth_far_meters(0),
                                                                                                   _number_of_detectors(0) {
   LOG_DEBUG(std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|constructed" << std::endl)
 }
@@ -27,6 +25,9 @@ void  BaseFramePointGenerator::configure(){
   _focal_length_pixels             = _camera_left->cameraMatrix()(0,0);
   _principal_point_offset_u_pixels = _camera_left->cameraMatrix()(0,2);
   _principal_point_offset_v_pixels = _camera_left->cameraMatrix()(1,2);
+
+  //ds initialize feature matcher
+  _feature_matcher_left.configure(_number_of_rows_image, _number_of_cols_image);
 
   //ds allocate descriptor extractor TODO enable further support and check BIT SIZES
 #if CV_MAJOR_VERSION == 2
@@ -88,24 +89,24 @@ void  BaseFramePointGenerator::configure(){
     _detector_thresholds[r] = new real[_parameters->number_of_detectors_horizontal];
     for (uint32_t c = 0; c < _parameters->number_of_detectors_horizontal; ++c) {
 #if CV_MAJOR_VERSION == 2
-      _detectors[r][c] = new cv::FastFeatureDetector(_parameters->detector_threshold_initial);
+      _detectors[r][c] = new cv::FastFeatureDetector(_parameters->detector_threshold_minimum);
 #else
-      _detectors[r][c] = cv::FastFeatureDetector::create(_parameters->detector_threshold_initial);
+      _detectors[r][c] = cv::FastFeatureDetector::create(_parameters->detector_threshold_minimum);
 #endif
       _detector_regions[r][c] = cv::Rect(std::round(c*pixel_cols_per_detector),
                                          std::round(r*pixel_rows_per_detector),
                                          pixel_cols_per_detector,
                                          pixel_rows_per_detector);
-      _detector_thresholds[r][c] = _parameters->detector_threshold_initial;
+      _detector_thresholds[r][c] = _parameters->detector_threshold_minimum;
     }
   }
   _number_of_detectors = _parameters->number_of_detectors_vertical*_parameters->number_of_detectors_horizontal;
 
   //ds allocate and initialize framepoint map
   _framepoints_in_image = new FramePoint**[_number_of_rows_image];
-  for (Index row = 0; row < _number_of_rows_image; ++row) {
+  for (int32_t row = 0; row < _number_of_rows_image; ++row) {
     _framepoints_in_image[row] = new FramePoint*[_number_of_cols_image];
-    for (Index col = 0; col < _number_of_cols_image; ++col) {
+    for (int32_t col = 0; col < _number_of_cols_image; ++col) {
       _framepoints_in_image[row][col] = 0;
     }
   }
@@ -135,7 +136,7 @@ BaseFramePointGenerator::~BaseFramePointGenerator() {
 
   //ds deallocate framepoint grid
   if (_framepoints_in_image) {
-    for (Index row = 0; row < _number_of_rows_image; ++row) {
+    for (int32_t row = 0; row < _number_of_rows_image; ++row) {
       delete[] _framepoints_in_image[row];
     }
     delete[] _framepoints_in_image;
@@ -219,7 +220,7 @@ void BaseFramePointGenerator::detectKeypoints(const cv::Mat& intensity_image_, s
   CHRONOMETER_STOP(keypoint_detection)
 }
 
-void BaseFramePointGenerator::extractDescriptors(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_, cv::Mat& descriptors_) {
+void BaseFramePointGenerator::computeDescriptors(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_, cv::Mat& descriptors_) {
   CHRONOMETER_START(descriptor_extraction)
   _descriptor_extractor->compute(intensity_image_, keypoints_, descriptors_);
   CHRONOMETER_STOP(descriptor_extraction)

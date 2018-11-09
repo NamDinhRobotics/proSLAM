@@ -213,6 +213,7 @@ void SLAMAssembly::loadCamerasFromMessageFile() {
     //ds compute right camera with baseline offset
     projection_matrix.block<3,1>(0,3) = _camera_left->cameraMatrix()*_camera_right->robotToCamera().translation();
     _camera_right->setProjectionMatrix(projection_matrix);
+    _camera_right->setBaselineHomogeneous(projection_matrix.col(3));
     LOG_DEBUG(std::cerr << "projection matrix RIGHT: " << std::endl;)
     LOG_DEBUG(std::printf("%11.6f %11.6f %11.6f %11.6f\n", projection_matrix(0,0), projection_matrix(0,1), projection_matrix(0,2), projection_matrix(0,3) ))
     LOG_DEBUG(std::printf("%11.6f %11.6f %11.6f %11.6f\n", projection_matrix(1,0), projection_matrix(1,1), projection_matrix(1,2), projection_matrix(1,3)))

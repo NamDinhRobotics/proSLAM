@@ -14,9 +14,33 @@ typedef srrg_hbst::BinaryNode<HBSTMatchable, real> HBSTNode;
 typedef HBSTNode::MatchableVector AppearanceVector;
 typedef srrg_hbst::BinaryTree<HBSTNode> HBSTTree;
 
+//! @struct container holding spatial and appearance information (used in findStereoKeypoints)
+struct IntensityFeature {
+
+  IntensityFeature(): row(0), col(0), index_in_vector(0) {}
+
+  IntensityFeature(const cv::KeyPoint& keypoint_,
+                   const cv::Mat& descriptor_,
+                   const size_t& index_in_vector_): keypoint(keypoint_),
+                                                    descriptor(descriptor_),
+                                                    row(keypoint_.pt.y),
+                                                    col(keypoint_.pt.x),
+                                                    index_in_vector(index_in_vector_) {}
+  cv::KeyPoint keypoint;  //ds geometric: feature location in 2D
+  cv::Mat descriptor;     //ds appearance: feature descriptor
+  int32_t row;            //ds pixel column coordinate (v)
+  int32_t col;            //ds pixel row coordinate (u)
+  size_t index_in_vector; //ds inverted index for vector containing this
+
+};
+typedef std::vector<IntensityFeature*> IntensityFeaturePointerVector;
+
 //ds this class encapsulates the triangulation information of a salient point in the image and can be linked to a previous FramePoint instance and a Landmark
 class FramePoint {
 public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+  //ds prohibit default construction
+  FramePoint() = delete;
 
 //ds object handling: specific instantiation controlled by Frame class (factory)
 protected:
@@ -28,8 +52,12 @@ protected:
              const cv::Mat& descriptor_right_,
              Frame* frame_);
 
-  //ds prohibit default construction
-  FramePoint() = delete;
+  //ds construct a new framepoint, owned by the provided Frame
+  FramePoint(const IntensityFeature* feature_left_,
+             const IntensityFeature* feature_right_,
+             Frame* frame_);
+
+  ~FramePoint();
 
 //ds getters/setters
 public:
@@ -58,13 +86,12 @@ public:
   inline const real depthMeters() const {return _depth_meters;}
   void setDepthMeters(const real& depth_meters_) {_depth_meters = depth_meters_;}
 
-  //ds flag telling us if the framepoint is close by the camera (depending on the maximumDepthClose value of a Frame)
-  inline void setIsNear(const bool& is_near_) {_is_near = is_near_;}
-  inline const bool isNear() const {return _is_near;}
-
   //ds frame point track length (number of previous elements)
   inline const Count trackLength() const {return _track_length;}
   void setTrackLength(const Count& track_length_) {_track_length = track_length_;}
+
+  void setEpipolarOffset(const int32_t& epipolar_offset_) {_epipolar_offset = epipolar_offset_;}
+  inline const int32_t& epipolarOffset() const {return _epipolar_offset;}
 
   inline const PointCoordinates& imageCoordinatesLeft() const {return _image_coordinates_left;}
   inline const PointCoordinates& imageCoordinatesRight() const {return _image_coordinates_right;}
@@ -93,10 +120,12 @@ public:
   static void reset() {_instances = 0;}
 
   //ds visualization only
-  inline const PointCoordinates reprojectionCoordinatesLeft() const {return _reprojection_coordinates_left;}
-  void setReprojectionCoordinatesLeft(const PointCoordinates& reprojection_coordinates_) {_reprojection_coordinates_left = reprojection_coordinates_; }
-  inline const PointCoordinates reprojectionCoordinatesRight() const {return _reprojection_coordinates_right;}
-  void setReprojectionCoordinatesRight(const PointCoordinates& reprojection_coordinates_) {_reprojection_coordinates_right = reprojection_coordinates_;}
+  inline const cv::Point2f projectionEstimateLeft() const {return _projection_estimate_left;}
+  inline const cv::Point2f projectionEstimateRight() const {return _projection_estimate_right;}
+  inline const cv::Point2f projectionEstimateRightCorrected() const {return _projection_estimate_right_corrected;}
+  void setProjectionEstimateLeft(const cv::Point2f& projection_estimate_) {_projection_estimate_left = projection_estimate_;}
+  void setProjectionEstimateRight(const cv::Point2f& projection_estimate_) {_projection_estimate_right = projection_estimate_;}
+  void setProjectionEstimateRightCorrected(const cv::Point2f& projection_estimate_) {_projection_estimate_right_corrected = projection_estimate_;}
 
 //ds constant properties
 public:
@@ -112,10 +141,10 @@ protected:
   const Identifier _identifier;
 
   //ds connections to temporal and ownership elements
-  FramePoint* _previous = 0; //ds FramePoint in the previous image
-  FramePoint* _next     = 0; //ds FramePoint in the next image (updated as soon as previous is called)
-  FramePoint* _origin   = 0; //ds FramePoint in the image where it was first detected (track start)
-  Frame* _frame         = 0; //ds Frame to which the point belongs
+  FramePoint* _previous = nullptr; //ds FramePoint in the previous image
+  FramePoint* _next     = nullptr; //ds FramePoint in the next image (updated as soon as previous is called)
+  FramePoint* _origin   = nullptr; //ds FramePoint in the image where it was first detected (track start)
+  Frame* _frame         = nullptr; //ds Frame to which the point belongs
 
   //ds triangulation information (set by StereoFramePointGenerator)
   const cv::KeyPoint _keypoint_left;
@@ -123,6 +152,13 @@ protected:
   const cv::Mat _descriptor_left;
   const cv::Mat _descriptor_right;
   const real _disparity_pixels;
+
+  //! @brief epipolar offset at triangulation (0 for regular, horizontal triangulation)
+  int32_t _epipolar_offset = 0;
+
+  //! @brief feature objects
+  const IntensityFeature* _feature_left  = nullptr;
+  const IntensityFeature* _feature_right = nullptr;
 
   //ds spatial properties
   PointCoordinates _image_coordinates_left;
@@ -136,10 +172,7 @@ protected:
   PointCoordinates _camera_coordinates_left_landmark = PointCoordinates::Zero();
 
   //ds connected landmark (if any)
-  Landmark* _landmark = 0;
-
-  //ds framepoint quality: near or far points
-  bool _is_near = false;
+  Landmark* _landmark = nullptr;
 
   //ds frame point track length (number of previous elements)
   Count _track_length = 0;
@@ -148,8 +181,9 @@ protected:
   friend Frame;
 
   //ds visualization only
-  PointCoordinates _reprojection_coordinates_left  = PointCoordinates::Zero();
-  PointCoordinates _reprojection_coordinates_right = PointCoordinates::Zero();
+  cv::Point2f _projection_estimate_left;
+  cv::Point2f _projection_estimate_right;
+  cv::Point2f _projection_estimate_right_corrected;
 
 //ds class specific
 private:

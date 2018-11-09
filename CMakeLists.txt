@@ -73,6 +73,9 @@ else()
   message("${PROJECT_NAME}|xfeatures2d library not found, using ORB instead of BRIEF descriptors")
 endif()
 
+#ds enable descriptor merging in HBST (an other SRRG components)
+add_definitions(-DSRRG_MERGE_DESCRIPTORS)
+
 #ds load QGLViewer library
 find_package(QGLViewer REQUIRED)
 

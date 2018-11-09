@@ -95,7 +95,7 @@ void ImageViewer::_drawPoints() {
         }
 
         //ds draw reprojection circle
-        cv::circle(_current_image, cv::Point(point->reprojectionCoordinatesLeft().x(), point->reprojectionCoordinatesLeft().y()), 4, color);
+        cv::circle(_current_image, point->projectionEstimateLeft(), 4, color);
 
         //ds draw the point
         const cv::Point2i projection(point->imageCoordinatesLeft().x(), point->imageCoordinatesLeft().y());

@@ -44,6 +44,8 @@ public:
   void setCameraMatrix(const CameraMatrix& camera_matrix_);
   inline const ProjectionMatrix& projectionMatrix() const {return _projection_matrix;}
   void setProjectionMatrix(const ProjectionMatrix& projection_matrix_) {_projection_matrix = projection_matrix_;}
+  inline const Vector3& baselineHomogeneous() const {return _baseline_homogeneous;}
+  void setBaselineHomogeneous(const Vector3& baseline_homogeneous_) {_baseline_homogeneous = baseline_homogeneous_;}
   inline const TransformMatrix3D& cameraToRobot() const {return _camera_to_robot;}
   inline const TransformMatrix3D& robotToCamera() const {return _robot_to_camera;}
   void setCameraToRobot(const TransformMatrix3D& camera_to_robot_);
@@ -73,8 +75,11 @@ protected:
   //! @brief inverse of the pinhole model camera matrix
   CameraMatrix _inverse_camera_matrix;
 
-  //! @brief stereo projection matrix (must be set manually with setProjectionMatrix)
+  //! @brief stereo projection matrix (must be set manually with setProjectionMatrix) TODO be removed, instead use baseline
   ProjectionMatrix _projection_matrix = ProjectionMatrix::Zero();
+
+  //! @brief stereo camera basline in homogeneous coordinates
+  Vector3 _baseline_homogeneous = Vector3::Zero();
 
   //! @brief rectification matrix
   Matrix3 _rectification_matrix = Matrix3::Zero();

@@ -69,6 +69,7 @@ void callbackCameraInfoRight(const sensor_msgs::CameraInfoConstPtr& message_) {
     //ds allocate a new camera
     camera_right = new proslam::Camera(message_->height, message_->width, camera_matrix_transposed.transpose());
     camera_right->setProjectionMatrix(projection_matrix_transposed.transpose());
+    camera_right->setBaselineHomogeneous(camera_right->projectionMatrix().col(3));
     camera_right->setDistortionCoefficients(distortion_coefficients);
     camera_right->setRectificationMatrix(rectification_matrix_transposed.transpose());
     std::cerr << BAR << std::endl;

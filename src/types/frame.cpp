@@ -10,15 +10,17 @@ Frame::Frame(const WorldMap* context_,
              Frame* previous_,
              Frame* next_,
              const TransformMatrix3D& robot_to_world_,
-             const real& maximum_depth_near_,
              const double& timestamp_image_left_seconds_): _identifier(_instances),
                                                            _timestamp_image_left_seconds(timestamp_image_left_seconds_),
                                                            _previous(previous_),
                                                            _next(next_),
-                                                           _maximum_depth_near(maximum_depth_near_),
-                                                           _local_map(0),
-                                                           _root(context_->rootFrame()) {
+                                                           _local_map(nullptr) {
   ++_instances;
+  if (context_) {
+    _root = context_->rootFrame();
+  } else {
+    _root = this;
+  }
   setRobotToWorld(robot_to_world_);
   _created_points.clear();
   _active_points.clear();
@@ -88,15 +90,15 @@ FramePoint* Frame::createFramepoint(const cv::KeyPoint& keypoint_left_,
   frame_point->setRobotCoordinates(_camera_left->cameraToRobot()*camera_coordinates_left_);
   frame_point->setWorldCoordinates(this->robotToWorld()*frame_point->robotCoordinates());
 
-  //ds if the point is not linked (no track)
-  if (previous_point_ == 0) {
-
-    //ds this point has no predecessor
-    frame_point->setOrigin(frame_point);
-  } else {
+  //ds if there is a previous point
+  if (previous_point_) {
 
     //ds connect the framepoints
     frame_point->setPrevious(previous_point_);
+  } else {
+
+    //ds this point has no predecessor
+    frame_point->setOrigin(frame_point);
   }
 
   //ds update depth statistics for this frame
@@ -104,9 +106,40 @@ FramePoint* Frame::createFramepoint(const cv::KeyPoint& keypoint_left_,
 
   //ds update depth based on quality
   frame_point->setDepthMeters(depth_meters);
-  if (frame_point->depthMeters() < _maximum_depth_near) {
-    frame_point->setIsNear(true);
+
+  //ds bookkeep each generated point for resize immune memory management (TODO remove costly bookkeeping)
+  _created_points.push_back(frame_point);
+  return frame_point;
+}
+
+FramePoint* Frame::createFramepoint(const IntensityFeature* feature_left_,
+                                    const IntensityFeature* feature_right_,
+                                    const PointCoordinates& camera_coordinates_left_,
+                                    FramePoint* previous_point_) {
+  assert(_camera_left != 0);
+
+  //ds allocate a new point connected to the previous one
+  FramePoint* frame_point = new FramePoint(feature_left_, feature_right_, this);
+  frame_point->setCameraCoordinatesLeft(camera_coordinates_left_);
+  frame_point->setRobotCoordinates(_camera_left->cameraToRobot()*camera_coordinates_left_);
+  frame_point->setWorldCoordinates(this->robotToWorld()*frame_point->robotCoordinates());
+
+  //ds if there is a previous point
+  if (previous_point_) {
+
+    //ds connect the framepoints
+    frame_point->setPrevious(previous_point_);
+  } else {
+
+    //ds this point has no predecessor
+    frame_point->setOrigin(frame_point);
   }
+
+  //ds update depth statistics for this frame
+  const real depth_meters = camera_coordinates_left_.z();
+
+  //ds update depth based on quality
+  frame_point->setDepthMeters(depth_meters);
 
   //ds bookkeep each generated point for resize immune memory management (TODO remove costly bookkeeping)
   _created_points.push_back(frame_point);
