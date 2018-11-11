@@ -25,9 +25,13 @@ void  BaseFramePointGenerator::configure(){
   _focal_length_pixels             = _camera_left->cameraMatrix()(0,0);
   _principal_point_offset_u_pixels = _camera_left->cameraMatrix()(0,2);
   _principal_point_offset_v_pixels = _camera_left->cameraMatrix()(1,2);
+  LOG_INFO(std::cerr << "BaseFramePointGenerator::configure|focal length (pixels): " << _focal_length_pixels << std::endl)
 
   //ds initialize feature matcher
   _feature_matcher_left.configure(_number_of_rows_image, _number_of_cols_image);
+
+  //ds configure tracking window
+  _projection_tracking_distance_pixels = _parameters->maximum_projection_tracking_distance_pixels;
 
   //ds allocate descriptor extractor TODO enable further support and check BIT SIZES
 #if CV_MAJOR_VERSION == 2
@@ -102,17 +106,28 @@ void  BaseFramePointGenerator::configure(){
   }
   _number_of_detectors = _parameters->number_of_detectors_vertical*_parameters->number_of_detectors_horizontal;
 
-  //ds allocate and initialize framepoint map
-  _framepoints_in_image = new FramePoint**[_number_of_rows_image];
-  for (int32_t row = 0; row < _number_of_rows_image; ++row) {
-    _framepoints_in_image[row] = new FramePoint*[_number_of_cols_image];
-    for (int32_t col = 0; col < _number_of_cols_image; ++col) {
-      _framepoints_in_image[row][col] = 0;
+  //ds compute binning configuration
+  _number_of_cols_bin = std::floor(static_cast<real>(_camera_left->numberOfImageCols())/_parameters->bin_size_pixels)+1;
+  _number_of_rows_bin = std::floor(static_cast<real>(_camera_left->numberOfImageRows())/_parameters->bin_size_pixels)+1;
+
+  //ds compute target number of points
+  _target_number_of_keypoints = _number_of_cols_bin*_number_of_rows_bin;
+  LOG_INFO(std::cerr << "BaseFramePointGenerator::configure|current target number of points: " << _target_number_of_keypoints << std::endl)
+
+  //ds compute target points per detector region
+  _target_number_of_keypoints_per_detector = static_cast<real>(_target_number_of_keypoints)/_number_of_detectors;
+  LOG_INFO(std::cerr << "BaseFramePointGenerator::configure|current target number of points per image region: " << _target_number_of_keypoints_per_detector << std::endl)
+
+  //ds allocate and initialize bin grid
+  _bin_map_left = new FramePoint**[_number_of_rows_bin];
+  for (Index row = 0; row < _number_of_rows_bin; ++row) {
+    _bin_map_left[row] = new FramePoint*[_number_of_cols_bin];
+    for (Index col = 0; col < _number_of_cols_bin; ++col) {
+      _bin_map_left[row][col] = nullptr;
     }
   }
-
-  //ds log computed values
-  LOG_INFO(std::cerr << "BaseFramePointGenerator::configure|focal length (pixels): " << _focal_length_pixels << std::endl)
+  LOG_DEBUG(std::cerr << "BaseTracker::configure|number of horizontal bins: " << _number_of_cols_bin << " size: " << _parameters->bin_size_pixels << std::endl)
+  LOG_DEBUG(std::cerr << "BaseTracker::configure|number of vertical bins: " << _number_of_rows_bin << " size: " << _parameters->bin_size_pixels << std::endl)
 
   //ds clear buffers
   _keypoints_with_descriptors_left.clear();
@@ -134,24 +149,12 @@ BaseFramePointGenerator::~BaseFramePointGenerator() {
     delete [] _detector_thresholds;
   }
 
-  //ds deallocate framepoint grid
-  if (_framepoints_in_image) {
-    for (int32_t row = 0; row < _number_of_rows_image; ++row) {
-      delete[] _framepoints_in_image[row];
-    }
-    delete[] _framepoints_in_image;
+  //ds free bin map
+  for (Count row = 0; row < _number_of_rows_bin; ++row) {
+    delete[] _bin_map_left[row];
   }
-
+  delete[] _bin_map_left;
   LOG_DEBUG(std::cerr << "BaseFramePointGenerator::~BaseFramePointGenerator|destroyed" << std::endl)
-}
-
-void BaseFramePointGenerator::setTargetNumberOfKeyoints(const Count& target_number_of_keypoints_) {
-  _target_number_of_keypoints = target_number_of_keypoints_;
-  LOG_INFO(std::cerr << "BaseFramePointGenerator::setTargetNumberOfKeyoints|current target number of points: " << _target_number_of_keypoints << std::endl)
-
-  //ds compute target points per detector region
-  _target_number_of_keypoints_per_detector = static_cast<real>(_target_number_of_keypoints)/_number_of_detectors;
-  LOG_INFO(std::cerr << "BaseFramePointGenerator::setTargetNumberOfKeyoints|current target number of points per image region: " << _target_number_of_keypoints_per_detector << std::endl)
 }
 
 void BaseFramePointGenerator::detectKeypoints(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_) {
@@ -224,6 +227,13 @@ void BaseFramePointGenerator::computeDescriptors(const cv::Mat& intensity_image_
   CHRONOMETER_START(descriptor_extraction)
   _descriptor_extractor->compute(intensity_image_, keypoints_, descriptors_);
   CHRONOMETER_STOP(descriptor_extraction)
+}
+
+void BaseFramePointGenerator::track(Frame* frame_,
+                                    Frame* frame_previous_,
+                                    const TransformMatrix3D& camera_left_previous_in_current_,
+                                    FramePointPointerVector& previous_framepoints_without_tracks_) {
+  throw std::runtime_error("default monocular tracking not implemented yet");
 }
 
 void BaseFramePointGenerator::adjustDetectorThresholds() {

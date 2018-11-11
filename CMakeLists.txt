@@ -14,7 +14,7 @@ message("${PROJECT_NAME}|build type: '${CMAKE_BUILD_TYPE}'")
 add_definitions(-DSRRG_PROSLAM_DESCRIPTOR_SIZE_BITS=256)
 
 #ds specify target log level: 0 ERROR, 1 WARNING, 2 INFO, 3 DEBUG (defaults to 2 if not defined)
-add_definitions(-DSRRG_PROSLAM_LOG_LEVEL=3)
+add_definitions(-DSRRG_PROSLAM_LOG_LEVEL=2)
 
 #ds load Eigen library
 find_package(Eigen3 REQUIRED)

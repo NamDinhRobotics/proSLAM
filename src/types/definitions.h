@@ -104,11 +104,6 @@ namespace proslam {
   #define CV_COLOR_CODE_VIOLETT cv::Scalar(255, 0, 255)
   #define CV_COLOR_CODE_DARKVIOLETT cv::Scalar(150, 0, 150)
 
-  //ds extended boolean
-  enum ThreeValued {False,
-                    True,
-                    Unknown};
-
   //ds log levels
   enum LoggingLevel {Debug   = 0,
                      Info    = 1,

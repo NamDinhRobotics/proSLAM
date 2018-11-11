@@ -99,6 +99,8 @@ void BaseFramePointGeneratorParameters::print() const {
   std::cerr << "BaseFramepointGeneratorParameters::print|detector_threshold_minimum: " << detector_threshold_minimum << std::endl;
   std::cerr << "BaseFramepointGeneratorParameters::print|detector_threshold_maximum_change: " << detector_threshold_maximum_change << std::endl;
   std::cerr << "BaseFramepointGeneratorParameters::print|matching_distance_tracking_threshold: " << matching_distance_tracking_threshold << std::endl;
+  std::cerr << "BaseFramepointGeneratorParameters::print|enable_keypoint_binning: " << enable_keypoint_binning << std::endl;
+  std::cerr << "BaseFramepointGeneratorParameters::print|bin_size_pixels: " << bin_size_pixels << std::endl;
 }
 
 void StereoFramePointGeneratorParameters::print() const {
@@ -127,8 +129,6 @@ void BaseTrackerParameters::print() const {
   std::cerr << "BaseTrackerParameters::print|range_point_tracking: " << range_point_tracking << std::endl;
   std::cerr << "BaseTrackerParameters::print|maximum_distance_tracking_pixels: " << maximum_distance_tracking_pixels << std::endl;
   std::cerr << "BaseTrackerParameters::print|maximum_number_of_landmark_recoveries: " << maximum_number_of_landmark_recoveries << std::endl;
-  std::cerr << "BaseTrackerParameters::print|bin_size_pixels: " << bin_size_pixels << std::endl;
-  std::cerr << "BaseTrackerParameters::print|ratio_keypoints_to_bins: " << ratio_keypoints_to_bins << std::endl;
   aligner->print();
 }
 
@@ -384,9 +384,8 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, range_point_tracking, int32_t)
     PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, maximum_distance_tracking_pixels, int32_t)
     PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, maximum_number_of_landmark_recoveries, Count)
-    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, enable_keypoint_binning, bool)
-    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, bin_size_pixels, Count)
-    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, ratio_keypoints_to_bins, real)
+    PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, enable_keypoint_binning, bool)
+    PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, bin_size_pixels, Count)
     PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, minimum_delta_angular_for_movement, real)
     PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, minimum_delta_translational_for_movement, real)
     PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->error_delta_for_convergence, real)
@@ -460,18 +459,16 @@ void ParameterCollection::setMode(const CommandLineParameters::TrackerMode& mode
       if (!stereo_framepoint_generator_parameters) {stereo_framepoint_generator_parameters = new StereoFramePointGeneratorParameters(command_line_parameters->logging_level);}
       if (!stereo_tracker_parameters) {
         stereo_tracker_parameters = new StereoTrackerParameters(command_line_parameters->logging_level);
-        stereo_tracker_parameters->enable_landmark_recovery = command_line_parameters->option_recover_landmarks;
       }
-      if (command_line_parameters->option_recover_landmarks) {stereo_tracker_parameters->enable_landmark_recovery = true;}
+      stereo_tracker_parameters->enable_landmark_recovery = command_line_parameters->option_recover_landmarks;
       break;
     }
     case CommandLineParameters::TrackerMode::RGB_DEPTH: {
       if (!depth_framepoint_generator_parameters) {depth_framepoint_generator_parameters = new DepthFramePointGeneratorParameters(command_line_parameters->logging_level);}
       if (!depth_tracker_parameters) {
         depth_tracker_parameters = new DepthTrackerParameters(command_line_parameters->logging_level);
-        depth_tracker_parameters->enable_landmark_recovery = command_line_parameters->option_recover_landmarks;
       }
-      if (command_line_parameters->option_recover_landmarks) {depth_tracker_parameters->enable_landmark_recovery = true;}
+      depth_tracker_parameters->enable_landmark_recovery = command_line_parameters->option_recover_landmarks;
       break;
     }
     default: {

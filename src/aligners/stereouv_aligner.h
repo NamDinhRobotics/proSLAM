@@ -4,7 +4,7 @@
 namespace proslam {
 
 //ds this class specifies an aligner for pose optimization by minimizing the reprojection errors in the image plane (used to determine the robots odometry)
-class StereoUVAligner: public BaseFrameAligner, public AlignerWorkspace<6,3> {
+class StereoUVAligner: public BaseFrameAligner, public AlignerWorkspace<6, 4> {
 
 //ds object handling
 PROSLAM_MAKE_PROCESSING_SUBCLASS(StereoUVAligner, AlignerParameters)
@@ -42,8 +42,8 @@ protected:
 
   Count _number_of_measurements = 0;
   std::vector<DimensionMatrix, Eigen::aligned_allocator<DimensionMatrix> > _information_vector;
-  std::vector<Vector3> _moving;
-  std::vector<Vector3> _fixed;
+  std::vector<Vector3, Eigen::aligned_allocator<Vector3> > _moving;
+  std::vector<Vector4, Eigen::aligned_allocator<Vector4> > _fixed;
   std::vector<real> _weights_translation;
 };
 }

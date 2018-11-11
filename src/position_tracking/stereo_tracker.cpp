@@ -47,9 +47,9 @@ namespace proslam {
   void StereoTracker::_recoverPoints(Frame* current_frame_) {
 
     //ds precompute transforms
-    const TransformMatrix3D world_to_camera_left    = current_frame_->worldToCameraLeft();
-    const ProjectionMatrix& projection_matrix_left  = _camera_left->projectionMatrix();
-    const ProjectionMatrix& projection_matrix_right = _camera_right->projectionMatrix();
+    const TransformMatrix3D world_to_camera_left  = current_frame_->worldToCameraLeft();
+    const CameraMatrix& camera_calibration_matrix = _camera_left->cameraMatrix();
+    const Vector3 baseline_homogeneous            = _camera_right->baselineHomogeneous();
 
     //ds obtain currently active tracking distance
     const real maximum_distance_appearance = _framepoint_generator->parameters()->matching_distance_tracking_threshold;
@@ -66,23 +66,23 @@ namespace proslam {
     for (FramePoint* point_previous: _lost_points) {
 
       //ds get point into current camera - based on last track
-      Vector4 point_in_camera_homogeneous(Vector4::Ones());
+      PointCoordinates point_in_camera_homogeneous(Vector3::Zero());
 
       //ds if we have a landmark at hand
       if (point_previous->landmark()) {
         point_previous->landmark()->incrementNumberOfRecoveries();
 
         //ds get point in camera frame based on landmark coordinates
-        point_in_camera_homogeneous.head<3>() = world_to_camera_left*point_previous->landmark()->coordinates();
+        point_in_camera_homogeneous = world_to_camera_left*point_previous->landmark()->coordinates();
       } else {
 
         //ds get point in camera frame based on point coordinates
-        point_in_camera_homogeneous.head<3>() = world_to_camera_left*point_previous->worldCoordinates();
+        point_in_camera_homogeneous = world_to_camera_left*point_previous->worldCoordinates();
       }
 
       //ds obtain point projection on camera image plane
-      PointCoordinates point_in_image_left  = projection_matrix_left*point_in_camera_homogeneous;
-      PointCoordinates point_in_image_right = projection_matrix_right*point_in_camera_homogeneous;
+      PointCoordinates point_in_image_left  = camera_calibration_matrix*point_in_camera_homogeneous;
+      PointCoordinates point_in_image_right = point_in_image_left+baseline_homogeneous;
 
       //ds normalize point and update prediction based on landmark position: LEFT
       point_in_image_left  /= point_in_image_left.z();
@@ -103,7 +103,7 @@ namespace proslam {
       const cv::Point2f projection_right(point_in_image_right.x(), point_in_image_right.y());
 
       //ds this can be moved outside of the loop if keypoint sizes are constant
-      const float regional_border_center = 4*point_previous->keypointLeft().size;
+      const float regional_border_center = 5*point_previous->keypointLeft().size;
       const cv::Point2f offset_keypoint_half(regional_border_center, regional_border_center);
       const float regional_full_height = regional_border_center+regional_border_center+1;
 
@@ -119,11 +119,9 @@ namespace proslam {
         continue;
       }
 
-      //ds extraction regions
+      //ds left search regions
       const cv::Point2f corner_left(projection_left-offset_keypoint_half);
       const cv::Rect_<float> region_of_interest_left(corner_left.x, corner_left.y, regional_full_height, regional_full_height);
-      const cv::Point2f corner_right(projection_right-offset_keypoint_half);
-      const cv::Rect_<float> region_of_interest_right(corner_right.x, corner_right.y, regional_full_height, regional_full_height);
 
       //ds extract descriptors at this position: LEFT
       keypoint_buffer_left[0]    = point_previous->keypointLeft();
@@ -135,6 +133,10 @@ namespace proslam {
         continue;
       }
       keypoint_buffer_left[0].pt += corner_left;
+
+      //ds right search region
+      const cv::Point2f corner_right(projection_right-offset_keypoint_half);
+      const cv::Rect_<float> region_of_interest_right(corner_right.x, corner_right.y, regional_full_height, regional_full_height);
 
       //ds extract descriptors at this position: RIGHT
       keypoint_buffer_right[0] = point_previous->keypointRight();
@@ -149,28 +151,28 @@ namespace proslam {
 
       if (cv::norm(point_previous->descriptorLeft(), descriptor_left, SRRG_PROSLAM_DESCRIPTOR_NORM) < maximum_distance_appearance &&
           cv::norm(point_previous->descriptorRight(), descriptor_right, SRRG_PROSLAM_DESCRIPTOR_NORM) < maximum_distance_appearance ) {
-        try {
 
-          //ds triangulate point
-          const PointCoordinates camera_coordinates(_stereo_framepoint_generator->getCoordinatesInCameraLeft(keypoint_buffer_left[0].pt, keypoint_buffer_right[0].pt));
+        //ds skip points with insufficient stereo disparity
+        if (keypoint_buffer_left[0].pt.x-keypoint_buffer_right[0].pt.x < _stereo_framepoint_generator->parameters()->minimum_disparity_pixels) {
+          continue;
+        }
 
-          //ds allocate a new point connected to the previous one
-          FramePoint* current_point = current_frame_->createFramepoint(keypoint_buffer_left[0],
-                                                                       descriptor_left,
-                                                                       keypoint_buffer_right[0],
-                                                                       descriptor_right,
-                                                                       camera_coordinates,
-                                                                       point_previous);
+        //ds allocate a new point connected to the previous one
+        FramePoint* current_point = current_frame_->createFramepoint(keypoint_buffer_left[0],
+                                                                     descriptor_left,
+                                                                     keypoint_buffer_right[0],
+                                                                     descriptor_right,
+                                                                     _stereo_framepoint_generator->getPointInLeftCamera(keypoint_buffer_left[0].pt, keypoint_buffer_right[0].pt),
+                                                                     point_previous);
 
-          //ds set the point to the control structure
-          current_frame_->points()[index_lost_point_recovered] = current_point;
-          ++index_lost_point_recovered;
-        } catch (const ExceptionTriangulation& /*exception_*/) {}
+        //ds set the point to the control structure
+        current_frame_->points()[index_lost_point_recovered] = current_point;
+        ++index_lost_point_recovered;
       }
     }
     _number_of_recovered_points = index_lost_point_recovered-_number_of_tracked_points;
     _number_of_tracked_points = index_lost_point_recovered;
     current_frame_->points().resize(_number_of_tracked_points);
-//    std::cerr << "StereoTracker::_recoverPoints|recovered points: " << _number_of_recovered_points << "/" << _number_of_lost_points << std::endl;
+    LOG_DEBUG(std::cerr << "StereoTracker::_recoverPoints|recovered points: " << _number_of_recovered_points << "/" << _number_of_lost_points << std::endl)
   }
 }

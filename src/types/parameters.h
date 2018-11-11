@@ -191,6 +191,10 @@ public:
 
   //! @brief maximum reliable depth with chosen sensor (stereo, depth, sonar, ..)
   real maximum_reliable_depth_meters = 15;
+
+  //! @brief feature density regularization
+  bool enable_keypoint_binning = true;
+  Count bin_size_pixels        = 15;
 };
 
 //! @class framepoint generation parameters for a stereo camera setup
@@ -210,7 +214,7 @@ public:
   real minimum_disparity_pixels = 1;
 
   //! @brief maximum checked epipolar line offsets
-  uint32_t maximum_epipolar_search_offset_pixels  = 1;
+  int32_t maximum_epipolar_search_offset_pixels  = 1;
 };
 
 //! @class framepoint generation parameters for a rgbd camera setup
@@ -262,11 +266,6 @@ public:
   //! @brief framepoint track recovery
   bool enable_landmark_recovery               = true;
   Count maximum_number_of_landmark_recoveries = 10;
-
-  //! @brief feature density regularization
-  bool enable_keypoint_binning = true;
-  Count bin_size_pixels        = 15;
-  real ratio_keypoints_to_bins = 1;
 
   //! @brief pose optimization
   real minimum_delta_angular_for_movement       = 0.001;

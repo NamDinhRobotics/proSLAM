@@ -30,26 +30,8 @@ Frame::Frame(const WorldMap* context_,
 
 Frame::~Frame() {
   clear();
-}
-
-const Count Frame::countPoints(const Count& min_track_length_,
-                               const ThreeValued& has_landmark_) const {
-  Count count = 0;
-  for (const FramePoint* frame_point: points()){
-    if(frame_point->trackLength() < min_track_length_) {
-      continue;
-    }
-    if(has_landmark_!= Unknown){
-      if(has_landmark_ == True && !frame_point->landmark()) {
-        continue;
-      }
-      if(has_landmark_ == False && frame_point->landmark()) {
-        continue;
-      }
-    }
-    ++count;
-  }
-  return count;
+  _keypoints_left.clear();
+  _keypoints_right.clear();
 }
 
 void Frame::setRobotToWorld(const TransformMatrix3D& robot_to_world_, const bool update_local_map_) {
@@ -152,8 +134,6 @@ void Frame::clear() {
   }
   _created_points.clear();
   _active_points.clear();
-  _keypoints_left.clear();
-  _keypoints_right.clear();
 }
 
 void Frame::updateActivePoints() {

@@ -90,6 +90,9 @@ public:
   inline const Count trackLength() const {return _track_length;}
   void setTrackLength(const Count& track_length_) {_track_length = track_length_;}
 
+  void setDescriptorDistanceTriangulation(const real& descriptor_distance_triangulation) {_descriptor_distance_triangulation = descriptor_distance_triangulation;}
+  inline const real& descriptorDistanceTriangulation() const {return _descriptor_distance_triangulation;}
+
   void setEpipolarOffset(const int32_t& epipolar_offset_) {_epipolar_offset = epipolar_offset_;}
   inline const int32_t& epipolarOffset() const {return _epipolar_offset;}
 
@@ -123,14 +126,16 @@ public:
   inline const cv::Point2f projectionEstimateLeft() const {return _projection_estimate_left;}
   inline const cv::Point2f projectionEstimateRight() const {return _projection_estimate_right;}
   inline const cv::Point2f projectionEstimateRightCorrected() const {return _projection_estimate_right_corrected;}
+  inline const cv::Point2f projectionEstimateLeftOptimized() const {return _projection_estimate_left_optimized;}
   void setProjectionEstimateLeft(const cv::Point2f& projection_estimate_) {_projection_estimate_left = projection_estimate_;}
   void setProjectionEstimateRight(const cv::Point2f& projection_estimate_) {_projection_estimate_right = projection_estimate_;}
   void setProjectionEstimateRightCorrected(const cv::Point2f& projection_estimate_) {_projection_estimate_right_corrected = projection_estimate_;}
+  void setProjectionEstimateLeftOptimized(const cv::Point2f& projection_estimate_left_optimized_) {_projection_estimate_left_optimized = projection_estimate_left_optimized_;}
 
 //ds constant properties
 public:
 
-  //! @brief the framepoints position in the framepoint matrix (corresponds to keypoint position left)
+  //! @brief the framepoints position in the image
   const uint32_t row;
   const uint32_t col;
 
@@ -152,6 +157,7 @@ protected:
   const cv::Mat _descriptor_left;
   const cv::Mat _descriptor_right;
   const real _disparity_pixels;
+  real _descriptor_distance_triangulation;
 
   //! @brief epipolar offset at triangulation (0 for regular, horizontal triangulation)
   int32_t _epipolar_offset = 0;
@@ -184,6 +190,7 @@ protected:
   cv::Point2f _projection_estimate_left;
   cv::Point2f _projection_estimate_right;
   cv::Point2f _projection_estimate_right_corrected;
+  cv::Point2f _projection_estimate_left_optimized;
 
 //ds class specific
 private:

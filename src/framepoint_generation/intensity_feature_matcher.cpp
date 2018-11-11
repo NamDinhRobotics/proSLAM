@@ -16,6 +16,9 @@ IntensityFeatureMatcher::~IntensityFeatureMatcher() {
     delete[] feature_lattice[r];
   }
   delete[] feature_lattice;
+  for (IntensityFeature* feature: feature_vector) {
+    delete feature;
+  }
   feature_vector.clear();
   LOG_DEBUG(std::cerr << "IntensityFeatureMatcher::~IntensityFeatureMatcher|destroyed" << std::endl)
 }
@@ -58,13 +61,11 @@ void IntensityFeatureMatcher::setFeatures(const std::vector<cv::KeyPoint>& keypo
   }
 
   //ds fill in features
-  number_of_features = 0;
   feature_vector.resize(keypoints_.size());
   for (uint32_t index = 0; index < keypoints_.size(); ++index) {
     IntensityFeature* feature = new IntensityFeature(keypoints_[index], descriptors_.row(index), index);
     feature_vector[index] = feature;
     feature_lattice[feature->row][feature->col] = feature;
-    ++number_of_features;
   }
 }
 
@@ -74,21 +75,16 @@ void IntensityFeatureMatcher::sortFeatureVector() {
   });
 }
 
-IntensityFeature* IntensityFeatureMatcher::getMatchingFeatureInRectangularRegion(const int32_t& row_reference_,
-                                                                                 const int32_t& col_reference_,
-                                                                                 const cv::Mat& descriptor_reference_,
-                                                                                 const int32_t& range_point_tracking_pixels_rows_,
-                                                                                 const int32_t& range_point_tracking_pixels_cols_,
-                                                                                 const real& maximum_descriptor_distance_tracking_) {
-  real descriptor_distance_best = maximum_descriptor_distance_tracking_;
+IntensityFeature* IntensityFeatureMatcher::getMatchingFeatureInRectangularRegion(const cv::Mat& descriptor_reference_,
+                                                                                 const int32_t& row_start_point,
+                                                                                 const int32_t& row_end_point,
+                                                                                 const int32_t& col_start_point,
+                                                                                 const int32_t& col_end_point,
+                                                                                 const real& maximum_descriptor_distance_tracking_,
+                                                                                 real& descriptor_distance_best_) {
+  descriptor_distance_best_ = maximum_descriptor_distance_tracking_;
   int32_t row_best = -1;
   int32_t col_best = -1;
-
-  //ds current tracking region
-  const int32_t row_start_point = std::max(row_reference_-range_point_tracking_pixels_rows_, 0);
-  const int32_t row_end_point   = std::min(row_reference_+range_point_tracking_pixels_rows_+1, number_of_rows);
-  const int32_t col_start_point = std::max(col_reference_-range_point_tracking_pixels_cols_, 0);
-  const int32_t col_end_point   = std::min(col_reference_+range_point_tracking_pixels_cols_+1, number_of_cols);
 
   //ds locate best match in appearance
   for (int32_t row = row_start_point; row < row_end_point; ++row) {
@@ -98,8 +94,8 @@ IntensityFeature* IntensityFeatureMatcher::getMatchingFeatureInRectangularRegion
                                                   feature_lattice[row][col]->descriptor,
                                                   SRRG_PROSLAM_DESCRIPTOR_NORM);
 
-        if (descriptor_distance < descriptor_distance_best) {
-          descriptor_distance_best = descriptor_distance;
+        if (descriptor_distance < descriptor_distance_best_) {
+          descriptor_distance_best_ = descriptor_distance;
           row_best = row;
           col_best = col;
         }

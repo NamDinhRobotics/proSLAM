@@ -8,38 +8,6 @@ namespace proslam {
 //ds this class processes two subsequent Frames and establishes Framepoint correspondences (tracks) based on the corresponding images
 class BaseTracker {
 
-//ds exported types
-public:
-
-  //ds track proposal between 2 framepoints
-  struct TrackCandidate {
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    TrackCandidate(FramePoint* framepoint_previous_,
-                   const int32_t& row_,
-                   const int32_t& col_,
-                   const int32_t& pixel_distance_,
-                   const real& matching_distance_): framepoint(framepoint_previous_),
-                                                    row(row_),
-                                                    col(col_),
-                                                    pixel_distance(pixel_distance_),
-                                                    descriptor_distance(matching_distance_) {}
-
-    TrackCandidate(): framepoint(0),
-                      row(0),
-                      col(0),
-                      pixel_distance(0),
-                      descriptor_distance(0) {}
-
-    FramePoint* framepoint;
-    int32_t row;
-    int32_t col;
-    int32_t pixel_distance;
-    real descriptor_distance;
-  };
-  typedef std::vector<TrackCandidate, Eigen::aligned_allocator<TrackCandidate>> TrackCandidateVector;
-  typedef std::pair<const Identifier, TrackCandidateVector> TrackCandidateMapElement;
-  typedef std::map<const Identifier, TrackCandidateVector, std::less<const Identifier>, Eigen::aligned_allocator<TrackCandidateMapElement>> TrackCandidateMap;
-
 //ds object handling
 PROSLAM_MAKE_PROCESSING_CLASS(BaseTracker)
 
@@ -69,9 +37,6 @@ public:
   const BaseFramePointGenerator* framepointGenerator() const {return _framepoint_generator;}
   const Count totalNumberOfTrackedPoints() const {return _total_number_of_tracked_points;}
   const Count totalNumberOfLandmarks() const {return _total_number_of_landmarks;}
-  const Count binSize() const {return _parameters->bin_size_pixels;}
-  const Count numberOfColsBin() const {return _number_of_cols_bin;}
-  const Count numberOfRowsBin() const {return _number_of_rows_bin;}
   const real meanTrackingRatio() const {return _mean_tracking_ratio;}
   const real meanNumberOfKeypoints() const {return _mean_number_of_keypoints;}
   const real meanNumberOfFramepoints() const {return _mean_number_of_framepoints;}
@@ -80,7 +45,7 @@ public:
 protected:
 
   //ds retrieves framepoint correspondences between previous and current frame
-  void _track(const Frame* previous_frame_,
+  void _track(Frame* previous_frame_,
               Frame* current_frame_,
               const TransformMatrix3D& previous_to_current_,
               const bool& track_by_appearance_ = false);
@@ -92,22 +57,6 @@ protected:
                           Frame* frame_current_,
                           TransformMatrix3D previous_to_current_,
                           const Count& recursion_ = 0);
-
-  //ds adds a new track
-  void _addTrack(TrackCandidate& track_candidate_, Frame* current_frame_);
-
-  //! @brief clears framepoint matrix based on active tracks
-  void _clearFramepoints();
-
-  //ds adds new framepoints to the provided frame (picked from the pool of the _framepoint_generator)
-  void _addPoints(Frame* frame_);
-
-  //ds retrieves framepoint projections as image coordinates in a vector (at the same time removing points with invalid projections)
-  void _project(ImageCoordinatesVector& predictions_left_,
-                FramePointPointerVector& previous_points_visible_,
-                const Frame* previous_frame_,
-                const Frame* current_frame_,
-                const TransformMatrix3D& previous_to_current_) const;
 
   //ds prunes invalid tracks after pose optimization
   void _prunePoints(Frame* frame_);
@@ -134,6 +83,7 @@ protected:
   Count _number_of_potential_points           = 0;
   Count _number_of_tracked_points             = 0;
   Count _number_of_tracked_landmarks_previous = 0;
+  Count _number_of_active_landmarks           = 0;
   real _tracking_ratio                        = 0;
   real _mean_tracking_ratio                   = 0;
   Count _number_of_tracked_frames             = 0;
@@ -157,12 +107,6 @@ protected:
   Count _number_of_lost_points      = 0;
   Count _number_of_recovered_points = 0;
   FramePointPointerVector _lost_points;
-
-  //ds feature density regularization
-  Count _number_of_rows_bin;
-  Count _number_of_cols_bin;
-  FramePointMatrix _bin_map_left;
-  bool _enable_keypoint_binning = false;
 
   //ds stats only
   real _mean_number_of_keypoints   = 0;

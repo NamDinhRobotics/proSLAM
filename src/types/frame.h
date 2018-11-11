@@ -119,10 +119,6 @@ public:
   void setIsKeyframe(const bool& is_keyframe_) {_is_keyframe = is_keyframe_;}
   inline const bool isKeyframe() const {return _is_keyframe;}
 
-  //ds get a quick overview of the overall point status in the frame
-  const Count countPoints(const Count& min_track_length_,
-                          const ThreeValued& has_landmark_ = Unknown) const;
-
   //ds free all point instances
   void clear();
 

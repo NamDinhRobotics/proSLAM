@@ -91,6 +91,7 @@ int32_t main(int32_t argc_, char** argv_) {
   std::cerr << extension << "'" << std::endl;
 
   //ds configure stereo framepoint generator
+  parameters->enable_keypoint_binning                 = true; //ds enable keypoint binning
   parameters->number_of_detectors_horizontal          = 1;
   parameters->number_of_detectors_vertical            = 1;
   parameters->detector_threshold_minimum              = fast_detector_threshold;
@@ -131,26 +132,14 @@ int32_t main(int32_t argc_, char** argv_) {
     Frame* frame = new Frame(nullptr, frame_previous, nullptr, TransformMatrix3D::Identity(), 0);
     frame->setCameraLeft(camera_left);
     frame->setCameraRight(camera_right);
-
-    //ds detect keypoints in left and right image
-    std::vector<cv::KeyPoint> keypoints_left;
-    std::vector<cv::KeyPoint> keypoints_right;
-    framepoint_generator->detectKeypoints(image_left, keypoints_left);
-    framepoint_generator->detectKeypoints(image_right, keypoints_right);
-
-    //ds compute descriptors of left and right keypoints
-    cv::Mat descriptors_left;
-    cv::Mat descriptors_right;
-    framepoint_generator->computeDescriptors(image_left, keypoints_left, descriptors_left);
-    framepoint_generator->computeDescriptors(image_right, keypoints_right, descriptors_right);
+    frame->setIntensityImageLeft(&image_left);
+    frame->setIntensityImageRight(&image_right);
 
     //ds initialize matchers for current measurements
-    framepoint_generator->featureMatcherLeft().setFeatures(keypoints_left, descriptors_left);
-    framepoint_generator->featureMatcherRight().setFeatures(keypoints_right, descriptors_right);
+    framepoint_generator->initialize(frame);
 
     //ds if we can track (i.e. have a previous image with points)
     if (frame_previous) {
-      std::cerr << BAR << std::endl;
 
       //ds retrieve relative motion (usually obtained through ICP) - identity if not available
       Eigen::Isometry3d camera_left_previous_in_current(Eigen::Isometry3d::Identity());
@@ -159,45 +148,37 @@ int32_t main(int32_t argc_, char** argv_) {
                                           poses_left_camera_in_world[number_of_processed_images-1];
       }
 
-      framepoint_generator->_setFramepoints(frame,
-                                            frame_previous,
-                                            camera_left_previous_in_current);
+      FramePointPointerVector lost_points(0);
+      framepoint_generator->track(frame,
+                                  frame_previous,
+                                  camera_left_previous_in_current,
+                                  lost_points);
 
       //ds remove matched indices from candidate pools
-      std::cerr << "trackAndStereoMatch|found tracks with matches total: " << frame->points().size() << "/" << framepoint_generator->featureMatcherLeft().number_of_features << std::endl;
-      std::cerr << "trackAndStereoMatch|number of unmatched features L: "
-                << framepoint_generator->featureMatcherLeft().feature_vector.size() << " R: " << framepoint_generator->featureMatcherRight().feature_vector.size() << std::endl;
-      std::cerr << BAR << std::endl;
+      std::cerr << "found tracks with matches total: " << frame->points().size() << std::endl;
+      std::cerr << "lost points: " << lost_points.size() << std::endl;
     }
 
     //ds find stereo matches and triangulate -> create Framepoints
-    std::cerr << BAR << std::endl;
-    framepoint_generator->_setFramepoints(frame);
-    std::cerr << BAR << std::endl;
+    framepoint_generator->compute(frame);
+    std::cerr << "total points: " << frame->points().size() << std::endl;
 
     //ds display current points
     cv::Mat image_display_stereo;
     cv::hconcat(image_left, image_right, image_display_stereo);
     cv::cvtColor(image_display_stereo, image_display_stereo, CV_GRAY2RGB);
     const cv::Point2f shift_horizontal(cols, 0);
-    for (const IntensityFeature* feature: framepoint_generator->featureMatcherLeft().feature_vector) {
-      cv::circle(image_display_stereo, cv::Point2f(feature->col, feature->row), 2, CV_COLOR_CODE_BLUE, -1);
-    }
-    for (const IntensityFeature* feature: framepoint_generator->featureMatcherRight().feature_vector) {
-      cv::circle(image_display_stereo, cv::Point2f(feature->col, feature->row)+shift_horizontal, 2, CV_COLOR_CODE_BLUE, -1);
-    }
     const cv::Point2f shift_text(shift_horizontal+cv::Point2f(5, 5));
     for (const FramePoint* point: frame->points()) {
       const cv::Scalar color = CV_COLOR_CODE_RANDOM;
-      cv::circle(image_display_stereo, point->keypointLeft().pt, 4, color, 1);
-      cv::circle(image_display_stereo, point->keypointRight().pt+shift_horizontal, 4, color, 1);
+      cv::circle(image_display_stereo, point->keypointLeft().pt, 2, color, -1);
+      cv::circle(image_display_stereo, point->keypointRight().pt+shift_horizontal, 2, color, -1);
       cv::putText(image_display_stereo, std::to_string(point->identifier())+" | "+std::to_string(point->epipolarOffset()),
                   point->keypointLeft().pt+cv::Point2f(5, 5), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.25, CV_COLOR_CODE_RED);
       cv::putText(image_display_stereo, std::to_string(point->identifier())+" | "+std::to_string(point->epipolarOffset()),
                   point->keypointRight().pt+shift_text, cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.25, CV_COLOR_CODE_RED);
     }
-    std::cerr << "processed images: " << file_name_image_left << " - " << file_name_image_right << " (" << number_of_processed_images << ")"
-              << " features L: " << framepoint_generator->featureMatcherLeft().number_of_features << " R: " << framepoint_generator->featureMatcherRight().number_of_features << std::endl;
+    std::cerr << "processed images: " << file_name_image_left << " - " << file_name_image_right << " (" << number_of_processed_images << ")" << std::endl;
 
     //ds display projected depth
     cv::Mat image_display_depth;

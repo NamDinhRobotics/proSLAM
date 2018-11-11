@@ -54,19 +54,23 @@ base_framepoint_generation:
   detector_threshold_initial:           20
   detector_threshold_minimum:           20
   detector_threshold_maximum:           100
-  number_of_detectors_vertical:         3
-  number_of_detectors_horizontal:       3
+  number_of_detectors_vertical:         1
+  number_of_detectors_horizontal:       1
 
   #ds dynamic thresholds for descriptor matching
   matching_distance_tracking_threshold: 35
   
   #ds maximum reliable depth with chosen sensor
   maximum_reliable_depth_meters: 15.0
+  
+  #feature density regularization
+  enable_keypoint_binning: true
+  bin_size_pixels:         15
 
 stereo_framepoint_generation:
 
   #ds stereo: triangulation
-  maximum_matching_distance_triangulation: 70
+  maximum_matching_distance_triangulation: 35
   minimum_disparity_pixels:                1
   maximum_epipolar_search_offset_pixels:   0
 
@@ -82,21 +86,16 @@ base_tracking:
   minimum_track_length_for_landmark_creation: 2
 
   #ds track lost criteria
-  minimum_number_of_landmarks_to_track: 5
+  minimum_number_of_landmarks_to_track: 10
 
   #point tracking thresholds
-  minimum_projection_tracking_distance_pixels: 4
-  maximum_projection_tracking_distance_pixels: 10
+  minimum_projection_tracking_distance_pixels: 10
+  maximum_projection_tracking_distance_pixels: 50
   maximum_distance_tracking_pixels:            22500 #150x150 maximum allowed pixel distance between image coordinates prediction and actual detection
   range_point_tracking:                        2     #pixel search range width for point vicinity tracking
 
   #landmark track recovery (if enabled)
   maximum_number_of_landmark_recoveries: 10
-
-  #feature density regularization
-  enable_keypoint_binning: true
-  bin_size_pixels:         10
-  ratio_keypoints_to_bins: 1
   
   #ds motion model for initial pose guess (select one: NONE, CONSTANT_VELOCITY, CAMERA_ODOMETRY)
   motion_model: CONSTANT_VELOCITY
@@ -107,7 +106,7 @@ base_tracking:
   
   #pose optimization: aligner unit configuration
   aligner->error_delta_for_convergence:  1e-3
-  aligner->maximum_error_kernel:         9
+  aligner->maximum_error_kernel:         16
   aligner->damping:                      0
   aligner->maximum_number_of_iterations: 1000
   aligner->minimum_number_of_inliers:    0

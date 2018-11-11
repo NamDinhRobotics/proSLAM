@@ -12,8 +12,11 @@ PROSLAM_MAKE_PROCESSING_CLASS(DepthFramePointGenerator)
 //ds functionality
 public:
 
+  //ds initializes the framepoint generator (e.g. detects keypoints and computes descriptors)
+  virtual void initialize(Frame* frame_, const bool& extract_features_ = true);
+
   //ds computes framepoints stored in a image-like matrix (_framepoints_in_image) for provided stereo images
-  virtual void compute(Frame* frame_, Frame* frame_previous_ = nullptr);
+  virtual void compute(Frame* frame_);
 
   void computeCoordinatesFromDepth(Frame* frame_, std::vector<cv::KeyPoint>& keypoints_, cv::Mat& descriptors_);
 

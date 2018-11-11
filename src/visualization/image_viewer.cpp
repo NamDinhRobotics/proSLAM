@@ -94,15 +94,18 @@ void ImageViewer::_drawPoints() {
           color = CV_COLOR_CODE_DARKGREEN;
         }
 
-        //ds draw reprojection circle
-        cv::circle(_current_image, point->projectionEstimateLeft(), 4, color);
+        //ds draw projection error
+        cv::line(_current_image, point->projectionEstimateLeft(), point->projectionEstimateLeftOptimized(), CV_COLOR_CODE_RED);
 
         //ds draw the point
-        const cv::Point2i projection(point->imageCoordinatesLeft().x(), point->imageCoordinatesLeft().y());
-        cv::circle(_current_image, projection, 2, color, -1);
+        cv::circle(_current_image, point->keypointLeft().pt, 2, color, -1);
 
         //ds draw track length
-        cv::putText(_current_image, std::to_string(point->trackLength()), projection+cv::Point2i(5, 5), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.25, CV_COLOR_CODE_RED);
+        cv::putText(_current_image, std::to_string(point->trackLength()), point->keypointLeft().pt+cv::Point2f(5, 5), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.25, CV_COLOR_CODE_RED);
+      } else {
+
+        //ds new point
+        cv::circle(_current_image, point->keypointLeft().pt, 2, CV_COLOR_CODE_GREEN, -1);
       }
     }
   }
@@ -110,21 +113,20 @@ void ImageViewer::_drawPoints() {
 
 void ImageViewer::_drawTracking() {
   if (_current_frame) {
+    const uint32_t& tracking_distance_pixels_half = _current_frame->projectionTrackingDistancePixels()/2;
 
     //ds for all points in the current frame
     for (const FramePoint* point: _current_frame->points()) {
-      const cv::Point current_point(point->imageCoordinatesLeft().x(), point->imageCoordinatesLeft().y());
-      if (point->landmark()) {
-        const cv::Point previous_point(point->previous()->imageCoordinatesLeft().x(), point->previous()->imageCoordinatesLeft().y());
-        cv::line(_current_image, current_point, previous_point, CV_COLOR_CODE_GREEN);
-      } else if (point->previous()) {
-        const cv::Point previous_point(point->previous()->imageCoordinatesLeft().x(), point->previous()->imageCoordinatesLeft().y());
-        cv::circle(_current_image, current_point, 1, CV_COLOR_CODE_GREEN, -1);
-        cv::line(_current_image, current_point, previous_point, CV_COLOR_CODE_GREEN);
-      }
+      if (point->previous()) {
+        if (!point->landmark()) {
+          cv::circle(_current_image, point->keypointLeft().pt, 2, CV_COLOR_CODE_GREEN, -1);
+          cv::line(_current_image, point->keypointLeft().pt, point->previous()->keypointLeft().pt, CV_COLOR_CODE_GREEN);
+        }
 
-      //ds draw tracking circle
-      cv::circle(_current_image, current_point, _current_frame->projectionTrackingDistancePixels(), CV_COLOR_CODE_GREEN);
+        //ds draw tracking line and circle
+        cv::line(_current_image, point->keypointLeft().pt, point->previous()->keypointLeft().pt, CV_COLOR_CODE_GREEN);
+        cv::circle(_current_image, point->keypointLeft().pt, tracking_distance_pixels_half, CV_COLOR_CODE_GREEN);
+      }
     }
   }
 }

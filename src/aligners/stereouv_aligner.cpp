@@ -34,10 +34,11 @@ namespace proslam {
       assert(_frame_current->cameraRight()->isInFieldOfView(frame_point->imageCoordinatesRight()));
       assert(frame_point->previous());
 
-      //ds set fixed part
-      _fixed[u] = Vector3(frame_point->imageCoordinatesLeft().x(),
-                          frame_point->imageCoordinatesLeft().y(),
-                          frame_point->imageCoordinatesRight().x());
+      //ds set fixed part (image coordinates)
+      _fixed[u](0) = frame_point->imageCoordinatesLeft().x();
+      _fixed[u](1) = frame_point->imageCoordinatesLeft().y();
+      _fixed[u](2) = frame_point->imageCoordinatesRight().x();
+      _fixed[u](3) = frame_point->imageCoordinatesRight().y();
 
       //ds if we have a landmark
       if (frame_point->landmark()) {
@@ -48,13 +49,10 @@ namespace proslam {
         //ds increase weight linear in the number of updates
         _information_vector[u] *= (1+frame_point->landmark()->numberOfUpdates());
       } else {
+
+        //ds set moving part (3D point coordinates)
         _moving[u] = frame_point->previous()->cameraCoordinatesLeft();
       }
-
-      //ds since we consider the vertical contribution only once in the jacobian/error
-      //ds but in fact the contribution corresponds to two measurements
-      //ds we simply weight the single vertical contribution twice to correct for this
-      _information_vector[u](1,1) *= 2;
 
       //ds scale information proportional to disparity of the measurement (the bigger, the closer, the better the triangulation)
       _information_vector[u] *= std::log(1+frame_point->disparityPixels());
@@ -122,9 +120,10 @@ namespace proslam {
       assert(_frame_current->cameraRight()->isInFieldOfView(sampled_point_in_image_right));
 
       //ds compute error (we compute the vertical error only once, since we assume rectified cameras)
-      const Vector3 error(sampled_point_in_image_left.x()-_fixed[u](0),
+      const Vector4 error(sampled_point_in_image_left.x()-_fixed[u](0),
                           sampled_point_in_image_left.y()-_fixed[u](1),
-                          sampled_point_in_image_right.x()-_fixed[u](2));
+                          sampled_point_in_image_right.x()-_fixed[u](2),
+                          sampled_point_in_image_right.y()-_fixed[u](3));
 
       //ds weight all measurements proportional to their distance to the sensor (squared to damp the effect)
       //const real weight_translation = 1/std::sqrt(depth_meters);
@@ -165,6 +164,9 @@ namespace proslam {
       jacobian_transform.block<3,3>(0,3) = -2*skew(sampled_point_in_camera_left);
 
       //ds precompute
+      const Matrix3_6 camera_matrix_per_jacobian_transform(_camera_calibration_matrix*jacobian_transform);
+
+      //ds precompute
       const real inverse_sampled_c_left  = 1/sampled_c_left;
       const real inverse_sampled_c_right = 1/sampled_c_right;
       const real inverse_sampled_c_squared_left  = inverse_sampled_c_left*inverse_sampled_c_left;
@@ -176,20 +178,24 @@ namespace proslam {
                        0, inverse_sampled_c_left, -sampled_abc_in_camera_left.y()*inverse_sampled_c_squared_left;
 
       //ds we compute only the contribution for the horizontal error: right
-      Matrix1_3 jacobian_right;
-      jacobian_right << inverse_sampled_c_right, 0, -sampled_abc_in_camera_right.x()*inverse_sampled_c_squared_right;
+      Matrix2_3 jacobian_right;
+      jacobian_right << inverse_sampled_c_right, 0, -sampled_abc_in_camera_right.x()*inverse_sampled_c_squared_right,
+                        0, inverse_sampled_c_right, -sampled_abc_in_camera_right.y()*inverse_sampled_c_squared_right;
+
+      //ds the last rows of jacobian_left and jacobian_right are identical for perfect, horizontally triangulated points
+      //ds in a horizontal stereo camera configuration
 
       //ds assemble final jacobian
       _jacobian.setZero();
 
       //ds we have to compute the full block
-      _jacobian.block<2,6>(0,0) = jacobian_left*_camera_calibration_matrix*jacobian_transform;
+      _jacobian.block<2,6>(0,0) = jacobian_left*camera_matrix_per_jacobian_transform;
 
       //ds we only have to compute the horizontal block
-      _jacobian.block<1,6>(2,0) = jacobian_right*_camera_calibration_matrix*jacobian_transform;
+      _jacobian.block<2,6>(2,0) = jacobian_right*camera_matrix_per_jacobian_transform;
 
       //ds precompute transposed
-      const Matrix6_3 jacobian_transposed(_jacobian.transpose());
+      const Matrix6_4 jacobian_transposed(_jacobian.transpose());
 
       //ds update H and b
       _H += jacobian_transposed*_omega*_jacobian;
@@ -266,6 +272,14 @@ namespace proslam {
                   << " average error: " << _total_error/(_number_of_inliers+_number_of_outliers)
                   << " inliers: " << _number_of_inliers << " outliers: " << _number_of_outliers << std::endl)
       }
+    }
+
+    //ds VISUALIZATION ONLY
+    for (Index u = 0; u < _number_of_measurements; ++u) {
+      FramePoint* frame_point = _frame_current->points()[u];
+      ImageCoordinates image_coordinates(_camera_calibration_matrix*_previous_to_current*_moving[u]);
+      image_coordinates /= image_coordinates.z();
+      frame_point->setProjectionEstimateLeftOptimized(cv::Point2f(image_coordinates.x(), image_coordinates.y()));
     }
   }
 }

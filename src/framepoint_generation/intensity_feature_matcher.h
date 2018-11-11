@@ -25,12 +25,13 @@ public:
   void sortFeatureVector();
 
   //ds performs a local search in a rectangular area on the feature lattice
-  IntensityFeature* getMatchingFeatureInRectangularRegion(const int32_t& row_reference_,
-                                                          const int32_t& col_reference_,
-                                                          const cv::Mat& descriptor_reference_,
-                                                          const int32_t& range_point_tracking_pixels_rows_,
-                                                          const int32_t& range_point_tracking_pixels_cols_,
-                                                          const real& maximum_descriptor_distance_tracking_);
+  IntensityFeature* getMatchingFeatureInRectangularRegion(const cv::Mat& descriptor_reference_,
+                                                          const int32_t& row_start_point,
+                                                          const int32_t& row_end_point,
+                                                          const int32_t& col_start_point,
+                                                          const int32_t& col_end_point,
+                                                          const real& maximum_descriptor_distance_tracking_,
+                                                          real& descriptor_distance_best_);
 
   //ds prunes features from feature vector if existing
   void prune(const std::set<uint32_t>& matched_indices_);
@@ -42,7 +43,6 @@ public:
   int32_t number_of_cols = 0;
   IntensityFeaturePointerVector feature_vector;
   IntensityFeature*** feature_lattice = nullptr;
-  uint32_t number_of_features         = 0;
 
 };
 } //namespace proslam
