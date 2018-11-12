@@ -113,7 +113,7 @@ void ImageViewer::_drawPoints() {
 
 void ImageViewer::_drawTracking() {
   if (_current_frame) {
-    const uint32_t& tracking_distance_pixels_half = _current_frame->projectionTrackingDistancePixels()/2;
+    const uint32_t& tracking_distance_pixels = _current_frame->projectionTrackingDistancePixels();
 
     //ds for all points in the current frame
     for (const FramePoint* point: _current_frame->points()) {
@@ -125,7 +125,7 @@ void ImageViewer::_drawTracking() {
 
         //ds draw tracking line and circle
         cv::line(_current_image, point->keypointLeft().pt, point->previous()->keypointLeft().pt, CV_COLOR_CODE_GREEN);
-        cv::circle(_current_image, point->keypointLeft().pt, tracking_distance_pixels_half, CV_COLOR_CODE_GREEN);
+        cv::circle(_current_image, point->keypointLeft().pt, tracking_distance_pixels, CV_COLOR_CODE_GREEN);
       }
     }
   }

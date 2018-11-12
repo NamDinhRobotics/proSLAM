@@ -1,5 +1,7 @@
 command_line:
 
+  #TODO THIS FILE NEEDS TO BE UPDATED!
+
   #system log level (select one: DEBUG, INFO, WARNING, ERROR)
   logging_level: DEBUG
 

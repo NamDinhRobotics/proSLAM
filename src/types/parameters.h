@@ -256,6 +256,7 @@ public:
   //! @brief point tracking thresholds
   int32_t minimum_projection_tracking_distance_pixels = 3;
   int32_t maximum_projection_tracking_distance_pixels = 10;
+  real tunnel_vision_ratio                            = 0.75;
 
   //! @brief pixel search range width for point vicinity tracking
   int32_t range_point_tracking = 2;

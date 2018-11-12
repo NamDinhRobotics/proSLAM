@@ -49,16 +49,16 @@ base_framepoint_generation:
   descriptor_type: BRIEF-256
 
   #ds dynamic thresholds for feature detection
-  target_number_of_keypoints_tolerance: 0.25
-  detector_threshold_maximum_change:    0.1
-  detector_threshold_initial:           20
-  detector_threshold_minimum:           20
+  target_number_of_keypoints_tolerance: 0.1
+  detector_threshold_maximum_change:    0.5
+  detector_threshold_initial:           15
+  detector_threshold_minimum:           15
   detector_threshold_maximum:           100
   number_of_detectors_vertical:         1
   number_of_detectors_horizontal:       1
 
   #ds dynamic thresholds for descriptor matching
-  matching_distance_tracking_threshold: 50
+  matching_distance_tracking_threshold: 40
   
   #ds maximum reliable depth with chosen sensor
   maximum_reliable_depth_meters: 15.0
@@ -70,7 +70,7 @@ base_framepoint_generation:
 stereo_framepoint_generation:
 
   #ds stereo: triangulation
-  maximum_matching_distance_triangulation: 70
+  maximum_matching_distance_triangulation: 60
   minimum_disparity_pixels:                1
   maximum_epipolar_search_offset_pixels:   0
 
@@ -89,10 +89,9 @@ base_tracking:
   minimum_number_of_landmarks_to_track: 5
 
   #point tracking thresholds
-  minimum_projection_tracking_distance_pixels: 10
+  minimum_projection_tracking_distance_pixels: 5
   maximum_projection_tracking_distance_pixels: 50
-  maximum_distance_tracking_pixels:            22500 #150x150 maximum allowed pixel distance between image coordinates prediction and actual detection
-  range_point_tracking:                        2     #pixel search range width for point vicinity tracking
+  tunnel_vision_ratio: 0.75
 
   #landmark track recovery (if enabled)
   maximum_number_of_landmark_recoveries: 10

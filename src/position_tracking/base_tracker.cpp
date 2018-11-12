@@ -229,17 +229,16 @@ void BaseTracker::_track(Frame* previous_frame_,
     LOG_WARNING(std::cerr << "BaseTracker::_trackFramepoints|low point tracking ratio: " << _tracking_ratio
               << " (" << _number_of_tracked_points << "/" << previous_frame_->points().size() << ")" << std::endl)
 
-    //ds if we still can increase the tracking window size
-    if (_projection_tracking_distance_pixels < _parameters->maximum_projection_tracking_distance_pixels) {
-      _projection_tracking_distance_pixels = std::min(_projection_tracking_distance_pixels*2.0, static_cast<real>(_parameters->maximum_projection_tracking_distance_pixels));
-    }
+    //ds maximimze tracking range
+    _projection_tracking_distance_pixels = _parameters->maximum_projection_tracking_distance_pixels;
 
   //ds narrow tracking window
   } else {
 
     //ds if we still can reduce the tracking window size
     if (_projection_tracking_distance_pixels > _parameters->minimum_projection_tracking_distance_pixels) {
-      _projection_tracking_distance_pixels = std::max(_projection_tracking_distance_pixels*0.75, static_cast<real>(_parameters->minimum_projection_tracking_distance_pixels));
+      _projection_tracking_distance_pixels = std::max(_projection_tracking_distance_pixels*_parameters->tunnel_vision_ratio,
+                                                      static_cast<real>(_parameters->minimum_projection_tracking_distance_pixels));
     }
   }
 

@@ -91,8 +91,7 @@ base_tracking:
   #point tracking thresholds
   minimum_projection_tracking_distance_pixels: 10
   maximum_projection_tracking_distance_pixels: 50
-  maximum_distance_tracking_pixels:            22500 #150x150 maximum allowed pixel distance between image coordinates prediction and actual detection
-  range_point_tracking:                        2     #pixel search range width for point vicinity tracking
+  tunnel_vision_ratio: 0.75
 
   #landmark track recovery (if enabled)
   maximum_number_of_landmark_recoveries: 10
