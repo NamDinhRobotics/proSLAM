@@ -25,12 +25,15 @@ public:
   void sortFeatureVector();
 
   //ds performs a local search in a rectangular area on the feature lattice
-  IntensityFeature* getMatchingFeatureInRectangularRegion(const cv::Mat& descriptor_reference_,
+  IntensityFeature* getMatchingFeatureInRectangularRegion(const int32_t& row_reference_,
+                                                          const int32_t& col_reference_,
+                                                          const cv::Mat& descriptor_reference_,
                                                           const int32_t& row_start_point,
                                                           const int32_t& row_end_point,
                                                           const int32_t& col_start_point,
                                                           const int32_t& col_end_point,
                                                           const real& maximum_descriptor_distance_tracking_,
+                                                          const bool track_by_appearance_,
                                                           real& descriptor_distance_best_);
 
   //ds prunes features from feature vector if existing

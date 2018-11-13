@@ -215,7 +215,7 @@ void BaseTracker::_track(Frame* previous_frame_,
 
   //ds configure and track points in current frame
   _framepoint_generator->setProjectionTrackingDistancePixels(_projection_tracking_distance_pixels);
-  _framepoint_generator->track(current_frame_, previous_frame_, previous_to_current_, _lost_points);
+  _framepoint_generator->track(current_frame_, previous_frame_, previous_to_current_, _lost_points, track_by_appearance_);
 
   //ds adjust bookkeeping
   _number_of_lost_points       = _lost_points.size();

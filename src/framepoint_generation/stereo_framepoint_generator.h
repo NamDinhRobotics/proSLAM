@@ -28,7 +28,8 @@ public:
   void track(Frame* frame_,
              Frame* frame_previous_,
              const TransformMatrix3D& camera_left_previous_in_current_,
-             FramePointPointerVector& previous_framepoints_without_tracks_) override;
+             FramePointPointerVector& previous_framepoints_without_tracks_,
+             const bool track_by_appearance_ = true) override;
 
   //ds computes 3D position of a stereo keypoint pair in the keft camera frame
   const PointCoordinates getPointInLeftCamera(const cv::Point2f& image_coordinates_left_, const cv::Point2f& image_coordinates_right_) const;

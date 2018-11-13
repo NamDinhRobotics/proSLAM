@@ -75,29 +75,62 @@ void IntensityFeatureMatcher::sortFeatureVector() {
   });
 }
 
-IntensityFeature* IntensityFeatureMatcher::getMatchingFeatureInRectangularRegion(const cv::Mat& descriptor_reference_,
+IntensityFeature* IntensityFeatureMatcher::getMatchingFeatureInRectangularRegion(const int32_t& row_reference_,
+                                                                                 const int32_t& col_reference_,
+                                                                                 const cv::Mat& descriptor_reference_,
                                                                                  const int32_t& row_start_point,
                                                                                  const int32_t& row_end_point,
                                                                                  const int32_t& col_start_point,
                                                                                  const int32_t& col_end_point,
                                                                                  const real& maximum_descriptor_distance_tracking_,
+                                                                                 const bool track_by_appearance_,
                                                                                  real& descriptor_distance_best_) {
   descriptor_distance_best_ = maximum_descriptor_distance_tracking_;
   int32_t row_best = -1;
   int32_t col_best = -1;
 
   //ds locate best match in appearance
-  for (int32_t row = row_start_point; row < row_end_point; ++row) {
-    for (int32_t col = col_start_point; col < col_end_point; ++col) {
-      if (feature_lattice[row][col]) {
-        const real descriptor_distance = cv::norm(descriptor_reference_,
-                                                  feature_lattice[row][col]->descriptor,
-                                                  SRRG_PROSLAM_DESCRIPTOR_NORM);
+  if (track_by_appearance_) {
+    for (int32_t row = row_start_point; row < row_end_point; ++row) {
+      for (int32_t col = col_start_point; col < col_end_point; ++col) {
+        if (feature_lattice[row][col]) {
+          const real descriptor_distance = cv::norm(descriptor_reference_,
+                                                    feature_lattice[row][col]->descriptor,
+                                                    SRRG_PROSLAM_DESCRIPTOR_NORM);
 
-        if (descriptor_distance < descriptor_distance_best_) {
-          descriptor_distance_best_ = descriptor_distance;
-          row_best = row;
-          col_best = col;
+          if (descriptor_distance < descriptor_distance_best_) {
+            descriptor_distance_best_ = descriptor_distance;
+            row_best = row;
+            col_best = col;
+          }
+        }
+      }
+    }
+
+  //ds locate best match in projection error, within maximum appearance distance
+  } else {
+    uint32_t projection_distance_pixels_best = 10000;
+    for (int32_t row = row_start_point; row < row_end_point; ++row) {
+      for (int32_t col = col_start_point; col < col_end_point; ++col) {
+        if (feature_lattice[row][col]) {
+          const real descriptor_distance = cv::norm(descriptor_reference_,
+                                                    feature_lattice[row][col]->descriptor,
+                                                    SRRG_PROSLAM_DESCRIPTOR_NORM);
+          if (descriptor_distance < maximum_descriptor_distance_tracking_) {
+
+            //ds compute projection distance
+            const uint32_t row_distance_pixels        = row_reference_-row;
+            const uint32_t col_distance_pixels        = col_reference_-col;
+            const uint32_t projection_distance_pixels = row_distance_pixels*row_distance_pixels+col_distance_pixels*col_distance_pixels;
+
+            //ds if better than best so far
+            if (projection_distance_pixels < projection_distance_pixels_best) {
+              projection_distance_pixels_best = projection_distance_pixels;
+              descriptor_distance_best_       = descriptor_distance;
+              row_best = row;
+              col_best = col;
+            }
+          }
         }
       }
     }

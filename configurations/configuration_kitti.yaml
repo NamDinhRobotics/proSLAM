@@ -18,11 +18,11 @@ command_line:
   #ds options
   option_use_gui:                   false
   option_use_odometry:              false
-  option_disable_relocalization:    false
+  option_disable_relocalization:    true
   option_show_top_viewer:           false
   option_drop_framepoints:          false
   option_equalize_histogram:        false
-  option_recover_landmarks:         true
+  option_recover_landmarks:         false
   option_disable_bundle_adjustment: true
   option_save_pose_graph:           false
 
@@ -49,28 +49,27 @@ base_framepoint_generation:
   descriptor_type: BRIEF-256
 
   #ds dynamic thresholds for feature detection
-  target_number_of_keypoints_tolerance: 0.25
-  detector_threshold_maximum_change:    0.1
-  detector_threshold_initial:           20
+  target_number_of_keypoints_tolerance: 0.1
+  detector_threshold_maximum_change:    0.5
   detector_threshold_minimum:           20
   detector_threshold_maximum:           100
   number_of_detectors_vertical:         1
   number_of_detectors_horizontal:       1
 
   #ds dynamic thresholds for descriptor matching
-  matching_distance_tracking_threshold: 35
+  matching_distance_tracking_threshold: 40
   
   #ds maximum reliable depth with chosen sensor
   maximum_reliable_depth_meters: 15.0
   
   #feature density regularization
   enable_keypoint_binning: true
-  bin_size_pixels:         15
+  bin_size_pixels:         10
 
 stereo_framepoint_generation:
 
   #ds stereo: triangulation
-  maximum_matching_distance_triangulation: 35
+  maximum_matching_distance_triangulation: 40
   minimum_disparity_pixels:                1
   maximum_epipolar_search_offset_pixels:   0
 
@@ -86,7 +85,7 @@ base_tracking:
   minimum_track_length_for_landmark_creation: 2
 
   #ds track lost criteria
-  minimum_number_of_landmarks_to_track: 10
+  minimum_number_of_landmarks_to_track: 5
 
   #point tracking thresholds
   minimum_projection_tracking_distance_pixels: 10
