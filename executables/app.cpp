@@ -107,11 +107,11 @@ int32_t main(int32_t argc_, char** argv_) {
     std::cerr << DOUBLE_BAR << std::endl;
 
     //ds do not forget to join threads
-    slam_thread->join();
-    delete slam_thread;
     std::cerr << "main|joining thread: system" << std::endl;
-    slam_thread->join();
-    delete slam_thread;
+    if (slam_thread) {
+      slam_thread->join();
+      delete slam_thread;
+    }
     std::cerr << "main|all threads successfully joined" << std::endl;
   }
 

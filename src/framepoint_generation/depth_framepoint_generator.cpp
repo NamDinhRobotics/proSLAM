@@ -5,25 +5,24 @@ namespace proslam {
 DepthFramePointGenerator::DepthFramePointGenerator(DepthFramePointGeneratorParameters* parameters_): BaseFramePointGenerator(parameters_),
                                                                                                      _parameters(parameters_),
                                                                                                      _camera_right(0) {
-  LOG_DEBUG(std::cerr << "DepthFramePointGenerator::DepthFramePointGenerator|constructed" << std::endl)
+  LOG_INFO(std::cerr << "DepthFramePointGenerator::DepthFramePointGenerator|constructed" << std::endl)
 }
 
 //ds the stereo camera setup must be provided
 void DepthFramePointGenerator::configure(){
-  LOG_DEBUG(std::cerr << "DepthFramePointGenerator::configure|configuring" << std::endl)
+  LOG_INFO(std::cerr << "DepthFramePointGenerator::configure|configuring" << std::endl)
   assert(_camera_right);
 
   //ds update base
   BaseFramePointGenerator::configure();
 
   //ds info
-  LOG_DEBUG(std::cerr << "DepthFramePointGenerator::configure|configured" << std::endl)
+  LOG_INFO(std::cerr << "DepthFramePointGenerator::configure|configured" << std::endl)
 }
 
 //ds cleanup of dynamic structures
 DepthFramePointGenerator::~DepthFramePointGenerator() {
-  LOG_DEBUG(std::cerr << "DepthFramePointGenerator::~DepthFramePointGenerator|destroying" << std::endl)
-  LOG_DEBUG(std::cerr << "DepthFramePointGenerator::~DepthFramePointGenerator|destroyed" << std::endl)
+  LOG_INFO(std::cerr << "DepthFramePointGenerator::~DepthFramePointGenerator|destroyed" << std::endl)
 }
 
 void DepthFramePointGenerator::_computeDepthMap(const cv::Mat& right_depth_image) {

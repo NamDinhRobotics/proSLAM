@@ -13,11 +13,11 @@ BaseFramePointGenerator::BaseFramePointGenerator(BaseFramePointGeneratorParamete
                                                                                                   _principal_point_offset_u_pixels(0),
                                                                                                   _principal_point_offset_v_pixels(0),
                                                                                                   _number_of_detectors(0) {
-  LOG_DEBUG(std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|constructed" << std::endl)
+  LOG_INFO(std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|constructed" << std::endl)
 }
 
 void  BaseFramePointGenerator::configure(){
-  LOG_DEBUG(std::cerr << "BaseFramePointGenerator::configure|configuring" << std::endl)
+  LOG_INFO(std::cerr << "BaseFramePointGenerator::configure|configuring" << std::endl)
   assert(_camera_left);
 
   _number_of_rows_image            = _camera_left->numberOfImageRows();
@@ -126,16 +126,16 @@ void  BaseFramePointGenerator::configure(){
       _bin_map_left[row][col] = nullptr;
     }
   }
-  LOG_DEBUG(std::cerr << "BaseTracker::configure|number of horizontal bins: " << _number_of_cols_bin << " size: " << _parameters->bin_size_pixels << std::endl)
-  LOG_DEBUG(std::cerr << "BaseTracker::configure|number of vertical bins: " << _number_of_rows_bin << " size: " << _parameters->bin_size_pixels << std::endl)
+  LOG_INFO(std::cerr << "BaseTracker::configure|number of horizontal bins: " << _number_of_cols_bin << " size: " << _parameters->bin_size_pixels << std::endl)
+  LOG_INFO(std::cerr << "BaseTracker::configure|number of vertical bins: " << _number_of_rows_bin << " size: " << _parameters->bin_size_pixels << std::endl)
 
   //ds clear buffers
   _keypoints_with_descriptors_left.clear();
-  LOG_DEBUG(std::cerr << "BaseFramePointGenerator::configure|configured" << std::endl)
+  LOG_INFO(std::cerr << "BaseFramePointGenerator::configure|configured" << std::endl)
 }
 
 BaseFramePointGenerator::~BaseFramePointGenerator() {
-  LOG_DEBUG(std::cerr << "BaseFramePointGenerator::~BaseFramePointGenerator|destroying" << std::endl)
+  LOG_INFO(std::cerr << "BaseFramePointGenerator::~BaseFramePointGenerator|destroying" << std::endl)
 
   //ds deallocate dynamic data structures: detectors
   if (_detectors && _detector_regions && _detector_thresholds) {
@@ -154,7 +154,7 @@ BaseFramePointGenerator::~BaseFramePointGenerator() {
     delete[] _bin_map_left[row];
   }
   delete[] _bin_map_left;
-  LOG_DEBUG(std::cerr << "BaseFramePointGenerator::~BaseFramePointGenerator|destroyed" << std::endl)
+  LOG_INFO(std::cerr << "BaseFramePointGenerator::~BaseFramePointGenerator|destroyed" << std::endl)
 }
 
 void BaseFramePointGenerator::detectKeypoints(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_) {

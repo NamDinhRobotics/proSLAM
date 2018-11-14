@@ -30,11 +30,11 @@ SLAMAssembly::SLAMAssembly(ParameterCollection* parameters_): _parameters(parame
   FramePoint::reset();
   LocalMap::reset();
   Landmark::reset();
-  LOG_DEBUG(std::cerr << "SLAMAssembly::SLAMAssembly|constructed" << std::endl)
+  LOG_INFO(std::cerr << "SLAMAssembly::SLAMAssembly|constructed" << std::endl)
 }
 
 SLAMAssembly::~SLAMAssembly() {
-  LOG_DEBUG(std::cerr << "SLAMAssembly::~SLAMAssembly|destroying assembly" << std::endl)
+  LOG_INFO(std::cerr << "SLAMAssembly::~SLAMAssembly|destroying assembly" << std::endl)
   delete _tracker;
   delete _graph_optimizer;
   delete _relocalizer;
@@ -48,8 +48,9 @@ SLAMAssembly::~SLAMAssembly() {
   delete _image_viewer;
   delete _map_viewer;
   delete _minimap_viewer;
+  _message_reader.close();
   _synchronizer.reset();
-  LOG_DEBUG(std::cerr << "SLAMAssembly::~SLAMAssembly|destroyed" << std::endl)
+  LOG_INFO(std::cerr << "SLAMAssembly::~SLAMAssembly|destroyed" << std::endl)
 }
 
 void SLAMAssembly::_createStereoTracker(Camera* camera_left_, Camera* camera_right_){

@@ -4,11 +4,11 @@ namespace proslam {
 
 Relocalizer::Relocalizer(RelocalizerParameters* parameters_): _parameters(parameters_),
                                                               _aligner(new XYZAligner(parameters_->aligner)) {
-  LOG_DEBUG(std::cerr << "Relocalizer::Relocalizer|constructed" << std::endl)
+  LOG_INFO(std::cerr << "Relocalizer::Relocalizer|constructed" << std::endl)
 }
 
 void Relocalizer::configure() {
-  LOG_DEBUG(std::cerr << "Relocalizer::configure|configuring" << std::endl)
+  LOG_INFO(std::cerr << "Relocalizer::configure|configuring" << std::endl)
   clear();
   _query_history.clear();
   assert(_query_history_queue.empty());
@@ -16,11 +16,11 @@ void Relocalizer::configure() {
 
   //ds configure aligner unit
   _aligner->configure();
-  LOG_DEBUG(std::cerr << "Relocalizer::configure|configured" << std::endl)
+  LOG_INFO(std::cerr << "Relocalizer::configure|configured" << std::endl)
 }
 
 Relocalizer::~Relocalizer() {
-  LOG_DEBUG(std::cerr << "Relocalizer::~Relocalizer|destroying" << std::endl)
+  LOG_INFO(std::cerr << "Relocalizer::~Relocalizer|destroying" << std::endl)
 
   //ds free closure buffer
   clear();
@@ -43,7 +43,7 @@ Relocalizer::~Relocalizer() {
 
   //ds free aligner
   delete _aligner;
-  LOG_DEBUG(std::cerr << "Relocalizer::~Relocalizer|destroyed" << std::endl)
+  LOG_INFO(std::cerr << "Relocalizer::~Relocalizer|destroyed" << std::endl)
 }
 
 //ds initialize relocalization module for a new local map

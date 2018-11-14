@@ -1,6 +1,6 @@
 #pragma once
 #include "definitions.h"
-#include "srrg_hbst_types/binary_tree.hpp"
+#include "srrg_hbst/types/binary_tree.hpp"
 
 namespace proslam {
   

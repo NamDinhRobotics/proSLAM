@@ -7,15 +7,15 @@ namespace proslam {
 using namespace srrg_core;
 
 WorldMap::WorldMap(const WorldMapParameters* parameters_): _parameters(parameters_) {
-  LOG_DEBUG(std::cerr << "WorldMap::WorldMap|constructing" << std::endl)
+  LOG_INFO(std::cerr << "WorldMap::WorldMap|constructing" << std::endl)
   clear();
-  LOG_DEBUG(std::cerr << "WorldMap::WorldMap|constructed" << std::endl)
+  LOG_INFO(std::cerr << "WorldMap::WorldMap|constructed" << std::endl)
 };
 
 WorldMap::~WorldMap() {
-  LOG_DEBUG(std::cerr << "WorldMap::~WorldMap|destroying" << std::endl)
+  LOG_INFO(std::cerr << "WorldMap::~WorldMap|destroying" << std::endl)
   clear();
-  LOG_DEBUG(std::cerr << "WorldMap::~WorldMap|destroyed" << std::endl)
+  LOG_INFO(std::cerr << "WorldMap::~WorldMap|destroyed" << std::endl)
 }
 
 //ds clears all internal structures

@@ -130,8 +130,8 @@ relocalization:
   aligner->maximum_error_kernel:         2.0
   aligner->damping:                      0.0
   aligner->maximum_number_of_iterations: 100
-  aligner->minimum_number_of_inliers:    15
-  aligner->minimum_inlier_ratio:         0.25
+  aligner->minimum_number_of_inliers:    10
+  aligner->minimum_inlier_ratio:         0.5
 
 graph_optimization:
 

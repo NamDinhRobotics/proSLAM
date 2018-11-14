@@ -7,11 +7,11 @@ namespace proslam {
 
 IntensityFeatureMatcher::IntensityFeatureMatcher() {
   feature_vector.clear();
-  LOG_DEBUG(std::cerr << "IntensityFeatureMatcher::IntensityFeatureMatcher|constructed" << std::endl)
+  LOG_INFO(std::cerr << "IntensityFeatureMatcher::IntensityFeatureMatcher|constructed" << std::endl)
 }
 
 IntensityFeatureMatcher::~IntensityFeatureMatcher() {
-  LOG_DEBUG(std::cerr << "IntensityFeatureMatcher::~IntensityFeatureMatcher|destroying" << std::endl)
+  LOG_INFO(std::cerr << "IntensityFeatureMatcher::~IntensityFeatureMatcher|destroying" << std::endl)
   for (int32_t r = 0; r < number_of_rows; ++r) {
     delete[] feature_lattice[r];
   }
@@ -20,11 +20,11 @@ IntensityFeatureMatcher::~IntensityFeatureMatcher() {
     delete feature;
   }
   feature_vector.clear();
-  LOG_DEBUG(std::cerr << "IntensityFeatureMatcher::~IntensityFeatureMatcher|destroyed" << std::endl)
+  LOG_INFO(std::cerr << "IntensityFeatureMatcher::~IntensityFeatureMatcher|destroyed" << std::endl)
 }
 
 void IntensityFeatureMatcher::configure(const int32_t& rows_, const int32_t& cols_) {
-  LOG_DEBUG(std::cerr << "IntensityFeatureMatcher::configure|configuring" << std::endl)
+  LOG_INFO(std::cerr << "IntensityFeatureMatcher::configure|configuring" << std::endl)
   if (rows_ <= 0 || cols_ <= 0) {
     throw std::runtime_error("KeypointWithDescriptorLattice::configure|invalid image dimensions");
   }
@@ -42,7 +42,7 @@ void IntensityFeatureMatcher::configure(const int32_t& rows_, const int32_t& col
   }
   number_of_rows = rows_;
   number_of_cols = cols_;
-  LOG_DEBUG(std::cerr << "IntensityFeatureMatcher::configure|configured" << std::endl)
+  LOG_INFO(std::cerr << "IntensityFeatureMatcher::configure|configured" << std::endl)
 }
 
 void IntensityFeatureMatcher::setFeatures(const std::vector<cv::KeyPoint>& keypoints_, const cv::Mat& descriptors_) {

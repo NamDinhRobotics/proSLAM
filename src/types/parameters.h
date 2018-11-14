@@ -64,7 +64,7 @@ public:
   bool option_drop_framepoints          = false;
   bool option_equalize_histogram        = false;
   bool option_use_odometry              = false;
-  bool option_recover_landmarks         = true;
+  bool option_recover_landmarks         = false;
   bool option_disable_bundle_adjustment = true;
   bool option_save_pose_graph           = false;
 };
@@ -183,8 +183,8 @@ public:
   uint32_t number_of_cameras = 1;
 
   //! @brief point tracking thresholds
-  int32_t minimum_projection_tracking_distance_pixels = 3;
-  int32_t maximum_projection_tracking_distance_pixels = 10;
+  int32_t minimum_projection_tracking_distance_pixels = 10;
+  int32_t maximum_projection_tracking_distance_pixels = 50;
 
   //! @brief dynamic thresholds for descriptor matching
   int32_t matching_distance_tracking_threshold = 0.2*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS;
@@ -214,7 +214,7 @@ public:
   real minimum_disparity_pixels = 1;
 
   //! @brief maximum checked epipolar line offsets
-  int32_t maximum_epipolar_search_offset_pixels  = 1;
+  int32_t maximum_epipolar_search_offset_pixels  = 0;
 };
 
 //! @class framepoint generation parameters for a rgbd camera setup

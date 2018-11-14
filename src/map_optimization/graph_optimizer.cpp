@@ -8,11 +8,11 @@ namespace proslam {
 GraphOptimizer::GraphOptimizer(GraphOptimizerParameters* parameters_): _parameters(parameters_),
                                                                        _optimizer(0),
                                                                        _vertex_frame_last_added(0) {
-  LOG_DEBUG(std::cerr << "GraphOptimizer::GraphOptimizer|constructed" << std::endl)
+  LOG_INFO(std::cerr << "GraphOptimizer::GraphOptimizer|constructed" << std::endl)
 }
 
 void GraphOptimizer::configure() {
-  LOG_DEBUG(std::cerr << "GraphOptimizer::GraphOptimizer|configuring" << std::endl)
+  LOG_INFO(std::cerr << "GraphOptimizer::GraphOptimizer|configuring" << std::endl)
 
   //ds allocate an optimizable graph
 #ifdef SRRG_PROSLAM_G2O_HAS_NEW_OWNERSHIP_MODEL
@@ -47,11 +47,11 @@ void GraphOptimizer::configure() {
   g2o::ParameterSE3Offset* parameter_world_offset = new g2o::ParameterSE3Offset();
   parameter_world_offset->setId(G2oParameter::WORLD_OFFSET);
   _optimizer->addParameter(parameter_world_offset);
-  LOG_DEBUG(std::cerr << "GraphOptimizer::GraphOptimizer|configured" << std::endl)
+  LOG_INFO(std::cerr << "GraphOptimizer::GraphOptimizer|configured" << std::endl)
 }
 
 GraphOptimizer::~GraphOptimizer(){
-  LOG_DEBUG(std::cerr << "GraphOptimizer::~GraphOptimizer|destroying" << std::endl)
+  LOG_INFO(std::cerr << "GraphOptimizer::~GraphOptimizer|destroying" << std::endl)
   _frames_in_pose_graph.clear();
   _landmarks_in_pose_graph.clear();
   if (_optimizer) {
@@ -59,7 +59,7 @@ GraphOptimizer::~GraphOptimizer(){
     _optimizer->clearParameters();
     delete _optimizer;
   }
-  LOG_DEBUG(std::cerr << "GraphOptimizer::~GraphOptimizer|destroyed" << std::endl)
+  LOG_INFO(std::cerr << "GraphOptimizer::~GraphOptimizer|destroyed" << std::endl)
 }
 
 void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std::string& file_name_) const {

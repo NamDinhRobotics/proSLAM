@@ -12,29 +12,29 @@ BaseTracker::BaseTracker(BaseTrackerParameters* parameters_): _parameters(parame
                                                               _pose_optimizer(0),
                                                               _framepoint_generator(0),
                                                               _has_odometry(false) {
-  LOG_DEBUG(std::cerr << "BaseTracker::BaseTracker|constructed" << std::endl)
+  LOG_INFO(std::cerr << "BaseTracker::BaseTracker|constructed" << std::endl)
 }
 
 void BaseTracker::configure() {
-  LOG_DEBUG(std::cerr << "BaseTracker::configure|configuring" << std::endl)
+  LOG_INFO(std::cerr << "BaseTracker::configure|configuring" << std::endl)
   assert(_camera_left);
   assert(_pose_optimizer);
   _previous_to_current_camera.setIdentity();
   _lost_points.clear();
 
   //ds print tracker configuration (with dynamic type of parameters)
-  LOG_DEBUG(std::cerr << "BaseTracker::configure|configured" << std::endl)
+  LOG_INFO(std::cerr << "BaseTracker::configure|configured" << std::endl)
 }
 
 //ds dynamic cleanup
 BaseTracker::~BaseTracker() {
-  LOG_DEBUG(std::cerr << "BaseTracker::~BaseTracker|destroying" << std::endl)
+  LOG_INFO(std::cerr << "BaseTracker::~BaseTracker|destroying" << std::endl)
   _lost_points.clear();
 
   //ds free dynamics
   delete _framepoint_generator;
   delete _pose_optimizer;
-  LOG_DEBUG(std::cerr << "BaseTracker::~BaseTracker|destroyed" << std::endl)
+  LOG_INFO(std::cerr << "BaseTracker::~BaseTracker|destroyed" << std::endl)
 }
 
 void BaseTracker::compute() {

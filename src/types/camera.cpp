@@ -13,6 +13,7 @@ Camera::Camera(const Count& image_rows_,
   ++_instances;
   setCameraMatrix(camera_matrix_);
   setCameraToRobot(camera_to_robot_);
+  LOG_INFO(std::cerr << "Camera::Camera|constructed" << std::endl)
 }
 
 const bool Camera::isInFieldOfView(const ImageCoordinates& image_coordinates_) const {
