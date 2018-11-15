@@ -344,6 +344,15 @@ public:
   //! @brief parameter printing function
   virtual void print() const;
 
+  //! @brief bundle adjustment switch
+  bool enable_full_bundle_adjustment = false;
+
+  //! @brief g2o factor graph optimization algorithm: GAUSS_NEWTON, LEVENBERG
+  std::string optimization_algorithm = "GAUSS_NEWTON";
+
+  //! @brief g2o linear solver type to perform optimization algorithm: CSPARSE, CHOLMOD
+  std::string linear_solver_type = "CHOLMOD";
+
   //! @brief maximum number of iterations graph optimization
   Count maximum_number_of_iterations = 100;
 

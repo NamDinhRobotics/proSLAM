@@ -419,7 +419,10 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, aligner->minimum_number_of_inliers, Count)
     PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, aligner->minimum_inlier_ratio, real)
 
-    //Pose Graph Optimization
+    //Factor Graph Optimization
+    PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, enable_full_bundle_adjustment, bool)
+    PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, optimization_algorithm, std::string)
+    PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, linear_solver_type, std::string)
     PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, maximum_number_of_iterations, Count)
     PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, identifier_space, real)
     PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, number_of_frames_per_bundle_adjustment, Count)

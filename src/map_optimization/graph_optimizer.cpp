@@ -1,36 +1,92 @@
 #include "graph_optimizer.h"
-#include "g2o/core/optimization_algorithm_gauss_newton.h"
-#include "g2o/core/optimization_algorithm_levenberg.h"
 #include "g2o/core/robust_kernel_impl.h"
+
+//ds backwards compatibility with g2o
+#ifdef SRRG_PROSLAM_G2O_HAS_NEW_OWNERSHIP_MODEL
+#define ALLOCATE_SOLVER(OPTIMIZATION_ALGORITHM_, SOLVER_TYPE_, BLOCK_TYPE_) \
+  std::unique_ptr<SOLVER_TYPE_> linear_solver = g2o::make_unique<SOLVER_TYPE_>(); \
+  linear_solver->setBlockOrdering(true); \
+  std::unique_ptr<BLOCK_TYPE_> block_solver = g2o::make_unique<BLOCK_TYPE_>(std::move(linear_solver)); \
+  solver = new OPTIMIZATION_ALGORITHM_(std::move(block_solver));
+#else
+#define ALLOCATE_SOLVER(OPTIMIZATION_ALGORITHM_, SOLVER_TYPE_, BLOCK_TYPE_) \
+  SOLVER_TYPE_* linear_solver = new SOLVER_TYPE_(); \
+  linear_solver->setBlockOrdering(true); \
+  BLOCK_TYPE_* block_solver = new BLOCK_TYPE_(linear_solver); \
+  solver = new OPTIMIZATION_ALGORITHM_(block_solver);
+#endif
 
 namespace proslam {
 
 GraphOptimizer::GraphOptimizer(GraphOptimizerParameters* parameters_): _parameters(parameters_),
-                                                                       _optimizer(0),
-                                                                       _vertex_frame_last_added(0) {
+                                                                       _optimizer(nullptr),
+                                                                       _vertex_frame_last_added(nullptr) {
   LOG_INFO(std::cerr << "GraphOptimizer::GraphOptimizer|constructed" << std::endl)
 }
 
 void GraphOptimizer::configure() {
-  LOG_INFO(std::cerr << "GraphOptimizer::GraphOptimizer|configuring" << std::endl)
+  LOG_INFO(std::cerr << "GraphOptimizer::configure|configuring" << std::endl)
 
-  //ds allocate an optimizable graph
-#ifdef SRRG_PROSLAM_G2O_HAS_NEW_OWNERSHIP_MODEL
-  std::unique_ptr<SlamLinearSolver> linearSolver = g2o::make_unique<SlamLinearSolver>();
-  linearSolver->setBlockOrdering(true);
-  std::unique_ptr<SlamBlockSolver> blockSolver = g2o::make_unique<SlamBlockSolver>(std::move(linearSolver));
-  g2o::OptimizationAlgorithmGaussNewton* solver = new g2o::OptimizationAlgorithmGaussNewton(std::move(blockSolver));
-#else
-  SlamLinearSolver* linearSolver = new SlamLinearSolver();
-  linearSolver->setBlockOrdering(true);
-  SlamBlockSolver* blockSolver = new SlamBlockSolver(linearSolver);
-  g2o::OptimizationAlgorithmGaussNewton* solver = new g2o::OptimizationAlgorithmGaussNewton(blockSolver);
-  //g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(blockSolver);
-#endif
+  //ds solver setup
+  g2o::OptimizationAlgorithm* solver = nullptr;
 
-  //ds allocate optimizer
+  //ds allocate an optimizable graph - depending on chosen parameters
+  if (_parameters->optimization_algorithm == "GAUSS_NEWTON" &&
+      _parameters->linear_solver_type == "CHOLMOD" &&
+      !_parameters->enable_full_bundle_adjustment) {
+    ALLOCATE_SOLVER(OptimizerGaussNewton, LinearSolverCholmod6x3, BlockSolver6x3)
+  }
+  else if (_parameters->optimization_algorithm == "GAUSS_NEWTON" &&
+      _parameters->linear_solver_type == "CSPARSE" &&
+      !_parameters->enable_full_bundle_adjustment) {
+    ALLOCATE_SOLVER(OptimizerGaussNewton, LinearSolverCSparse6x3, BlockSolver6x3)
+  }
+
+  else if (_parameters->optimization_algorithm == "GAUSS_NEWTON" &&
+      _parameters->linear_solver_type == "CHOLMOD" &&
+      _parameters->enable_full_bundle_adjustment) {
+    ALLOCATE_SOLVER(OptimizerGaussNewton, LinearSolverCholmodVariable, BlockSolverVariable)
+  }
+  else if (_parameters->optimization_algorithm == "GAUSS_NEWTON" &&
+      _parameters->linear_solver_type == "CSPARSE" &&
+      _parameters->enable_full_bundle_adjustment) {
+    ALLOCATE_SOLVER(OptimizerGaussNewton, LinearSolverCSparseVariable, BlockSolverVariable)
+  }
+
+  else if (_parameters->optimization_algorithm == "LEVENBERG" &&
+      _parameters->linear_solver_type == "CHOLMOD" &&
+      !_parameters->enable_full_bundle_adjustment) {
+    ALLOCATE_SOLVER(OptimizerLevenberg, LinearSolverCholmod6x3, BlockSolver6x3)
+  }
+  else if (_parameters->optimization_algorithm == "LEVENBERG" &&
+      _parameters->linear_solver_type == "CSPARSE" &&
+      !_parameters->enable_full_bundle_adjustment) {
+    ALLOCATE_SOLVER(OptimizerLevenberg, LinearSolverCSparse6x3, BlockSolver6x3)
+  }
+
+  else if (_parameters->optimization_algorithm == "LEVENBERG" &&
+      _parameters->linear_solver_type == "CHOLMOD" &&
+      _parameters->enable_full_bundle_adjustment) {
+    ALLOCATE_SOLVER(OptimizerLevenberg, LinearSolverCholmodVariable, BlockSolverVariable)
+  }
+  else if (_parameters->optimization_algorithm == "LEVENBERG" &&
+      _parameters->linear_solver_type == "CSPARSE" &&
+      _parameters->enable_full_bundle_adjustment) {
+    ALLOCATE_SOLVER(OptimizerLevenberg, LinearSolverCSparseVariable, BlockSolverVariable)
+  }
+
+  //ds if we couldn't allocate a solver
+  if (!solver) {
+
+    //ds critical
+    throw std::runtime_error("GraphOptimizer::configure|unable to set solver, please check configuration");
+  }
+
+  //ds allocate optimizer (deleting a previous one)
   if (_optimizer) {delete _optimizer;}
   _optimizer = new g2o::SparseOptimizer();
+
+  //ds set the solver
   _optimizer->setAlgorithm(solver);
 
   //ds clean bookkeeping
@@ -47,7 +103,9 @@ void GraphOptimizer::configure() {
   g2o::ParameterSE3Offset* parameter_world_offset = new g2o::ParameterSE3Offset();
   parameter_world_offset->setId(G2oParameter::WORLD_OFFSET);
   _optimizer->addParameter(parameter_world_offset);
-  LOG_INFO(std::cerr << "GraphOptimizer::GraphOptimizer|configured" << std::endl)
+  LOG_INFO(std::cerr << "GraphOptimizer::configure|allocated optimization algorithm: " << _parameters->optimization_algorithm
+                     << " with solver: " << _parameters->linear_solver_type << std::endl)
+  LOG_INFO(std::cerr << "GraphOptimizer::configure|configured" << std::endl)
 }
 
 GraphOptimizer::~GraphOptimizer(){
@@ -352,8 +410,8 @@ void GraphOptimizer::optimizeFrames(WorldMap* world_map_) {
   CHRONOMETER_START(optimization)
 
   //ds optimize existing graph
-//  const std::string file_name = "pose_graph_"+std::to_string(world_map_->currentFrame()->identifier())+".g2o";
-//  _optimizer->save(file_name.c_str());
+  const std::string file_name = "pose_graph_"+std::to_string(world_map_->currentFrame()->identifier())+".g2o";
+  _optimizer->save(file_name.c_str());
   _optimizer->initializeOptimization();
   _optimizer->optimize(_parameters->maximum_number_of_iterations);
 

@@ -103,7 +103,7 @@ int32_t main(int32_t argc_, char** argv_) {
     }
   } catch (const std::runtime_error& exception_) {
     std::cerr << DOUBLE_BAR << std::endl;
-    std::cerr << "main|caught runtime exception '" << exception_.what() << "'" << std::endl;
+    std::cerr << "main|caught runtime exception: '" << exception_.what() << "'" << std::endl;
     std::cerr << DOUBLE_BAR << std::endl;
 
     //ds do not forget to join threads

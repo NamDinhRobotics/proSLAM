@@ -138,6 +138,15 @@ relocalization:
 
 graph_optimization:
 
+  #enable full bundle adjustment (default: only pose graph optimization upon loop closing)
+  enable_full_bundle_adjustment: false
+
+  #g2o factor graph optimization algorithm: GAUSS_NEWTON, LEVENBERG 
+  optimization_algorithm: GAUSS_NEWTON
+
+  #g2o linear solver type to perform optimization algorithm: CHOLMOD, CSPARSE
+  linear_solver_type: CHOLMOD
+
   #g2o identifier space between frames and landmark vertices
   identifier_space: 1e6
   

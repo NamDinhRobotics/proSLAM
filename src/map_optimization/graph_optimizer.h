@@ -6,7 +6,10 @@
 #include "g2o/core/factory.h"
 #include "g2o/core/optimization_algorithm_factory.h"
 #include "g2o/solvers/csparse/linear_solver_csparse.h"
+#include "g2o/solvers/cholmod/linear_solver_cholmod.h"
 #include "g2o/types/slam3d/types_slam3d.h"
+#include "g2o/core/optimization_algorithm_gauss_newton.h"
+#include "g2o/core/optimization_algorithm_levenberg.h"
 #include "types/world_map.h"
 #include "relocalization/closure.h"
 
@@ -18,8 +21,19 @@ class GraphOptimizer {
 //ds exported data types
 public:
 
-  typedef g2o::BlockSolver<g2o::BlockSolverTraits<-1, -1>> SlamBlockSolver;
-  typedef g2o::LinearSolverCSparse<SlamBlockSolver::PoseMatrixType> SlamLinearSolver;
+  //ds available block solver types (the less numbers, the faster it is - variable being the slowest)
+  typedef g2o::BlockSolver<g2o::BlockSolverTraits<-1, -1>> BlockSolverVariable;
+  typedef g2o::BlockSolver<g2o::BlockSolverTraits<6, 3>> BlockSolver6x3;
+
+  //ds available solvers
+  typedef g2o::LinearSolverCSparse<BlockSolverVariable::PoseMatrixType> LinearSolverCSparseVariable;
+  typedef g2o::LinearSolverCholmod<BlockSolverVariable::PoseMatrixType> LinearSolverCholmodVariable;
+  typedef g2o::LinearSolverCSparse<BlockSolver6x3::PoseMatrixType> LinearSolverCSparse6x3;
+  typedef g2o::LinearSolverCholmod<BlockSolver6x3::PoseMatrixType> LinearSolverCholmod6x3;
+
+  //ds available optimization algorithm
+  typedef g2o::OptimizationAlgorithmGaussNewton OptimizerGaussNewton;
+  typedef g2o::OptimizationAlgorithmLevenberg OptimizerLevenberg;
 
   //! @brief g2o parameter identifiers
   enum G2oParameter {

@@ -89,7 +89,7 @@ base_tracking:
   minimum_number_of_landmarks_to_track: 5
 
   #point tracking thresholds
-  minimum_projection_tracking_distance_pixels: 5
+  minimum_projection_tracking_distance_pixels: 10
   maximum_projection_tracking_distance_pixels: 50
   tunnel_vision_ratio: 0.75
 
@@ -134,6 +134,15 @@ relocalization:
   aligner->minimum_inlier_ratio:         0.5
 
 graph_optimization:
+
+  #enable full bundle adjustment (default: only pose graph optimization upon loop closing)
+  enable_full_bundle_adjustment: false
+
+  #g2o factor graph optimization algorithm: GAUSS_NEWTON, LEVENBERG 
+  optimization_algorithm: GAUSS_NEWTON
+
+  #g2o linear solver type to perform optimization algorithm: CHOLMOD, CSPARSE
+  linear_solver_type: CHOLMOD
 
   #g2o identifier space between frames and landmark vertices
   identifier_space: 1e6
