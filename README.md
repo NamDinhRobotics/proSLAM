@@ -85,16 +85,16 @@ CMake variables that must be set when building without ROS or to select specific
 
 2) launch a terminal in that folder and uncompress the tarball:
 
-    tar -xzvf 00.tar.gz
+        tar -xzvf 00.tar.gz
 
-The folder should now contain 4 files (.txt) and 1 folder (.txt.d) plus the tarball 00.tar.gz
+    The folder should now contain 4 files (.txt) and 1 folder (.txt.d) plus the tarball 00.tar.gz
 
 3) run the system directly in the folder (`rosrun` is used for convenience only, the binary can also be launched normally with `./app`):
 
-    rosrun srrg_proslam app 00.txt -use-gui
+        rosrun srrg_proslam app 00.txt -use-gui
 
-Two windows will pop up - "input: images" (OpenCV), "output: map" (OpenGL) <br/>
-**all controls are handled in the "output: map" window**
+    Two windows will pop up - "input: images" (OpenCV), "output: map" (OpenGL) <br/>
+    **all controls are handled in the "output: map" window**
 
 4) press `[Space]` on the "output: map" window to toggle between automatic processing and stepwise (press `[ARROW_UP]` for stepping) mode
 
@@ -106,19 +106,19 @@ Two windows will pop up - "input: images" (OpenCV), "output: map" (OpenGL) <br/>
 ### Quantitative result evaluation ###
 To see the raw system performance on KITTI simply launch srrg_proslam with the input dataset and the configuration file:
 
-    rosrun srrg_proslam app 00.txt -c configuration_kitti.yaml
+        rosrun srrg_proslam app 00.txt -c configuration_kitti.yaml
 
 After a complete run we evaluate the `KITTI error statistics` by calling:
 
-    rosrun srrg_core srrg_kitti_evaluate_odometry_app -odom trajectory_kitti.txt -gt 00_gt.txt -seq 00.txt
+        rosrun srrg_core srrg_kitti_evaluate_odometry_app -odom trajectory_kitti.txt -gt 00_gt.txt -seq 00.txt
     
 To see the raw system performance on EuRoC simply launch srrg_proslam with the input dataset and the configuration file:
 
-    rosrun srrg_proslam app MH_01_easy.txt -c configuration_euroc.yaml
+        rosrun srrg_proslam app MH_01_easy.txt -c configuration_euroc.yaml
 
 After a complete run we evaluate the `EuRoC RMSE` by calling:
 
-    rosrun srrg_proslam trajectory_analyzer -tum trajectory_tum.txt -asl state_groundtruth_estimate.csv
+        rosrun srrg_proslam trajectory_analyzer -tum trajectory_tum.txt -asl state_groundtruth_estimate.csv
     
 The specific configuration files (`configuration_kitti.yaml, configuration_euroc.yaml`) can be found in the configurations folder of the ProSLAM project
 
@@ -163,7 +163,7 @@ A custom configuration file can be specified as follows:
 [proslam_wiki]: https://gitlab.com/srrg-software/srrg_proslam/wikis/home
 
 ---
-### Full system overview
+### Full system overview (might take some time to load)
 ![](https://drive.google.com/uc?export=download&id=1U8SJuETvbtYgqGFVIPffUPwI-iikSs4s)
 Detailed notes coming soon!
 
@@ -171,7 +171,6 @@ Detailed notes coming soon!
 ### It doesn't work? ###
 [Open an issue](https://gitlab.com/srrg-software/srrg_proslam/issues) or contact the maintainer (see package.xml)
 
-Instant troubleshooting:
  - 3D viewer issues (Qt) on Ubuntu 18.04? Set the enviroment variable: `QT_QPA_PLATFORMTHEME="gtk"` and try again
 
 ---
