@@ -38,12 +38,12 @@ void  BaseFramePointGenerator::configure(){
   if (_parameters->descriptor_type == "BRIEF-256") {
     _descriptor_extractor = new cv::BriefDescriptorExtractor(DESCRIPTOR_SIZE_BYTES);
   } else if (_parameters->descriptor_type == "ORB-256") {
-    _descriptor_extractor        = cv::ORB();
+    _descriptor_extractor        = new cv::OrbDescriptorExtractor();
     _parameters->descriptor_type = "ORB-256";
   } else {
     LOG_WARNING(std::cerr << "BaseFramePointGenerator::configure|descriptor_type: " << _parameters->descriptor_type
                           << " is not implemented, defaulting to ORB-256" << std::endl)
-    _descriptor_extractor        = cv::ORB();
+    _descriptor_extractor        = new cv::OrbDescriptorExtractor();
     _parameters->descriptor_type = "ORB-256";
   }
 #elif CV_MAJOR_VERSION == 3

@@ -124,8 +124,6 @@ BaseTrackerParameters::BaseTrackerParameters(const LoggingLevel& logging_level_)
 
 void BaseTrackerParameters::print() const {
   std::cerr << "BaseTrackerParameters::print|minimum_number_of_landmarks_to_track: " << minimum_number_of_landmarks_to_track << std::endl;
-  std::cerr << "BaseTrackerParameters::print|minimum_projection_tracking_distance_pixels: " << minimum_projection_tracking_distance_pixels << std::endl;
-  std::cerr << "BaseTrackerParameters::print|maximum_projection_tracking_distance_pixels: " << maximum_projection_tracking_distance_pixels << std::endl;
   std::cerr << "BaseTrackerParameters::print|range_point_tracking: " << range_point_tracking << std::endl;
   std::cerr << "BaseTrackerParameters::print|maximum_distance_tracking_pixels: " << maximum_distance_tracking_pixels << std::endl;
   std::cerr << "BaseTrackerParameters::print|maximum_number_of_landmark_recoveries: " << maximum_number_of_landmark_recoveries << std::endl;
@@ -379,8 +377,8 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     //MotionEstimation (GENERIC)
     PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, minimum_track_length_for_landmark_creation, Count)
     PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, minimum_number_of_landmarks_to_track, Count)
-    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, minimum_projection_tracking_distance_pixels, int32_t)
-    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, maximum_projection_tracking_distance_pixels, int32_t)
+    PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, minimum_projection_tracking_distance_pixels, int32_t)
+    PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, maximum_projection_tracking_distance_pixels, int32_t)
     PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, tunnel_vision_ratio, real)
     PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, maximum_number_of_landmark_recoveries, Count)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, enable_keypoint_binning, bool)

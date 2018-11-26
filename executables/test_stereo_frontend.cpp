@@ -1,3 +1,4 @@
+#include <fstream>
 #include "framepoint_generation/stereo_framepoint_generator.h"
 using namespace proslam;
 

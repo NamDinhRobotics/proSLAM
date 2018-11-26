@@ -64,7 +64,7 @@ public:
   bool option_drop_framepoints          = false;
   bool option_equalize_histogram        = false;
   bool option_use_odometry              = false;
-  bool option_recover_landmarks         = false;
+  bool option_recover_landmarks         = true;
   bool option_disable_bundle_adjustment = true;
   bool option_save_pose_graph           = false;
 };
@@ -183,7 +183,7 @@ public:
   uint32_t number_of_cameras = 1;
 
   //! @brief point tracking thresholds
-  int32_t minimum_projection_tracking_distance_pixels = 10;
+  int32_t minimum_projection_tracking_distance_pixels = 15;
   int32_t maximum_projection_tracking_distance_pixels = 50;
 
   //! @brief dynamic thresholds for descriptor matching
@@ -254,9 +254,7 @@ public:
   Count minimum_number_of_landmarks_to_track = 10;
 
   //! @brief point tracking thresholds
-  int32_t minimum_projection_tracking_distance_pixels = 3;
-  int32_t maximum_projection_tracking_distance_pixels = 10;
-  real tunnel_vision_ratio                            = 0.75;
+  real tunnel_vision_ratio = 0.75;
 
   //! @brief pixel search range width for point vicinity tracking
   int32_t range_point_tracking = 2;
@@ -319,7 +317,7 @@ public:
   Count preliminary_minimum_interspace_queries = 5;
 
   //! @brief minimum relative number of matches
-  real preliminary_minimum_matching_ratio      = 0.1;
+  real preliminary_minimum_matching_ratio      = 0.25;
 
   //! @brief minimum absolute number of matches
   Count minimum_number_of_matches_per_landmark = 20;

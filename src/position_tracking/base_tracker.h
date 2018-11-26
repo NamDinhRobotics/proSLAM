@@ -90,7 +90,7 @@ protected:
   const Camera* _camera_left;
 
   //! @brief currently active projection tracking distance (adjusted dynamically at runtime)
-  int32_t _projection_tracking_distance_pixels;
+  int32_t _projection_tracking_distance_pixels = 0;
 
   //gg working elements
   const cv::Mat* _intensity_image_left;

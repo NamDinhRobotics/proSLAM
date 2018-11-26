@@ -6,7 +6,6 @@ using namespace srrg_core;
 
 BaseTracker::BaseTracker(BaseTrackerParameters* parameters_): _parameters(parameters_),
                                                               _camera_left(0),
-                                                              _projection_tracking_distance_pixels(parameters_->maximum_projection_tracking_distance_pixels),
                                                               _intensity_image_left(0),
                                                               _context(0),
                                                               _pose_optimizer(0),
@@ -21,6 +20,7 @@ void BaseTracker::configure() {
   assert(_pose_optimizer);
   _previous_to_current_camera.setIdentity();
   _lost_points.clear();
+  _projection_tracking_distance_pixels = _framepoint_generator->parameters()->maximum_projection_tracking_distance_pixels;
 
   //ds print tracker configuration (with dynamic type of parameters)
   LOG_INFO(std::cerr << "BaseTracker::configure|configured" << std::endl)
@@ -210,7 +210,7 @@ void BaseTracker::_track(Frame* previous_frame_,
   if (track_by_appearance_) {
 
     //ds maximimize tracking window
-    _projection_tracking_distance_pixels = _parameters->maximum_projection_tracking_distance_pixels;
+    _projection_tracking_distance_pixels = _framepoint_generator->parameters()->maximum_projection_tracking_distance_pixels;
   }
 
   //ds configure and track points in current frame
@@ -230,15 +230,15 @@ void BaseTracker::_track(Frame* previous_frame_,
               << " (" << _number_of_tracked_points << "/" << previous_frame_->points().size() << ")" << std::endl)
 
     //ds maximimze tracking range
-    _projection_tracking_distance_pixels = _parameters->maximum_projection_tracking_distance_pixels;
+    _projection_tracking_distance_pixels = _framepoint_generator->parameters()->maximum_projection_tracking_distance_pixels;
 
   //ds narrow tracking window
   } else {
 
     //ds if we still can reduce the tracking window size
-    if (_projection_tracking_distance_pixels > _parameters->minimum_projection_tracking_distance_pixels) {
+    if (_projection_tracking_distance_pixels > _framepoint_generator->parameters()->minimum_projection_tracking_distance_pixels) {
       _projection_tracking_distance_pixels = std::max(_projection_tracking_distance_pixels*_parameters->tunnel_vision_ratio,
-                                                      static_cast<real>(_parameters->minimum_projection_tracking_distance_pixels));
+                                                      static_cast<real>(_framepoint_generator->parameters()->minimum_projection_tracking_distance_pixels));
     }
   }
 
@@ -356,7 +356,7 @@ void BaseTracker::_registerRecursive(Frame* frame_previous_,
     if (recursion_ < 2) {
 
       //ds if we still can increase the tracking window size
-      if (_projection_tracking_distance_pixels < _parameters->maximum_projection_tracking_distance_pixels) {
+      if (_projection_tracking_distance_pixels < _framepoint_generator->parameters()->maximum_projection_tracking_distance_pixels) {
         ++_projection_tracking_distance_pixels;
       }
 
