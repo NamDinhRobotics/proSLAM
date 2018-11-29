@@ -56,6 +56,10 @@ base_framepoint_generation:
   detector_threshold_maximum:           100
   number_of_detectors_vertical:         1
   number_of_detectors_horizontal:       1
+  
+  #point tracking thresholds
+  minimum_projection_tracking_distance_pixels: 10
+  maximum_projection_tracking_distance_pixels: 50
 
   #ds dynamic thresholds for descriptor matching
   matching_distance_tracking_threshold: 40
@@ -89,8 +93,6 @@ base_tracking:
   minimum_number_of_landmarks_to_track: 5
 
   #point tracking thresholds
-  minimum_projection_tracking_distance_pixels: 10
-  maximum_projection_tracking_distance_pixels: 50
   tunnel_vision_ratio: 0.75
 
   #landmark track recovery (if enabled)

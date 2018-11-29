@@ -313,6 +313,9 @@ public:
   //! @brief parameter printing function
   virtual void print() const;
 
+  //! @brief maximum descriptor distance for a valid match
+  real maximum_descriptor_distance = 0.1*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS;
+
   //! @brief minimum query interspace
   Count preliminary_minimum_interspace_queries = 5;
 

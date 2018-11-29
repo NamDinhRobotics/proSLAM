@@ -18,11 +18,11 @@ command_line:
   #ds options
   option_use_gui:                   false
   option_use_odometry:              false
-  option_disable_relocalization:    true
+  option_disable_relocalization:    false
   option_show_top_viewer:           false
   option_drop_framepoints:          false
   option_equalize_histogram:        false
-  option_recover_landmarks:         false
+  option_recover_landmarks:         true
   option_disable_bundle_adjustment: true
   option_save_pose_graph:           false
 
@@ -56,6 +56,10 @@ base_framepoint_generation:
   number_of_detectors_vertical:         1
   number_of_detectors_horizontal:       1
 
+  #point tracking thresholds
+  minimum_projection_tracking_distance_pixels: 10
+  maximum_projection_tracking_distance_pixels: 50
+
   #ds dynamic thresholds for descriptor matching
   matching_distance_tracking_threshold: 40
   
@@ -88,8 +92,6 @@ base_tracking:
   minimum_number_of_landmarks_to_track: 5
 
   #point tracking thresholds
-  minimum_projection_tracking_distance_pixels: 10
-  maximum_projection_tracking_distance_pixels: 50
   tunnel_vision_ratio: 0.75
 
   #landmark track recovery (if enabled)

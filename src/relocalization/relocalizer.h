@@ -79,6 +79,9 @@ protected:
   //ds local map to local map alignment
   XYZAligner* _aligner = nullptr;
 
+  //ds place database
+  HBSTTree _database;
+
 private:
 
   //ds module time consumption

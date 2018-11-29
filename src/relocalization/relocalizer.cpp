@@ -62,6 +62,40 @@ void Relocalizer::detect() {
   if (!_query) {
     return;
   }
+  const Count number_of_query_matchables = _query->matchables.size();
+
+  //ds if we are not yet in query range - only add matchables and nothing else to do
+  if (_database.size() < _parameters->preliminary_minimum_interspace_queries) {
+
+    //ds add matchables
+    _database.add(_query->matchables, srrg_hbst::SplittingStrategy::SplitEven);
+    return;
+  }
+
+  //ds matching result container: a map that contains a vector of matches to the current image for each reference image
+  HBSTTree::MatchVectorMap matches_per_reference_image;
+
+  //ds query database for current matchables and integrate current image simultaneously
+  _database.matchAndAdd(_query->matchables, matches_per_reference_image, _parameters->maximum_descriptor_distance);
+
+  //ds evaluate matches for each reference image in the range
+  const Count maximum_index_reference_image = _database.size()-_parameters->preliminary_minimum_interspace_queries;
+  for (Count index_reference_image = 0; index_reference_image < maximum_index_reference_image; ++index_reference_image) {
+    HBSTTree::MatchVector& matches = matches_per_reference_image.at(index_reference_image);
+
+    //ds compute relative matching ratio (how many of the query matchables were matched)
+    const real matching_ratio = static_cast<real>(matches.size())/number_of_query_matchables;
+
+    //ds skip this reference image if matching ratio is insufficient
+    if (matching_ratio < _parameters->preliminary_minimum_matching_ratio) {
+      continue;
+    }
+
+    std::cerr << "found match: " << _query->local_map->identifier() << " : " << index_reference_image << std::endl;
+  }
+
+  return;
+
 
   //ds evaluate all past queries
   for (const Query* reference: _query_history) {

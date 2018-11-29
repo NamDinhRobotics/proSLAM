@@ -61,10 +61,16 @@ LocalMap::LocalMap(FramePointerVector& frames_,
         const Index number_of_added_landmarks = landmarks_added_to_context.size();
         assert(number_of_added_landmarks < maximum_number_of_landmarks);
 
+        //ds create HBST matchables
+        HBSTTree::MatchableVector matchables(landmark->appearances().size());
+        for (Count u = 0; u < matchables.size(); ++u) {
+          matchables[u] = new HBSTMatchable(landmark, landmark->appearances()[u], _identifier);
+        }
+
         //ds update state position in local map
-        Landmark::State* landmark_state       = new Landmark::State(landmark, landmark->appearances(), _world_to_local_map*landmark->coordinates());
+        Landmark::State* landmark_state       = new Landmark::State(landmark, matchables, _world_to_local_map*landmark->coordinates());
         _landmarks[number_of_added_landmarks] = landmark_state;
-        _appearances.insert(_appearances.end(), landmark->appearances().begin(), landmark->appearances().end());
+        _appearances.insert(_appearances.end(), matchables.begin(), matchables.end());
         landmark->addState(landmark_state);
 
         //ds block further additions of this landmark

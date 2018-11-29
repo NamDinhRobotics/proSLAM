@@ -29,9 +29,9 @@ Landmark::Landmark(FramePoint* origin_, const LandmarkParameters* parameters_): 
 }
 
 Landmark::~Landmark() {
-  for (const HBSTNode::Matchable* appearance: _appearances) {
-    delete appearance;
-  }
+  _appearances.clear();
+  _measurements.clear();
+  _states_in_local_maps.clear();
 }
 
 void Landmark::addState(State* landmark_state_) {
@@ -45,7 +45,7 @@ void Landmark::update(const FramePoint* point_) {
   }
 
   //ds update appearance history (left descriptors only)
-  _appearances.push_back(new HBSTMatchable(this, point_->descriptorLeft()));
+  _appearances.push_back(point_->descriptorLeft());
   _measurements.push_back(Measurement(point_));
 
   //ds trigger classic ICP in camera update of landmark coordinates - setup
@@ -140,10 +140,7 @@ void Landmark::update(const FramePoint* point_) {
 void Landmark::merge(Landmark* landmark_) {
   assert(landmark_ != this);
 
-  //ds update recent appearances and add them to this appearances
-  for (HBSTMatchable* appearance: landmark_->_appearances) {
-    appearance->objects.begin()->second = this;
-  }
+  //ds update recent appearances
   _appearances.insert(_appearances.end(), landmark_->_appearances.begin(), landmark_->_appearances.end());
   landmark_->_appearances.clear();
 

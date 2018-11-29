@@ -69,7 +69,7 @@ public:
   inline const PointCoordinates& coordinates() const {return _world_coordinates;}
   void setCoordinates(const PointCoordinates& coordinates_) {_world_coordinates = coordinates_;}
 
-  const AppearanceVector& appearances() const {return _appearances;}
+  const std::vector<cv::Mat>& appearances() const {return _appearances;}
   void addState(State* landmark_state_);
 
   //ds position related
@@ -112,7 +112,7 @@ protected:
   PointCoordinates _world_coordinates;
 
   //ds currently active appearances of this landmark (not yet in local map)
-  AppearanceVector _appearances;
+  std::vector<cv::Mat> _appearances;
 
   //ds landmark states captured in local maps
   StatePointerVector _states_in_local_maps;
