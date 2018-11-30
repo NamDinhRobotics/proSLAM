@@ -118,7 +118,7 @@ BaseTrackerParameters::BaseTrackerParameters(const LoggingLevel& logging_level_)
 
   //ds set specific default parameters
   aligner->error_delta_for_convergence  = 1e-3;
-  aligner->maximum_error_kernel         = 9;
+  aligner->maximum_error_kernel         = 16;
   aligner->maximum_number_of_iterations = 1000;
 }
 
@@ -141,7 +141,7 @@ void DepthTrackerParameters::print() const {
 void RelocalizerParameters::print() const {
   std::cerr << "RelocalizerParameters::print|preliminary_minimum_interspace_queries: " << preliminary_minimum_interspace_queries << std::endl;
   std::cerr << "RelocalizerParameters::print|preliminary_minimum_matching_ratio: " << preliminary_minimum_matching_ratio << std::endl;
-  std::cerr << "RelocalizerParameters::print|minimum_number_of_matches_per_landmark: " << minimum_number_of_matches_per_landmark << std::endl;
+  std::cerr << "RelocalizerParameters::print|minimum_number_of_matches_per_landmark: " << minimum_number_of_matched_landmarks << std::endl;
   std::cerr << "RelocalizerParameters::print|minimum_matches_per_correspondence: " << minimum_matches_per_correspondence << std::endl;
   aligner->print();
 }
@@ -408,7 +408,7 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     //Relocalization (GENERIC)
     PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, preliminary_minimum_interspace_queries, Count)
     PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, preliminary_minimum_matching_ratio, real)
-    PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, minimum_number_of_matches_per_landmark, Count)
+    PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, minimum_number_of_matched_landmarks, Count)
     PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, minimum_matches_per_correspondence, Count)
     PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, aligner->error_delta_for_convergence, real)
     PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, aligner->maximum_error_kernel, real)

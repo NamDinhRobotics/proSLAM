@@ -4,15 +4,15 @@ namespace proslam {
 
 Relocalizer::Relocalizer(RelocalizerParameters* parameters_): _parameters(parameters_),
                                                               _aligner(new XYZAligner(parameters_->aligner)) {
+  _added_local_maps.clear();
+  clear();
   LOG_INFO(std::cerr << "Relocalizer::Relocalizer|constructed" << std::endl)
 }
 
 void Relocalizer::configure() {
   LOG_INFO(std::cerr << "Relocalizer::configure|configuring" << std::endl)
+    _added_local_maps.clear();
   clear();
-  _query_history.clear();
-  assert(_query_history_queue.empty());
-  assert(_aligner != 0);
 
   //ds configure aligner unit
   _aligner->configure();
@@ -21,54 +21,31 @@ void Relocalizer::configure() {
 
 Relocalizer::~Relocalizer() {
   LOG_INFO(std::cerr << "Relocalizer::~Relocalizer|destroying" << std::endl)
+  _added_local_maps.clear();
 
   //ds free closure buffer
   clear();
-
-  //ds free history
-  for (const Query* query: _query_history) {
-    delete query;
-  }
-  _query_history.clear();
-
-  //ds free history buffer
-  for (Index i = 0; i < _query_history_queue.size(); ++i) {
-    const Query* query = _query_history_queue.front();
-    _query_history_queue.pop();
-    delete query;
-  }
-
-  //ds free active query - if available
-  delete _query;
 
   //ds free aligner
   delete _aligner;
   LOG_INFO(std::cerr << "Relocalizer::~Relocalizer|destroyed" << std::endl)
 }
 
-//ds initialize relocalization module for a new local map
-void Relocalizer::initialize(const LocalMap* local_map_) {
-  CHRONOMETER_START(overall)
-  if (_query) {
-    delete _query;
-  }
-  _query = new Query(local_map_);
-  CHRONOMETER_STOP(overall)
-}
-
 //ds retrieve loop closure candidates for the given cloud
-void Relocalizer::detect() {
+void Relocalizer::detect(const LocalMap* local_map_query_) {
   CHRONOMETER_START(overall)
-  if (!_query) {
+  if (!local_map_query_) {
     return;
   }
-  const Count number_of_query_matchables = _query->matchables.size();
+
+  //ds always add the entry (only matching is optional)
+  _added_local_maps.push_back(local_map_query_);
 
   //ds if we are not yet in query range - only add matchables and nothing else to do
   if (_database.size() < _parameters->preliminary_minimum_interspace_queries) {
 
     //ds add matchables
-    _database.add(_query->matchables, srrg_hbst::SplittingStrategy::SplitEven);
+    _database.add(local_map_query_->appearances(), srrg_hbst::SplittingStrategy::SplitEven);
     return;
   }
 
@@ -76,111 +53,77 @@ void Relocalizer::detect() {
   HBSTTree::MatchVectorMap matches_per_reference_image;
 
   //ds query database for current matchables and integrate current image simultaneously
-  _database.matchAndAdd(_query->matchables, matches_per_reference_image, _parameters->maximum_descriptor_distance);
+  _database.matchAndAdd(local_map_query_->appearances(), matches_per_reference_image, _parameters->maximum_descriptor_distance);
 
   //ds evaluate matches for each reference image in the range
-  const Count maximum_index_reference_image = _database.size()-_parameters->preliminary_minimum_interspace_queries;
-  for (Count index_reference_image = 0; index_reference_image < maximum_index_reference_image; ++index_reference_image) {
-    HBSTTree::MatchVector& matches = matches_per_reference_image.at(index_reference_image);
+  const Count number_of_query_matchables = local_map_query_->appearances().size();
+  const Count maximum_index_reference    = _database.size()-_parameters->preliminary_minimum_interspace_queries;
+  for (Count index_reference_local_map = 0; index_reference_local_map < maximum_index_reference; ++index_reference_local_map) {
+    HBSTTree::MatchVector& multiple_matches_mixed = matches_per_reference_image.at(index_reference_local_map);
 
     //ds compute relative matching ratio (how many of the query matchables were matched)
-    const real matching_ratio = static_cast<real>(matches.size())/number_of_query_matchables;
+    const real relative_number_of_matches = static_cast<real>(multiple_matches_mixed.size())/number_of_query_matchables;
 
     //ds skip this reference image if matching ratio is insufficient
-    if (matching_ratio < _parameters->preliminary_minimum_matching_ratio) {
+    if (relative_number_of_matches < _parameters->preliminary_minimum_matching_ratio) {
       continue;
     }
 
-    std::cerr << "found match: " << _query->local_map->identifier() << " : " << index_reference_image << std::endl;
-  }
-
-  return;
-
-
-  //ds evaluate all past queries
-  for (const Query* reference: _query_history) {
-
-    //ds get transform prior
-    const TransformMatrix3D transform_estimate_query_to_reference = reference->local_map->worldToLocalMap()*_query->local_map->localMapToWorld();
-
-    //ds compute absolute distance
-    const real distance_meters_squared = transform_estimate_query_to_reference.translation().squaredNorm();
-
-    //ds skip the candidate if too far from the odometry
-    if (distance_meters_squared > 25*25) {
-      continue;
-    }
-
-    //ds matches within the current reference
-    HBSTTree::MatchVector matches_unfiltered;
-    LandmarkCorrespondence::MatchMap matches_per_landmark;
-
-    //ds get matches
-    assert(0 < _query->matchables.size());
-    assert(0 < reference->matchables.size());
-    reference->database->match(_query->matchables, matches_unfiltered);
-    assert(0 < matches_unfiltered.size());
-    const Count& absolute_number_of_matches = matches_unfiltered.size();
-    if (static_cast<real>(absolute_number_of_matches)/_query->matchables.size() < _parameters->preliminary_minimum_matching_ratio) {
-      continue;
-    }
-
-    //ds loop over all matches
-    for (const HBSTTree::Match match: matches_unfiltered) {
+    //ds loop over all matches to organize them per landmark
+    LandmarkCorrespondence::MatchMap multiple_matches_per_landmark;
+    for (const HBSTTree::Match& match: multiple_matches_mixed) {
 
       //ds buffer landmark identifier
-      Landmark* landmark_query       = match.object_query;
-      Landmark* landmark_reference   = match.object_reference;
+      Landmark* landmark_query                    = match.object_query;
+      Landmark* landmark_reference                = match.object_reference;
       const Identifier& query_landmark_identifier = landmark_query->identifier();
 
-      try{
+      //ds update match map (adding a new entry if not existing yet)
+      try {
 
         //ds add a new match to the given query point
-        matches_per_landmark.at(query_landmark_identifier).push_back(new LandmarkCorrespondence::Match(landmark_query, landmark_reference, match.distance));
+        multiple_matches_per_landmark.at(query_landmark_identifier).push_back(LandmarkCorrespondence::Match(landmark_query, landmark_reference, match.distance));
       } catch(const std::out_of_range& /*exception*/) {
 
         //ds initialize the first match for the given query point
-        matches_per_landmark.insert(std::make_pair(query_landmark_identifier, LandmarkCorrespondence::MatchPointerVector(1, new LandmarkCorrespondence::Match(landmark_query, landmark_reference, match.distance))));
+        multiple_matches_per_landmark.insert(std::make_pair(query_landmark_identifier,
+                                                            LandmarkCorrespondence::MatchVector(1, LandmarkCorrespondence::Match(landmark_query, landmark_reference, match.distance))));
       }
     }
-    assert(0 < absolute_number_of_matches);
-    assert(0 < matches_per_landmark.size());
-    const real relative_number_of_matches = static_cast<real>(absolute_number_of_matches)/_query->matchables.size();
 
-    //ds if the result quality is sufficient
-    if (matches_per_landmark.size() > _parameters->minimum_number_of_matches_per_landmark) {
-
-      //ds correspondences
-      CorrespondencePointerVector correspondences;
-      _mask_id_references_for_correspondences.clear();
-
-      //ds compute point-to-point correspondences for all matches
-      for(const LandmarkCorrespondence::MatchMapElement matches_per_point: matches_per_landmark){
-        LandmarkCorrespondence* correspondence = _getCorrespondenceNN(matches_per_point.second);
-        if (correspondence != 0) {
-          correspondences.push_back(correspondence);
-        }
-      }
-      assert(0 < correspondences.size());
-
-      //ds update closures
-      _closures.push_back(new Closure(_query->local_map,
-                                      reference->local_map,
-                                      absolute_number_of_matches,
-                                      relative_number_of_matches,
-                                      matches_per_landmark,
-                                      correspondences));
+    //ds skip further processing if number of matching landmarks is insufficient
+    if (multiple_matches_per_landmark.size() < _parameters->minimum_number_of_matched_landmarks) {
+      continue;
     }
+
+    //ds prepare point to point correspondence search
+    CorrespondencePointerVector correspondences;
+    _mask_id_references_for_correspondences.clear();
+
+    //ds compute the best point to point correspondences from multiple match candidates
+    for(const LandmarkCorrespondence::MatchMapElement& multiple_matches: multiple_matches_per_landmark) {
+
+      //ds retrieve best correspondence for the multiple matches
+      LandmarkCorrespondence* correspondence = _getCorrespondenceNN(multiple_matches.second);
+      if (correspondence) {
+        correspondences.push_back(correspondence);
+      }
+    }
+
+    //ds add to closure buffer
+    _closures.push_back(new Closure(local_map_query_,
+                                    _added_local_maps[index_reference_local_map],
+                                    multiple_matches_per_landmark.size(),
+                                    relative_number_of_matches,
+                                    correspondences));
   }
   CHRONOMETER_STOP(overall)
+  return;
 }
 
-//ds geometric verification and determination of spatial relation between set closures
+//ds geometric verification and determination of spatial relation between a set of closures
 void Relocalizer::compute() {
   CHRONOMETER_START(overall)
-  if (!_query) {
-    return;
-  }
   for(Closure* closure: _closures) {
     _aligner->initialize(closure);
     _aligner->converge();
@@ -188,61 +131,39 @@ void Relocalizer::compute() {
   CHRONOMETER_STOP(overall)
 }
 
-//ds integrate frame into loop closing pool
-void Relocalizer::train() {
-  CHRONOMETER_START(overall)
-  if (!_query) {
-    return;
-  }
-
-  //ds add the active query to our database structure
-  _query_history_queue.push(_query);
-
-  //ds check if we can pop the first element of the buffer into our history
-  if (_query_history_queue.size() > _parameters->preliminary_minimum_interspace_queries) {
-    _query_history.push_back(_query_history_queue.front());
-    _query_history_queue.pop();
-  }
-
-  //ds reset handles
-  _query = nullptr;
-  CHRONOMETER_STOP(overall)
-}
-
 void Relocalizer::clear() {
-  if (_query) {
-    delete _query;
-  }
+  CHRONOMETER_START(overall)
   for(const Closure* closure: _closures) {
     delete closure;
   }
   _closures.clear();
   _mask_id_references_for_correspondences.clear();
+  CHRONOMETER_STOP(overall)
 }
 
 //ds retrieve correspondences from matches
-LandmarkCorrespondence* Relocalizer::_getCorrespondenceNN(const LandmarkCorrespondence::MatchPointerVector& matches_) {
+LandmarkCorrespondence* Relocalizer::_getCorrespondenceNN(const LandmarkCorrespondence::MatchVector& matches_) {
   assert(0 < matches_.size());
 
   //ds point counts
   std::multiset<Count> counts;
 
   //ds best match and count so far
-  const LandmarkCorrespondence::Match* match_best = 0;
+  const LandmarkCorrespondence::Match* match_best = nullptr;
   Count count_best = 0;
 
   //ds loop over the list and count entries
-  for(const LandmarkCorrespondence::Match* match: matches_){
+  for(const LandmarkCorrespondence::Match& match: matches_){
 
     //ds update count - if not in the mask
-    if(0 == _mask_id_references_for_correspondences.count(match->reference->identifier())) {
-      counts.insert(match->reference->identifier());
-      const Count count_current = counts.count(match->reference->identifier());
+    if(0 == _mask_id_references_for_correspondences.count(match.reference->identifier())) {
+      counts.insert(match.reference->identifier());
+      const Count count_current = counts.count(match.reference->identifier());
 
       //ds if we get a better count
       if( count_best < count_current ){
         count_best = count_current;
-        match_best = match;
+        match_best = &match;
       }
     }
   }

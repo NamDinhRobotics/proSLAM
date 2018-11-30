@@ -11,7 +11,7 @@ public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds match information between two landmark states
   struct Match {
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Match(Landmark* landmark_query_,
           Landmark* landmark_reference_,
           const Count& matching_distance_hamming_): query(landmark_query_),
@@ -22,9 +22,9 @@ public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Landmark* reference;
     const Count matching_distance_hamming;
   };
-  typedef std::vector<const Match*> MatchPointerVector;
-  typedef std::pair<const Identifier, MatchPointerVector> MatchMapElement;
-  typedef std::map<const Identifier, MatchPointerVector, std::less<Identifier>, Eigen::aligned_allocator<MatchMapElement>> MatchMap;
+  typedef std::vector<Match, Eigen::aligned_allocator<Match>> MatchVector;
+  typedef std::pair<const Identifier, MatchVector> MatchMapElement;
+  typedef std::map<const Identifier, MatchVector, std::less<Identifier>, Eigen::aligned_allocator<MatchMapElement>> MatchMap;
 
 //ds object handling
 public:

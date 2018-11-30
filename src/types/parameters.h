@@ -83,10 +83,10 @@ public:
   real error_delta_for_convergence   = 1e-5;
 
   //! @brief maximum allowed robust kernel error
-  real maximum_error_kernel          = 0.5;
+  real maximum_error_kernel          = 5*5;
 
   //! @brief system damping factor
-  real damping                       = 1;
+  real damping                       = 0;
 
   //! @brief alignment iteration cap
   Count maximum_number_of_iterations = 1000;
@@ -171,7 +171,7 @@ public:
 
   //! @brief dynamic thresholds for feature detection
   real target_number_of_keypoints_tolerance = 0.1;
-  uint32_t detector_threshold_minimum       = 10;
+  uint32_t detector_threshold_minimum       = 20;
   uint32_t detector_threshold_maximum       = 100;
   real detector_threshold_maximum_change    = 0.5;
 
@@ -317,16 +317,16 @@ public:
   real maximum_descriptor_distance = 0.1*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS;
 
   //! @brief minimum query interspace
-  Count preliminary_minimum_interspace_queries = 5;
+  Count preliminary_minimum_interspace_queries = 10;
 
   //! @brief minimum relative number of matches
-  real preliminary_minimum_matching_ratio      = 0.25;
+  real preliminary_minimum_matching_ratio = 0.1;
 
   //! @brief minimum absolute number of matches
-  Count minimum_number_of_matches_per_landmark = 20;
+  Count minimum_number_of_matched_landmarks = 50;
 
   //! @brief correspondence retrieval
-  Count minimum_matches_per_correspondence     = 0;
+  Count minimum_matches_per_correspondence = 0;
 
   //! @brief parameters of aligner unit
   AlignerParameters* aligner;

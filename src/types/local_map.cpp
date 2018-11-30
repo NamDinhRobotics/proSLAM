@@ -18,7 +18,7 @@ LocalMap::LocalMap(FramePointerVector& frames_,
   ++_instances;
 
   //ds clear structures
-  _landmarks.clear();
+  _landmark_states.clear();
   _closures.clear();
   _frames.clear();
 
@@ -38,11 +38,11 @@ LocalMap::LocalMap(FramePointerVector& frames_,
   setLocalMapToWorld(_keyframe->robotToWorld(), false);
 
   //ds keep track of added landmarks in order to add them only once
-  std::set<Identifier> landmarks_added_to_context;
+  std::set<Identifier> landmark_states_added;
 
   //ds preallocate bookkeeping with maximum allowed landmarks
-  const Count maximum_number_of_landmarks = frames_.size()*_parameters->maximum_number_of_landmarks;
-  _landmarks.resize(maximum_number_of_landmarks);
+  const Count maximum_number_of_landmarks = _parameters->maximum_number_of_landmarks;
+  _landmark_states.resize(maximum_number_of_landmarks);
 
   //ds create item context for this local map: loop over all frames
   for (Frame* frame: frames_) {
@@ -57,9 +57,13 @@ LocalMap::LocalMap(FramePointerVector& frames_,
       Landmark* landmark = frame_point->landmark();
 
       //ds if we have a landmark and it has not been added yet
-      if (landmark && landmarks_added_to_context.count(landmark->identifier()) == 0) {
-        const Index number_of_added_landmarks = landmarks_added_to_context.size();
-        assert(number_of_added_landmarks < maximum_number_of_landmarks);
+      if (landmark && landmark_states_added.count(landmark->identifier()) == 0) {
+        const Index number_of_added_landmarks = landmark_states_added.size();
+
+        //ds temporarily extend landmark buffer (which is sparsified later to fit the original maximum size)
+        if (number_of_added_landmarks == maximum_number_of_landmarks) {
+          _landmark_states.resize(_landmark_states.size()+maximum_number_of_landmarks);
+        }
 
         //ds create HBST matchables
         HBSTTree::MatchableVector matchables(landmark->appearances().size());
@@ -67,22 +71,33 @@ LocalMap::LocalMap(FramePointerVector& frames_,
           matchables[u] = new HBSTMatchable(landmark, landmark->appearances()[u], _identifier);
         }
 
-        //ds update state position in local map
-        Landmark::State* landmark_state       = new Landmark::State(landmark, matchables, _world_to_local_map*landmark->coordinates());
-        _landmarks[number_of_added_landmarks] = landmark_state;
-        _appearances.insert(_appearances.end(), matchables.begin(), matchables.end());
-        landmark->addState(landmark_state);
+        //ds create a landmark snapshot and add it to the local map
+        _landmark_states[number_of_added_landmarks] = new Landmark::State(landmark, matchables, _world_to_local_map*landmark->coordinates());
 
         //ds block further additions of this landmark
-        landmarks_added_to_context.insert(landmark->identifier());
+        landmark_states_added.insert(landmark->identifier());
       }
     }
   }
-  _landmarks.resize(landmarks_added_to_context.size());
+  _landmark_states.resize(landmark_states_added.size());
+
+  //ds check if we have to sparsify the landmarks TODO implement
+  if (_landmark_states.size() > maximum_number_of_landmarks) {
+    LOG_INFO(std::cerr << "LocalMap::LocalMap|" << _identifier
+                       << "|pruning stored landmarks from: " << landmark_states_added.size() << " to: " << maximum_number_of_landmarks << std::endl)
+
+    //ds TODO free unused landmark states
+  }
+
+  //ds add appearances for all remaining landmarks
+  for (Landmark::State* landmark_state: _landmark_states) {
+    _appearances.insert(_appearances.end(), landmark_state->appearances.begin(), landmark_state->appearances.end());
+    landmark_state->landmark->addState(landmark_state);
+  }
 
   //ds check for low item counts
-  if (_parameters->minimum_number_of_landmarks > landmarks_added_to_context.size()) {
-    LOG_WARNING(std::cerr << "LocalMap::LocalMap|creating local map with low landmark number: " << landmarks_added_to_context.size() << std::endl)
+  if (_parameters->minimum_number_of_landmarks > landmark_states_added.size()) {
+    LOG_WARNING(std::cerr << "LocalMap::LocalMap|creating local map with low landmark number: " << landmark_states_added.size() << std::endl)
   }
 }
 
@@ -91,10 +106,10 @@ LocalMap::~LocalMap() {
 }
 
 void LocalMap::clear() {
-  for (const Landmark::State* state: _landmarks) {
+  for (const Landmark::State* state: _landmark_states) {
     delete state;
   }
-  _landmarks.clear();
+  _landmark_states.clear();
   _closures.clear();
   _frames.clear();
 }
@@ -114,8 +129,8 @@ void LocalMap::setLocalMapToWorld(const TransformMatrix3D& local_map_to_world_, 
 
   //ds update landmark world coordinates according to this local map estimate
   if (update_landmark_world_coordinates_) {
-    for (Index index = 0; index < _landmarks.size(); ++index) {
-      _landmarks[index]->landmark->setCoordinates(_local_map_to_world*_landmarks[index]->coordinates);
+    for (Index index = 0; index < _landmark_states.size(); ++index) {
+      _landmark_states[index]->landmark->setCoordinates(_local_map_to_world*_landmark_states[index]->coordinates);
     }
   }
 }

@@ -83,7 +83,7 @@ public:
   void setNext(LocalMap* local_map_) {_next = local_map_;}
   inline Frame* keyframe() const {return _keyframe;}
   inline const FramePointerVector& frames() const {return _frames;}
-  inline Landmark::StatePointerVector& landmarks() {return _landmarks;}
+  inline Landmark::StatePointerVector& landmarkStates() {return _landmark_states;}
   inline const AppearanceVector& appearances() const {return _appearances;}
 
   //ds TODO purge this
@@ -116,7 +116,7 @@ protected:
   FramePointerVector _frames;
 
   //ds landmarks in the configuration at the time of the creation of the local map
-  Landmark::StatePointerVector _landmarks;
+  Landmark::StatePointerVector _landmark_states;
 
   //ds appearance vector, corresponding to the union of all appearences stored in _landmarks
   AppearanceVector _appearances;
@@ -138,4 +138,5 @@ private:
 };
 
 typedef std::vector<LocalMap*> LocalMapPointerVector;
+typedef std::vector<const LocalMap*> ConstLocalMapPointerVector;
 }

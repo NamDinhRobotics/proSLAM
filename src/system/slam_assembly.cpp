@@ -545,8 +545,7 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
       if (created_local_map) {
 
         //ds localize in database (not yet optimizing the graph)
-        _relocalizer->initialize(_world_map->currentLocalMap());
-        _relocalizer->detect();
+        _relocalizer->detect(_world_map->currentLocalMap());
         _relocalizer->compute();
 
         //ds check the closures
@@ -568,7 +567,9 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
             }
           }
         }
-        _relocalizer->train();
+
+        //ds clear buffer (automatically purges invalidated closures)
+        _relocalizer->clear();
       }
 
       //ds if bundle-adjustment is desired
@@ -683,7 +684,6 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
           if (_map_viewer) {_map_viewer->unlock();}
         }
       }
-      _relocalizer->clear();
     } else if (_parameters->command_line_parameters->option_drop_framepoints) {
 
       //ds free disconnected framepoints if available: TODO safe window
@@ -739,6 +739,7 @@ void SLAMAssembly::printReport() const {
   std::cerr << "           mean landmarks per frame: " << _tracker->totalNumberOfLandmarks()/_number_of_processed_frames << std::endl;
   std::cerr << "              mean tracks per frame: " << _tracker->totalNumberOfTrackedPoints()/_number_of_processed_frames << std::endl;
   std::cerr << "             mean tracks per second: " << _tracker->totalNumberOfTrackedPoints()/_processing_time_total_seconds << std::endl;
+  std::cerr << "            number of loop closures: " << _world_map->numberOfClosures() << std::endl;
   std::cerr << "  number of recursive registrations: " << _tracker->numberOfRecursiveRegistrations() << std::endl;
 
   //ds display further information depending on tracking mode
