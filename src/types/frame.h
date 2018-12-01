@@ -103,11 +103,11 @@ public:
   //! @brief created framepoints by this factory
   inline const FramePointPointerVector& createdPoints() const {return _created_points;}
 
-  inline const IntensityImage& intensityImageLeft() const {return *_intensity_image_left;}
-  void setIntensityImageLeft(const IntensityImage* intensity_image_)  {_intensity_image_left = intensity_image_;}
+  inline const cv::Mat& intensityImageLeft() const {return _intensity_image_left;}
+  void setIntensityImageLeft(const cv::Mat intensity_image_)  {_intensity_image_left = intensity_image_;}
 
-  inline const IntensityImage& intensityImageRight() const {return *_intensity_image_right;}
-  void setIntensityImageRight(const IntensityImage* intensity_image_)  {_intensity_image_right = intensity_image_;}
+  inline const cv::Mat& intensityImageRight() const {return _intensity_image_right;}
+  void setIntensityImageRight(const cv::Mat intensity_image_)  {_intensity_image_right = intensity_image_;}
 
   inline const Status& status() const {return _status;}
   void setStatus(const Status& status_) {_status = status_;}
@@ -180,8 +180,8 @@ protected:
   const Camera* _camera_right  = 0;
 
   //ds to support arbitrary number of rgb/depth image combinations
-  const IntensityImage* _intensity_image_left;
-  const IntensityImage* _intensity_image_right;
+  cv::Mat _intensity_image_left;
+  cv::Mat _intensity_image_right;
 
   //ds link to a local map if the frame is part of one
   LocalMap* _local_map;

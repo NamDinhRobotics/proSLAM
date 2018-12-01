@@ -8,8 +8,6 @@ LocalMap::LocalMap(FramePointerVector& frames_,
                    const LocalMapParameters* parameters_,
                    LocalMap* local_map_root_,
                    LocalMap* local_map_previous_): _identifier(_instances),
-                                                   _local_map_to_world(TransformMatrix3D::Identity()),
-                                                   _world_to_local_map(TransformMatrix3D::Identity()),
                                                    _root(local_map_root_),
                                                    _previous(local_map_previous_),
                                                    _next(nullptr),
@@ -84,7 +82,7 @@ LocalMap::LocalMap(FramePointerVector& frames_,
   //ds check if we have to sparsify the landmarks TODO implement
   if (_landmark_states.size() > maximum_number_of_landmarks) {
     LOG_INFO(std::cerr << "LocalMap::LocalMap|" << _identifier
-                       << "|pruning stored landmarks from: " << landmark_states_added.size() << " to: " << maximum_number_of_landmarks << std::endl)
+                       << "|pruning landmarks from: " << landmark_states_added.size() << " to: " << maximum_number_of_landmarks << std::endl)
 
     //ds TODO free unused landmark states
   }

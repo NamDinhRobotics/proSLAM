@@ -27,7 +27,7 @@ namespace proslam {
     const TransformMatrix3D& world_to_reference_local_map(context_->local_map_reference->worldToLocalMap());
     const TransformMatrix3D& world_to_query_local_map(context_->local_map_query->worldToLocalMap());
     for (Index u = 0; u < _number_of_measurements; ++u) {
-      const LandmarkCorrespondence* correspondence = _context->correspondences[u];
+      const Closure::Correspondence* correspondence = _context->correspondences[u];
 
       //ds point coordinates to register
       _fixed[u]  = world_to_reference_local_map*correspondence->reference->coordinates();
@@ -136,9 +136,9 @@ namespace proslam {
         if (_number_of_inliers > _parameters->minimum_number_of_inliers && inlier_ratio > _parameters->minimum_inlier_ratio) {
           LOG_INFO(std::printf("XYZAligner::converge|found   alignment for local maps [%06lu:{%06lu-%06lu}] > [%06lu:{%06lu-%06lu}] "
                                "(correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu)\n",
-          _context->identifier_query,
+          _context->local_map_query->identifier(),
           _context->local_map_query->frames().front()->identifier(), _context->local_map_query->frames().back()->identifier(),
-          _context->identifier_reference,
+          _context->local_map_reference->identifier(),
           _context->local_map_reference->frames().front()->identifier(), _context->local_map_reference->frames().back()->identifier(),
           _context->correspondences.size(), iteration, inlier_ratio, _number_of_inliers))
 
@@ -154,9 +154,9 @@ namespace proslam {
         } else {
           LOG_INFO(std::printf("XYZAligner::converge|dropped alignment for local maps [%06lu:{%06lu-%06lu}] > [%06lu:{%06lu-%06lu}] "
                                "(correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu)\n",
-          _context->identifier_query,
+          _context->local_map_query->identifier(),
           _context->local_map_query->frames().front()->identifier(), _context->local_map_query->frames().back()->identifier(),
-          _context->identifier_reference,
+          _context->local_map_reference->identifier(),
           _context->local_map_reference->frames().front()->identifier(), _context->local_map_reference->frames().back()->identifier(),
           _context->correspondences.size(), iteration, inlier_ratio, _number_of_inliers))
           _context->is_valid = false;

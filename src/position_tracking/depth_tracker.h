@@ -19,7 +19,7 @@ public:
 public:
 
   void setDepthCamera(const Camera* depth_camera_) {_depth_camera = depth_camera_;}
-  void setDepthImageRight(const cv::Mat* depth_image_) {_depth_image = depth_image_;}
+  void setDepthImage(const cv::Mat& depth_image_) {_depth_image = depth_image_;}
 
 //ds helpers
 protected:
@@ -34,12 +34,12 @@ protected:
 protected:
 
   //ds configuration
-  const Camera* _depth_camera;
+  const Camera* _depth_camera = nullptr;
 
   //ds processing
-  const cv::Mat* _depth_image;
+  cv::Mat _depth_image;
 
   //ds specified generator instance
-  DepthFramePointGenerator* _depth_framepoint_generator;
+  DepthFramePointGenerator* _depth_framepoint_generator = nullptr;
 };
 }

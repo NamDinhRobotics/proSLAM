@@ -5,11 +5,6 @@ namespace proslam {
 using namespace srrg_core;
 
 BaseTracker::BaseTracker(BaseTrackerParameters* parameters_): _parameters(parameters_),
-                                                              _camera_left(0),
-                                                              _intensity_image_left(0),
-                                                              _context(0),
-                                                              _pose_optimizer(0),
-                                                              _framepoint_generator(0),
                                                               _has_odometry(false) {
   LOG_INFO(std::cerr << "BaseTracker::BaseTracker|constructed" << std::endl)
 }

@@ -83,7 +83,7 @@ public:
   real error_delta_for_convergence   = 1e-5;
 
   //! @brief maximum allowed robust kernel error
-  real maximum_error_kernel          = 5*5;
+  real maximum_error_kernel          = 10;
 
   //! @brief system damping factor
   real damping                       = 0;
@@ -95,7 +95,7 @@ public:
   Count minimum_number_of_inliers    = 25;
 
   //! @brief the minimum ratio of inliers to outliers required for a valid alignment
-  real minimum_inlier_ratio          = 0.25;
+  real minimum_inlier_ratio          = 0.5;
 };
 
 //! @class landmark parameters
@@ -173,7 +173,7 @@ public:
   real target_number_of_keypoints_tolerance = 0.1;
   uint32_t detector_threshold_minimum       = 20;
   uint32_t detector_threshold_maximum       = 100;
-  real detector_threshold_maximum_change    = 0.5;
+  real detector_threshold_maximum_change    = 0.1;
 
   //! @brief detector number per image dimension
   uint32_t number_of_detectors_vertical   = 1;

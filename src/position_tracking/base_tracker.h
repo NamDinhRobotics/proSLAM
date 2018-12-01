@@ -30,7 +30,7 @@ public:
   void setAligner(BaseFrameAligner* pose_optimizer_) {_pose_optimizer = pose_optimizer_;}
   void setFramePointGenerator(BaseFramePointGenerator * framepoint_generator_) {_framepoint_generator = framepoint_generator_;}
   void setWorldMap(WorldMap* context_) {_context = context_;}
-  void setIntensityImageLeft(const cv::Mat* intensity_image_left_) {_intensity_image_left = intensity_image_left_;}
+  void setIntensityImageLeft(const cv::Mat& intensity_image_left_) {_intensity_image_left = intensity_image_left_;}
   BaseFrameAligner* aligner() {return _pose_optimizer;}
   void setMotionPreviousToCurrent(const TransformMatrix3D& motion_previous_to_current_) {_previous_to_current_camera = motion_previous_to_current_;}
   BaseFramePointGenerator* framepointGenerator() {return _framepoint_generator;}
@@ -87,18 +87,18 @@ protected:
   real _tracking_ratio                        = 0;
   real _mean_tracking_ratio                   = 0;
   Count _number_of_tracked_frames             = 0;
-  const Camera* _camera_left;
+  const Camera* _camera_left                  = nullptr;
 
   //! @brief currently active projection tracking distance (adjusted dynamically at runtime)
   int32_t _projection_tracking_distance_pixels = 0;
 
   //gg working elements
-  const cv::Mat* _intensity_image_left;
-  WorldMap* _context;
+  cv::Mat _intensity_image_left;
+  WorldMap* _context = nullptr;
 
   //gg processing objects
-  BaseFrameAligner* _pose_optimizer;
-  BaseFramePointGenerator* _framepoint_generator;
+  BaseFrameAligner* _pose_optimizer              = nullptr;
+  BaseFramePointGenerator* _framepoint_generator = nullptr;
 
   //! @brief position tracking bookkeeping
   TransformMatrix3D _previous_to_current_camera = TransformMatrix3D::Identity();

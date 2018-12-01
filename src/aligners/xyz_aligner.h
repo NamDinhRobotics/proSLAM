@@ -32,5 +32,9 @@ protected:
   std::vector<DimensionMatrix, Eigen::aligned_allocator<DimensionMatrix> > _information_vector;
   std::vector<Vector3> _moving;
   std::vector<Vector3> _fixed;
+
 };
+
+typedef std::shared_ptr<XYZAligner> XYZAlignerPtr;
+
 }

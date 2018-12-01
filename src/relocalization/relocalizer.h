@@ -14,24 +14,25 @@ PROSLAM_MAKE_PROCESSING_CLASS(Relocalizer)
 public:
 
   //ds retrieve loop closure candidates for the given local map, containing descriptors for its landmarks
-  void detect(const LocalMap* local_map_query_);
+  void detectClosures(const LocalMap* local_map_query_);
 
-  //ds geometric verification and determination of spatial relation between set closures
-  void compute();
+  //ds geometric verification and determination of spatial relation between closure set
+  void registerClosures();
+
+  //ds clear currently available closure buffer
+  void clear();
 
 //ds getters/setters
 public:
 
   inline const ClosurePointerVector& closures() const {return _closures;}
-  void setClosures(ClosurePointerVector& closures_) {_closures = closures_;}
-  void clear();
-  XYZAligner* aligner() {return _aligner;}
+  XYZAlignerPtr aligner() {return _aligner;}
 
 //ds helpers
 protected:
 
   //ds retrieve correspondences from matches
-  inline LandmarkCorrespondence* _getCorrespondenceNN(const LandmarkCorrespondence::MatchVector& matches_);
+  inline Closure::Correspondence* _getCorrespondenceNN(const Closure::CandidateVector& matches_);
 
 protected:
 
@@ -39,13 +40,13 @@ protected:
   ClosurePointerVector _closures;
 
   //ds local map to local map alignment
-  XYZAligner* _aligner = nullptr;
-
-  //ds added local maps (in order of calls)
-  ConstLocalMapPointerVector _added_local_maps;
+  XYZAlignerPtr _aligner = nullptr;
 
   //ds database of visited places (= local maps), storing a descriptor vector for each place
-  HBSTTree _database;
+  HBSTTree _place_database;
+
+  //ds local maps that have been added to the place database (in order of calls)
+  ConstLocalMapPointerVector _added_local_maps;
 
   //ds correspondence retrieval buffer
   std::set<Identifier> _mask_id_references_for_correspondences;

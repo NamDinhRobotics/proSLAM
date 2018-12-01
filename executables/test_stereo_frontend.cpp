@@ -133,8 +133,8 @@ int32_t main(int32_t argc_, char** argv_) {
     Frame* frame = new Frame(nullptr, frame_previous, nullptr, TransformMatrix3D::Identity(), 0);
     frame->setCameraLeft(camera_left);
     frame->setCameraRight(camera_right);
-    frame->setIntensityImageLeft(&image_left);
-    frame->setIntensityImageRight(&image_right);
+    frame->setIntensityImageLeft(image_left);
+    frame->setIntensityImageRight(image_right);
 
     //ds initialize matchers for current measurements
     framepoint_generator->initialize(frame);

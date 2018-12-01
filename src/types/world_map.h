@@ -1,5 +1,5 @@
 #pragma once
-#include "../relocalization/closure.h"
+#include "local_map.h"
 
 namespace proslam {
 
@@ -44,7 +44,7 @@ public:
   void addLoopClosure(LocalMap* query_,
                       const LocalMap* reference_,
                       const TransformMatrix3D& query_to_reference_,
-                      const CorrespondencePointerVector& landmark_correspondences_,
+                      const Closure::CorrespondencePointerVector& landmark_correspondences_,
                       const real& information_ = 1);
 
   //! @brief dump trajectory to file (in KITTI benchmark format: 4x4 isometries per line and TUM benchmark format: timestamp x z y and qx qy qz qw per line)

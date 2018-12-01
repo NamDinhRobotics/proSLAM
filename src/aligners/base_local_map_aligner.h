@@ -1,4 +1,5 @@
 #pragma once
+#include "types/local_map.h"
 #include "relocalization/closure.h"
 #include "base_aligner.h"
 

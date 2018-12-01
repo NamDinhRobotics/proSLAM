@@ -4,10 +4,7 @@ namespace proslam {
   using namespace srrg_core;
 
   DepthTracker::DepthTracker(DepthTrackerParameters* parameters_): BaseTracker(parameters_),
-                                                                   _parameters(parameters_),
-                                                                   _depth_camera(0),
-                                                                   _depth_image(0),
-                                                                   _depth_framepoint_generator(0) {
+                                                                   _parameters(parameters_) {
     LOG_INFO(std::cerr << "DepthTracker::DepthTracker|constructed" << std::endl)
   }
 

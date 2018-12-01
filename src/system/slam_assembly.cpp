@@ -502,20 +502,20 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
                            const TransformMatrix3D& odometry_) {
 
   //ds call the tracker
-  _tracker->setIntensityImageLeft(&intensity_image_left_);
+  _tracker->setIntensityImageLeft(intensity_image_left_);
 
   //ds depending on tracking mode
   switch (_parameters->command_line_parameters->tracker_mode){
     case CommandLineParameters::TrackerMode::RGB_STEREO: {
       StereoTracker* stereo_tracker = dynamic_cast<StereoTracker*>(_tracker);
       assert(stereo_tracker);
-      stereo_tracker->setIntensityImageRight(&intensity_image_right_);
+      stereo_tracker->setIntensityImageRight(intensity_image_right_);
       break;
     }
     case CommandLineParameters::TrackerMode::RGB_DEPTH: {
       DepthTracker* depth_tracker = dynamic_cast<DepthTracker*>(_tracker);
       assert(depth_tracker);
-      depth_tracker->setDepthImageRight(&intensity_image_right_);
+      depth_tracker->setDepthImage(intensity_image_right_);
       break;
     }
     default: {
@@ -542,11 +542,13 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
       if (_map_viewer) {_map_viewer->lock();}
       const bool created_local_map = _world_map->createLocalMap(_parameters->command_line_parameters->option_drop_framepoints);
       if (_map_viewer) {_map_viewer->unlock();}
+
+      //ds if we successfully created a local map
       if (created_local_map) {
 
         //ds localize in database (not yet optimizing the graph)
-        _relocalizer->detect(_world_map->currentLocalMap());
-        _relocalizer->compute();
+        _relocalizer->detectClosures(_world_map->currentLocalMap());
+        _relocalizer->registerClosures();
 
         //ds check the closures
         for(Closure* closure: _relocalizer->closures()) {
@@ -560,7 +562,7 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
                                        closure->correspondences,
                                        closure->icp_inlier_ratio);
             if (_parameters->command_line_parameters->option_use_gui) {
-              for (const LandmarkCorrespondence* match: closure->correspondences) {
+              for (const Closure::Correspondence* match: closure->correspondences) {
                 _world_map->landmarks().at(match->query->identifier())->setIsInLoopClosureQuery(true);
                 _world_map->landmarks().at(match->reference->identifier())->setIsInLoopClosureReference(true);
               }
@@ -613,7 +615,7 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
           //ds merge inlier landmark correspondences
           for(Closure* closure: _relocalizer->closures()) {
             if (closure->is_valid) {
-              for (const LandmarkCorrespondence* correspondence: closure->correspondences) {
+              for (const Closure::Correspondence* correspondence: closure->correspondences) {
                 Identifier identifier_query     = correspondence->query->identifier();
                 Identifier identifier_reference = correspondence->reference->identifier();
 

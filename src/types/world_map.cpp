@@ -22,16 +22,19 @@ WorldMap::~WorldMap() {
 void WorldMap::clear() {
 
   //ds free landmarks
+  LOG_INFO(std::cerr << "WorldMap::clear|erasing landmarks" << std::endl)
   for(LandmarkPointerMap::iterator it = _landmarks.begin(); it != _landmarks.end(); ++it) {
     delete it->second;
   }
 
   //ds free all frames
+  LOG_INFO(std::cerr << "WorldMap::clear|erasing frames and framepoints" << std::endl)
   for(FramePointerMap::iterator it = _frames.begin(); it != _frames.end(); ++it) {
     delete it->second;
   }
 
   //ds free all local maps
+  LOG_INFO(std::cerr << "WorldMap::clear|erasing local maps" << std::endl)
   for(const LocalMap* local_map: _local_maps) {
     delete local_map;
   }
@@ -146,7 +149,7 @@ void WorldMap::resetWindowForLocalMapCreation(const bool& drop_framepoints_) {
 void WorldMap::addLoopClosure(LocalMap* query_,
                               const LocalMap* reference_,
                               const TransformMatrix3D& query_to_reference_,
-                              const CorrespondencePointerVector& landmark_correspondences_,
+                              const Closure::CorrespondencePointerVector& landmark_correspondences_,
                               const real& information_) {
 
   //ds check if we relocalized after a lost track

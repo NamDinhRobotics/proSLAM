@@ -202,7 +202,7 @@ void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std:
     if (frame.second->localMap() && frame.second->localMap()->closures().size() > 0) {
 
       //ds for all linked loop closures
-      for (const LocalMap::Closure& closure: frame.second->localMap()->closures()) {
+      for (const LocalMap::ClosureConstraint& closure: frame.second->localMap()->closures()) {
 
         //ds retrieve closure edge
         _setPoseEdge(pose_graph,
@@ -273,7 +273,7 @@ void GraphOptimizer::addFrame(Frame* frame_) {
       _local_maps_in_graph.insert(std::make_pair(local_map->identifier(), local_map));
 
       //ds for all linked loop closures
-      for (const LocalMap::Closure& closure: local_map->closures()) {
+      for (const LocalMap::ClosureConstraint& closure: local_map->closures()) {
 
         //ds reference frame
         Frame* reference_frame = closure.local_map->keyframe();

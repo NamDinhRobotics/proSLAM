@@ -1,5 +1,6 @@
 #pragma once
-#include "relocalization/landmark_correspondence.h"
+#include "landmark.h"
+#include "relocalization/closure.h"
 
 namespace proslam {
 
@@ -10,22 +11,22 @@ class LocalMap {
 public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   //ds loop closure constraint element between 2 local maps TODO move to relocalizer
-  struct Closure {
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    Closure(const LocalMap* local_map_,
-            const TransformMatrix3D& relation_,
-            const CorrespondencePointerVector& landmark_correspondences_,
-            const real& omega_ = 1): local_map(local_map_),
-                                     relation(relation_),
-                                     landmark_correspondences(landmark_correspondences_),
-                                     omega(omega_){}
+  struct ClosureConstraint {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    ClosureConstraint(const LocalMap* local_map_,
+                      const TransformMatrix3D& relation_,
+                      const Closure::CorrespondencePointerVector& landmark_correspondences_,
+                      const real& omega_ = 1): local_map(local_map_),
+                                               relation(relation_),
+                                               landmark_correspondences(landmark_correspondences_),
+                                               omega(omega_){}
 
     const LocalMap* local_map;
     const TransformMatrix3D relation;
-    const CorrespondencePointerVector landmark_correspondences;
+    const Closure::CorrespondencePointerVector landmark_correspondences;
     const real omega;
   };
-  typedef std::vector<Closure, Eigen::aligned_allocator<Closure>> ClosureVector;
+  typedef std::vector<ClosureConstraint, Eigen::aligned_allocator<ClosureConstraint>> ClosureConstraintVector;
 
 //ds object handling
 protected:
@@ -63,8 +64,8 @@ public:
   //! @param[in] omega_ 1D information value of the correspondence
   void addCorrespondence(const LocalMap* local_map_reference_,
                          const TransformMatrix3D& query_to_reference_,
-                         const CorrespondencePointerVector& landmark_correspondences_,
-                         const real& omega_ = 1) {_closures.push_back(Closure(local_map_reference_, query_to_reference_, landmark_correspondences_, omega_));}
+                         const Closure::CorrespondencePointerVector& landmark_correspondences_,
+                         const real& omega_ = 1) {_closures.push_back(ClosureConstraint(local_map_reference_, query_to_reference_, landmark_correspondences_, omega_));}
 
 //ds getters/setters
 public:
@@ -87,7 +88,7 @@ public:
   inline const AppearanceVector& appearances() const {return _appearances;}
 
   //ds TODO purge this
-  inline const ClosureVector& closures() const {return _closures;}
+  inline const ClosureConstraintVector& closures() const {return _closures;}
 
   //ds reset allocated object counter
   static void reset() {_instances = 0;}
@@ -99,10 +100,10 @@ protected:
   const Identifier _identifier;
 
   //! @brief pose of the local map with respect to the world map coordinate frame
-  TransformMatrix3D _local_map_to_world;
+  TransformMatrix3D _local_map_to_world = TransformMatrix3D::Identity();
 
   //! @brief transform to map world geometries into the local map coordinate frame
-  TransformMatrix3D _world_to_local_map;
+  TransformMatrix3D _world_to_local_map = TransformMatrix3D::Identity();
 
   //ds links to preceding and subsequent instances
   LocalMap* _root;
@@ -122,7 +123,7 @@ protected:
   AppearanceVector _appearances;
 
   //ds loop closures for the local map
-  ClosureVector _closures;
+  ClosureConstraintVector _closures;
 
   //ds grant access to local map producer
   friend WorldMap;
@@ -135,8 +136,10 @@ private:
 
   //! @brief inner instance count - incremented upon constructor call (also unsuccessful calls)
   static Count _instances;
+
 };
 
 typedef std::vector<LocalMap*> LocalMapPointerVector;
 typedef std::vector<const LocalMap*> ConstLocalMapPointerVector;
+
 }
