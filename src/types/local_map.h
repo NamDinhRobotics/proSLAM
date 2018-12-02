@@ -26,7 +26,26 @@ public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     const Closure::CorrespondencePointerVector landmark_correspondences;
     const real omega;
   };
+
   typedef std::vector<ClosureConstraint, Eigen::aligned_allocator<ClosureConstraint>> ClosureConstraintVector;
+
+  //ds landmark snapshot at creation of local map
+  struct LandmarkState {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    LandmarkState(Landmark* landmark_,
+                  PointCoordinates coordinates_in_local_map_): landmark(landmark_),
+                                                               coordinates_in_local_map(coordinates_in_local_map_) {}
+
+    void updateCoordinatesInWorld(const TransformMatrix3D& local_map_to_world_) {
+      landmark->setCoordinates(local_map_to_world_*coordinates_in_local_map);
+    }
+
+    Landmark* landmark;
+    PointCoordinates coordinates_in_local_map;
+  };
+
+  typedef std::pair<const Identifier, LandmarkState> LandmarkStateMapElement;
+  typedef std::map<const Identifier, LandmarkState, std::less<Identifier>, Eigen::aligned_allocator<LandmarkStateMapElement> > LandmarkStateMap;
 
 //ds object handling
 protected:
@@ -67,6 +86,15 @@ public:
                          const Closure::CorrespondencePointerVector& landmark_correspondences_,
                          const real& omega_ = 1) {_closures.push_back(ClosureConstraint(local_map_reference_, query_to_reference_, landmark_correspondences_, omega_));}
 
+  //! @brief replaces a landmark with another (e.g. merged)
+  //! @param[in] landmark_old_ landmark currently in this local map
+  //! @param[in] landmark_new_ landmark to replace the currently present landmark_old_ in this local map
+  void replace(Landmark* landmark_old_, Landmark* landmark_new_);
+
+  //! @brief remove merged matchables from internal appearance vector
+  //! @param[in] matchables_to_remove_ set of unique matchables (by pointers) to remove
+  void replace(const std::map<const HBSTMatchable*, HBSTMatchable*>& matchables_to_replace_);
+
 //ds getters/setters
 public:
 
@@ -84,8 +112,8 @@ public:
   void setNext(LocalMap* local_map_) {_next = local_map_;}
   inline Frame* keyframe() const {return _keyframe;}
   inline const FramePointerVector& frames() const {return _frames;}
-  inline Landmark::StatePointerVector& landmarkStates() {return _landmark_states;}
-  inline const AppearanceVector& appearances() const {return _appearances;}
+  inline LandmarkStateMap& landmarks() {return _landmarks;}
+  inline AppearanceVector& appearances() {return _appearances;}
 
   //ds TODO purge this
   inline const ClosureConstraintVector& closures() const {return _closures;}
@@ -116,8 +144,9 @@ protected:
   //ds the contained Frames
   FramePointerVector _frames;
 
-  //ds landmarks in the configuration at the time of the creation of the local map
-  Landmark::StatePointerVector _landmark_states;
+  //ds the contained landmarks with coordinates in the local map frame (i.e. w.r.t. key frame)
+  //ds these estimates are currently frozen after local map creation TODO update it after optimization
+  LandmarkStateMap _landmarks;
 
   //ds appearance vector, corresponding to the union of all appearences stored in _landmarks
   AppearanceVector _appearances;

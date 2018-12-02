@@ -35,7 +35,6 @@ BaseTracker::~BaseTracker() {
 void BaseTracker::compute() {
   assert(_camera_left);
   assert(_context);
-  assert(_intensity_image_left);
 
   //ds reset point configurations
   _number_of_tracked_points   = 0;
@@ -430,7 +429,7 @@ void BaseTracker::_updatePoints(WorldMap* context_, Frame* frame_) {
       continue;
     }
 
-    //ds initial update setup
+    //ds check if the point is linked to a landmark
     Landmark* landmark = point->landmark();
 
     //ds if there's no landmark yet
@@ -438,8 +437,6 @@ void BaseTracker::_updatePoints(WorldMap* context_, Frame* frame_) {
 
       //ds create a landmark and associate it with the current framepoint
       landmark = context_->createLandmark(point);
-      assert(landmark);
-      point->setLandmark(landmark);
     }
 
     //ds update landmark position based on current point (triggered as we linked the landmark to the point)

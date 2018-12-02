@@ -4,7 +4,6 @@ namespace proslam {
 
 StereoFramePointGenerator::StereoFramePointGenerator(StereoFramePointGeneratorParameters* parameters_): BaseFramePointGenerator(parameters_),
                                                                                                         _parameters(parameters_) {
-  _triangulation_success_ratios.clear();
   _epipolar_search_offsets_pixel.clear();
   LOG_INFO(std::cerr << "StereoFramePointGenerator::StereoFramePointGenerator|constructed" << std::endl)
 }
@@ -16,7 +15,6 @@ void StereoFramePointGenerator::configure(){
   //ds integrate configuration
   _parameters->number_of_cameras = 2;
   BaseFramePointGenerator::configure();
-  _triangulation_success_ratios.clear();
 
   //ds set initial tracking distance (changes at runtime)
   _projection_tracking_distance_pixels = _parameters->maximum_projection_tracking_distance_pixels;
@@ -55,7 +53,6 @@ void StereoFramePointGenerator::configure(){
 //ds cleanup of dynamic structures
 StereoFramePointGenerator::~StereoFramePointGenerator() {
   LOG_INFO(std::cerr << "StereoFramePointGenerator::~StereoFramePointGenerator|destroying" << std::endl)
-  _triangulation_success_ratios.clear();
   _epipolar_search_offsets_pixel.clear();
   LOG_INFO(std::cerr << "StereoFramePointGenerator::~StereoFramePointGenerator|destroyed" << std::endl)
 }
@@ -426,16 +423,5 @@ void StereoFramePointGenerator::compute(Frame* frame_) {
     //ds add all points to frame
     framepoints.insert(framepoints.end(), framepoints_new.begin(), framepoints_new.end());
   }
-}
-
-const real StereoFramePointGenerator::standardDeviationTriangulationSuccessRatio() const {
-  real standard_deviation_triangulation_success_ratio = 0;
-  for (const double& triangulation_success_ratio: _triangulation_success_ratios) {
-    standard_deviation_triangulation_success_ratio += (_mean_triangulation_success_ratio-triangulation_success_ratio)
-                                                     *(_mean_triangulation_success_ratio-triangulation_success_ratio);
-  }
-  standard_deviation_triangulation_success_ratio /= _triangulation_success_ratios.size();
-  standard_deviation_triangulation_success_ratio = std::sqrt(standard_deviation_triangulation_success_ratio);
-  return standard_deviation_triangulation_success_ratio;
 }
 }

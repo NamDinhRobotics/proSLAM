@@ -31,7 +31,6 @@ namespace proslam {
   }
   
   void DepthTracker::compute() {
-    assert(_depth_image);
     BaseTracker::compute();
   }
 

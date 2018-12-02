@@ -22,19 +22,19 @@ WorldMap::~WorldMap() {
 void WorldMap::clear() {
 
   //ds free landmarks
-  LOG_INFO(std::cerr << "WorldMap::clear|erasing landmarks" << std::endl)
+  LOG_INFO(std::cerr << "WorldMap::clear|deleting landmarks: " << _landmarks.size() << std::endl)
   for(LandmarkPointerMap::iterator it = _landmarks.begin(); it != _landmarks.end(); ++it) {
     delete it->second;
   }
 
   //ds free all frames
-  LOG_INFO(std::cerr << "WorldMap::clear|erasing frames and framepoints" << std::endl)
+  LOG_INFO(std::cerr << "WorldMap::clear|deleting frames: " << _frames.size() << std::endl)
   for(FramePointerMap::iterator it = _frames.begin(); it != _frames.end(); ++it) {
     delete it->second;
   }
 
   //ds free all local maps
-  LOG_INFO(std::cerr << "WorldMap::clear|erasing local maps" << std::endl)
+  LOG_INFO(std::cerr << "WorldMap::clear|deleting local maps: " << _local_maps.size() << std::endl)
   for(const LocalMap* local_map: _local_maps) {
     delete local_map;
   }
@@ -289,18 +289,91 @@ void WorldMap::setTrack(Frame* frame_) {
   _last_local_map_before_track_break = 0;
 }
 
-void WorldMap::mergeLandmarks(const std::map<Identifier, std::pair<Identifier, Count>>& landmarks_to_merge_) {
+void WorldMap::mergeLandmarks(const LocalMap::ClosureConstraintVector& closures_) {
   CHRONOMETER_START(landmark_merging)
+
+  //ds keep track of the best merged references
+  //ds we need to do this since we're processing multiple closures here,
+  //ds which possibly contain different query-reference correspondences
+  std::map<Identifier, std::pair<Identifier, Count>> landmark_queries_to_references_filtered;
+  std::map<Identifier, std::pair<Identifier, Count>> landmark_references_to_queries_filtered;
+
+  //ds determine landmark merge configuration
+  for (const LocalMap::ClosureConstraint& closure: closures_) {
+    for (const Closure::Correspondence* correspondence: closure.landmark_correspondences) {
+      Identifier identifier_query     = correspondence->query->identifier();
+      Identifier identifier_reference = correspondence->reference->identifier();
+
+      //ds query is always greater than reference (merging into old landmarks)
+      if (identifier_query < identifier_reference) {
+        std::swap(identifier_query, identifier_reference);
+      }
+
+      //ds if the correspondence is valid and not a redundant merge for an already merged landmark
+      if (correspondence->is_inlier && identifier_query != identifier_reference) {
+
+        //ds potential correspondance candidates
+        const Count& matching_count = correspondence->matching_count;
+        std::pair<Identifier, Count> candidate_query(identifier_query, matching_count);
+        std::pair<Identifier, Count> candidate_reference(identifier_reference, matching_count);
+
+        //ds evaluate current situation for the proposed query-reference pair
+        std::map<Identifier, std::pair<Identifier, Count>>::iterator iterator_query     = landmark_queries_to_references_filtered.find(identifier_query);
+        std::map<Identifier, std::pair<Identifier, Count>>::iterator iterator_reference = landmark_references_to_queries_filtered.find(identifier_reference);
+
+        //ds if there is not entry for the query nor the reference
+        if (iterator_query == landmark_queries_to_references_filtered.end() &&
+            iterator_reference == landmark_references_to_queries_filtered.end()) {
+
+          //ds we add new entries
+          landmark_queries_to_references_filtered.insert(std::make_pair(identifier_query, candidate_reference));
+          landmark_references_to_queries_filtered.insert(std::make_pair(identifier_reference, candidate_query));
+        }
+
+        //ds if we have a new reference for an already added query
+        else if (iterator_query != landmark_queries_to_references_filtered.end() &&
+                 iterator_reference == landmark_references_to_queries_filtered.end()) {
+
+          //ds check if the reference is better than the added one
+          if (matching_count > iterator_query->second.second) {
+
+            //ds remove previous entry
+            landmark_references_to_queries_filtered.erase(iterator_query->second.first);
+
+            //ds update entries
+            iterator_query->second = candidate_query;
+            landmark_references_to_queries_filtered.insert(std::make_pair(identifier_reference, candidate_query));
+          }
+        }
+
+        //ds if we have a new query for and already added reference
+        else if (iterator_query == landmark_queries_to_references_filtered.end() &&
+                 iterator_reference != landmark_references_to_queries_filtered.end()) {
+
+          //ds check if the query is better than the added one
+          if (matching_count > iterator_reference->second.second) {
+
+            //ds remove previous entry
+            landmark_queries_to_references_filtered.erase(iterator_reference->second.first);
+
+            //ds update entries
+            iterator_reference->second = candidate_reference;
+            landmark_queries_to_references_filtered.insert(std::make_pair(identifier_query, candidate_reference));
+          }
+        }
+      }
+    }
+  }
 
   //ds map of merged landmark identfiers in case of multi-merges
   std::map<Identifier, Identifier> merged_landmark_identifiers;
 
   //ds for each entry: <query, reference>
-  for (const std::pair<Identifier, std::pair<Identifier, Count>>& pair: landmarks_to_merge_) {
+  for (const std::pair<Identifier, std::pair<Identifier, Count>>& pair: landmark_queries_to_references_filtered) {
     Landmark* landmark_query     = nullptr;
     Landmark* landmark_reference = nullptr;
 
-    //ds try to retrieve landmarks from map, falling back to merge information on failure
+    //ds try to retrieve landmarks from map, ignoring queries that have been merged already
     try {
       landmark_query = _landmarks.at(pair.first);
     } catch (const std::out_of_range& /*ex*/) {
@@ -309,6 +382,8 @@ void WorldMap::mergeLandmarks(const std::map<Identifier, std::pair<Identifier, C
       LOG_WARNING(std::cerr << "WorldMap::mergeLandmarks|already merged landmark ID: " << landmark_query->identifier() << std::endl)
       continue;
     }
+
+    //ds check for reference landmark, route to absorbing one if the reference has been a query earlier
     try {
       landmark_reference = _landmarks.at(pair.second.first);
     } catch (const std::out_of_range& /*ex*/) {
@@ -344,8 +419,8 @@ void WorldMap::mergeLandmarks(const std::map<Identifier, std::pair<Identifier, C
       delete landmark_query;
     }
   }
-  LOG_DEBUG(std::cerr << "WorldMap::mergeLandmarks|merged landmarks: " << landmarks_to_merge_.size() << std::endl)
+  LOG_DEBUG(std::cerr << "WorldMap::mergeLandmarks|merged landmarks: " << merged_landmark_identifiers.size() << std::endl)
+  _number_of_merged_landmarks += merged_landmark_identifiers.size();
   CHRONOMETER_STOP(landmark_merging)
 }
 }
-

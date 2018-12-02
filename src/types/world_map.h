@@ -109,7 +109,7 @@ public:
   const LandmarkPointerMap& landmarks() const {return _landmarks;}
   LandmarkPointerVector& currentlyTrackedLandmarks() {return _currently_tracked_landmarks;}
   const LandmarkPointerVector& currentlyTrackedLandmarks() const {return _currently_tracked_landmarks;}
-  void mergeLandmarks(const std::map<Identifier, std::pair<Identifier, Count>>& landmarks_to_merge_);
+  void mergeLandmarks(const LocalMap::ClosureConstraintVector& closures_);
 
   LocalMap* currentLocalMap() {return _current_local_map;}
   const LocalMapPointerVector& localMaps() const {return _local_maps;}
@@ -118,7 +118,8 @@ public:
   const TransformMatrix3D robotToWorld() const {return robot_to_world;}
 
   const bool relocalized() const {return _relocalized;}
-  const Count numberOfClosures() const {return _number_of_closures;}
+  const Count& numberOfClosures() const {return _number_of_closures;}
+  const Count& numberOfMergedLandmarks() const {return _number_of_merged_landmarks;}
 
   //ds visualization only
   const FramePointerMap& frames() const {return _frames;}
@@ -163,16 +164,17 @@ protected:
 
   //ds local map control structures
   FramePointerVector _frame_queue_for_local_map;
-  LocalMap* _current_local_map  = 0;
+  LocalMap* _current_local_map  = nullptr;
   LocalMapPointerVector _local_maps;
 
   //ds track recovery
-  Frame* _last_frame_before_track_break = 0;
-  LocalMap* _last_local_map_before_track_break = 0;
-  LocalMap* _root_local_map = 0;
+  Frame* _last_frame_before_track_break        = nullptr;
+  LocalMap* _last_local_map_before_track_break = nullptr;
+  LocalMap* _root_local_map                    = nullptr;
 
   //ds informative only
   CREATE_CHRONOMETER(landmark_merging)
+  Count _number_of_merged_landmarks = 0;
 
 private:
 

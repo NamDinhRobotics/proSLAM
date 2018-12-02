@@ -27,7 +27,7 @@ Relocalizer::~Relocalizer() {
 }
 
 //ds retrieve loop closure candidates for the given cloud
-void Relocalizer::detectClosures(const LocalMap* local_map_query_) {
+void Relocalizer::detectClosures(LocalMap* local_map_query_) {
   CHRONOMETER_START(overall)
   if (!local_map_query_) {
     return;
@@ -41,79 +41,107 @@ void Relocalizer::detectClosures(const LocalMap* local_map_query_) {
 
     //ds add matchables
     _place_database.add(local_map_query_->appearances(), srrg_hbst::SplittingStrategy::SplitEven);
-    return;
   }
 
-  //ds matching result container: a map that contains a vector of matches to the current image for each reference image
-  HBSTTree::MatchVectorMap matches_per_reference_image;
+  //ds we want to add and match against past places
+  else {
 
-  //ds query database for current matchables and integrate current image simultaneously
-  _place_database.matchAndAdd(local_map_query_->appearances(), matches_per_reference_image, _parameters->maximum_descriptor_distance);
+    //ds matching result container: a map that contains a vector of matches to the current image for each reference image
+    HBSTTree::MatchVectorMap matches_per_reference_image;
 
-  //ds evaluate matches for each reference image in the range
-  const Count number_of_query_matchables = local_map_query_->appearances().size();
-  const Count maximum_index_reference    = _place_database.size()-_parameters->preliminary_minimum_interspace_queries;
-  for (Count index_reference_local_map = 0; index_reference_local_map < maximum_index_reference; ++index_reference_local_map) {
-    HBSTTree::MatchVector& multiple_matches_mixed = matches_per_reference_image.at(index_reference_local_map);
+    //ds query database for current matchables and integrate current image simultaneously
+    _place_database.matchAndAdd(local_map_query_->appearances(), matches_per_reference_image, _parameters->maximum_descriptor_distance);
 
-    //ds compute relative matching ratio (how many of the query matchables were matched)
-    const real relative_number_of_matches = static_cast<real>(multiple_matches_mixed.size())/number_of_query_matchables;
+    //ds evaluate matches for each reference image in the range
+    const Count number_of_query_matchables = local_map_query_->appearances().size();
+    const Count maximum_index_reference    = _place_database.size()-_parameters->preliminary_minimum_interspace_queries;
+    for (Count index_reference_local_map = 0; index_reference_local_map < maximum_index_reference; ++index_reference_local_map) {
+      HBSTTree::MatchVector& multiple_matches_mixed = matches_per_reference_image.at(index_reference_local_map);
 
-    //ds skip this reference image if matching ratio is insufficient
-    if (relative_number_of_matches < _parameters->preliminary_minimum_matching_ratio) {
-      continue;
-    }
+      //ds compute relative matching ratio (how many of the query matchables were matched)
+      const real relative_number_of_matches = static_cast<real>(multiple_matches_mixed.size())/number_of_query_matchables;
 
-    //ds loop over all matches to organize them per landmark
-    Closure::CandidateMap multiple_matches_per_landmark;
-    for (const HBSTTree::Match& match: multiple_matches_mixed) {
-
-      //ds buffer landmark identifier
-      Landmark* landmark_query                    = match.object_query;
-      Landmark* landmark_reference                = match.object_reference;
-      const Identifier& query_landmark_identifier = landmark_query->identifier();
-
-      //ds update match map (adding a new entry if not existing yet)
-      try {
-
-        //ds add a new match to the given query point
-        multiple_matches_per_landmark.at(query_landmark_identifier).push_back(Closure::Candidate(landmark_query, landmark_reference, match.distance));
-      } catch(const std::out_of_range& /*exception*/) {
-
-        //ds initialize the first match for the given query point
-        multiple_matches_per_landmark.insert(std::make_pair(query_landmark_identifier,
-                                                            Closure::CandidateVector(1, Closure::Candidate(landmark_query, landmark_reference, match.distance))));
+      //ds skip this reference image if matching ratio is insufficient
+      if (relative_number_of_matches < _parameters->preliminary_minimum_matching_ratio) {
+        continue;
       }
-    }
 
-    //ds skip further processing if number of matching landmarks is insufficient
-    if (multiple_matches_per_landmark.size() < _parameters->minimum_number_of_matched_landmarks) {
-      continue;
-    }
+      //ds loop over all matches to organize them per landmark
+      Closure::CandidateMap multiple_matches_per_landmark;
+      for (const HBSTTree::Match& match: multiple_matches_mixed) {
 
-    //ds prepare point to point correspondence search
-    Closure::CorrespondencePointerVector correspondences;
-    _mask_id_references_for_correspondences.clear();
+        //ds buffer landmark identifier
+        Landmark* landmark_query                    = match.object_query;
+        Landmark* landmark_reference                = match.object_reference;
+        const Identifier& query_landmark_identifier = landmark_query->identifier();
 
-    //ds compute the best point to point correspondences from multiple match candidates
-    for(const Closure::CandidateMapElement& multiple_matches: multiple_matches_per_landmark) {
+        //ds update match map (adding a new entry if not existing yet)
+        try {
 
-      //ds retrieve best correspondence for the multiple matches
-      Closure::Correspondence* correspondence = _getCorrespondenceNN(multiple_matches.second);
-      if (correspondence) {
-        correspondences.push_back(correspondence);
+          //ds add a new match to the given query point
+          multiple_matches_per_landmark.at(query_landmark_identifier).push_back(Closure::Candidate(landmark_query, landmark_reference, match.distance));
+        } catch(const std::out_of_range& /*exception*/) {
+
+          //ds initialize the first match for the given query point
+          multiple_matches_per_landmark.insert(std::make_pair(query_landmark_identifier,
+                                                              Closure::CandidateVector(1, Closure::Candidate(landmark_query, landmark_reference, match.distance))));
+        }
       }
-    }
 
-    //ds add to closure buffer
-    _closures.push_back(new Closure(local_map_query_,
-                                    _added_local_maps[index_reference_local_map],
-                                    multiple_matches_per_landmark.size(),
-                                    relative_number_of_matches,
-                                    correspondences));
+      //ds skip further processing if number of matching landmarks is insufficient
+      if (multiple_matches_per_landmark.size() < _parameters->minimum_number_of_matched_landmarks) {
+        continue;
+      }
+
+      //ds prepare point to point correspondence search
+      Closure::CorrespondencePointerVector correspondences;
+      _mask_id_references_for_correspondences.clear();
+
+      //ds compute the best point to point correspondences from multiple match candidates
+      for(const Closure::CandidateMapElement& multiple_matches: multiple_matches_per_landmark) {
+
+        //ds retrieve best correspondence for the multiple matches
+        Closure::Correspondence* correspondence = _getCorrespondenceNN(multiple_matches.second);
+        if (correspondence) {
+          correspondences.push_back(correspondence);
+        }
+      }
+
+      //ds add to closure buffer
+      _closures.push_back(new Closure(local_map_query_,
+                                      _added_local_maps[index_reference_local_map],
+                                      multiple_matches_per_landmark.size(),
+                                      relative_number_of_matches,
+                                      correspondences));
+    }
   }
+
+#ifdef SRRG_MERGE_DESCRIPTORS
+  //ds always check for absorbed matchables (we need to update our bookkeeping) of the last add call (this local map)
+  HBSTTree::MatchableMergeVector merges = _place_database.getMerges();
+  if (!merges.empty()) {
+
+    //ds remove merged matchables from appearance vector in local map
+    std::map<const HBSTMatchable*, HBSTMatchable*> matchables_to_replace;
+    for (const HBSTTree::MatchableMerge& merge: merges) {
+      matchables_to_replace.insert(std::make_pair(merge.query, merge.reference));
+    }
+    local_map_query_->replace(matchables_to_replace);
+
+    //ds evaluate each merge
+    for (HBSTTree::MatchableMerge& merge: merges) {
+
+      //ds the absorbed landmark must be contained in the merged objects for this local map ID by design
+      //ds recall that merge.query is already freed
+      Landmark* landmark = merge.query_object;
+
+      //ds replace the matchable in the landmark list, note that the memory for query is already freed
+      landmark->replace(merge.query, merge.reference);
+    }
+    LOG_DEBUG(std::cerr << "Relocalizer::detectClosures|merged appearances: " << merges.size() << std::endl)
+  }
+#endif
   CHRONOMETER_STOP(overall)
-  return;
 }
 
 //ds geometric verification and determination of spatial relation between a set of closures

@@ -14,7 +14,7 @@ PROSLAM_MAKE_PROCESSING_CLASS(Relocalizer)
 public:
 
   //ds retrieve loop closure candidates for the given local map, containing descriptors for its landmarks
-  void detectClosures(const LocalMap* local_map_query_);
+  void detectClosures(LocalMap* local_map_query_);
 
   //ds geometric verification and determination of spatial relation between closure set
   void registerClosures();

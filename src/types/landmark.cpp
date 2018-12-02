@@ -10,8 +10,9 @@ Landmark::Landmark(FramePoint* origin_, const LandmarkParameters* parameters_): 
                                                                                 _parameters(parameters_) {
   ++_instances;
   _measurements.clear();
-  _appearances.clear();
-  _states_in_local_maps.clear();
+  _appearance_map.clear();
+  _descriptors.clear();
+  _local_maps.clear();
 
   //ds compute initial position estimate as rude average of the track
   //ds we do not weight the measurements with disparity/inverse depth here
@@ -19,6 +20,7 @@ Landmark::Landmark(FramePoint* origin_, const LandmarkParameters* parameters_): 
   _world_coordinates.setZero();
   FramePoint* framepoint = origin_;
   while (framepoint) {
+    framepoint->setLandmark(this);
     _measurements.push_back(Measurement(framepoint));
     _origin = framepoint;
     _world_coordinates += framepoint->worldCoordinates();
@@ -29,23 +31,28 @@ Landmark::Landmark(FramePoint* origin_, const LandmarkParameters* parameters_): 
 }
 
 Landmark::~Landmark() {
-  _appearances.clear();
+  _appearance_map.clear();
   _measurements.clear();
-  _states_in_local_maps.clear();
+  _descriptors.clear();
+  _local_maps.clear();
 }
 
-void Landmark::addState(State* landmark_state_) {
-  _states_in_local_maps.push_back(landmark_state_);
-  _appearances.clear();
-}
+void Landmark::replace(const HBSTMatchable* matchable_old_, HBSTMatchable* matchable_new_) {
 
-void Landmark::update(const FramePoint* point_) {
-  if (!point_) {
-    return;
+  //ds remove the old matchable and check for failure
+  if (_appearance_map.erase(matchable_old_) != 1) {
+    LOG_WARNING(std::cerr << "Landmark::replace|" << _identifier << "|unable to erase old HBSTMatchable: " << matchable_old_ << std::endl)
   }
 
+  //ds insert new matchable - not critical if already present (same landmark in subsequent local maps)
+  _appearance_map.insert(std::make_pair(matchable_new_, matchable_new_));
+}
+
+void Landmark::update(FramePoint* point_) {
+  _last_update = point_;
+
   //ds update appearance history (left descriptors only)
-  _appearances.push_back(point_->descriptorLeft());
+  _descriptors.push_back(point_->descriptorLeft());
   _measurements.push_back(Measurement(point_));
 
   //ds trigger classic ICP in camera update of landmark coordinates - setup
@@ -138,21 +145,28 @@ void Landmark::update(const FramePoint* point_) {
 }
 
 void Landmark::merge(Landmark* landmark_) {
-  assert(landmark_ != this);
-
-  //ds update recent appearances
-  _appearances.insert(_appearances.end(), landmark_->_appearances.begin(), landmark_->_appearances.end());
-  landmark_->_appearances.clear();
-
-  //ds update states of absorbed landmark and add them to this states
-  for (State* state: landmark_->_states_in_local_maps) {
-    for (HBSTMatchable* appearance: state->appearances) {
-      appearance->objects.begin()->second = this;
-    }
-    state->landmark = this;
+  if (landmark_ == this) {
+    LOG_WARNING(std::cerr << "Landmark::merge|" << _identifier << "|received merge request to itself: " << landmark_ << std::endl)
+    return;
   }
-  _states_in_local_maps.insert(_states_in_local_maps.end(), landmark_->_states_in_local_maps.begin(), landmark_->_states_in_local_maps.end());
-  landmark_->_states_in_local_maps.clear();
+
+  //ds merge landmark appearances
+  for (HBSTMatchableMemoryMapElement appearance: landmark_->_appearance_map) {
+    appearance.second->setObjects(this);
+  }
+  _appearance_map.insert(landmark_->_appearance_map.begin(), landmark_->_appearance_map.end());
+  landmark_->_appearance_map.clear();
+
+  //ds merge landmark local maps
+  for (LocalMap* local_map: landmark_->_local_maps) {
+    local_map->replace(landmark_, this);
+  }
+  _local_maps.insert(_local_maps.end(), landmark_->_local_maps.begin(), landmark_->_local_maps.end());
+  landmark_->_local_maps.clear();
+
+  //ds merge descriptors
+  _descriptors.insert(_descriptors.end(), landmark_->_descriptors.begin(), landmark_->_descriptors.end());
+  landmark_->_descriptors.clear();
 
   //ds compute new merged world coordinates
   _world_coordinates = (_number_of_updates*_world_coordinates+
@@ -165,11 +179,16 @@ void Landmark::merge(Landmark* landmark_) {
   _measurements.insert(_measurements.end(), landmark_->_measurements.begin(), landmark_->_measurements.end());
   landmark_->_measurements.clear();
 
-  //ds update past framepoint pointers
-  FramePoint* framepoint = landmark_->_origin;
-  while (framepoint) {
-    framepoint->setLandmark(this);
-    framepoint = framepoint->next();
+  //ds connect framepoint history (last update of this with origin of absorbed landmark)
+  landmark_->_origin->setPrevious(_last_update);
+
+  //ds update track lengths and landmark references until we arrive in the last framepoint of the absorbed landmark
+  //ds which will replace the _last_update of this landmark
+  while (_last_update->next()) {
+    _last_update = _last_update->next();
+    _last_update->setLandmark(this);
+    _last_update->setTrackLength(_last_update->previous()->trackLength()+1);
+    _last_update->setOrigin(_origin);
   }
 }
 }

@@ -39,15 +39,8 @@ SLAMAssembly::~SLAMAssembly() {
   delete _graph_optimizer;
   delete _relocalizer;
   delete _world_map;
-
-  //ds free cameras
   delete _camera_left;
   delete _camera_right;
-
-  //ds free viewers if set
-  delete _image_viewer;
-  delete _map_viewer;
-  delete _minimap_viewer;
   _message_reader.close();
   _synchronizer.reset();
   LOG_INFO(std::cerr << "SLAMAssembly::~SLAMAssembly|destroyed" << std::endl)
@@ -257,11 +250,13 @@ void SLAMAssembly::loadCameras(Camera* camera_left_, Camera* camera_right_) {
             << ", aspect ratio: " << static_cast<real>(camera_right_->numberOfImageCols())/camera_right_->numberOfImageRows() << std::endl)
 }
 
-void SLAMAssembly::initializeGUI(QApplication* ui_server_) {
+void SLAMAssembly::initializeGUI(std::shared_ptr<QApplication> ui_server_) {
   if (_parameters->command_line_parameters->option_use_gui) {
     _ui_server = ui_server_;
-    _image_viewer = new ImageViewer(_parameters->image_viewer_parameters);
-    _map_viewer   = new MapViewer(_parameters->map_viewer_parameters);
+
+    //ds allocate internal viewers (with new to keep Eigen's memory sane)
+    _image_viewer = std::shared_ptr<ImageViewer>(new ImageViewer(_parameters->image_viewer_parameters));
+    _map_viewer   = std::shared_ptr<MapViewer>(new MapViewer(_parameters->map_viewer_parameters));
     _map_viewer->setCameraLeftToRobot(_camera_left->cameraToRobot());
 
     //ds orientation flip for proper camera following
@@ -278,7 +273,7 @@ void SLAMAssembly::initializeGUI(QApplication* ui_server_) {
     if (_parameters->command_line_parameters->option_show_top_viewer) {
       _parameters->top_map_viewer_parameters->object_scale = 1;
       _parameters->top_map_viewer_parameters->window_title = "minimap [OpenGL]";
-      _minimap_viewer = new MapViewer(_parameters->top_map_viewer_parameters);
+      _minimap_viewer = std::shared_ptr<MapViewer>(new MapViewer(_parameters->top_map_viewer_parameters));
       _minimap_viewer->setCameraLeftToRobot(_camera_left->cameraToRobot());
       TransformMatrix3D center_for_kitti_sequence_00;
       center_for_kitti_sequence_00.matrix() << 1, 0, 0, 0,
@@ -606,81 +601,8 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
           //ds optimize pose graph with the loop closure constraint
           _graph_optimizer->optimizeFrames(_world_map);
 
-          //ds keep track of the best merged references
-          //ds we need to do this since we're processing multiple closures here,
-          //ds which possibly contain different query-reference correspondences
-          std::map<Identifier, std::pair<Identifier, Count>> landmark_queries_to_references_filtered;
-          std::map<Identifier, std::pair<Identifier, Count>> landmark_references_to_queries_filtered;
-
-          //ds merge inlier landmark correspondences
-          for(Closure* closure: _relocalizer->closures()) {
-            if (closure->is_valid) {
-              for (const Closure::Correspondence* correspondence: closure->correspondences) {
-                Identifier identifier_query     = correspondence->query->identifier();
-                Identifier identifier_reference = correspondence->reference->identifier();
-
-                //ds query is always greater than reference (merging into old landmarks)
-                if (identifier_query < identifier_reference) {
-                  std::swap(identifier_query, identifier_reference);
-                }
-
-                //ds if the correspondence is valid and not a redundant merge for an already merged landmark
-                if (correspondence->is_inlier && identifier_query != identifier_reference) {
-
-                  //ds potential correspondance candidates
-                  const Count& matching_count = correspondence->matching_count;
-                  std::pair<Identifier, Count> candidate_query(identifier_query, matching_count);
-                  std::pair<Identifier, Count> candidate_reference(identifier_reference, matching_count);
-
-                  //ds evaluate current situation for the proposed query-reference pair
-                  std::map<Identifier, std::pair<Identifier, Count>>::iterator iterator_query     = landmark_queries_to_references_filtered.find(identifier_query);
-                  std::map<Identifier, std::pair<Identifier, Count>>::iterator iterator_reference = landmark_references_to_queries_filtered.find(identifier_reference);
-
-                  //ds if there is not entry for the query nor the reference
-                  if (iterator_query == landmark_queries_to_references_filtered.end() &&
-                      iterator_reference == landmark_references_to_queries_filtered.end()) {
-
-                    //ds we add new entries
-                    landmark_queries_to_references_filtered.insert(std::make_pair(identifier_query, candidate_query));
-                    landmark_references_to_queries_filtered.insert(std::make_pair(identifier_reference, candidate_reference));
-                  }
-
-                  //ds if we have a new reference for an already added query
-                  else if (iterator_query != landmark_queries_to_references_filtered.end() &&
-                           iterator_reference == landmark_references_to_queries_filtered.end()) {
-
-                    //ds check if the reference is better than the added one
-                    if (matching_count > iterator_query->second.second) {
-
-                      //ds remove previous entry
-                      landmark_references_to_queries_filtered.erase(iterator_query->second.first);
-
-                      //ds update entries
-                      iterator_query->second = candidate_query;
-                      landmark_references_to_queries_filtered.insert(std::make_pair(identifier_reference, candidate_reference));
-                    }
-                  }
-
-                  //ds if we have a new query for and already added reference
-                  else if (iterator_query == landmark_queries_to_references_filtered.end() &&
-                           iterator_reference != landmark_references_to_queries_filtered.end()) {
-
-                    //ds check if the query is better than the added one
-                    if (matching_count > iterator_reference->second.second) {
-
-                      //ds remove previous entry
-                      landmark_queries_to_references_filtered.erase(iterator_reference->second.first);
-
-                      //ds update entries
-                      iterator_reference->second = candidate_reference;
-                      landmark_queries_to_references_filtered.insert(std::make_pair(identifier_query, candidate_query));
-                    }
-                  }
-                }
-              }
-            }
-          }
-          _world_map->mergeLandmarks(landmark_queries_to_references_filtered);
+          //ds merge landmarks for the current local map and its closures
+          _world_map->mergeLandmarks(_world_map->currentLocalMap()->closures());
 
           //ds re-enable the GUI
           if (_map_viewer) {_map_viewer->unlock();}
@@ -742,14 +664,15 @@ void SLAMAssembly::printReport() const {
   std::cerr << "              mean tracks per frame: " << _tracker->totalNumberOfTrackedPoints()/_number_of_processed_frames << std::endl;
   std::cerr << "             mean tracks per second: " << _tracker->totalNumberOfTrackedPoints()/_processing_time_total_seconds << std::endl;
   std::cerr << "            number of loop closures: " << _world_map->numberOfClosures() << std::endl;
+  std::cerr << "         number of merged landmarks: " << _world_map->numberOfMergedLandmarks()
+            << " (of total landmarks: " << static_cast<real>(_world_map->numberOfMergedLandmarks())/_world_map->landmarks().size() <<  ")" << std::endl;
   std::cerr << "  number of recursive registrations: " << _tracker->numberOfRecursiveRegistrations() << std::endl;
 
   //ds display further information depending on tracking mode
   switch (_parameters->command_line_parameters->tracker_mode){
     case CommandLineParameters::TrackerMode::RGB_STEREO: {
       StereoFramePointGenerator* stereo_framepoint_generator = dynamic_cast<StereoFramePointGenerator*>(_tracker->framepointGenerator());
-      std::cerr << "average triangulation success ratio: " << stereo_framepoint_generator->meanTriangulationSuccessRatio()
-                << " (standard deviation: " << stereo_framepoint_generator->standardDeviationTriangulationSuccessRatio() << ")" << std::endl;
+      std::cerr << "average triangulation success ratio: " << stereo_framepoint_generator->meanTriangulationSuccessRatio() << std::endl;
       break;
     }
     case CommandLineParameters::TrackerMode::RGB_DEPTH: {

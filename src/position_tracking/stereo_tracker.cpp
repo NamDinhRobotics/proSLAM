@@ -35,7 +35,6 @@ namespace proslam {
   
   //ds creates a new Frame for the given images, retrieves the correspondences relative to the previous Frame, optimizes the current frame pose and updates landmarks
   void StereoTracker::compute() {
-    assert(_intensity_image_right);
     BaseTracker::compute();
   }
 

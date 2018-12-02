@@ -38,9 +38,7 @@ public:
 public:
 
   inline void setCameraRight(const Camera* camera_right_) {_camera_right = camera_right_;}
-  void setMaximumMatchingDistanceTriangulation(const real& maximum_matching_distance_triangulation_) {_parameters->maximum_matching_distance_triangulation = maximum_matching_distance_triangulation_;}
   const real& meanTriangulationSuccessRatio() const {return _mean_triangulation_success_ratio;}
-  const real standardDeviationTriangulationSuccessRatio() const;
 
 //ds settings
 protected:
@@ -61,7 +59,6 @@ protected:
   //! @brief information only: average triangulation success ratio
   real _mean_triangulation_success_ratio = 1;
   Count _number_of_triangulations = 1;
-  std::vector<real> _triangulation_success_ratios;
 
   //! @brief horizontal epipolar stereo matching search offsets (to consider for stereo matching)
   std::vector<int32_t> _epipolar_search_offsets_pixel;

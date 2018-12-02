@@ -256,12 +256,6 @@ public:
   //! @brief point tracking thresholds
   real tunnel_vision_ratio = 0.75;
 
-  //! @brief pixel search range width for point vicinity tracking
-  int32_t range_point_tracking = 2;
-
-  //! @brief maximum allowed pixel distance between image coordinates prediction and actual detection
-  int32_t maximum_distance_tracking_pixels = 150*150;
-
   //! @brief framepoint track recovery
   bool enable_landmark_recovery               = true;
   Count maximum_number_of_landmark_recoveries = 10;

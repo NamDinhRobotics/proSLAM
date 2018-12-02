@@ -10,6 +10,24 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 message("${PROJECT_NAME}|build type: '${CMAKE_BUILD_TYPE}'")
 
+#ds flags for release build
+if("${CMAKE_BUILD_TYPE}" STREQUAL "Release" OR "${CMAKE_BUILD_TYPE}" STREQUAL "RELEASE")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=gnu++11 -march=native -Wall -Ofast -DNDEBUG -fPIC")
+  message("${PROJECT_NAME}|adding flags for '${CMAKE_BUILD_TYPE}': '--std=gnu++11 -march=native -Wall -Ofast -DNDEBUG -fPIC'")
+  
+#ds flags for other build(s) (e.g. debug)
+else()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=gnu++11 -march=native -Wall -O0 -g -fPIC -fstack-check")
+  message("${PROJECT_NAME}|adding flags for '${CMAKE_BUILD_TYPE}': '--std=gnu++11 -march=native -Wall -O0 -g -fPIC -fstack-check'")
+endif()
+
+#ds enable ARM flags if applicable
+if("${CMAKE_HOST_SYSTEM_PROCESSOR}" STREQUAL "armv7l")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -funsafe-math-optimizations")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -funsafe-math-optimizations")
+  message("${PROJECT_NAME}|enabling ARM neon optimizations")
+endif()
+
 #ds specify target binary descriptor bit size (256 if not defined)
 add_definitions(-DSRRG_PROSLAM_DESCRIPTOR_SIZE_BITS=256)
 
@@ -73,7 +91,7 @@ else()
   message("${PROJECT_NAME}|xfeatures2d library not found, using ORB instead of BRIEF descriptors")
 endif()
 
-#ds enable descriptor merging in HBST (an other SRRG components)
+#ds enable descriptor merging in HBST (an other SRRG components) - careful for collisions with landmark merging!
 add_definitions(-DSRRG_MERGE_DESCRIPTORS)
 
 #ds load QGLViewer library
@@ -137,22 +155,6 @@ endif()
 
 #ds load suite sparse for pose graph optimization
 find_package(SuiteSparse REQUIRED)
-
-#ds check flags for release build
-if("${CMAKE_BUILD_TYPE}" STREQUAL "Release" OR "${CMAKE_BUILD_TYPE}" STREQUAL "RELEASE")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=gnu++11 -march=native -Wall -Ofast -DNDEBUG -fPIC")
-  message("${PROJECT_NAME}|adding flags for '${CMAKE_BUILD_TYPE}': '--std=gnu++11 -march=native -Wall -Ofast -DNDEBUG -fPIC'")
-else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=gnu++11 -march=native -Wall -O0 -g -fPIC -fstack-check")
-  message("${PROJECT_NAME}|adding flags for '${CMAKE_BUILD_TYPE}': '--std=gnu++11 -march=native -Wall -O0 -g -fPIC -fstack-check'")
-endif()
-
-#ds enable ARM flags if applicable
-if("${CMAKE_HOST_SYSTEM_PROCESSOR}" STREQUAL "armv7l")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -funsafe-math-optimizations")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -funsafe-math-optimizations")
-  message("${PROJECT_NAME}|enabling ARM neon optimizations")
-endif()
 
 #ds specify additional locations of header files
 include_directories(

@@ -254,7 +254,7 @@ int32_t main(int32_t argc_, char** argv_) {
   slam_system.loadCameras(camera_left, camera_right);
 
   //ds allocate a qt UI server in the main scope (required)
-  QApplication* ui_server = new QApplication(argc_, argv_);
+  std::shared_ptr<QApplication> ui_server(new QApplication(argc_, argv_));
 
   //ds initialize gui
   slam_system.initializeGUI(ui_server);

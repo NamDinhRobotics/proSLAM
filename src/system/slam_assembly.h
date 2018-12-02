@@ -36,7 +36,7 @@ public:
   void loadCameras(Camera* camera_left_, Camera* camera_right_);
 
   //ds initializes gui components
-  void initializeGUI(QApplication* ui_server_);
+  void initializeGUI(std::shared_ptr<QApplication> ui_server_);
 
   //ds updates GUI components with current state
   void updateGUI();
@@ -52,8 +52,8 @@ public:
   void playbackMessageFile();
 
   //! @brief thread wrapping
-  std::thread* playbackMessageFileInThread() {
-    return new std::thread([=] {playbackMessageFile();});
+  std::shared_ptr<std::thread> playbackMessageFileInThread() {
+    return std::make_shared<std::thread>([=] {playbackMessageFile();});
   }
 
   //! @brief process a pair of rectified and undistorted stereo images
@@ -132,14 +132,14 @@ protected:
 protected:
 
   //ds Qt UI server
-  QApplication* _ui_server;
+  std::shared_ptr<QApplication> _ui_server;
 
   //ds raw image input processing viewer
-  ImageViewer* _image_viewer;
+  std::shared_ptr<ImageViewer> _image_viewer;
 
   //ds 3D output viewers
-  MapViewer* _map_viewer;
-  MapViewer* _minimap_viewer;
+  std::shared_ptr<MapViewer> _map_viewer;
+  std::shared_ptr<MapViewer> _minimap_viewer;
 
 //  std::atomic<bool> _new_image_available;
 

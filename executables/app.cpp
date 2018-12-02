@@ -8,12 +8,12 @@ int32_t main(int32_t argc_, char** argv_) {
   //ds allocate the complete parameter collection with default values (will be propagated through the complete SLAM system)
   proslam::ParameterCollection* parameters = new proslam::ParameterCollection(proslam::LoggingLevel::Debug);
 
+  //ds parse parameters from command line (optionally setting the parameter values)
   try {
-
-    //ds parse parameters from command line (optionally setting the parameter values)
     parameters->parseFromCommandLine(argc_, argv_);
   } catch (const std::runtime_error& exception_) {
     std::cerr << "main|caught exception '" << exception_.what() << "'" << std::endl;
+    std::cerr << "main|unable to load parameters from file - terminating" << std::endl;
     delete parameters;
     return 0;
   }
@@ -22,17 +22,16 @@ int32_t main(int32_t argc_, char** argv_) {
   parameters->command_line_parameters->print();
 
   //ds allocate SLAM system (has internal access to parameter server)
-  //ds we allocate it dynamically so we can destroy it when we want
-  proslam::SLAMAssembly* slam_system = new proslam::SLAMAssembly(parameters);
+  proslam::SLAMAssembly slam_system(parameters);
 
-  //ds dynamic elements (in this scope for cleanup in case an exception occurs)
-  QApplication* gui_server = nullptr;
-  std::thread* slam_thread = nullptr;
+  //ds worker thread
+  std::shared_ptr<std::thread> slam_thread = nullptr;
 
+  //ds start system
   try {
 
     //ds load cameras
-    slam_system->loadCamerasFromMessageFile();
+    slam_system.loadCamerasFromMessageFile();
 
     //ds if visualization is desired
     if (parameters->command_line_parameters->option_use_gui) {
@@ -45,22 +44,22 @@ int32_t main(int32_t argc_, char** argv_) {
       const int64_t duration_gui_sleep_milliseconds = 1000/target_display_frequency;
 
       //ds allocate a qt UI server in the main scope (required)
-      gui_server = new QApplication(argc_, argv_);
+      std::shared_ptr<QApplication> gui_server(new QApplication(argc_, argv_));
 
       //ds initialize GUI
-      slam_system->initializeGUI(gui_server);
+      slam_system.initializeGUI(gui_server);
 
       //ds start message playback in separate thread
-      slam_thread = slam_system->playbackMessageFileInThread();
+      slam_thread = slam_system.playbackMessageFileInThread();
 
       //ds enter GUI loop
-      while (slam_system->isViewerOpen()) {
+      while (slam_system.isViewerOpen()) {
 
         //ds breathe (maximum GUI speed: 50 fps)
         std::this_thread::sleep_for(std::chrono::milliseconds(duration_gui_sleep_milliseconds));
 
         //ds draw current state
-        slam_system->draw();
+        slam_system.draw();
       }
 
       //ds clean up GL
@@ -68,12 +67,11 @@ int32_t main(int32_t argc_, char** argv_) {
       gui_server->quit();
 
       //ds signal termination request (no effect if processing has already terminated)
-      slam_system->requestTermination();
+      slam_system.requestTermination();
 
       //ds join system thread
       std::cerr << "main|joining thread: system" << std::endl;
       slam_thread->join();
-      delete slam_thread;
       std::cerr << "main|all threads successfully joined" << std::endl;
     } else {
 
@@ -87,19 +85,19 @@ int32_t main(int32_t argc_, char** argv_) {
       std::getchar();
 
       //ds plain full-speed message playback in the main thread (blocking)
-      slam_system->playbackMessageFile();
+      slam_system.playbackMessageFile();
     }
 
     //ds print full report
-    slam_system->printReport();
+    slam_system.printReport();
 
     //ds save trajectories to disk
-    slam_system->writeTrajectoryKITTI("trajectory_kitti.txt");
-    slam_system->writeTrajectoryTUM("trajectory_tum.txt");
+    slam_system.writeTrajectoryKITTI("trajectory_kitti.txt");
+    slam_system.writeTrajectoryTUM("trajectory_tum.txt");
 
     //ds save g2o graph to disk
     if (parameters->command_line_parameters->option_save_pose_graph) {
-      slam_system->writePoseGraphToFile("pose_graph.g2o");
+      slam_system.writePoseGraphToFile("pose_graph.g2o");
     }
   } catch (const std::runtime_error& exception_) {
     std::cerr << DOUBLE_BAR << std::endl;
@@ -110,14 +108,11 @@ int32_t main(int32_t argc_, char** argv_) {
     std::cerr << "main|joining thread: system" << std::endl;
     if (slam_thread) {
       slam_thread->join();
-      delete slam_thread;
     }
     std::cerr << "main|all threads successfully joined" << std::endl;
   }
 
   //ds clean up dynamic memory
-  delete slam_system;
   delete parameters;
-  delete gui_server;
   return 0;
 }

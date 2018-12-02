@@ -3,6 +3,10 @@
 
 namespace proslam {
 
+//ds friends
+class LocalMap;
+class WorldMap;
+
 //ds this class represents a salient 3D point in the world, perceived in a sequence of images
 class Landmark {
 public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -10,20 +14,8 @@ public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 //ds exported types
 public:
 
-  //ds snapshot of the landmark in an arbitrary context (e.g. LocalMap)
-  struct State {
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    State(Landmark* landmark_,
-          const AppearanceVector& appearances_,
-          const PointCoordinates& coordinates_): landmark(landmark_),
-                                                 appearances(appearances_),
-                                                 coordinates(coordinates_) {}
-
-    Landmark* landmark;
-    AppearanceVector appearances;
-    PointCoordinates coordinates;
-  };
-  typedef std::vector<State*> StatePointerVector;
+  typedef std::pair<const HBSTMatchable*, HBSTMatchable*> HBSTMatchableMemoryMapElement;
+  typedef std::map<const HBSTMatchable*, HBSTMatchable*> HBSTMatchableMemoryMap;
 
   //ds a landmark measurement (used for position optimization)
   struct Measurement {
@@ -43,6 +35,7 @@ public:
     PointCoordinates world_coordinates;
     real inverse_depth_meters;
   };
+
   typedef std::vector<Measurement, Eigen::aligned_allocator<Measurement>> MeasurementVector;
 
 //ds object handling: specific instantiation controlled by WorldMap class (factory)
@@ -69,8 +62,10 @@ public:
   inline const PointCoordinates& coordinates() const {return _world_coordinates;}
   void setCoordinates(const PointCoordinates& coordinates_) {_world_coordinates = coordinates_;}
 
-  const std::vector<cv::Mat>& appearances() const {return _appearances;}
-  void addState(State* landmark_state_);
+  //! @brief replaces a matchable in the appearance map
+  void replace(const HBSTMatchable* matchable_old_, HBSTMatchable* matchable_new_);
+
+  const HBSTMatchableMemoryMap& appearances() const {return _appearance_map;}
 
   //ds position related
   const Count numberOfUpdates() const {return _number_of_updates;}
@@ -80,7 +75,7 @@ public:
   inline void setIsCurrentlyTracked(const bool& is_currently_tracked_) {_is_currently_tracked = is_currently_tracked_;}
 
   //ds landmark coordinates update with visual information (tracking)
-  void update(const FramePoint* point_);
+  void update(FramePoint* point_);
 
   const Count& numberOfRecoveries() const {return _number_of_recoveries;}
   void incrementNumberOfRecoveries() {++_number_of_recoveries;}
@@ -105,17 +100,21 @@ protected:
   //ds unique identifier for a landmark (exists once in memory)
   const Identifier _identifier;
 
-  //ds linked FramePoint in an image at the time of creation of this instance
-  FramePoint* _origin;
+  //ds linked FramePoint in an image at the time of creation of this instance and its last update
+  FramePoint* _origin      = nullptr;
+  FramePoint* _last_update = nullptr;
 
   //ds world coordinates of the landmark
   PointCoordinates _world_coordinates;
 
-  //ds currently active appearances of this landmark (not yet in local map)
-  std::vector<cv::Mat> _appearances;
+  //ds descriptors of this landmark which have not been converted to appearances yet
+  std::vector<cv::Mat> _descriptors;
 
-  //ds landmark states captured in local maps
-  StatePointerVector _states_in_local_maps;
+  //ds appearances of this landmark that are captured in a local map (previously contained in _descriptors)
+  HBSTMatchableMemoryMap _appearance_map;
+
+  //ds connected local maps
+  std::vector<LocalMap*> _local_maps;
 
   //ds flags
   bool _is_currently_tracked = false; //ds set if the landmark is visible (=tracked) in the current image
@@ -125,8 +124,9 @@ protected:
   Count _number_of_updates    = 0;
   Count _number_of_recoveries = 0;
 
-  //ds grant access to landmark factory
+  //ds grant access to landmark factory and helpers
   friend WorldMap;
+  friend LocalMap;
 
   //ds visualization only
   bool _is_in_loop_closure_query     = false;
@@ -140,10 +140,12 @@ private:
 
   //ds inner instance count - incremented upon constructor call (also unsuccessful calls)
   static Count _instances;
+
 };
 
 typedef std::vector<Landmark*> LandmarkPointerVector;
 typedef std::pair<const Identifier, Landmark*> LandmarkPointerMapElement;
 typedef std::map<const Identifier, Landmark*> LandmarkPointerMap;
 typedef std::set<const Landmark*> LandmarkPointerSet;
+
 }

@@ -124,8 +124,6 @@ BaseTrackerParameters::BaseTrackerParameters(const LoggingLevel& logging_level_)
 
 void BaseTrackerParameters::print() const {
   std::cerr << "BaseTrackerParameters::print|minimum_number_of_landmarks_to_track: " << minimum_number_of_landmarks_to_track << std::endl;
-  std::cerr << "BaseTrackerParameters::print|range_point_tracking: " << range_point_tracking << std::endl;
-  std::cerr << "BaseTrackerParameters::print|maximum_distance_tracking_pixels: " << maximum_distance_tracking_pixels << std::endl;
   std::cerr << "BaseTrackerParameters::print|maximum_number_of_landmark_recoveries: " << maximum_number_of_landmark_recoveries << std::endl;
   aligner->print();
 }
@@ -406,6 +404,7 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     ++number_of_parameters_parsed;
 
     //Relocalization (GENERIC)
+    PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, maximum_descriptor_distance, real)
     PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, preliminary_minimum_interspace_queries, Count)
     PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, preliminary_minimum_matching_ratio, real)
     PARSE_PARAMETER(configuration, relocalization, relocalizer_parameters, minimum_number_of_matched_landmarks, Count)
