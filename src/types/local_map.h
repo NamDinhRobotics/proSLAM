@@ -114,6 +114,7 @@ public:
   inline const FramePointerVector& frames() const {return _frames;}
   inline LandmarkStateMap& landmarks() {return _landmarks;}
   inline AppearanceVector& appearances() {return _appearances;}
+  inline const AppearanceVector& appearances() const {return _appearances;}
 
   //ds TODO purge this
   inline const ClosureConstraintVector& closures() const {return _closures;}

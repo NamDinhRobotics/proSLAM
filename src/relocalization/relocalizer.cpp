@@ -65,10 +65,13 @@ void Relocalizer::detectClosures(LocalMap* local_map_query_) {
       if (relative_number_of_matches < _parameters->preliminary_minimum_matching_ratio) {
         continue;
       }
+      std::cerr << index_reference_local_map << " : " << multiple_matches_mixed.size() << "/" << number_of_query_matchables << " = " << relative_number_of_matches
+                << " reference matchables: " << _added_local_maps[index_reference_local_map]->appearances().size() << std::endl;
 
       //ds loop over all matches to organize them per landmark
       Closure::CandidateMap multiple_matches_per_landmark;
       for (const HBSTTree::Match& match: multiple_matches_mixed) {
+        std::cerr << match.object_query->identifier() << " -> " << match.object_reference->identifier() << " distance: " << match.distance << std::endl;
 
         //ds buffer landmark identifier
         Landmark* landmark_query                    = match.object_query;
@@ -113,6 +116,7 @@ void Relocalizer::detectClosures(LocalMap* local_map_query_) {
                                       multiple_matches_per_landmark.size(),
                                       relative_number_of_matches,
                                       correspondences));
+      getchar();
     }
   }
 
