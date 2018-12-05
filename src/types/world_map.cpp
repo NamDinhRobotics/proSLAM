@@ -10,7 +10,7 @@ WorldMap::WorldMap(const WorldMapParameters* parameters_): _parameters(parameter
   LOG_INFO(std::cerr << "WorldMap::WorldMap|constructing" << std::endl)
   clear();
   LOG_INFO(std::cerr << "WorldMap::WorldMap|constructed" << std::endl)
-};
+}
 
 WorldMap::~WorldMap() {
   LOG_INFO(std::cerr << "WorldMap::~WorldMap|destroying" << std::endl)
@@ -392,6 +392,26 @@ void WorldMap::mergeLandmarks(const LocalMap::ClosureConstraintVector& closures_
 
     //ds skip processing for identical calls
     if (landmark_query->identifier() == landmark_reference->identifier()) {
+      continue;
+    }
+
+    //ds if the landmarks share a local map, we cannot merge them (this has to be done within the local map)
+    //ds TODO perform merge and handle colliding framepoints
+    bool shared_local_map = false;
+    for (const LocalMap* local_map_query: landmark_query->_local_maps) {
+      for (const LocalMap* local_map_reference: landmark_reference->_local_maps) {
+        if (local_map_query == local_map_reference) {
+          shared_local_map = true;
+          break;
+        }
+      }
+      if (shared_local_map) {
+        break;
+      }
+    }
+
+    //ds skip merging
+    if (shared_local_map) {
       continue;
     }
 

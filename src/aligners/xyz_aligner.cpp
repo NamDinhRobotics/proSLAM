@@ -134,7 +134,7 @@ namespace proslam {
 
         //ds if the solution is acceptable
         if (_number_of_inliers > _parameters->minimum_number_of_inliers && inlier_ratio > _parameters->minimum_inlier_ratio) {
-          LOG_INFO(std::printf("XYZAligner::converge|found   alignment for local maps [%06lu:{%06lu-%06lu}] > [%06lu:{%06lu-%06lu}] "
+          LOG_INFO(std::printf("XYZAligner::converge|registered local maps [%06lu:{%06lu-%06lu}] > [%06lu:{%06lu-%06lu}] "
                                "(correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu)\n",
           _context->local_map_query->identifier(),
           _context->local_map_query->frames().front()->identifier(), _context->local_map_query->frames().back()->identifier(),
@@ -152,7 +152,7 @@ namespace proslam {
 
           break;
         } else {
-          LOG_INFO(std::printf("XYZAligner::converge|dropped alignment for local maps [%06lu:{%06lu-%06lu}] > [%06lu:{%06lu-%06lu}] "
+          LOG_DEBUG(std::printf("XYZAligner::converge|dropped registration for local maps [%06lu:{%06lu-%06lu}] > [%06lu:{%06lu-%06lu}] "
                                "(correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu)\n",
           _context->local_map_query->identifier(),
           _context->local_map_query->frames().front()->identifier(), _context->local_map_query->frames().back()->identifier(),
@@ -171,7 +171,7 @@ namespace proslam {
         _context->is_valid = false;
         _has_system_converged = false;
         LOG_WARNING(std::cerr << "XYZAligner::converge|system did not converge - inlier ratio: " << static_cast<real>(_number_of_inliers)/_context->correspondences.size()
-                              << "[" << _context->local_map_query->identifier() << "][" << _context->local_map_reference->identifier() << "]" << std::endl)
+                              << " [" << _context->local_map_query->identifier() << "][" << _context->local_map_reference->identifier() << "]" << std::endl)
       }
     }
   }

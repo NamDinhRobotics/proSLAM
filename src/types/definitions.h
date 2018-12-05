@@ -160,4 +160,4 @@ namespace proslam {
   #define LOG_ERROR(EXPRESSION) \
     LOG_GENERIC(LoggingLevel::Error, "ERROR  ", EXPRESSION)
 
-};
+}

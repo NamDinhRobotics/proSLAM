@@ -2,10 +2,15 @@
 
 int32_t main(int32_t argc_, char** argv_) {
 
-  //ds enable opencv2 optimizations
+#ifdef SRRG_MERGE_DESCRIPTORS
+  std::cerr << "main|HBST descriptor merging enabled" << std::endl;
+#endif
+
+  //ds enable opencv optimizations
   cv::setUseOptimized(true);
 
   //ds allocate the complete parameter collection with default values (will be propagated through the complete SLAM system)
+  std::cerr << "main|loading parameters" << std::endl;
   proslam::ParameterCollection* parameters = new proslam::ParameterCollection(proslam::LoggingLevel::Debug);
 
   //ds parse parameters from command line (optionally setting the parameter values)

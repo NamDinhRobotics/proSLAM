@@ -4,21 +4,21 @@ project(srrg_proslam)
 find_package(srrg_cmake_modules REQUIRED)
 set(CMAKE_MODULE_PATH ${srrg_cmake_modules_INCLUDE_DIRS})
 
-#ds determine build type, default build type Release
+#ds determine build type, default build type: release
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release)
+  set(CMAKE_BUILD_TYPE RELEASE)
 endif()
 message("${PROJECT_NAME}|build type: '${CMAKE_BUILD_TYPE}'")
 
 #ds flags for release build
 if("${CMAKE_BUILD_TYPE}" STREQUAL "Release" OR "${CMAKE_BUILD_TYPE}" STREQUAL "RELEASE")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=gnu++11 -march=native -Wall -Ofast -DNDEBUG -fPIC")
-  message("${PROJECT_NAME}|adding flags for '${CMAKE_BUILD_TYPE}': '--std=gnu++11 -march=native -Wall -Ofast -DNDEBUG -fPIC'")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -march=native -Wall -pedantic -Ofast -DNDEBUG")
+  message("${PROJECT_NAME}|adding flags for '${CMAKE_BUILD_TYPE}': '-std=c++11 -march=native -Wall -pedantic -Ofast -DNDEBUG'")
   
 #ds flags for other build(s) (e.g. debug)
 else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=gnu++11 -march=native -Wall -O0 -g -fPIC -fstack-check")
-  message("${PROJECT_NAME}|adding flags for '${CMAKE_BUILD_TYPE}': '--std=gnu++11 -march=native -Wall -O0 -g -fPIC -fstack-check'")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -march=native -Wall -pedantic -O0 -g -fstack-check")
+  message("${PROJECT_NAME}|adding flags for '${CMAKE_BUILD_TYPE}': '-std=c++11 -march=native -Wall -pedantic -O0 -g -fstack-check'")
 endif()
 
 #ds enable ARM flags if applicable
@@ -33,6 +33,9 @@ add_definitions(-DSRRG_PROSLAM_DESCRIPTOR_SIZE_BITS=256)
 
 #ds specify target log level: 0 ERROR, 1 WARNING, 2 INFO, 3 DEBUG (defaults to 2 if not defined)
 add_definitions(-DSRRG_PROSLAM_LOG_LEVEL=2)
+
+#ds enable descriptor merging in HBST (and other SRRG components) - careful for collisions with landmark merging!
+add_definitions(-DSRRG_MERGE_DESCRIPTORS)
 
 #ds load Eigen library
 find_package(Eigen3 REQUIRED)
@@ -90,9 +93,6 @@ if(NOT ${FOUND_OPENCV_CONTRIB} EQUAL -1)
 else()
   message("${PROJECT_NAME}|xfeatures2d library not found, using ORB instead of BRIEF descriptors")
 endif()
-
-#ds enable descriptor merging in HBST (an other SRRG components) - careful for collisions with landmark merging!
-add_definitions(-DSRRG_MERGE_DESCRIPTORS)
 
 #ds load QGLViewer library
 find_package(QGLViewer REQUIRED)
@@ -157,7 +157,8 @@ endif()
 find_package(SuiteSparse REQUIRED)
 
 #ds specify additional locations of header files
-include_directories(
+#ds treating them as system includes to surpress warnings (!)
+include_directories(SYSTEM
   ${EIGEN3_INCLUDE_DIR}
   ${g2o_INCLUDE_DIRS}
   ${CSPARSE_INCLUDE_DIR}

@@ -151,7 +151,7 @@ void Landmark::merge(Landmark* landmark_) {
   }
 
   //ds merge landmark appearances
-  for (HBSTMatchableMemoryMapElement appearance: landmark_->_appearance_map) {
+  for (auto& appearance: landmark_->_appearance_map) {
     appearance.second->setObjects(this);
   }
   _appearance_map.insert(landmark_->_appearance_map.begin(), landmark_->_appearance_map.end());
@@ -161,7 +161,7 @@ void Landmark::merge(Landmark* landmark_) {
   for (LocalMap* local_map: landmark_->_local_maps) {
     local_map->replace(landmark_, this);
   }
-  _local_maps.insert(_local_maps.end(), landmark_->_local_maps.begin(), landmark_->_local_maps.end());
+  _local_maps.insert(landmark_->_local_maps.begin(), landmark_->_local_maps.end());
   landmark_->_local_maps.clear();
 
   //ds merge descriptors

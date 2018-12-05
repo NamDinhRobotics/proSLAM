@@ -64,7 +64,7 @@ base_framepoint_generation:
   maximum_projection_tracking_distance_pixels: 50
 
   #ds dynamic thresholds for descriptor matching
-  matching_distance_tracking_threshold: 50
+  matching_distance_tracking_threshold: 45
   
   #ds maximum reliable depth with chosen sensor
   maximum_reliable_depth_meters: 15.0
@@ -76,7 +76,7 @@ base_framepoint_generation:
 stereo_framepoint_generation:
 
   #ds stereo: triangulation
-  maximum_matching_distance_triangulation: 75
+  maximum_matching_distance_triangulation: 90
   minimum_disparity_pixels:                1
   maximum_epipolar_search_offset_pixels:   0
 

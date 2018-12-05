@@ -170,6 +170,7 @@ private:
 };
 
 typedef std::vector<LocalMap*> LocalMapPointerVector;
+typedef std::set<LocalMap*> LocalMapPointerSet;
 typedef std::vector<const LocalMap*> ConstLocalMapPointerVector;
 
 }

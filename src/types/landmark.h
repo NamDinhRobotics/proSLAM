@@ -14,7 +14,6 @@ public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 //ds exported types
 public:
 
-  typedef std::pair<const HBSTMatchable*, HBSTMatchable*> HBSTMatchableMemoryMapElement;
   typedef std::map<const HBSTMatchable*, HBSTMatchable*> HBSTMatchableMemoryMap;
 
   //ds a landmark measurement (used for position optimization)
@@ -94,6 +93,8 @@ public:
   inline void setIsInLoopClosureQuery(const bool& is_in_loop_closure_query_) {_is_in_loop_closure_query = is_in_loop_closure_query_;}
   inline void setIsInLoopClosureReference(const bool& is_in_loop_closure_reference_) {_is_in_loop_closure_reference = is_in_loop_closure_reference_;}
 
+  const std::set<LocalMap*>& localMaps() const {return _local_maps;}
+
 //ds attributes
 protected:
 
@@ -114,7 +115,7 @@ protected:
   HBSTMatchableMemoryMap _appearance_map;
 
   //ds connected local maps
-  std::vector<LocalMap*> _local_maps;
+  std::set<LocalMap*> _local_maps;
 
   //ds flags
   bool _is_currently_tracked = false; //ds set if the landmark is visible (=tracked) in the current image

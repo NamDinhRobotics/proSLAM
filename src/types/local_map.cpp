@@ -62,7 +62,7 @@ LocalMap::LocalMap(FramePointerVector& frames_,
           landmark->_appearance_map.insert(std::make_pair(matchable, matchable));
         }
         landmark->_descriptors.clear();
-        landmark->_local_maps.push_back(this);
+        landmark->_local_maps.insert(this);
 
         //ds create a landmark snapshot and add it to the local map
         const PointCoordinates coordinates_in_local_map = _world_to_local_map*landmark->coordinates();
@@ -115,7 +115,7 @@ void LocalMap::replace(Landmark* landmark_old_, Landmark* landmark_new_) {
 
   //ds remove the old landmark from the local map and check for failure
   if (_landmarks.erase(landmark_old_->identifier()) != 1) {
-    LOG_WARNING(std::cerr << "LocalMap::replace|unable to erase old landmark with ID: " << landmark_old_->identifier() << std::endl)
+    LOG_WARNING(std::cerr << "LocalMap::replace|" << _identifier << "|unable to erase old landmark with ID: " << landmark_old_->identifier() << std::endl)
   }
 
   //ds look if the new landmark is already present (can happen through merging)

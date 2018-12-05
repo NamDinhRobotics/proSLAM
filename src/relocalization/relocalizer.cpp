@@ -35,6 +35,7 @@ void Relocalizer::detectClosures(LocalMap* local_map_query_) {
 
   //ds always add the entry (only matching is optional)
   _added_local_maps.push_back(local_map_query_);
+  const Count number_of_query_matchables = local_map_query_->appearances().size();
 
   //ds if we are not yet in query range - only add matchables and nothing else to do
   if (_place_database.size() < _parameters->preliminary_minimum_interspace_queries) {
@@ -53,8 +54,7 @@ void Relocalizer::detectClosures(LocalMap* local_map_query_) {
     _place_database.matchAndAdd(local_map_query_->appearances(), matches_per_reference_image, _parameters->maximum_descriptor_distance);
 
     //ds evaluate matches for each reference image in the range
-    const Count number_of_query_matchables = local_map_query_->appearances().size();
-    const Count maximum_index_reference    = _place_database.size()-_parameters->preliminary_minimum_interspace_queries;
+    const Count maximum_index_reference = _place_database.size()-_parameters->preliminary_minimum_interspace_queries;
     for (Count index_reference_local_map = 0; index_reference_local_map < maximum_index_reference; ++index_reference_local_map) {
       HBSTTree::MatchVector& multiple_matches_mixed = matches_per_reference_image.at(index_reference_local_map);
 
@@ -65,17 +65,32 @@ void Relocalizer::detectClosures(LocalMap* local_map_query_) {
       if (relative_number_of_matches < _parameters->preliminary_minimum_matching_ratio) {
         continue;
       }
-      std::cerr << index_reference_local_map << " : " << multiple_matches_mixed.size() << "/" << number_of_query_matchables << " = " << relative_number_of_matches
-                << " reference matchables: " << _added_local_maps[index_reference_local_map]->appearances().size() << std::endl;
 
       //ds loop over all matches to organize them per landmark
       Closure::CandidateMap multiple_matches_per_landmark;
       for (const HBSTTree::Match& match: multiple_matches_mixed) {
-        std::cerr << match.object_query->identifier() << " -> " << match.object_reference->identifier() << " distance: " << match.distance << std::endl;
+
+        //ds we need to evaluate matches that have several candidates with the same distance
+        if (match.object_references.size() > 1) {
+
+          //ds check if all candidates belong NOT to the same landmark (otherwise we keep the match!)
+          bool has_multiple_landmarks = false;
+          for (Landmark* landmark_reference: match.object_references) {
+            if (landmark_reference != match.object_references[0]) {
+              has_multiple_landmarks = true;
+              break;
+            }
+          }
+
+          //ds we skip matches that have multiple candidates (with same distance) due to ambiguity
+          if (has_multiple_landmarks) {
+            continue;
+          }
+        }
 
         //ds buffer landmark identifier
         Landmark* landmark_query                    = match.object_query;
-        Landmark* landmark_reference                = match.object_reference;
+        Landmark* landmark_reference                = match.object_references[0];
         const Identifier& query_landmark_identifier = landmark_query->identifier();
 
         //ds update match map (adding a new entry if not existing yet)
@@ -116,7 +131,6 @@ void Relocalizer::detectClosures(LocalMap* local_map_query_) {
                                       multiple_matches_per_landmark.size(),
                                       relative_number_of_matches,
                                       correspondences));
-      getchar();
     }
   }
 
@@ -142,7 +156,8 @@ void Relocalizer::detectClosures(LocalMap* local_map_query_) {
       //ds replace the matchable in the landmark list, note that the memory for query is already freed
       landmark->replace(merge.query, merge.reference);
     }
-    LOG_DEBUG(std::cerr << "Relocalizer::detectClosures|merged appearances: " << merges.size() << std::endl)
+    LOG_DEBUG(std::cerr << "Relocalizer::detectClosures|merged appearances: " << merges.size()
+                        << " (" << static_cast<real>(merges.size())/number_of_query_matchables << ")" << std::endl)
   }
 #endif
   CHRONOMETER_STOP(overall)
