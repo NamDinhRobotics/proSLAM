@@ -42,6 +42,7 @@ void Relocalizer::detectClosures(LocalMap* local_map_query_) {
 
     //ds add matchables
     _place_database.add(local_map_query_->appearances(), srrg_hbst::SplittingStrategy::SplitEven);
+    local_map_query_->appearances().clear();
   }
 
   //ds we want to add and match against past places
@@ -52,6 +53,7 @@ void Relocalizer::detectClosures(LocalMap* local_map_query_) {
 
     //ds query database for current matchables and integrate current image simultaneously
     _place_database.matchAndAdd(local_map_query_->appearances(), matches_per_reference_image, _parameters->maximum_descriptor_distance);
+    local_map_query_->appearances().clear();
 
     //ds evaluate matches for each reference image in the range
     const Count maximum_index_reference = _place_database.size()-_parameters->preliminary_minimum_interspace_queries;
@@ -138,13 +140,6 @@ void Relocalizer::detectClosures(LocalMap* local_map_query_) {
   //ds always check for absorbed matchables (we need to update our bookkeeping) of the last add call (this local map)
   HBSTTree::MatchableMergeVector merges = _place_database.getMerges();
   if (!merges.empty()) {
-
-    //ds remove merged matchables from appearance vector in local map
-    std::map<const HBSTMatchable*, HBSTMatchable*> matchables_to_replace;
-    for (const HBSTTree::MatchableMerge& merge: merges) {
-      matchables_to_replace.insert(std::make_pair(merge.query, merge.reference));
-    }
-    local_map_query_->replace(matchables_to_replace);
 
     //ds evaluate each merge
     for (HBSTTree::MatchableMerge& merge: merges) {

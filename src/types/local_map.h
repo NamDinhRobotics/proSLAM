@@ -91,10 +91,6 @@ public:
   //! @param[in] landmark_new_ landmark to replace the currently present landmark_old_ in this local map
   void replace(Landmark* landmark_old_, Landmark* landmark_new_);
 
-  //! @brief remove merged matchables from internal appearance vector
-  //! @param[in] matchables_to_remove_ set of unique matchables (by pointers) to remove
-  void replace(const std::map<const HBSTMatchable*, HBSTMatchable*>& matchables_to_replace_);
-
 //ds getters/setters
 public:
 
@@ -149,7 +145,8 @@ protected:
   //ds these estimates are currently frozen after local map creation TODO update it after optimization
   LandmarkStateMap _landmarks;
 
-  //ds appearance vector, corresponding to the union of all appearences stored in _landmarks
+  //ds appearance vector, corresponding to the union of all appearances stored in _landmarks
+  //ds this vector is emptied after a local map gets consumed by HBST for place recognition
   AppearanceVector _appearances;
 
   //ds loop closures for the local map

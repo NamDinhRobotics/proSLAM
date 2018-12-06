@@ -131,27 +131,6 @@ void LocalMap::replace(Landmark* landmark_old_, Landmark* landmark_new_) {
   }
 }
 
-void LocalMap::replace(const std::map<const HBSTMatchable*, HBSTMatchable*>& matchables_to_replace_) {
-  const Count number_of_matchables_to_replace = matchables_to_replace_.size();
-
-  //ds check all appearances for a match
-  Count number_of_matchables_replaced = 0;
-  for (size_t u = 0; u < _appearances.size(); ++u) {
-
-    //ds if this matchable has to be replaced (because it was merged)
-    auto iterator = matchables_to_replace_.find(_appearances[u]);
-    if (iterator != matchables_to_replace_.end()) {
-      _appearances[u] = iterator->second;
-      ++number_of_matchables_replaced;
-
-      //ds check for termination
-      if (number_of_matchables_replaced == number_of_matchables_to_replace) {
-        break;
-      }
-    }
-  }
-}
-
 void LocalMap::setLocalMapToWorld(const TransformMatrix3D& local_map_to_world_, const bool update_landmark_world_coordinates_) {
   _local_map_to_world = local_map_to_world_;
   _world_to_local_map = _local_map_to_world.inverse();
