@@ -55,7 +55,7 @@ namespace proslam {
       }
 
       //ds scale information proportional to disparity of the measurement (the bigger, the closer, the better the triangulation)
-      _information_vector[u] *= std::log(1+frame_point->disparityPixels());
+      _information_vector[u] *= std::log(1+frame_point->disparityPixels())/(1+std::fabs(frame_point->epipolarOffset()));
     }
 
     //ds if individual weighting is desired
@@ -67,7 +67,7 @@ namespace proslam {
 
     //ds wrappers for optimization
     _camera_calibration_matrix = _frame_current->cameraLeft()->cameraMatrix();
-    _offset_camera_right       = _frame_current->cameraRight()->projectionMatrix().block<3,1>(0,3);
+    _offset_camera_right       = _frame_current->cameraRight()->baselineHomogeneous();
     _number_of_rows_image      = _frame_current->cameraLeft()->numberOfImageRows();
     _number_of_cols_image      = _frame_current->cameraLeft()->numberOfImageCols();
   }

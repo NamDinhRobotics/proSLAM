@@ -42,41 +42,41 @@ local_map:
 world_map:
 
   #ds key frame generation properties
-  minimum_distance_traveled_for_local_map: 0.5
+  minimum_distance_traveled_for_local_map: 1.0
   minimum_degrees_rotated_for_local_map:   0.5
   minimum_number_of_frames_for_local_map:  4
 
 base_framepoint_generation:
 
   #ds feature descriptor type (BRIEF-128/256/512, ORB-256, BRISK-512, FREAK-512, A-KAZE-486, BinBoost-064)
-  descriptor_type: ORB-256
+  descriptor_type: BRIEF-256
 
   #ds dynamic thresholds for feature detection
   target_number_of_keypoints_tolerance: 0.1
-  detector_threshold_maximum_change:    0.1
+  detector_threshold_maximum_change:    0.2
   detector_threshold_minimum:           20
   detector_threshold_maximum:           100
-  number_of_detectors_vertical:         1
-  number_of_detectors_horizontal:       1
+  number_of_detectors_vertical:         3
+  number_of_detectors_horizontal:       3
 
   #point tracking thresholds
   minimum_projection_tracking_distance_pixels: 15
   maximum_projection_tracking_distance_pixels: 50
 
   #ds dynamic thresholds for descriptor matching
-  matching_distance_tracking_threshold: 45
+  matching_distance_tracking_threshold: 35
   
   #ds maximum reliable depth with chosen sensor
   maximum_reliable_depth_meters: 15.0
   
   #feature density regularization
   enable_keypoint_binning: true
-  bin_size_pixels:         20
+  bin_size_pixels:         14
 
 stereo_framepoint_generation:
 
   #ds stereo: triangulation
-  maximum_matching_distance_triangulation: 90
+  maximum_matching_distance_triangulation: 95
   minimum_disparity_pixels:                1
   maximum_epipolar_search_offset_pixels:   0
 
@@ -110,7 +110,7 @@ base_tracking:
   #pose optimization: aligner unit configuration
   aligner->error_delta_for_convergence:  1e-3
   aligner->maximum_error_kernel:         16
-  aligner->damping:                      0
+  aligner->damping:                      1000
   aligner->maximum_number_of_iterations: 1000
   aligner->minimum_number_of_inliers:    0
   aligner->minimum_inlier_ratio:         0
@@ -152,7 +152,7 @@ graph_optimization:
   linear_solver_type: CHOLMOD
 
   #g2o identifier space between frames and landmark vertices
-  identifier_space: 1e6
+  identifier_space: 1e9
   
   #maximum number of iterations graph optimization
   maximum_number_of_iterations: 100
@@ -161,13 +161,13 @@ graph_optimization:
   number_of_frames_per_bundle_adjustment: 100
 
   #base frame weight in pose graph (assuming 1 for landmarks)
-  base_information_frame: 1e4
+  base_information_frame: 1e5
   
   #free translation for pose to pose measurements
   free_translation_for_poses: true
   
   #translational frame weight reduction in pose graph
-  base_information_frame_factor_for_translation: 1e-4
+  base_information_frame_factor_for_translation: 1e-5
 
   #enable robust kernel for loop closure measurements
   enable_robust_kernel_for_poses: true

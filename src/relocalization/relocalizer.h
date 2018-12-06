@@ -22,6 +22,9 @@ public:
   //ds clear currently available closure buffer
   void clear();
 
+  //! @brief keeps only a single closure, based on the maximum relative number of correspodences TODO add proper constraints
+  void prune();
+
 //ds getters/setters
 public:
 

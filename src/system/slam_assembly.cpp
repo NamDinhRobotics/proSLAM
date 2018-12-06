@@ -544,6 +544,7 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
         //ds localize in database (not yet optimizing the graph)
         _relocalizer->detectClosures(_world_map->currentLocalMap());
         _relocalizer->registerClosures();
+//        _relocalizer->prune();
 
         //ds check the closures
         for(Closure* closure: _relocalizer->closures()) {

@@ -56,6 +56,12 @@ protected:
   real _c_y = 0;
   real _b_x = 0;
 
+  //! @brief current epipolar search range
+  int32_t _maximum_epipolar_search_offset_pixels = 0;
+
+  //! @brief current triangulation distance
+  real _current_maximum_descriptor_distance_triangulation = 0.1*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS;
+
   //! @brief information only: average triangulation success ratio
   real _mean_triangulation_success_ratio = 1;
   Count _number_of_triangulations = 1;

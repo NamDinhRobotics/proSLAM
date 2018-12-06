@@ -38,8 +38,9 @@ void StereoFramePointGenerator::configure(){
   _feature_matcher_right.configure(_number_of_rows_image, _number_of_cols_image);
 
   //ds configure epipolar search ranges (minimum 0)
+  _maximum_epipolar_search_offset_pixels = _parameters->maximum_epipolar_search_offset_pixels;
   _epipolar_search_offsets_pixel.push_back(0);
-  for (int32_t u = 1; u <= _parameters->maximum_epipolar_search_offset_pixels; ++u) {
+  for (int32_t u = 1; u <= _maximum_epipolar_search_offset_pixels; ++u) {
     _epipolar_search_offsets_pixel.push_back(u);
     _epipolar_search_offsets_pixel.push_back(-u);
   }
@@ -81,6 +82,18 @@ void StereoFramePointGenerator::initialize(Frame* frame_, const bool& extract_fe
     computeDescriptors(frame_->intensityImageRight(), frame_->keypointsRight(), frame_->descriptorsRight());
     LOG_DEBUG(std::cerr << "StereoFramePointGenerator::initialize|extracted features L: " << frame_->keypointsLeft().size()
                         << " R: " << frame_->keypointsRight().size() << std::endl)
+
+    //ds set maximum descriptor distance for triangulation depending on on state
+    if (frame_->status() == Frame::Localizing) {
+
+      //ds be conservative while localizing
+      _current_maximum_descriptor_distance_triangulation = 0.1*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS;
+    } else {
+
+      //ds adjust triangulation distance: few point > narrow window as we cannot permit invalid triangulations
+      const real ratio_available_points = std::min(static_cast<real>(_number_of_detected_keypoints)/_target_number_of_keypoints, 1.0);
+      _current_maximum_descriptor_distance_triangulation = std::max(ratio_available_points*_parameters->maximum_matching_distance_triangulation, 0.1*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS);
+    }
   }
 
   //ds initialize matchers for left and right frame
@@ -171,8 +184,9 @@ void StereoFramePointGenerator::track(Frame* frame_,
 
       //ds TRIANGULATION: obtain matching feature in right image (if any)
       //ds we reduce the vertical matching space to the epipolar range - we search only to the left of the measure left camera coordinate
-      row_start_point = std::max(row_projection_right_corrected-_parameters->maximum_epipolar_search_offset_pixels, 0);
-      row_end_point   = std::min(row_projection_right_corrected+_parameters->maximum_epipolar_search_offset_pixels+1, _number_of_rows_image);
+      const int32_t epipolar_offset_previous = std::fabs(point_previous->epipolarOffset());
+      row_start_point = std::max(row_projection_right_corrected-epipolar_offset_previous, 0);
+      row_end_point   = std::min(row_projection_right_corrected+epipolar_offset_previous+1, _number_of_rows_image);
       col_start_point = std::max(col_projection_right_corrected-_projection_tracking_distance_pixels, 0);
       col_end_point   = std::min(col_projection_right_corrected+_projection_tracking_distance_pixels+1, feature_left->col);
 
@@ -184,13 +198,18 @@ void StereoFramePointGenerator::track(Frame* frame_,
                                                                                                      row_end_point,
                                                                                                      col_start_point,
                                                                                                      col_end_point,
-                                                                                                     _parameters->maximum_matching_distance_triangulation,
+                                                                                                     _current_maximum_descriptor_distance_triangulation,
                                                                                                      true,
                                                                                                      descriptor_distance_best);
 
       //ds if we found a match
       if (feature_right) {
         assert(feature_left->col >= feature_right->col);
+
+//        //ds skip feature if descriptor distance to previous is violated
+//        if (cv::norm(feature_right->descriptor, point_previous->descriptorRight(), SRRG_PROSLAM_DESCRIPTOR_NORM) > _parameters->matching_distance_tracking_threshold) {
+//          continue;
+//        }
 
         //ds skip points with insufficient stereo disparity
         if (feature_left->col-feature_right->col < _parameters->minimum_disparity_pixels) {
@@ -268,6 +287,8 @@ void StereoFramePointGenerator::compute(Frame* frame_) {
   if (!frame_) {
     throw std::runtime_error("StereoFramePointGenerator::compute|called with empty frame");
   }
+  FramePointPointerVector& framepoints(frame_->points());
+  const Count number_of_points_tracked = framepoints.size();
 
   //ds store already present points for optional binning
   if (_parameters->enable_keypoint_binning) {
@@ -319,7 +340,7 @@ void StereoFramePointGenerator::compute(Frame* frame_) {
 
       //ds search bookkeeping
       uint32_t index_search_R       = index_R;
-      real descriptor_distance_best = _parameters->maximum_matching_distance_triangulation;
+      real descriptor_distance_best = _current_maximum_descriptor_distance_triangulation;
       uint32_t index_best_R         = 0;
 
       //ds scan epipolar line for current keypoint at idx_L - exhaustive
@@ -338,7 +359,7 @@ void StereoFramePointGenerator::compute(Frame* frame_) {
       }
 
       //ds check if something was found
-      if (descriptor_distance_best < _parameters->maximum_matching_distance_triangulation) {
+      if (descriptor_distance_best < _current_maximum_descriptor_distance_triangulation) {
         IntensityFeature* feature_right = features_right[index_best_R];
 
         //ds skip points with insufficient stereo disparity
@@ -361,9 +382,10 @@ void StereoFramePointGenerator::compute(Frame* frame_) {
           //ds if there is already a point in the bin
           if (_bin_map_left[row_bin][col_bin]) {
 
-            //ds if the point in the bin is not tracked and we have a triangulation with a higher confidence (i.e. smaller descriptor distance)
+            //ds if the point in the bin is not tracked, we prefer points with maximal disparity (= maximally accurate depth estimate)
             if (!_bin_map_left[row_bin][col_bin]->previous() &&
-                framepoint->descriptorDistanceTriangulation() < _bin_map_left[row_bin][col_bin]->descriptorDistanceTriangulation()) {
+                framepoint->disparityPixels() > _bin_map_left[row_bin][col_bin]->disparityPixels() &&
+                framepoint->descriptorDistanceTriangulation() <= _bin_map_left[row_bin][col_bin]->descriptorDistanceTriangulation()) {
 
               //ds overwrite the entry
               _bin_map_left[row_bin][col_bin] = framepoint;
@@ -397,10 +419,9 @@ void StereoFramePointGenerator::compute(Frame* frame_) {
   framepoints_new.resize(number_of_new_points);
   LOG_DEBUG(std::cerr << "StereoFramePointGenerator::compute|number of new stereo points: " << number_of_new_points << std::endl)
 
-  //ds update framepoints
-  FramePointPointerVector& framepoints(frame_->points());
-  const Count number_of_points_tracked = framepoints.size();
-  if (_parameters->enable_keypoint_binning) {
+  //ds update framepoints - checking for the available points to optionally disable binning in very sparse scenarios
+  const real available_point_ratio = static_cast<real>(number_of_points_tracked+framepoints_new.size())/_target_number_of_keypoints;
+  if (_parameters->enable_keypoint_binning && available_point_ratio > 0.1) {
 
     //ds reserve space for the best case (all points can be added)
     Count number_of_points_binned = number_of_points_tracked;
@@ -422,6 +443,44 @@ void StereoFramePointGenerator::compute(Frame* frame_) {
 
     //ds add all points to frame
     framepoints.insert(framepoints.end(), framepoints_new.begin(), framepoints_new.end());
+
+    //ds clean up bins if skipped before
+    if (_parameters->enable_keypoint_binning) {
+      LOG_WARNING(std::cerr << "StereoFramePointGenerator::compute|skipped binning due to low point density: " << available_point_ratio << std::endl)
+      for (Index row = 0; row < _number_of_rows_bin; ++row) {
+        for (Index col = 0; col < _number_of_cols_bin; ++col) {
+          _bin_map_left[row][col] = nullptr;
+        }
+      }
+    }
   }
+
+//  //ds compute final triangulation ratio
+//  const real triangulation_ratio = static_cast<real>(framepoints.size())/_number_of_detected_keypoints;
+//
+//  //ds if we managed to triangulate only few points
+//  if (triangulation_ratio < 0.25) {
+//
+//    //ds only one line (otherwise ignore request)
+//    if (_maximum_epipolar_search_offset_pixels == _parameters->maximum_epipolar_search_offset_pixels) {
+//
+//      //ds update offset and loop once more
+//      ++_maximum_epipolar_search_offset_pixels;
+//
+//      //ds add scan candidates
+//      _epipolar_search_offsets_pixel.push_back(_maximum_epipolar_search_offset_pixels);
+//      _epipolar_search_offsets_pixel.push_back(-_maximum_epipolar_search_offset_pixels);
+//      LOG_DEBUG(std::cerr << "StereoFramePointGenerator::compute|checking more epipolar lines in next input because of low triangulation ratio: " << triangulation_ratio << std::endl)
+//    }
+//  }
+//
+//  //ds triangulation ratio is fine, return to original configuration
+//  else if (_maximum_epipolar_search_offset_pixels > _parameters->maximum_epipolar_search_offset_pixels) {
+//
+//    //ds reset the last offset and finish loop
+//    _maximum_epipolar_search_offset_pixels = _parameters->maximum_epipolar_search_offset_pixels;
+//    _epipolar_search_offsets_pixel.pop_back();
+//    _epipolar_search_offsets_pixel.pop_back();
+//  }
 }
 }

@@ -47,7 +47,7 @@ namespace proslam {
     const Vector3 baseline_homogeneous            = _camera_right->baselineHomogeneous();
 
     //ds obtain currently active tracking distance
-    const real maximum_distance_appearance = _framepoint_generator->parameters()->matching_distance_tracking_threshold;
+    const real maximum_descriptor_distance = _framepoint_generator->parameters()->matching_distance_tracking_threshold;
 
     //ds buffers
     const cv::Mat& intensity_image_left  = current_frame_->intensityImageLeft();
@@ -59,6 +59,11 @@ namespace proslam {
     Index index_lost_point_recovered = _number_of_tracked_points;
     current_frame_->points().resize(_number_of_tracked_points+_number_of_lost_points);
     for (FramePoint* point_previous: _lost_points) {
+
+      //ds skip non landmarks for now (TODO parametrize)
+      if (!point_previous->landmark()) {
+        continue;
+      }
 
       //ds get point into current camera - based on last track
       PointCoordinates point_in_camera_homogeneous(Vector3::Zero());
@@ -124,7 +129,14 @@ namespace proslam {
       cv::Mat descriptor_left;
       const cv::Mat roi_left(intensity_image_left(region_of_interest_left));
       _framepoint_generator->descriptorExtractor()->compute(roi_left, keypoint_buffer_left, descriptor_left);
+
+      //ds if no descriptor could be computed
       if (descriptor_left.rows == 0) {
+        continue;
+      }
+
+      //ds if descriptor distance is to high
+      if (cv::norm(point_previous->descriptorLeft(), descriptor_left, SRRG_PROSLAM_DESCRIPTOR_NORM) > maximum_descriptor_distance) {
         continue;
       }
       keypoint_buffer_left[0].pt += corner_left;
@@ -139,31 +151,34 @@ namespace proslam {
       cv::Mat descriptor_right;
       const cv::Mat roi_right(intensity_image_right(region_of_interest_right));
       _framepoint_generator->descriptorExtractor()->compute(roi_right, keypoint_buffer_right, descriptor_right);
+
+      //ds if no descriptor could be computed
       if (descriptor_right.rows == 0) {
+        continue;
+      }
+
+      //ds if descriptor distance is to high
+      if (cv::norm(point_previous->descriptorRight(), descriptor_right, SRRG_PROSLAM_DESCRIPTOR_NORM) > maximum_descriptor_distance) {
         continue;
       }
       keypoint_buffer_right[0].pt += corner_right;
 
-      if (cv::norm(point_previous->descriptorLeft(), descriptor_left, SRRG_PROSLAM_DESCRIPTOR_NORM) < maximum_distance_appearance &&
-          cv::norm(point_previous->descriptorRight(), descriptor_right, SRRG_PROSLAM_DESCRIPTOR_NORM) < maximum_distance_appearance ) {
-
-        //ds skip points with insufficient stereo disparity
-        if (keypoint_buffer_left[0].pt.x-keypoint_buffer_right[0].pt.x < _stereo_framepoint_generator->parameters()->minimum_disparity_pixels) {
-          continue;
-        }
-
-        //ds allocate a new point connected to the previous one
-        FramePoint* current_point = current_frame_->createFramepoint(keypoint_buffer_left[0],
-                                                                     descriptor_left,
-                                                                     keypoint_buffer_right[0],
-                                                                     descriptor_right,
-                                                                     _stereo_framepoint_generator->getPointInLeftCamera(keypoint_buffer_left[0].pt, keypoint_buffer_right[0].pt),
-                                                                     point_previous);
-
-        //ds set the point to the control structure
-        current_frame_->points()[index_lost_point_recovered] = current_point;
-        ++index_lost_point_recovered;
+      //ds skip points with insufficient stereo disparity
+      if (keypoint_buffer_left[0].pt.x-keypoint_buffer_right[0].pt.x < _stereo_framepoint_generator->parameters()->minimum_disparity_pixels) {
+        continue;
       }
+
+      //ds allocate a new point connected to the previous one
+      FramePoint* current_point = current_frame_->createFramepoint(keypoint_buffer_left[0],
+                                                                   descriptor_left,
+                                                                   keypoint_buffer_right[0],
+                                                                   descriptor_right,
+                                                                   _stereo_framepoint_generator->getPointInLeftCamera(keypoint_buffer_left[0].pt, keypoint_buffer_right[0].pt),
+                                                                   point_previous);
+
+      //ds set the point to the control structure
+      current_frame_->points()[index_lost_point_recovered] = current_point;
+      ++index_lost_point_recovered;
     }
     _number_of_recovered_points = index_lost_point_recovered-_number_of_tracked_points;
     _number_of_tracked_points = index_lost_point_recovered;

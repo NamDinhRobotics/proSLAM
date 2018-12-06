@@ -168,6 +168,38 @@ void Relocalizer::registerClosures() {
   CHRONOMETER_STOP(overall)
 }
 
+void Relocalizer::prune() {
+  CHRONOMETER_START(overall)
+  Closure* closure_best = nullptr;
+  for(Closure* closure: _closures) {
+    if (closure->is_valid) {
+      if (closure_best) {
+
+        //ds if the current candidate is better
+        if (closure->icp_inlier_ratio > closure_best->icp_inlier_ratio &&
+            closure->relative_number_of_matches > closure_best->relative_number_of_matches) {
+          closure_best->is_valid = false;
+          delete closure_best;
+
+          //ds update
+          closure_best = closure;
+        }
+      } else {
+        closure_best = closure;
+      }
+    } else {
+      delete closure;
+    }
+  }
+
+  //ds update closure vector (note that we freed already all other closures besides the best)
+  _closures.clear();
+  if (closure_best) {
+    _closures.push_back(closure_best);
+  }
+  CHRONOMETER_STOP(overall)
+}
+
 void Relocalizer::clear() {
   CHRONOMETER_START(overall)
   for(const Closure* closure: _closures) {
