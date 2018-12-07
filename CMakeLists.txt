@@ -32,7 +32,7 @@ endif()
 add_definitions(-DSRRG_PROSLAM_DESCRIPTOR_SIZE_BITS=256)
 
 #ds specify target log level: 0 ERROR, 1 WARNING, 2 INFO, 3 DEBUG (defaults to 2 if not defined)
-add_definitions(-DSRRG_PROSLAM_LOG_LEVEL=2)
+add_definitions(-DSRRG_PROSLAM_LOG_LEVEL=3)
 
 #ds enable descriptor merging in HBST (and other SRRG components) - careful for collisions with landmark merging!
 add_definitions(-DSRRG_MERGE_DESCRIPTORS)

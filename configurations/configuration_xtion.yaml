@@ -1,0 +1,172 @@
+command_line:
+
+  #system log level (select one: DEBUG, INFO, WARNING, ERROR)
+  logging_level: DEBUG
+
+  #ds processing mode (select one: RGB_STEREO, RGB_DEPTH)
+  tracker_mode: RGB_DEPTH
+
+  #ds topic names
+  topic_image_left:        /camera/rgb/image_raw
+  topic_image_right:       /camera/depth/image_raw
+  topic_camera_info_left:  /camera_left/camera_info
+  topic_camera_info_right: /camera_right/camera_info
+  
+  #ds dataset file name
+  dataset_file_name:
+
+  #ds options
+  option_use_gui:                   true
+  option_disable_relocalization:    true
+  option_show_top_viewer:           false
+  option_drop_framepoints:          false
+  option_equalize_histogram:        false
+  option_recover_landmarks:         true
+  option_disable_bundle_adjustment: true
+  option_save_pose_graph:           false
+
+local_map:
+
+  #ds target minimum number of landmarks for local map creation
+  minimum_number_of_landmarks: 50
+  
+  #ds target maximum number of landmarks for local map creation
+  maximum_number_of_landmarks: 1000
+
+world_map:
+
+  #ds key frame generation properties
+  minimum_distance_traveled_for_local_map: 1.0
+  minimum_degrees_rotated_for_local_map:   0.5
+  minimum_number_of_frames_for_local_map:  4
+
+base_framepoint_generation:
+
+  #ds feature descriptor type (BRIEF-128/256/512, ORB-256, BRISK-512, FREAK-512, A-KAZE-486, BinBoost-064)
+  descriptor_type: BRIEF-256
+
+  #ds dynamic thresholds for feature detection
+  target_number_of_keypoints_tolerance: 0.1
+  detector_threshold_maximum_change:    0.5
+  detector_threshold_minimum:           10
+  detector_threshold_maximum:           100
+  number_of_detectors_vertical:         1
+  number_of_detectors_horizontal:       1
+
+  #point tracking thresholds
+  minimum_projection_tracking_distance_pixels: 5
+  maximum_projection_tracking_distance_pixels: 25
+
+  #ds dynamic thresholds for descriptor matching
+  matching_distance_tracking_threshold: 25
+  
+  #ds maximum reliable depth with chosen sensor
+  maximum_reliable_depth_meters: 2.5
+  
+  #feature density regularization
+  enable_keypoint_binning: true
+  bin_size_pixels:         10
+
+stereo_framepoint_generation:
+
+  #ds stereo: triangulation
+  maximum_matching_distance_triangulation: 0
+  minimum_disparity_pixels:                0
+  maximum_epipolar_search_offset_pixels:   0
+
+depth_framepoint_generation:
+
+  #ds depth sensor configuration
+  maximum_depth_near_meters: 5
+  maximum_depth_far_meters:  20
+
+base_tracking:
+
+  #ds this criteria is used for the decision of whether creating a landmark or not from a track of framepoints
+  minimum_track_length_for_landmark_creation: 2
+
+  #ds track lost criteria
+  minimum_number_of_landmarks_to_track: 5
+
+  #point tracking thresholds
+  tunnel_vision_ratio: 0.75
+
+  #landmark track recovery (if enabled)
+  maximum_number_of_landmark_recoveries: 10
+  
+  #ds motion model for initial pose guess (select one: NONE, CONSTANT_VELOCITY, CAMERA_ODOMETRY)
+  motion_model: CAMERA_ODOMETRY
+
+  #pose optimization
+  minimum_delta_angular_for_movement:       0.001
+  minimum_delta_translational_for_movement: 0.01
+  
+  #pose optimization: aligner unit configuration
+  aligner->error_delta_for_convergence:  1e-3
+  aligner->maximum_error_kernel:         9
+  aligner->damping:                      0
+  aligner->maximum_number_of_iterations: 1000
+  aligner->minimum_number_of_inliers:    0
+  aligner->minimum_inlier_ratio:         0
+
+relocalization:
+
+  #maximum permitted descriptor distance to still be considered as a match
+  maximum_descriptor_distance: 25
+
+  #minimum query interspace
+  preliminary_minimum_interspace_queries: 50
+
+  #minimum relative number of matches
+  preliminary_minimum_matching_ratio: 0.1
+
+  #minimum absolute number of matches
+  minimum_number_of_matched_landmarks: 25
+
+  #correspondence retrieval
+  minimum_matches_per_correspondence: 0
+  
+  #icp: aligner unit configuration
+  aligner->error_delta_for_convergence:  1e-5
+  aligner->maximum_error_kernel:         1.0
+  aligner->damping:                      0.0
+  aligner->maximum_number_of_iterations: 100
+  aligner->minimum_number_of_inliers:    25
+  aligner->minimum_inlier_ratio:         0.5
+
+graph_optimization:
+
+  #enable full bundle adjustment (default: only pose graph optimization upon loop closing)
+  enable_full_bundle_adjustment: false
+
+  #g2o factor graph optimization algorithm: GAUSS_NEWTON, LEVENBERG 
+  optimization_algorithm: GAUSS_NEWTON
+
+  #g2o linear solver type to perform optimization algorithm: CHOLMOD, CSPARSE
+  linear_solver_type: CHOLMOD
+
+  #g2o identifier space between frames and landmark vertices
+  identifier_space: 1e9
+  
+  #maximum number of iterations graph optimization
+  maximum_number_of_iterations: 100
+
+  #determines window size for bundle adjustment
+  number_of_frames_per_bundle_adjustment: 100
+
+  #base frame weight in pose graph (assuming 1 for landmarks)
+  base_information_frame: 1e5
+  
+  #free translation for pose to pose measurements
+  free_translation_for_poses: true
+  
+  #translational frame weight reduction in pose graph
+  base_information_frame_factor_for_translation: 1e-5
+
+  #enable robust kernel for loop closure measurements
+  enable_robust_kernel_for_poses: true
+
+  #enable robust kernel for landmark measurements
+  enable_robust_kernel_for_landmarks: false
+
+visualization:

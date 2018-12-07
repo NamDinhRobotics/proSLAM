@@ -63,7 +63,6 @@ public:
   bool option_show_top_viewer           = false;
   bool option_drop_framepoints          = false;
   bool option_equalize_histogram        = false;
-  bool option_use_odometry              = false;
   bool option_recover_landmarks         = true;
   bool option_disable_bundle_adjustment = true;
   bool option_save_pose_graph           = false;
@@ -109,7 +108,7 @@ public:
   virtual void print() const;
 
   //! @brief minimum number of measurements before optimization is filtering
-  Count minimum_number_of_forced_updates = 2;
+//  Count minimum_number_of_forced_updates = 2;
 };
 
 //! @class local map parameters
@@ -269,6 +268,9 @@ public:
 
   //! @brief parameters of aligner unit
   AlignerParameters* aligner;
+
+  //! @brief transform that is applied to given odometry guess to result in camera_left_to_world
+  TransformMatrix3D transform_odometry;
 };
 
 //! @class stereo tracker parameters
@@ -404,7 +406,7 @@ public:
   //! @brief display options
   bool frames_drawn       = true;
   bool landmarks_drawn    = true;
-  bool follow_robot       = true;
+  bool follow_robot       = false;
   bool ground_truth_drawn = false;
 
   //! @brief default sizes

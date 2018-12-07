@@ -5,7 +5,7 @@ namespace proslam {
 using namespace srrg_core;
 
 BaseTracker::BaseTracker(BaseTrackerParameters* parameters_): _parameters(parameters_),
-                                                              _has_odometry(false) {
+                                                              _has_guess(false) {
   LOG_INFO(std::cerr << "BaseTracker::BaseTracker|constructed" << std::endl)
 }
 
@@ -37,52 +37,50 @@ void BaseTracker::compute() {
   assert(_context);
 
   //ds reset point configurations
+  _status_previous            = _status;
   _number_of_tracked_points   = 0;
   _number_of_lost_points      = 0;
   _number_of_recovered_points = 0;
   _context->currentlyTrackedLandmarks().clear();
 
   //ds relative camera motion guess
-  TransformMatrix3D previous_to_current = TransformMatrix3D::Identity();
+  TransformMatrix3D previous_to_current_guess = TransformMatrix3D::Identity();
 
   //ds check if initial guess can be refined with a motion model or other input
   switch(_parameters->motion_model) {
 
     //ds use previous motion as initial guess for current motion
     case Parameters::MotionModel::CONSTANT_VELOCITY: {
-      previous_to_current = _previous_to_current_camera;
+      previous_to_current_guess = _previous_to_current_camera;
       break;
     }
 
-    //ds camera odometry as motion guess
+    //ds use camera odometry as motion guess
     case Parameters::MotionModel::CAMERA_ODOMETRY: {
-      if (!_context->currentFrame()){
-        _previous_odometry = _odometry;
+
+      //ds initialize guess if set
+      if (_context->currentFrame()){
+        previous_to_current_guess = _camera_left_in_world_guess.inverse()*_camera_left_in_world_guess_previous;
       }
-      TransformMatrix3D odom_delta = _odometry.inverse()*_previous_odometry;
-      _previous_odometry           = _odometry;
-      previous_to_current          = odom_delta;
+      _camera_left_in_world_guess_previous = _camera_left_in_world_guess;
       break;
     }
 
     //ds no guess (identity)
-    case Parameters::MotionModel::NONE: {
-      previous_to_current = TransformMatrix3D::Identity();
-      break;
-    }
-
-    //ds invalid setting
     default: {
-      throw std::runtime_error("motion model undefined");
+      previous_to_current_guess.setIdentity();
+      break;
     }
   }
 
-  //ds create new frame
+  //ds create a new frame (specific)
   Frame* current_frame = _createFrame();
   current_frame->setStatus(_status);
+
+  //ds the new frame is automatically linked to the previous
   Frame* previous_frame = current_frame->previous();
 
-  //ds initialize framepoint generator
+  //ds initialize framepoint generator (specific)
   _framepoint_generator->initialize(current_frame);
 
   //ds if possible - attempt to track the points from the previous frame
@@ -94,7 +92,7 @@ void BaseTracker::compute() {
 
     //ds search point tracks
     CHRONOMETER_START(tracking);
-    _track(previous_frame, current_frame, previous_to_current, track_by_appearance);
+    _track(previous_frame, current_frame, previous_to_current_guess, track_by_appearance);
     CHRONOMETER_STOP(tracking);
   }
 
@@ -105,63 +103,86 @@ void BaseTracker::compute() {
     //ds localization mode - always running on tracking by appearance with maximum window size
     case Frame::Localizing: {
 
-      //ds if we got not enough tracks to evaluate for position tracking
-      if (_number_of_tracked_points < _parameters->minimum_number_of_landmarks_to_track) {
-
-        //ds reset state and stick to previous solution
-        LOG_WARNING(std::printf("BaseTracker::compute|skipping position tracking due to insufficient number of tracks: %lu\n", _number_of_tracked_points))
-        _previous_to_current_camera = TransformMatrix3D::Identity();
+      //ds if we don't have a previous frame
+      if (!previous_frame) {
         break;
       }
 
-      //ds if we have a previous frame
-      if (previous_frame) {
+      //ds if we got not enough tracks to evaluate for position tracking
+      if (_number_of_tracked_points < _parameters->minimum_number_of_landmarks_to_track || true) {
 
-        LOG_INFO(std::cerr << "BaseTracker::compute|STATE: LOCALIZING|current tracks: "
-                           << _number_of_tracked_points << "/" << previous_frame->points().size()
-                           << " at image: " << current_frame->identifier() << std::endl)
+        //ds if we have some information about the camera pose (e.g. odometry)
+        if (_parameters->motion_model == Parameters::MotionModel::CAMERA_ODOMETRY) {
 
-        //ds solve pose on frame points only
-        CHRONOMETER_START(pose_optimization);
-        _pose_optimizer->setEnableWeightsTranslation(false);
-        _pose_optimizer->initialize(previous_frame, current_frame, previous_to_current);
-        _pose_optimizer->converge();
-        CHRONOMETER_STOP(pose_optimization);
+          //ds reset state and stick to previous solution
+          LOG_WARNING(std::printf("BaseTracker::compute|skipping position tracking due to insufficient number of tracks: %lu\n", _number_of_tracked_points))
+          LOG_WARNING(std::printf("BaseTracker::compute|using camera odometry guess as pose estimate\n"))
 
-        //ds if the pose computation is acceptable
-        if (_pose_optimizer->numberOfInliers() > _parameters->minimum_number_of_landmarks_to_track) {
+          //ds compute current robot pose
+          const TransformMatrix3D camera_left_to_world = previous_frame->cameraLeftToWorld()*previous_to_current_guess.inverse();
+          current_frame->setRobotToWorld(camera_left_to_world*_camera_left->robotToCamera());
+        } else {
 
-          //ds compute resulting motion
-          _previous_to_current_camera = _pose_optimizer->previousToCurrent();
-          const real delta_angular          = WorldMap::toOrientationRodrigues(_previous_to_current_camera.linear()).norm();
-          const real delta_translational    = _previous_to_current_camera.translation().norm();
+          //ds reset state and stick to previous solution
+          LOG_WARNING(std::printf("BaseTracker::compute|skipping position tracking due to insufficient number of tracks: %lu\n", _number_of_tracked_points))
+          _previous_to_current_camera = TransformMatrix3D::Identity();
+        }
+        break;
+      }
 
-            //ds if the posit result is significant enough
-          if (delta_angular > _parameters->minimum_delta_angular_for_movement || delta_translational > _parameters->minimum_delta_translational_for_movement) {
+      LOG_INFO(std::cerr << "BaseTracker::compute|STATE: LOCALIZING|current tracks: "
+                         << _number_of_tracked_points << "/" << previous_frame->points().size()
+                         << " at image: " << current_frame->identifier() << std::endl)
 
-            //ds update tracker - TODO purge this transform chaos
-            const TransformMatrix3D world_to_camera_current = _previous_to_current_camera*previous_frame->worldToCameraLeft();
-            const TransformMatrix3D world_to_robot_current  = _camera_left->cameraToRobot()*world_to_camera_current;
-            current_frame->setRobotToWorld(world_to_robot_current.inverse());
-            LOG_WARNING(std::cerr << "BaseTracker::compute|using posit on frame points (experimental) inliers: " << _pose_optimizer->numberOfInliers()
-                      << " outliers: " << _pose_optimizer->numberOfOutliers() << " average error: " << _pose_optimizer->totalError()/_pose_optimizer->numberOfInliers() <<  std::endl)
+      //ds solve pose on frame points only
+      CHRONOMETER_START(pose_optimization);
+      _pose_optimizer->setEnableWeightsTranslation(false);
+      _pose_optimizer->initialize(previous_frame, current_frame, previous_to_current_guess);
+      _pose_optimizer->converge();
+      CHRONOMETER_STOP(pose_optimization);
+
+      //ds if the pose computation is acceptable
+      if (_pose_optimizer->numberOfInliers() > _parameters->minimum_number_of_landmarks_to_track) {
+
+        //ds compute resulting motion
+        _previous_to_current_camera    = _pose_optimizer->previousToCurrent();
+        const real delta_angular       = WorldMap::toOrientationRodrigues(_previous_to_current_camera.linear()).norm();
+        const real delta_translational = _previous_to_current_camera.translation().norm();
+
+          //ds if the posit result is significant enough
+        if (delta_angular > _parameters->minimum_delta_angular_for_movement || delta_translational > _parameters->minimum_delta_translational_for_movement) {
+
+          //ds update tracker - TODO purge this transform chaos
+          const TransformMatrix3D world_to_camera_current = _previous_to_current_camera*previous_frame->worldToCameraLeft();
+          const TransformMatrix3D world_to_robot_current  = _camera_left->cameraToRobot()*world_to_camera_current;
+          current_frame->setRobotToWorld(world_to_robot_current.inverse());
+          LOG_WARNING(std::cerr << "BaseTracker::compute|using posit on frame points (experimental) inliers: " << _pose_optimizer->numberOfInliers()
+                    << " outliers: " << _pose_optimizer->numberOfOutliers() << " average error: " << _pose_optimizer->totalError()/_pose_optimizer->numberOfInliers() <<  std::endl)
+        } else {
+
+          //ds if we have some information about the camera pose (e.g. odometry)
+          if (_parameters->motion_model == Parameters::MotionModel::CAMERA_ODOMETRY) {
+
+            //ds compute current robot pose
+            const TransformMatrix3D camera_left_to_world = previous_frame->cameraLeftToWorld()*previous_to_current_guess.inverse();
+            current_frame->setRobotToWorld(camera_left_to_world*_camera_left->robotToCamera());
           } else {
 
             //ds keep previous solution
             current_frame->setRobotToWorld(previous_frame->robotToWorld());
             _previous_to_current_camera = TransformMatrix3D::Identity();
           }
-
-          //ds update context position
-          _context->setRobotToWorld(current_frame->robotToWorld());
         }
+      } else {
+
+        throw std::runtime_error("handle this case instead of doing nothing");
       }
       break;
     }
 
     //ds on the track
     case Frame::Tracking: {
-      _registerRecursive(previous_frame, current_frame, previous_to_current);
+      _registerRecursive(previous_frame, current_frame, previous_to_current_guess);
       break;
     }
     default: {
@@ -170,14 +191,16 @@ void BaseTracker::compute() {
     }
   }
 
+  //ds update context pose
+  _context->setRobotToWorld(current_frame->robotToWorld());
+
   //ds trigger landmark creation and framepoint update
   _updatePoints(_context, current_frame);
 
-  //ds check if we switch to tracking state
-  _status_previous = _status;
-  if (_number_of_active_landmarks > _parameters->minimum_number_of_landmarks_to_track) {
-    _status = Frame::Tracking;
-  }
+//  //ds check if we switch to tracking state
+//  if (_number_of_active_landmarks > _parameters->minimum_number_of_landmarks_to_track) {
+//    _status = Frame::Tracking;
+//  }
 
   //ds compute remaining points in frame
   CHRONOMETER_START(track_creation)
@@ -273,8 +296,20 @@ void BaseTracker::_registerRecursive(Frame* frame_previous_,
       return;
     } else {
 
-      //ds failed
-      breakTrack(frame_current_);
+      //ds if we have some information about the camera pose (e.g. odometry)
+      if (_parameters->motion_model == Parameters::MotionModel::CAMERA_ODOMETRY) {
+
+        //ds reset state and stick to previous solution
+        LOG_WARNING(std::printf("BaseTracker::_registerRecursive|using camera odometry guess as pose estimate\n"))
+
+        //ds compute current robot pose
+        const TransformMatrix3D camera_left_to_world = frame_previous_->cameraLeftToWorld()*_previous_to_current_camera.inverse();
+        frame_current_->setRobotToWorld(camera_left_to_world*_camera_left->robotToCamera());
+      } else {
+
+        //ds failed
+        breakTrack(frame_current_);
+      }
       return;
     }
   }
@@ -320,9 +355,18 @@ void BaseTracker::_registerRecursive(Frame* frame_previous_,
       frame_current_->setRobotToWorld(world_to_robot_current.inverse());
     } else {
 
-      //ds keep previous solution
-      frame_current_->setRobotToWorld(frame_previous_->robotToWorld());
-      _previous_to_current_camera = TransformMatrix3D::Identity();
+      //ds if we have some information about the camera pose (e.g. odometry)
+      if (_parameters->motion_model == Parameters::MotionModel::CAMERA_ODOMETRY) {
+
+        //ds compute current robot pose
+        const TransformMatrix3D camera_left_to_world = frame_previous_->cameraLeftToWorld()*_previous_to_current_camera.inverse();
+        frame_current_->setRobotToWorld(camera_left_to_world*_camera_left->robotToCamera());
+      } else {
+
+        //ds keep previous solution
+        frame_current_->setRobotToWorld(frame_previous_->robotToWorld());
+        _previous_to_current_camera = TransformMatrix3D::Identity();
+      }
     }
 
     //ds visualization only (we need to clear and push_back in order to not crash the gui since its decoupled - otherwise we could use resize)
@@ -339,9 +383,6 @@ void BaseTracker::_registerRecursive(Frame* frame_previous_,
       _recoverPoints(frame_current_);
       CHRONOMETER_STOP(point_recovery)
     }
-
-    //ds update tracks
-    _context->setRobotToWorld(frame_current_->robotToWorld());
   } else {
     LOG_WARNING(std::cerr << frame_current_->identifier() << "|BaseTracker::_registerRecursive|recursion: " << recursion_
                           << "|inliers: " << number_of_inliers << " average error: " << average_error << std::endl)
@@ -361,8 +402,20 @@ void BaseTracker::_registerRecursive(Frame* frame_previous_,
       ++_number_of_recursive_registrations;
     } else {
 
-      //ds failed
-      breakTrack(frame_current_);
+      //ds if we have some information about the camera pose (e.g. odometry)
+      if (_parameters->motion_model == Parameters::MotionModel::CAMERA_ODOMETRY) {
+
+        //ds reset state and stick to previous solution
+        LOG_WARNING(std::printf("BaseTracker::_registerRecursive|using camera odometry guess as pose estimate\n"))
+
+        //ds compute current robot pose
+        const TransformMatrix3D camera_left_to_world = frame_previous_->cameraLeftToWorld()*_previous_to_current_camera.inverse();
+        frame_current_->setRobotToWorld(camera_left_to_world*_camera_left->robotToCamera());
+      } else {
+
+        //ds failed
+        breakTrack(frame_current_);
+      }
     }
   }
 }
@@ -448,6 +501,7 @@ void BaseTracker::_updatePoints(WorldMap* context_, Frame* frame_) {
     landmark->setIsCurrentlyTracked(true);
     context_->currentlyTrackedLandmarks().push_back(landmark);
   }
+  LOG_WARNING(std::cerr << "BaseTracker::_updatePoints|updated landmarks: " << _number_of_active_landmarks << std::endl)
   CHRONOMETER_STOP(landmark_optimization)
 }
 }

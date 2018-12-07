@@ -21,7 +21,7 @@ namespace proslam {
     LOG_INFO(std::cerr << "DepthTracker::~DepthTracker|destroyed" << std::endl)
   }
 
-  Frame* DepthTracker::_createFrame(){
+  Frame* DepthTracker::_createFrame() {
     Frame* current_frame = _context->createFrame(_context->robotToWorld());
     current_frame->setCameraLeft(_camera_left);
     current_frame->setIntensityImageLeft(_intensity_image_left);

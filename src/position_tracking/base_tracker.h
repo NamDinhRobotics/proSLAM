@@ -25,8 +25,8 @@ public:
 public:
 
   const uint64_t& numberOfRecursiveRegistrations() const {return _number_of_recursive_registrations;}
-  void setCameraLeft(const Camera* camera_left_) {_camera_left = camera_left_; _has_odometry = false;}
-  void setOdometry(const TransformMatrix3D& odometry_) {_odometry = odometry_; _has_odometry = true;}
+  void setCameraLeft(const Camera* camera_left_) {_camera_left = camera_left_; _has_guess = false;}
+  void setCameraLeftInWorldGuess(const TransformMatrix3D& camera_left_in_world_guess_) {_camera_left_in_world_guess = camera_left_in_world_guess_; _has_guess = true;}
   void setAligner(BaseFrameAligner* pose_optimizer_) {_pose_optimizer = pose_optimizer_;}
   void setFramePointGenerator(BaseFramePointGenerator * framepoint_generator_) {_framepoint_generator = framepoint_generator_;}
   void setWorldMap(WorldMap* context_) {_context = context_;}
@@ -100,7 +100,7 @@ protected:
   BaseFrameAligner* _pose_optimizer              = nullptr;
   BaseFramePointGenerator* _framepoint_generator = nullptr;
 
-  //! @brief position tracking bookkeeping
+  //! @brief position tracking bookkeeping (required for motion model: CONSTANT_VELOCITY)
   TransformMatrix3D _previous_to_current_camera = TransformMatrix3D::Identity();
 
   //ds framepoint track recovery
@@ -122,8 +122,8 @@ private:
   CREATE_CHRONOMETER(point_recovery)
   Count _total_number_of_tracked_points = 0;
   Count _total_number_of_landmarks      = 0;
-  bool _has_odometry;
-  TransformMatrix3D _odometry;
-  TransformMatrix3D _previous_odometry;
+  bool _has_guess;
+  TransformMatrix3D _camera_left_in_world_guess;
+  TransformMatrix3D _camera_left_in_world_guess_previous;
 };
 }

@@ -65,7 +65,7 @@ public:
   inline cv::Mat& descriptorsRight() {return _descriptors_right;}
 
   inline const Camera* cameraLeft() const {return _camera_left;}
-  void setCameraLeft(const Camera* camera_) {_camera_left = camera_;}
+  void setCameraLeft(const Camera* camera_);
 
   inline const Camera* cameraRight() const {return _camera_right;}
   void setCameraRight(const Camera* camera_) {_camera_right = camera_;}

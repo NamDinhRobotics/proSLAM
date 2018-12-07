@@ -139,6 +139,10 @@ void MapViewer::draw(){
 
       //ds set ego perspective head
       world_to_robot = _robot_viewpoint*_world_to_robot;
+    } else {
+
+      //ds draw world origin XYZ axes
+      drawAxis(10*_parameters->object_scale);
     }
     glPushMatrix();
     glMultMatrixf(world_to_robot.cast<float>().data());

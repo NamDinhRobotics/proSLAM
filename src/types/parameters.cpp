@@ -60,7 +60,6 @@ void CommandLineParameters::print() const {
   std::cerr << "-use-gui (-ug)                     " << option_use_gui << std::endl;
   std::cerr << "-open-loop (-ol)                   " << option_disable_relocalization << std::endl;
   std::cerr << "-show-top (-st)                    " << option_show_top_viewer << std::endl;
-  std::cerr << "-use-odometry (-uo)                " << option_use_odometry << std::endl;
   std::cerr << "-depth-mode (-dm)                  " << (tracker_mode == TrackerMode::RGB_DEPTH) << std::endl;
   std::cerr << "-drop-framepoints (-df)            " << option_drop_framepoints << std::endl;
   std::cerr << "-equalize-histogram (-eh)          " << option_equalize_histogram << std::endl;
@@ -79,7 +78,7 @@ void AlignerParameters::print() const {
 }
 
 void LandmarkParameters::print() const {
-  std::cerr << "LandmarkParameters::print|minimum_number_of_forced_updates: " << minimum_number_of_forced_updates << std::endl;
+//  std::cerr << "LandmarkParameters::print|minimum_number_of_forced_updates: " << minimum_number_of_forced_updates << std::endl;
 }
 
 void LocalMapParameters::print() const {
@@ -266,8 +265,6 @@ void ParameterCollection::parseFromCommandLine(const int32_t& argc_, char ** arg
       command_line_parameters->option_equalize_histogram = true;
     } else if (!std::strcmp(argv_[number_of_checked_parameters], "-depth-mode") || !std::strcmp(argv_[number_of_checked_parameters], "-dm")) {
       command_line_parameters->tracker_mode = CommandLineParameters::TrackerMode::RGB_DEPTH;
-    } else if (!std::strcmp(argv_[number_of_checked_parameters], "-use-odometry") || !std::strcmp(argv_[number_of_checked_parameters], "-uo")) {
-      command_line_parameters->option_use_odometry = true;
     } else if (!std::strcmp(argv_[number_of_checked_parameters], "-recover-landmarks") || !std::strcmp(argv_[number_of_checked_parameters], "-rl")) {
       command_line_parameters->option_recover_landmarks = true;
     } else if (!std::strcmp(argv_[number_of_checked_parameters], "-configuration") || !std::strcmp(argv_[number_of_checked_parameters], "-c")) {
@@ -317,7 +314,6 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     PARSE_PARAMETER(configuration, command_line, command_line_parameters, topic_camera_info_right, std::string)
     PARSE_PARAMETER(configuration, command_line, command_line_parameters, dataset_file_name, std::string)
     PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_use_gui, bool)
-    PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_use_odometry, bool)
     PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_disable_relocalization, bool)
     PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_show_top_viewer, bool)
     PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_drop_framepoints, bool)
@@ -329,7 +325,7 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     PARSE_PARAMETER(configuration, world_map, world_map_parameters, minimum_distance_traveled_for_local_map, real)
     PARSE_PARAMETER(configuration, world_map, world_map_parameters, minimum_degrees_rotated_for_local_map, real)
     PARSE_PARAMETER(configuration, world_map, world_map_parameters, minimum_number_of_frames_for_local_map, Count)
-    PARSE_PARAMETER(configuration, landmark, world_map_parameters->landmark, minimum_number_of_forced_updates, Count)
+//    PARSE_PARAMETER(configuration, landmark, world_map_parameters->landmark, minimum_number_of_forced_updates, Count)
     PARSE_PARAMETER(configuration, local_map, world_map_parameters->local_map, minimum_number_of_landmarks, Count)
 
     //ds mode specific parameters
@@ -397,6 +393,8 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
       tracker_parameters->motion_model = Parameters::MotionModel::NONE;
     } else if (motion_model == "CONSTANT_VELOCITY") {
       tracker_parameters->motion_model = Parameters::MotionModel::CONSTANT_VELOCITY;
+    } else if (motion_model == "CAMERA_ODOMETRY") {
+      tracker_parameters->motion_model = Parameters::MotionModel::CAMERA_ODOMETRY;
     } else {
       LOG_ERROR(std::cerr << "ParameterCollection::parseFromFile|invalid motion model: " << motion_model << std::endl)
       throw std::runtime_error("invalid motion model");

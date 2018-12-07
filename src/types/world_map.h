@@ -115,6 +115,7 @@ public:
   const LocalMapPointerVector& localMaps() const {return _local_maps;}
 
   void setRobotToWorld(const TransformMatrix3D& robot_pose_) {robot_to_world = robot_pose_;}
+  void setWorldToRobot(const TransformMatrix3D& robot_pose_) {robot_to_world = robot_pose_.inverse();}
   const TransformMatrix3D robotToWorld() const {return robot_to_world;}
 
   const bool relocalized() const {return _relocalized;}

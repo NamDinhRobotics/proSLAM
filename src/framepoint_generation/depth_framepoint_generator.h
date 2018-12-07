@@ -18,7 +18,17 @@ public:
   //ds computes framepoints stored in a image-like matrix (_framepoints_in_image) for provided stereo images
   virtual void compute(Frame* frame_);
 
-  void computeCoordinatesFromDepth(Frame* frame_, std::vector<cv::KeyPoint>& keypoints_, cv::Mat& descriptors_);
+  //! @brief computes first tracks between previous framepoints, estimates the projection error
+  //! @brief and uses the prior on the right camera for fast and reliable stereo matching
+  //! @param[in, out] frame_ frame that will be filled with framepoints and tracks
+  //! @param[in] frame_previous_ previous frame that contains valid framepoints on which we will track
+  //! @param[in] camera_left_previous_in_current_ the relative camera motion guess between frame_ and frame_previous_
+  //! @param[out] previous_points_without_tracks_ lost points
+  void track(Frame* frame_,
+             Frame* frame_previous_,
+             const TransformMatrix3D& camera_left_previous_in_current_,
+             FramePointPointerVector& previous_framepoints_without_tracks_,
+             const bool track_by_appearance_ = true) override;
 
 //ds setters/getters
 public:

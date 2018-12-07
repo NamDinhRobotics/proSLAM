@@ -1,5 +1,4 @@
 #include "uvd_aligner.h"
-
 #include "types/landmark.h"
 
 namespace proslam {
@@ -17,16 +16,17 @@ namespace proslam {
   void UVDAligner::initialize(const Frame* frame_previous_,
                               const Frame* frame_current_,
                               const TransformMatrix3D& previous_to_current_) {
-    _frame_current = frame_current_;
-    _errors.resize(_frame_current->points().size());
-    _inliers.resize(_frame_current->points().size());
-//  TODO _robot_to_world = previous_to_current_;
-//    _world_to_robot = _robot_to_world.inverse();
+    _frame_previous      = frame_previous_;
+    _frame_current       = frame_current_;
+    _previous_to_current = previous_to_current_;
+
+    //ds prepare buffers
+    _number_of_measurements = _frame_current->points().size();
+    _errors.resize(_number_of_measurements);
+    _inliers.resize(_number_of_measurements);
 
     //ds wrappers for optimization
-//    _camera_to_world = _robot_to_world*_frame_current->cameraLeft()->cameraToRobot();
-//    _world_to_camera = _camera_to_world.inverse();
-    _camera_matrix  = _frame_current->cameraLeft()->cameraMatrix();
+    _camera_matrix        = _frame_current->cameraLeft()->cameraMatrix();
     _number_of_rows_image = _frame_current->cameraLeft()->numberOfImageRows();
     _number_of_cols_image = _frame_current->cameraLeft()->numberOfImageCols();
   }
@@ -161,6 +161,13 @@ namespace proslam {
 
   //ds solve alignment problem until convergence is reached
   void UVDAligner::converge() {
+    for (Index index_point = 0; index_point < _number_of_measurements; index_point++) {
+      _errors[index_point]  = 0;
+      _inliers[index_point] = true;
+    }
+    _number_of_inliers = _number_of_measurements;
+    //ds TODO update aligner
+    return;
 
     //ds previous error to check for convergence
     real total_error_previous = 0;
@@ -196,9 +203,5 @@ namespace proslam {
       }
     }
 
-//    //ds update wrapped structures
-//    _camera_to_world = _world_to_camera.inverse();
-//    _robot_to_world = _camera_to_world*_frame_current->cameraLeft()->robotToCamera();
-//    _world_to_robot = _robot_to_world.inverse();
   }
 }

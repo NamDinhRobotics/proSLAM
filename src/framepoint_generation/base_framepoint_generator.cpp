@@ -229,14 +229,6 @@ void BaseFramePointGenerator::computeDescriptors(const cv::Mat& intensity_image_
   CHRONOMETER_STOP(descriptor_extraction)
 }
 
-void BaseFramePointGenerator::track(Frame* frame_,
-                                    Frame* frame_previous_,
-                                    const TransformMatrix3D& camera_left_previous_in_current_,
-                                    FramePointPointerVector& previous_framepoints_without_tracks_,
-                                    const bool track_by_appearance_) {
-  throw std::runtime_error("default monocular tracking not implemented yet");
-}
-
 void BaseFramePointGenerator::adjustDetectorThresholds() {
   for (uint32_t r = 0; r < _parameters->number_of_detectors_vertical; ++r) {
     for (uint32_t c = 0; c < _parameters->number_of_detectors_horizontal; ++c) {

@@ -31,5 +31,6 @@ protected:
 
   //ds buffers
   CameraMatrix _camera_matrix = CameraMatrix::Zero();
+  Count _number_of_measurements = 0;
 };
 }

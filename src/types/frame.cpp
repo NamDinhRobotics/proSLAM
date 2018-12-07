@@ -34,6 +34,15 @@ Frame::~Frame() {
   _keypoints_right.clear();
 }
 
+void Frame::setCameraLeft(const Camera* camera_) {
+  assert(camera_);
+
+  //ds set camera and update pose with respect to world
+  _camera_left          = camera_;
+  _camera_left_to_world = _robot_to_world*_camera_left->cameraToRobot();
+  _world_to_camera_left = _camera_left_to_world.inverse();
+}
+
 void Frame::setRobotToWorld(const TransformMatrix3D& robot_to_world_, const bool update_local_map_) {
   _robot_to_world = robot_to_world_;
   _world_to_robot = _robot_to_world.inverse();

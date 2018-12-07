@@ -386,7 +386,7 @@ void SLAMAssembly::playbackMessageFile() {
     //ds if we have a synchronized package of sensor messages ready
     if (_synchronizer.messagesReady()) {
 
-      //ds check if termination is requested
+      //ds if termination is requested - terminate
       if (_is_termination_requested) {
         break;
       }
@@ -394,6 +394,11 @@ void SLAMAssembly::playbackMessageFile() {
       //ds buffer sensor data
       srrg_core::PinholeImageMessage* image_message_left  = dynamic_cast<srrg_core::PinholeImageMessage*>(_synchronizer.messages()[0].get());
       srrg_core::PinholeImageMessage* image_message_right = dynamic_cast<srrg_core::PinholeImageMessage*>(_synchronizer.messages()[1].get());
+
+      //ds if message retrieval failed
+      if (!image_message_left || !image_message_right) {
+        throw std::runtime_error("SLAMAssembly::playbackMessageFile|unable to retrieve image data from srrg messages");
+      }
 
       //ds buffer images
       cv::Mat intensity_image_left_rectified;
@@ -417,11 +422,22 @@ void SLAMAssembly::playbackMessageFile() {
         }
       }
 
-      //ds check if first frame and odometry is available
-      if (_world_map->frames().size() == 0 && image_message_left->hasOdom()) {
-        _world_map->setRobotToWorld(image_message_left->odometry().cast<real>()*robot_to_camera_left);
-        if (_parameters->command_line_parameters->option_use_gui) {
-          _map_viewer->setWorldToRobotOrigin(_world_map->robotToWorld().inverse());
+      //ds odometry guess integration (if available)
+      TransformMatrix3D camera_left_to_world_guess(TransformMatrix3D::Identity());
+      if (image_message_left->hasOdom()) {
+
+        //ds get odometry into camera frame
+        const TransformMatrix3D& robot_to_world = image_message_left->odometry().cast<real>();
+        camera_left_to_world_guess = robot_to_world*_camera_left->cameraToRobot();
+
+        //ds if first frame is available
+        if (_world_map->frames().size() == 0) {
+
+          //ds move current robot pose to odometry estimate (this only has an effect if the odometry starts not in the world origin)
+          _world_map->setRobotToWorld(robot_to_world);
+          if (_parameters->command_line_parameters->option_use_gui) {
+            _map_viewer->setWorldToRobotOrigin(_world_map->robotToWorld().inverse());
+          }
         }
       }
 
@@ -432,8 +448,8 @@ void SLAMAssembly::playbackMessageFile() {
       process(intensity_image_left_rectified,
               intensity_image_right_rectified,
               image_message_left->timestamp(),
-              image_message_left->hasOdom() && _parameters->command_line_parameters->option_use_odometry,
-              image_message_left->odometry().cast<real>());
+              image_message_left->hasOdom(),
+              camera_left_to_world_guess);
 
       //ds update timing stats
       const double processing_time_seconds = srrg_core::getTime()-time_start_seconds;
@@ -493,13 +509,13 @@ void SLAMAssembly::playbackMessageFile() {
 void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
                            const cv::Mat& intensity_image_right_,
                            const double& timestamp_image_left_seconds_,
-                           const bool& use_odometry_,
-                           const TransformMatrix3D& odometry_) {
+                           const bool& use_guess_,
+                           const TransformMatrix3D& camera_left_in_world_guess_) {
 
   //ds call the tracker
   _tracker->setIntensityImageLeft(intensity_image_left_);
 
-  //ds depending on tracking mode
+  //ds depending on tracking mode we have to set auxiliary information (UGLY)
   switch (_parameters->command_line_parameters->tracker_mode){
     case CommandLineParameters::TrackerMode::RGB_STEREO: {
       StereoTracker* stereo_tracker = dynamic_cast<StereoTracker*>(_tracker);
@@ -517,11 +533,13 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
       throw std::runtime_error("unknown tracker");
     }
   }
-  if (use_odometry_) {
-    _tracker->setOdometry(odometry_);
+
+  //ds if we have a prior on the camera pose
+  if (use_guess_) {
+    _tracker->setCameraLeftInWorldGuess(camera_left_in_world_guess_);
   }
 
-  //ds track framepoints and derive new robot pose
+  //ds track framepoints from previous state (predict) and derive current state (update)
   _tracker->compute();
 
   //ds if we generated a valid frame
@@ -544,7 +562,6 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
         //ds localize in database (not yet optimizing the graph)
         _relocalizer->detectClosures(_world_map->currentLocalMap());
         _relocalizer->registerClosures();
-//        _relocalizer->prune();
 
         //ds check the closures
         for(Closure* closure: _relocalizer->closures()) {

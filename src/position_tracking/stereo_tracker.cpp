@@ -29,7 +29,6 @@ namespace proslam {
     current_frame->setIntensityImageLeft(_intensity_image_left);
     current_frame->setCameraRight(_camera_right);
     current_frame->setIntensityImageRight(_intensity_image_right);
-    current_frame->setRobotToWorld(_context->robotToWorld()); //ds TODO remove
     return current_frame;
   }
   

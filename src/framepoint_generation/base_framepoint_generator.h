@@ -33,7 +33,7 @@ public:
                      Frame* frame_previous_,
                      const TransformMatrix3D& camera_left_previous_in_current_,
                      FramePointPointerVector& previous_framepoints_without_tracks_,
-                     const bool track_by_appearance_ = true);
+                     const bool track_by_appearance_ = true) = 0;
 
   //ds adjust detector thresholds (for all image streams)
   void adjustDetectorThresholds();

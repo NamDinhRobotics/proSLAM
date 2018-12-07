@@ -60,8 +60,8 @@ public:
   void process(const cv::Mat& intensity_image_left_,
                const cv::Mat& intensity_image_right_,
                const double& timestamp_image_left_seconds_ = 0,
-               const bool& use_odometry_ = false,
-               const TransformMatrix3D& odometry_ = TransformMatrix3D::Identity());
+               const bool& use_guess_ = false,
+               const TransformMatrix3D& camera_left_in_world_guess_ = TransformMatrix3D::Identity());
 
   //ds prints extensive run summary
   void printReport() const;
