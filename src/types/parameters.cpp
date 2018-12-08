@@ -112,8 +112,7 @@ void DepthFramePointGeneratorParameters::print() const {
   BaseFramePointGeneratorParameters::print();
 }
 
-BaseTrackerParameters::BaseTrackerParameters(const LoggingLevel& logging_level_): Parameters(logging_level_),
-                                                                                  aligner(new AlignerParameters(logging_level_)) {
+BaseTrackerParameters::BaseTrackerParameters(): aligner(new AlignerParameters()) {
 
   //ds set specific default parameters
   aligner->error_delta_for_convergence  = 1e-3;
@@ -158,21 +157,20 @@ void MapViewerParameters::print() const {
 
 }
 
-ParameterCollection::ParameterCollection(const LoggingLevel& logging_level_): Parameters(logging_level_),
-                                                                              _parameters(this),
-                                                                              number_of_parameters_detected(0),
-                                                                              number_of_parameters_parsed(0) {
+ParameterCollection::ParameterCollection(): _parameters(this),
+                                            number_of_parameters_detected(0),
+                                            number_of_parameters_parsed(0) {
   LOG_INFO(std::cerr << "ParameterCollection::ParameterCollection|constructing" << std::endl)
 
   //ds allocate minimal set of parameters
-  command_line_parameters    = new CommandLineParameters(logging_level_);
-  world_map_parameters       = new WorldMapParameters(logging_level_);
-  relocalizer_parameters     = new RelocalizerParameters(logging_level_);
-  graph_optimizer_parameters = new GraphOptimizerParameters(logging_level_);
+  command_line_parameters    = new CommandLineParameters();
+  world_map_parameters       = new WorldMapParameters();
+  relocalizer_parameters     = new RelocalizerParameters();
+  graph_optimizer_parameters = new GraphOptimizerParameters();
 
-  image_viewer_parameters   = new ImageViewerParameters(logging_level_);
-  map_viewer_parameters     = new MapViewerParameters(logging_level_);
-  top_map_viewer_parameters = new MapViewerParameters(logging_level_);
+  image_viewer_parameters   = new ImageViewerParameters();
+  map_viewer_parameters     = new MapViewerParameters();
+  top_map_viewer_parameters = new MapViewerParameters();
 
   LOG_INFO(std::cerr << "ParameterCollection::ParameterCollection|constructed" << std::endl)
 }
@@ -325,7 +323,7 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     PARSE_PARAMETER(configuration, world_map, world_map_parameters, minimum_distance_traveled_for_local_map, real)
     PARSE_PARAMETER(configuration, world_map, world_map_parameters, minimum_degrees_rotated_for_local_map, real)
     PARSE_PARAMETER(configuration, world_map, world_map_parameters, minimum_number_of_frames_for_local_map, Count)
-//    PARSE_PARAMETER(configuration, landmark, world_map_parameters->landmark, minimum_number_of_forced_updates, Count)
+    PARSE_PARAMETER(configuration, landmark, world_map_parameters->landmark, maximum_error_squared_meters, real)
     PARSE_PARAMETER(configuration, local_map, world_map_parameters->local_map, minimum_number_of_landmarks, Count)
 
     //ds mode specific parameters
@@ -347,8 +345,8 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
         tracker_parameters               = depth_tracker_parameters;
 
         //FramepointGeneration (SPECIFIC)
-        PARSE_PARAMETER(configuration, depth_framepoint_generation, depth_framepoint_generator_parameters, maximum_depth_near_meters, real)
-        PARSE_PARAMETER(configuration, depth_framepoint_generation, depth_framepoint_generator_parameters, maximum_depth_far_meters, real)
+        PARSE_PARAMETER(configuration, depth_framepoint_generation, depth_framepoint_generator_parameters, maximum_depth_meters, real)
+        PARSE_PARAMETER(configuration, depth_framepoint_generation, depth_framepoint_generator_parameters, minimum_depth_meters, real)
         break;
       }
       default: {
@@ -453,17 +451,17 @@ void ParameterCollection::setMode(const CommandLineParameters::TrackerMode& mode
   //ds generate tracker mode specific parameters
   switch (mode_) {
     case CommandLineParameters::TrackerMode::RGB_STEREO: {
-      if (!stereo_framepoint_generator_parameters) {stereo_framepoint_generator_parameters = new StereoFramePointGeneratorParameters(command_line_parameters->logging_level);}
+      if (!stereo_framepoint_generator_parameters) {stereo_framepoint_generator_parameters = new StereoFramePointGeneratorParameters();}
       if (!stereo_tracker_parameters) {
-        stereo_tracker_parameters = new StereoTrackerParameters(command_line_parameters->logging_level);
+        stereo_tracker_parameters = new StereoTrackerParameters();
       }
       stereo_tracker_parameters->enable_landmark_recovery = command_line_parameters->option_recover_landmarks;
       break;
     }
     case CommandLineParameters::TrackerMode::RGB_DEPTH: {
-      if (!depth_framepoint_generator_parameters) {depth_framepoint_generator_parameters = new DepthFramePointGeneratorParameters(command_line_parameters->logging_level);}
+      if (!depth_framepoint_generator_parameters) {depth_framepoint_generator_parameters = new DepthFramePointGeneratorParameters();}
       if (!depth_tracker_parameters) {
-        depth_tracker_parameters = new DepthTrackerParameters(command_line_parameters->logging_level);
+        depth_tracker_parameters = new DepthTrackerParameters();
       }
       depth_tracker_parameters->enable_landmark_recovery = command_line_parameters->option_recover_landmarks;
       break;

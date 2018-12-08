@@ -16,6 +16,16 @@ Camera::Camera(const Count& image_rows_,
   LOG_INFO(std::cerr << "Camera::Camera|constructed" << std::endl)
 }
 
+Camera::Camera(srrg_core::PinholeImageMessage* message_): _identifier(_instances),
+                                                          _number_of_image_rows(message_->image().rows),
+                                                          _number_of_image_cols(message_->image().cols) {
+  ++_instances;
+  setCameraMatrix(message_->cameraMatrix().cast<real>());
+  setCameraToRobot(message_->offset().cast<real>());
+  LOG_INFO(std::cerr << "Camera::Camera|constructed from message: " << message_->className()
+                     << " with topic: " << message_->topic() << std::endl)
+}
+
 const bool Camera::isInFieldOfView(const ImageCoordinates& image_coordinates_) const {
   assert(image_coordinates_.z() == 1);
   return ((image_coordinates_.x() >= 0 && image_coordinates_.x() <= _number_of_image_cols)&&

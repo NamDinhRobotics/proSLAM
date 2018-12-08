@@ -7,20 +7,11 @@ namespace proslam {
 class Parameters {
 public:
 
-  //! @brief constructor
-  Parameters(const LoggingLevel& logging_level_): logging_level(logging_level_) {}
-
-  //! @brief disable default construction
-  Parameters() = delete;
-
   //! @brief destructor
   virtual ~Parameters() {}
 
   //! @brief parameter printing function
   virtual void print() const = 0;
-
-  //! @brief log level (for all components) - currently disabled and defined at compile time for all components
-  LoggingLevel logging_level;
 
   //! @brief SLAM system motion models
   enum MotionModel {NONE,
@@ -41,7 +32,7 @@ public:
 public:
 
   //! @brief constructor
-  CommandLineParameters(const LoggingLevel& logging_level_): Parameters(logging_level_) {}
+  CommandLineParameters() {}
 
   //! @brief parameter printing function
   virtual void print() const;
@@ -73,7 +64,7 @@ class AlignerParameters: public Parameters {
 public:
 
   //! @brief constructor
-  AlignerParameters(const LoggingLevel& logging_level_): Parameters(logging_level_) {}
+  AlignerParameters() {}
 
   //! @brief parameter printing function
   virtual void print() const;
@@ -102,13 +93,16 @@ class LandmarkParameters: public Parameters {
 public:
 
   //! @brief constructor
-  LandmarkParameters(const LoggingLevel& logging_level_): Parameters(logging_level_) {}
+  LandmarkParameters() {}
 
   //! @brief parameter printing function
   virtual void print() const;
 
   //! @brief minimum number of measurements before optimization is filtering
 //  Count minimum_number_of_forced_updates = 2;
+
+  //! @brief maximum measured distance kernel for landmark optimization
+  real maximum_error_squared_meters = 5*5;
 };
 
 //! @class local map parameters
@@ -116,7 +110,7 @@ class LocalMapParameters: public Parameters {
 public:
 
   //! @brief constructor
-  LocalMapParameters(const LoggingLevel& logging_level_): Parameters(logging_level_) {}
+  LocalMapParameters() {}
 
   //! @brief parameter printing function
   virtual void print() const;
@@ -133,9 +127,8 @@ class WorldMapParameters: public Parameters {
 public:
 
   //! @brief default constructor
-  WorldMapParameters(const LoggingLevel& logging_level_): Parameters(logging_level_),
-                                                          landmark(new LandmarkParameters(logging_level_)),
-                                                          local_map(new LocalMapParameters(logging_level_)) {};
+  WorldMapParameters(): landmark(new LandmarkParameters()),
+                        local_map(new LocalMapParameters()) {}
 
   //! @brief destructor: clean inner parameters
   ~WorldMapParameters() {delete landmark; delete local_map;}
@@ -160,7 +153,7 @@ class BaseFramePointGeneratorParameters: public Parameters {
 public:
 
   //! @brief constructor
-  BaseFramePointGeneratorParameters(const LoggingLevel& logging_level_): Parameters(logging_level_) {}
+  BaseFramePointGeneratorParameters() {}
 
   //! @brief parameter printing function
   virtual void print() const;
@@ -201,7 +194,7 @@ class StereoFramePointGeneratorParameters: public BaseFramePointGeneratorParamet
 public:
 
   //! @brief constructor
-  StereoFramePointGeneratorParameters(const LoggingLevel& logging_level_): BaseFramePointGeneratorParameters(logging_level_) {}
+  StereoFramePointGeneratorParameters() {}
 
   //! @brief parameter printing function
   virtual void print() const;
@@ -221,14 +214,14 @@ class DepthFramePointGeneratorParameters: public BaseFramePointGeneratorParamete
 public:
 
   //! @brief constructor
-  DepthFramePointGeneratorParameters(const LoggingLevel& logging_level_): BaseFramePointGeneratorParameters(logging_level_) {}
+  DepthFramePointGeneratorParameters() {}
 
   //! @brief parameter printing function
   virtual void print() const;
 
   //! @brief depth sensor configuration
-  real maximum_depth_near_meters = 5;
-  real maximum_depth_far_meters  = 20;
+  real maximum_depth_meters = 5;
+  real minimum_depth_meters = 0.1;
 };
 
 //! @class base tracker parameters
@@ -236,7 +229,7 @@ class BaseTrackerParameters: public Parameters {
 protected:
 
   //! @brief default construction (only by subclasses)
-  BaseTrackerParameters(const LoggingLevel& logging_level_);
+  BaseTrackerParameters();
 
   //! @brief destructor: clean inner parameters
   ~BaseTrackerParameters() {delete aligner;}
@@ -278,7 +271,7 @@ class StereoTrackerParameters: public BaseTrackerParameters {
 public:
 
   //! @brief constructor
-  StereoTrackerParameters(const LoggingLevel& logging_level_): BaseTrackerParameters(logging_level_) {}
+  StereoTrackerParameters() {}
 
   //! @brief parameter printing function
   virtual void print() const;
@@ -289,7 +282,7 @@ class DepthTrackerParameters: public BaseTrackerParameters {
 public:
 
   //! @brief constructor
-  DepthTrackerParameters(const LoggingLevel& logging_level_): BaseTrackerParameters(logging_level_) {}
+  DepthTrackerParameters() {}
 
   //! @brief parameter printing function
   virtual void print() const;
@@ -300,8 +293,7 @@ class RelocalizerParameters: public Parameters {
 public:
 
   //! @brief default constructor
-  RelocalizerParameters(const LoggingLevel& logging_level_): Parameters(logging_level_),
-                                                             aligner(new AlignerParameters(logging_level_)) {}
+  RelocalizerParameters(): aligner(new AlignerParameters()) {}
 
   //! @brief destructor: clean inner parameters
   ~RelocalizerParameters() {delete aligner;}
@@ -333,7 +325,7 @@ class GraphOptimizerParameters: public Parameters {
 public:
 
   //! @brief default constructor
-  GraphOptimizerParameters(const LoggingLevel& logging_level_): Parameters(logging_level_) {}
+  GraphOptimizerParameters() {}
 
   //! @brief destructor: clean inner parameters
   ~GraphOptimizerParameters() {}
@@ -380,7 +372,7 @@ class ImageViewerParameters: public Parameters {
 public:
 
   //! @brief default constructor
-  ImageViewerParameters(const LoggingLevel& logging_level_): Parameters(logging_level_) {}
+  ImageViewerParameters() {}
 
   //! @brief parameter printing function
   virtual void print() const;
@@ -398,7 +390,7 @@ class MapViewerParameters: public Parameters {
 public:
 
   //! @brief default constructor
-  MapViewerParameters(const LoggingLevel& logging_level_): Parameters(logging_level_) {}
+  MapViewerParameters() {}
 
   //! @brief parameter printing function
   virtual void print() const;
@@ -427,7 +419,7 @@ public:
   //! allocates the minimal set of parameters
   //! specific parameter sets are allocated automatically after parsing the command line
   //! @param[in] logging_level_ desired logging level for contained parameters
-  ParameterCollection(const LoggingLevel& logging_level_);
+  ParameterCollection();
 
   //! @brief default destructor
   ~ParameterCollection();

@@ -10,16 +10,11 @@ class DepthTracker: public BaseTracker {
 //ds object management
 PROSLAM_MAKE_PROCESSING_CLASS(DepthTracker)
 
-//ds functionality
-public:
-
-  virtual void compute();
-
 //ds setters/getters
 public:
 
   void setDepthCamera(const Camera* depth_camera_) {_depth_camera = depth_camera_;}
-  void setDepthImage(const cv::Mat& depth_image_) {_depth_image = depth_image_;}
+  void setImageSecondary(const cv::Mat& image_) {_depth_image = image_;}
 
 //ds helpers
 protected:

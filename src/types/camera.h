@@ -1,5 +1,6 @@
 #pragma once
 #include "definitions.h"
+#include "srrg_messages/pinhole_image_message.h"
 
 namespace proslam {
 
@@ -19,6 +20,9 @@ public:
          const Count& number_of_image_cols_,
          const CameraMatrix& camera_matrix_,
          const TransformMatrix3D& camera_to_robot_ = TransformMatrix3D::Identity());
+
+  //! @brief constructs a camera from a srrg_core::PinholeImageMessage*
+  Camera(srrg_core::PinholeImageMessage* message_);
 
   //! @brief prohibit default construction
   Camera() = delete;

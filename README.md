@@ -124,15 +124,19 @@ The specific configuration files (`configuration_kitti.yaml, configuration_euroc
 
 ---
 ### Pre-formatted SRRG datasets (online ground truth display) ###
+Rigid stereo RGB:
  - `KITTI Sequence 00`: https://drive.google.com/open?id=0ByaBRAPfmgEqdXhJRmktQ2lsMEE (2.8GB)
  - `KITTI Sequence 01`: https://drive.google.com/open?id=0ByaBRAPfmgEqN19hTUJjRG9XV3M (0.7GB)
  - `KITTI Sequence 03`: https://drive.google.com/open?id=1ySsnZoMT_HotLWF9ToyWIa3Ud_YhSEKj (0.6GB)
  - `KITTI Sequence 04`: https://drive.google.com/open?id=0ByaBRAPfmgEqOEhEdEdLcUJUMlE (0.2GB)
  - `KITTI Sequence 06`: https://drive.google.com/open?id=0ByaBRAPfmgEqcC14TS1mbF9XSmc (0.7GB)
  - `KITTI Sequence 10`: https://drive.google.com/open?id=1Nt71O0i0ClZwa6W8PrybjlNV9Xq99S1y (0.7GB)
- - `EuRoC MH_01_easy`: https://drive.google.com/open?id=0ByaBRAPfmgEqbUctejZwb0xRaFk (1.3GB)
- - `EuRoC MH_05_difficult`: https://drive.google.com/open?id=0ByaBRAPfmgEqTWVCZDVqNTY2QXc (0.8GB)
- - `EuRoC V1_01_easy`: https://drive.google.com/open?id=0ByaBRAPfmgEqRW5aWUZWV1NLSVE (1.0GB) <br/>
+ - `EuRoC MH_01_easy` (VI-Sensor): https://drive.google.com/open?id=0ByaBRAPfmgEqbUctejZwb0xRaFk (1.3GB)
+ - `EuRoC MH_05_difficult` (VI-Sensor): https://drive.google.com/open?id=0ByaBRAPfmgEqTWVCZDVqNTY2QXc (0.8GB)
+ - `EuRoC V1_01_easy` (VI-Sensor): https://drive.google.com/open?id=0ByaBRAPfmgEqRW5aWUZWV1NLSVE (1.0GB)
+
+RGB-D:
+ - `Orazio Run` (Xtion): https://drive.google.com/open?id=1otTszNB91Gn_Di8mOAaShMd6bquEonUC (4.0GB)
 
 Run procedure remains identical to the one above (only the dataset name has to be adjusted, e.g. `00.txt` becomes `MH_01_easy.txt`) <br/>
 The ground truth display can be toggled by pressing the Number key `4` in the "output: map" window <br/>
@@ -141,7 +145,7 @@ The EuRoC sequences generally require image histogram equalization for best perf
 Dataset conversion utilities are available in the [srrg_core](https://gitlab.com/srrg-software/srrg_core) package <br/>
 An example to obtain a converted EuRoC sequence (e.g. `MH_01_easy.txt`, using a hardcoded camera calibration) goes as follows:
 
-    rosrun srrg_core srrg_message_converter_euroc_app -o MH_01_easy.txt -hard-calibration
+		rosrun srrg_core srrg_message_converter_euroc_app -o MH_01_easy.txt -hard-calibration
 
 Note that the command has to be issued from inside of the ASL folder `mav0` <br/>
 
@@ -153,14 +157,22 @@ Please use the provided datasets in SRRG format. <br/>
 The ROS node is currently under development.
 
 ---
-### [Configuration file][proslam_wiki] (YAML) ###
-ProSLAM supports classic YAML configuration files, enabling fine-grained adjustment of deep system parameters. <br/>
+### [Configuration][proslam_wiki] (YAML) ###
+ProSLAM supports regular YAML configuration files, enabling fine-grained adjustment of deep system parameters. <br/>
 Example configuration files can be found in the `configurations` folder. <br/>
 A custom configuration file can be specified as follows:
 
-    rosrun srrg_proslam app 00.txt -c configuration.yaml
+		rosrun srrg_proslam app 00.txt -c configuration.yaml
     
-[proslam_wiki]: https://gitlab.com/srrg-software/srrg_proslam/wikis/home
+Off-the-shelf configuration(s) for rigid stereo RGB (e.g. KITTI):
+
+		rosrun srrg_proslam app 00.txt -c configuration_kitti.yaml
+
+		rosrun srrg_proslam app 00.txt -c configuration_kitti_fast.yaml
+    
+Off-the-shelf configuration(s) for RGB-D (e.g. Orazio):
+    
+		rosrun srrg_proslam app orazio_2016_run.txt -c configuration_xtion.yaml
 
 ---
 ### Full system overview (might take some time to load)
@@ -186,3 +198,5 @@ Please cite our most recent article when using the ProSLAM system: <br>
     }
 
 > ICRA 2018 'ProSLAM: Graph SLAM from a Programmer's Perspective' https://ieeexplore.ieee.org/document/8461180/ (DOI: 10.1109/ICRA.2018.8461180)
+
+[proslam_wiki]: https://gitlab.com/srrg-software/srrg_proslam/wikis/home

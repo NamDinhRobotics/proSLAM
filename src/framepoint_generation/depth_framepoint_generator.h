@@ -42,9 +42,7 @@ protected:
 //ds settings
 protected:
 
-  const Camera* _camera_right;
-
-  const real _maximum_reliable_depth_far_meters = 5;
+  const Camera* _camera_right = nullptr;
 
   //ds inner memory buffers (operated on in compute)
   cv::Mat _space_map_left_meters; // xyz coordinates of every pixel of the left image in meters

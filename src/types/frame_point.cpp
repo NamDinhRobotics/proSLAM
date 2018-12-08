@@ -25,7 +25,11 @@ FramePoint::FramePoint(const cv::KeyPoint& keypoint_left_,
 
 FramePoint::FramePoint(const IntensityFeature* feature_left_,
                        const IntensityFeature* feature_right_,
-                       Frame* frame_): FramePoint(feature_left_->keypoint, feature_left_->descriptor, feature_right_->keypoint,  feature_right_->descriptor, frame_) {
+                       Frame* frame_): FramePoint(feature_left_->keypoint,
+                                                  feature_left_->descriptor,
+                                                  feature_right_->keypoint,
+                                                  feature_right_->descriptor,
+                                                  frame_) {
   _feature_left  = feature_left_;
   _feature_right = feature_right_;
 }

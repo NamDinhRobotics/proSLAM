@@ -15,11 +15,14 @@ PROSLAM_MAKE_PROCESSING_CLASS(BaseTracker)
 public:
 
   //! @brief creates a new Frame for the given images, retrieves the correspondences relative to the previous Frame, optimizes the current frame pose and updates landmarks
-  virtual void compute();
+  void compute();
 
   //! @breaks the track at the current frame
   //! @param[in] frame_ target frame to break the track at
   void breakTrack(Frame* frame_);
+
+  //! @brief auxilary data (handled by subclasses)
+  virtual void setImageSecondary(const cv::Mat& image_) = 0;
 
 //ds getters/setters
 public:
@@ -47,15 +50,13 @@ protected:
   //ds retrieves framepoint correspondences between previous and current frame
   void _track(Frame* previous_frame_,
               Frame* current_frame_,
-              const TransformMatrix3D& previous_to_current_,
               const bool& track_by_appearance_ = false);
 
   //! @brief recursive registration method, that calls track framepoints with different parameters upon failure
-  //! @param [in] frame_previous_ the previous frame
-  //! @param [in] frame_current_ the current frame to align against the previous frame
-  void _registerRecursive(Frame* frame_previous_,
-                          Frame* frame_current_,
-                          TransformMatrix3D previous_to_current_,
+  //! @param [in] previous_frame_ the previous frame
+  //! @param [in] current_frame_ the current frame to align against the previous frame
+  void _registerRecursive(Frame* previous_frame_,
+                          Frame* current_frame_,
                           const Count& recursion_ = 0);
 
   //ds prunes invalid tracks after pose optimization
@@ -70,13 +71,16 @@ protected:
   //ds creates a frame, which is filled by calling the framepoint generator
   virtual Frame* _createFrame() = 0;
 
+  //! @brief resets the pose estimate to a fallback estimate
+  //! depending on the selected motion model and/or additinal sensors (e.g. odometry)
+  void _fallbackEstimate(Frame* current_frame_,
+                         Frame* previous_frame_);
+
 //ds attributes
 protected:
 
-  //ds tracker state
-  Frame::Status _status                        = Frame::Localizing;
-  Frame::Status _status_previous               = Frame::Localizing;
-  uint64_t _number_of_recursive_registrations  = 0;
+  //ds current tracker state
+  Frame::Status _status = Frame::Localizing;
 
   //ds running variables and buffered values
   Count _number_of_tracked_landmarks          = 0;
@@ -100,8 +104,12 @@ protected:
   BaseFrameAligner* _pose_optimizer              = nullptr;
   BaseFramePointGenerator* _framepoint_generator = nullptr;
 
-  //! @brief position tracking bookkeeping (required for motion model: CONSTANT_VELOCITY)
+  //! @brief position tracking bookkeeping: after optimization
   TransformMatrix3D _previous_to_current_camera = TransformMatrix3D::Identity();
+
+  //ds additional information
+  TransformMatrix3D _camera_left_in_world_guess;
+  TransformMatrix3D _camera_left_in_world_guess_previous;
 
   //ds framepoint track recovery
   Count _number_of_lost_points      = 0;
@@ -109,6 +117,7 @@ protected:
   FramePointPointerVector _lost_points;
 
   //ds stats only
+  uint64_t _number_of_recursive_registrations  = 0;
   real _mean_number_of_keypoints   = 0;
   real _mean_number_of_framepoints = 0;
 
@@ -123,7 +132,5 @@ private:
   Count _total_number_of_tracked_points = 0;
   Count _total_number_of_landmarks      = 0;
   bool _has_guess;
-  TransformMatrix3D _camera_left_in_world_guess;
-  TransformMatrix3D _camera_left_in_world_guess_previous;
 };
 }

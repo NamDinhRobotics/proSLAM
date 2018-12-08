@@ -63,7 +63,6 @@ void Landmark::update(FramePoint* point_) {
   Matrix3 jacobian_transposed;
   Matrix3 omega(Matrix3::Identity());
   real total_error_squared_previous = 0;
-  const real maximum_error_squared_meters = 5*5;
 
   //ds gauss newton descent
   for (uint32_t iteration = 0; iteration < 1000; ++iteration) {
@@ -94,8 +93,8 @@ void Landmark::update(FramePoint* point_) {
       total_error_squared += error_squared;
 
       //ds robust kernel
-      if (error_squared > maximum_error_squared_meters) {
-        omega *= maximum_error_squared_meters/error_squared;
+      if (error_squared > _parameters->maximum_error_squared_meters) {
+        omega *= _parameters->maximum_error_squared_meters/error_squared;
         ++number_of_outliers;
       }
 

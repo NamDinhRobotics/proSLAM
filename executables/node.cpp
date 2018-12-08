@@ -162,7 +162,7 @@ int32_t main(int32_t argc_, char** argv_) {
   cv::setUseOptimized(true);
 
   //ds allocate the complete parameter collection with default values
-  proslam::ParameterCollection* parameters = new proslam::ParameterCollection(proslam::LoggingLevel::Debug);
+  proslam::ParameterCollection* parameters = new proslam::ParameterCollection();
 
   try {
 

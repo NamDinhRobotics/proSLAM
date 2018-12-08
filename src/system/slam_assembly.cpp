@@ -1,13 +1,10 @@
 #include "slam_assembly.h"
-
-#include "srrg_messages/pinhole_image_message.h"
 #include "position_tracking/depth_tracker.h"
 #include "position_tracking/stereo_tracker.h"
 #include "aligners/stereouv_aligner.h"
 #include "aligners/uvd_aligner.h"
 
 namespace proslam {
-
 SLAMAssembly::SLAMAssembly(ParameterCollection* parameters_): _parameters(parameters_),
                                                               _world_map(new WorldMap(_parameters->world_map_parameters)),
                                                               _graph_optimizer(new GraphOptimizer(_parameters->graph_optimizer_parameters)),
@@ -87,7 +84,7 @@ void SLAMAssembly::_createStereoTracker(Camera* camera_left_, Camera* camera_rig
 void SLAMAssembly::_createDepthTracker(Camera* camera_left_, Camera* camera_right_){
 
   //ds allocate and configure the framepoint generator
-  _camera_left = camera_left_;
+  _camera_left  = camera_left_;
   _camera_right = camera_right_;
   DepthFramePointGenerator* framepoint_generator = new DepthFramePointGenerator(_parameters->depth_framepoint_generator_parameters);
   framepoint_generator->setCameraLeft(camera_left_);
@@ -133,27 +130,27 @@ void SLAMAssembly::loadCamerasFromMessageFile() {
 
   //ds quickly read the first messages to buffer camera info
   srrg_core::BaseMessage* message = 0;
+  _camera_left  = nullptr;
+  _camera_right = nullptr;
   while ((message = _message_reader.readMessage())) {
-    srrg_core::BaseSensorMessage* sensor_message = dynamic_cast<srrg_core::BaseSensorMessage*>(message);
-    if (sensor_message) {
+
+    //ds we currently only process image data!
+    srrg_core::PinholeImageMessage* image_message = dynamic_cast<srrg_core::PinholeImageMessage*>(message);
+    if (image_message) {
+
+      //ds fix orazio orientation TODO purify dataset calibration parameters
+      if (_parameters->command_line_parameters->dataset_file_name == "orazio_2016_run.txt") {
+        std::cerr << "applying orazio tilt correction" << std::endl;
+        Eigen::Isometry3f offset_corrected(image_message->offset());
+        offset_corrected.rotate(Eigen::AngleAxisf(0.3, Eigen::Vector3f::UnitX()));
+        image_message->setOffset(offset_corrected);
+      }
 
       //ds check for the two set topics to set the camera objects
-      if (_camera_left == 0 && sensor_message->topic().compare(_parameters->command_line_parameters->topic_image_left) == 0) {
-        srrg_core::PinholeImageMessage* message_image_left = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_message);
-
-        //ds allocate a new camera
-        _camera_left = new Camera(message_image_left->image().rows,
-                                  message_image_left->image().cols,
-                                  message_image_left->cameraMatrix().cast<real>(),
-                                  message_image_left->offset().cast<real>());
-      } else if (_camera_right == 0 && sensor_message->topic().compare(_parameters->command_line_parameters->topic_image_right) == 0) {
-        srrg_core::PinholeImageMessage* message_image_right = dynamic_cast<srrg_core::PinholeImageMessage*>(sensor_message);
-
-        //ds allocate a new camera
-        _camera_right = new Camera(message_image_right->image().rows,
-                                   message_image_right->image().cols,
-                                   message_image_right->cameraMatrix().cast<real>(),
-                                   message_image_right->offset().cast<real>());
+      if (_camera_left == nullptr && image_message->topic() == _parameters->command_line_parameters->topic_image_left) {
+        _camera_left = new Camera(image_message);
+      } else if (_camera_right == nullptr && image_message->topic() == _parameters->command_line_parameters->topic_image_right) {
+        _camera_right = new Camera(image_message);
       }
     }
     message->untaint();
@@ -193,10 +190,10 @@ void SLAMAssembly::loadCamerasFromMessageFile() {
 
     //ds set left
     _camera_left->setProjectionMatrix(projection_matrix);
-    LOG_DEBUG(std::cerr << "projection matrix LEFT: " << std::endl;)
-    LOG_DEBUG(std::printf("%11.6f %11.6f %11.6f %11.6f\n", projection_matrix(0,0), projection_matrix(0,1), projection_matrix(0,2), projection_matrix(0,3)))
-    LOG_DEBUG(std::printf("%11.6f %11.6f %11.6f %11.6f\n", projection_matrix(1,0), projection_matrix(1,1), projection_matrix(1,2), projection_matrix(1,3)))
-    LOG_DEBUG(std::printf("%11.6f %11.6f %11.6f %11.6f\n", projection_matrix(2,0), projection_matrix(2,1), projection_matrix(2,2), projection_matrix(2,3)))
+    LOG_INFO(std::cerr << "projection matrix LEFT: " << std::endl;)
+    LOG_INFO(std::printf("%11.6f %11.6f %11.6f %11.6f\n", projection_matrix(0,0), projection_matrix(0,1), projection_matrix(0,2), projection_matrix(0,3)))
+    LOG_INFO(std::printf("%11.6f %11.6f %11.6f %11.6f\n", projection_matrix(1,0), projection_matrix(1,1), projection_matrix(1,2), projection_matrix(1,3)))
+    LOG_INFO(std::printf("%11.6f %11.6f %11.6f %11.6f\n", projection_matrix(2,0), projection_matrix(2,1), projection_matrix(2,2), projection_matrix(2,3)))
 
     //ds sanity check
     if ((_camera_left->cameraMatrix()-_camera_right->cameraMatrix()).squaredNorm() != 0) {
@@ -208,10 +205,10 @@ void SLAMAssembly::loadCamerasFromMessageFile() {
     projection_matrix.block<3,1>(0,3) = _camera_left->cameraMatrix()*_camera_right->robotToCamera().translation();
     _camera_right->setProjectionMatrix(projection_matrix);
     _camera_right->setBaselineHomogeneous(projection_matrix.col(3));
-    LOG_DEBUG(std::cerr << "projection matrix RIGHT: " << std::endl;)
-    LOG_DEBUG(std::printf("%11.6f %11.6f %11.6f %11.6f\n", projection_matrix(0,0), projection_matrix(0,1), projection_matrix(0,2), projection_matrix(0,3) ))
-    LOG_DEBUG(std::printf("%11.6f %11.6f %11.6f %11.6f\n", projection_matrix(1,0), projection_matrix(1,1), projection_matrix(1,2), projection_matrix(1,3)))
-    LOG_DEBUG(std::printf("%11.6f %11.6f %11.6f %11.6f\n", projection_matrix(2,0), projection_matrix(2,1), projection_matrix(2,2), projection_matrix(2,3)))
+    LOG_INFO(std::cerr << "projection matrix RIGHT: " << std::endl;)
+    LOG_INFO(std::printf("%11.6f %11.6f %11.6f %11.6f\n", projection_matrix(0,0), projection_matrix(0,1), projection_matrix(0,2), projection_matrix(0,3) ))
+    LOG_INFO(std::printf("%11.6f %11.6f %11.6f %11.6f\n", projection_matrix(1,0), projection_matrix(1,1), projection_matrix(1,2), projection_matrix(1,3)))
+    LOG_INFO(std::printf("%11.6f %11.6f %11.6f %11.6f\n", projection_matrix(2,0), projection_matrix(2,1), projection_matrix(2,2), projection_matrix(2,3)))
   }
 
   //ds load cameras to assembly
@@ -357,7 +354,7 @@ void SLAMAssembly::playbackMessageFile() {
   _message_reader.open(_parameters->command_line_parameters->dataset_file_name);
 
   //ds frame counts
-  _number_of_processed_frames = 0;
+  _number_of_processed_frames              = 0;
   Count number_of_processed_frames_current = 0;
 
   //ds time measurement
@@ -401,24 +398,24 @@ void SLAMAssembly::playbackMessageFile() {
       }
 
       //ds buffer images
-      cv::Mat intensity_image_left_rectified;
+      cv::Mat image_left;
       if(image_message_left->image().type() == CV_8UC3){
-        cvtColor(image_message_left->image(), intensity_image_left_rectified, CV_BGR2GRAY);
+        cvtColor(image_message_left->image(), image_left, CV_BGR2GRAY);
       } else {
-        intensity_image_left_rectified = image_message_left->image();
+        image_left = image_message_left->image();
       }
-      cv::Mat intensity_image_right_rectified;
+      cv::Mat image_right;
       if (_parameters->command_line_parameters->tracker_mode == CommandLineParameters::TrackerMode::RGB_STEREO && image_message_right->image().type() == CV_8UC3) {
-        cvtColor(image_message_right->image(), intensity_image_right_rectified, CV_BGR2GRAY);
+        cvtColor(image_message_right->image(), image_right, CV_BGR2GRAY);
       } else {
-        intensity_image_right_rectified = image_message_right->image();
+        image_right = image_message_right->image();
       }
 
       //ds preprocess the images if desired
       if (_parameters->command_line_parameters->option_equalize_histogram) {
-        cv::equalizeHist(intensity_image_left_rectified, intensity_image_left_rectified);
+        cv::equalizeHist(image_left, image_left);
         if (_parameters->command_line_parameters->tracker_mode == CommandLineParameters::TrackerMode::RGB_STEREO) {
-          cv::equalizeHist(intensity_image_right_rectified, intensity_image_right_rectified);
+          cv::equalizeHist(image_right, image_right);
         }
       }
 
@@ -427,8 +424,10 @@ void SLAMAssembly::playbackMessageFile() {
       if (image_message_left->hasOdom()) {
 
         //ds get odometry into camera frame
-        const TransformMatrix3D& robot_to_world = image_message_left->odometry().cast<real>();
+        const TransformMatrix3D robot_to_world = image_message_left->odometry().cast<real>();
         camera_left_to_world_guess = robot_to_world*_camera_left->cameraToRobot();
+
+
 
         //ds if first frame is available
         if (_world_map->frames().size() == 0) {
@@ -445,8 +444,7 @@ void SLAMAssembly::playbackMessageFile() {
       const double time_start_seconds = srrg_core::getTime();
 
       //ds progress SLAM with the new images
-      process(intensity_image_left_rectified,
-              intensity_image_right_rectified,
+      process(image_left, image_right,
               image_message_left->timestamp(),
               image_message_left->hasOdom(),
               camera_left_to_world_guess);
@@ -498,8 +496,8 @@ void SLAMAssembly::playbackMessageFile() {
       updateGUI();
 
       //ds free image references (GUI gets copies)
-      intensity_image_left_rectified.release();
-      intensity_image_right_rectified.release();
+      image_left.release();
+      image_right.release();
     }
   }
   _message_reader.close();
@@ -512,27 +510,9 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
                            const bool& use_guess_,
                            const TransformMatrix3D& camera_left_in_world_guess_) {
 
-  //ds call the tracker
+  //ds provide tracker with data
   _tracker->setIntensityImageLeft(intensity_image_left_);
-
-  //ds depending on tracking mode we have to set auxiliary information (UGLY)
-  switch (_parameters->command_line_parameters->tracker_mode){
-    case CommandLineParameters::TrackerMode::RGB_STEREO: {
-      StereoTracker* stereo_tracker = dynamic_cast<StereoTracker*>(_tracker);
-      assert(stereo_tracker);
-      stereo_tracker->setIntensityImageRight(intensity_image_right_);
-      break;
-    }
-    case CommandLineParameters::TrackerMode::RGB_DEPTH: {
-      DepthTracker* depth_tracker = dynamic_cast<DepthTracker*>(_tracker);
-      assert(depth_tracker);
-      depth_tracker->setDepthImage(intensity_image_right_);
-      break;
-    }
-    default: {
-      throw std::runtime_error("unknown tracker");
-    }
-  }
+  _tracker->setImageSecondary(intensity_image_right_);
 
   //ds if we have a prior on the camera pose
   if (use_guess_) {

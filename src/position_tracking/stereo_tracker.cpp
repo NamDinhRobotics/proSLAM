@@ -31,11 +31,6 @@ namespace proslam {
     current_frame->setIntensityImageRight(_intensity_image_right);
     return current_frame;
   }
-  
-  //ds creates a new Frame for the given images, retrieves the correspondences relative to the previous Frame, optimizes the current frame pose and updates landmarks
-  void StereoTracker::compute() {
-    BaseTracker::compute();
-  }
 
   //ds attempts to recover framepoints in the current image using the more precise pose estimate, retrieved after pose optimization
   void StereoTracker::_recoverPoints(Frame* current_frame_) {

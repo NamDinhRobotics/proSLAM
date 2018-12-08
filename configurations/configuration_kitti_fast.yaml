@@ -28,8 +28,8 @@ command_line:
 
 landmark:
 
-  #ds minimum number of measurements to always integrate
-  minimum_number_of_forced_updates: 2
+  #ds maximum measured distance kernel for landmark optimization
+  maximum_error_squared_meters: 25.0
 
 local_map:
 

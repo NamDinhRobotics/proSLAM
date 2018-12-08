@@ -11,7 +11,7 @@ int32_t main(int32_t argc_, char** argv_) {
 
   //ds allocate the complete parameter collection with default values (will be propagated through the complete SLAM system)
   std::cerr << "main|loading parameters" << std::endl;
-  proslam::ParameterCollection* parameters = new proslam::ParameterCollection(proslam::LoggingLevel::Debug);
+  proslam::ParameterCollection* parameters = new proslam::ParameterCollection();
 
   //ds parse parameters from command line (optionally setting the parameter values)
   try {

@@ -69,7 +69,7 @@ FramePoint* Frame::createFramepoint(const cv::KeyPoint& keypoint_left_,
                                     const cv::Mat& descriptor_right_,
                                     const PointCoordinates& camera_coordinates_left_,
                                     FramePoint* previous_point_) {
-  assert(_camera_left != 0);
+  assert(_camera_left);
 
   //ds allocate a new point connected to the previous one
   FramePoint* frame_point = new FramePoint(keypoint_left_,
@@ -79,7 +79,7 @@ FramePoint* Frame::createFramepoint(const cv::KeyPoint& keypoint_left_,
                                            this);
   frame_point->setCameraCoordinatesLeft(camera_coordinates_left_);
   frame_point->setRobotCoordinates(_camera_left->cameraToRobot()*camera_coordinates_left_);
-  frame_point->setWorldCoordinates(this->robotToWorld()*frame_point->robotCoordinates());
+  frame_point->setWorldCoordinates(_robot_to_world*frame_point->robotCoordinates());
 
   //ds if there is a previous point
   if (previous_point_) {
@@ -92,11 +92,8 @@ FramePoint* Frame::createFramepoint(const cv::KeyPoint& keypoint_left_,
     frame_point->setOrigin(frame_point);
   }
 
-  //ds update depth statistics for this frame
-  const real depth_meters = camera_coordinates_left_.z();
-
   //ds update depth based on quality
-  frame_point->setDepthMeters(depth_meters);
+  frame_point->setDepthMeters(camera_coordinates_left_.z());
 
   //ds bookkeep each generated point for resize immune memory management (TODO remove costly bookkeeping)
   _created_points.push_back(frame_point);
@@ -107,34 +104,12 @@ FramePoint* Frame::createFramepoint(const IntensityFeature* feature_left_,
                                     const IntensityFeature* feature_right_,
                                     const PointCoordinates& camera_coordinates_left_,
                                     FramePoint* previous_point_) {
-  assert(_camera_left != 0);
-
-  //ds allocate a new point connected to the previous one
-  FramePoint* frame_point = new FramePoint(feature_left_, feature_right_, this);
-  frame_point->setCameraCoordinatesLeft(camera_coordinates_left_);
-  frame_point->setRobotCoordinates(_camera_left->cameraToRobot()*camera_coordinates_left_);
-  frame_point->setWorldCoordinates(this->robotToWorld()*frame_point->robotCoordinates());
-
-  //ds if there is a previous point
-  if (previous_point_) {
-
-    //ds connect the framepoints
-    frame_point->setPrevious(previous_point_);
-  } else {
-
-    //ds this point has no predecessor
-    frame_point->setOrigin(frame_point);
-  }
-
-  //ds update depth statistics for this frame
-  const real depth_meters = camera_coordinates_left_.z();
-
-  //ds update depth based on quality
-  frame_point->setDepthMeters(depth_meters);
-
-  //ds bookkeep each generated point for resize immune memory management (TODO remove costly bookkeeping)
-  _created_points.push_back(frame_point);
-  return frame_point;
+  return createFramepoint(feature_left_->keypoint,
+                          feature_left_->descriptor,
+                          feature_right_->keypoint,
+                          feature_right_->descriptor,
+                          camera_coordinates_left_,
+                          previous_point_);
 }
 
 void Frame::clear() {

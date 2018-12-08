@@ -61,7 +61,7 @@ int32_t main(int32_t argc_, char** argv_) {
   std::cerr << BAR << std::endl;
 
   //ds allocate stereo framepoint generator parameters
-  StereoFramePointGeneratorParameters* parameters = new StereoFramePointGeneratorParameters(LoggingLevel::Debug);
+  StereoFramePointGeneratorParameters* parameters = new StereoFramePointGeneratorParameters();
 
   //ds allocate and configure a stereo framepoint generator unit
   StereoFramePointGenerator* framepoint_generator = new StereoFramePointGenerator(parameters);

@@ -3,8 +3,7 @@
 namespace proslam {
 
 DepthFramePointGenerator::DepthFramePointGenerator(DepthFramePointGeneratorParameters* parameters_): BaseFramePointGenerator(parameters_),
-                                                                                                     _parameters(parameters_),
-                                                                                                     _camera_right(0) {
+                                                                                                     _parameters(parameters_) {
   LOG_INFO(std::cerr << "DepthFramePointGenerator::DepthFramePointGenerator|constructed" << std::endl)
 }
 
@@ -74,8 +73,13 @@ void DepthFramePointGenerator::compute(Frame* frame_) {
     //ds retrieve depth point at given pixel
     const cv::Vec3f& depth_point = _space_map_left_meters.at<const cv::Vec3f>(feature_left->row, feature_left->col);
 
-    //ds skip if above maximum reliable depth
-    if (depth_point[2] >= _maximum_reliable_depth_far_meters) {
+    //ds skip if above maximum depth
+    if (depth_point[2] >= _parameters->maximum_depth_meters) {
+      continue;
+    }
+
+    //ds skip if below minimum depth
+    if (depth_point[2] < _parameters->minimum_depth_meters) {
       continue;
     }
 
@@ -216,7 +220,12 @@ void DepthFramePointGenerator::track(Frame* frame_,
       const cv::Vec3f& depth_point = _space_map_left_meters.at<const cv::Vec3f>(feature_left->row, feature_left->col);
 
       //ds skip if above maximum reliable depth
-      if (depth_point[2] >= _maximum_reliable_depth_far_meters) {
+      if (depth_point[2] >= _parameters->maximum_depth_meters) {
+        continue;
+      }
+
+      //ds skip if below minimum depth
+      if (depth_point[2] < _parameters->minimum_depth_meters) {
         continue;
       }
 
@@ -273,11 +282,11 @@ void DepthFramePointGenerator::_computeDepthMap(const cv::Mat& right_depth_image
     throw std::runtime_error("depth tracker requires a 16bit mono image to encode depth");
   }
 
-  //ds allocate new space map and initialize fields
+  //ds allocate new space map and initialize fields with invalid maximum depth
   _space_map_left_meters.create(_number_of_rows_image,_number_of_cols_image, CV_32FC3);
   for (int32_t row = 0; row < _number_of_rows_image; ++row) {
     for (int32_t col = 0; col < _number_of_cols_image; ++col) {
-      _space_map_left_meters.at<cv::Vec3f>(row, col) = cv::Vec3f(0,0,_maximum_reliable_depth_far_meters);
+      _space_map_left_meters.at<cv::Vec3f>(row, col) = cv::Vec3f(0, 0, _parameters->maximum_depth_meters);
     }
   }
 
@@ -287,17 +296,18 @@ void DepthFramePointGenerator::_computeDepthMap(const cv::Mat& right_depth_image
   _col_map.create(_number_of_rows_image,_number_of_cols_image, CV_16SC1);
   _col_map=-1;
 
-  const Matrix3 inverse_camera_matrix_right=_camera_right->cameraMatrix().inverse();
-  const float _depth_pixel_to_meters=1e-3;
+  const Matrix3 inverse_camera_matrix_right = _camera_right->cameraMatrix().inverse();
+  const Matrix3 camera_matrix_left          = _camera_left->cameraMatrix();
+  const real _depth_pixel_to_meters         = 1e-3;
 
-  TransformMatrix3D right_to_left_transform=_camera_left->robotToCamera()*_camera_right->cameraToRobot();
+  TransformMatrix3D right_to_left_transform = _camera_left->robotToCamera()*_camera_right->cameraToRobot();
   for (int32_t r=0; r<_number_of_rows_image; ++r){
     const unsigned short* raw_depth=right_depth_image.ptr<const unsigned short>(r);
     for (int32_t c=0; c<_number_of_cols_image; ++c, raw_depth++){
       if (!*raw_depth)
         continue;
       // retrieve depth
-      const float depth_right_meters=(*raw_depth)*_depth_pixel_to_meters;
+      const real depth_right_meters=(*raw_depth)*_depth_pixel_to_meters;
       // retrieve point in right camers, meters
       Vector3 point_in_right_camera_meters=inverse_camera_matrix_right*Vector3(c*depth_right_meters, r*depth_right_meters,depth_right_meters);
       // map the point to the left camera
@@ -307,8 +317,8 @@ void DepthFramePointGenerator::_computeDepthMap(const cv::Mat& right_depth_image
       if (depth_left_meters<=0)
         continue;
       // project to image coordinates
-      Vector3 point_in_left_camera_pixels=_camera_left->cameraMatrix()*point_in_left_camera_meters;
-      point_in_left_camera_pixels *= 1./point_in_left_camera_pixels.z();
+      Vector3 point_in_left_camera_pixels = camera_matrix_left*point_in_left_camera_meters;
+      point_in_left_camera_pixels /= point_in_left_camera_pixels.z();
 
       // round to int
       const int32_t dest_r=round(point_in_left_camera_pixels.y());
@@ -328,8 +338,8 @@ void DepthFramePointGenerator::_computeDepthMap(const cv::Mat& right_depth_image
         dest_space=cv::Vec3f(point_in_left_camera_meters.x(),
                              point_in_left_camera_meters.y(),
                              point_in_left_camera_meters.z());
-        _row_map.at<unsigned short>(dest_r, dest_c)=r;
-        _col_map.at<unsigned short>(dest_r, dest_c)=c;
+        _row_map.at<short>(dest_r, dest_c)=r;
+        _col_map.at<short>(dest_r, dest_c)=c;
       }
     }
   }

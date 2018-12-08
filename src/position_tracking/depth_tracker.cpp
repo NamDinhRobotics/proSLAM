@@ -29,10 +29,6 @@ namespace proslam {
     current_frame->setIntensityImageRight(_depth_image);
     return current_frame;
   }
-  
-  void DepthTracker::compute() {
-    BaseTracker::compute();
-  }
 
   void DepthTracker::_recoverPoints(Frame* current_frame_) {
     return;

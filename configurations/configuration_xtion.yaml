@@ -17,13 +17,18 @@ command_line:
 
   #ds options
   option_use_gui:                   true
-  option_disable_relocalization:    true
+  option_disable_relocalization:    false
   option_show_top_viewer:           false
   option_drop_framepoints:          false
   option_equalize_histogram:        false
   option_recover_landmarks:         true
   option_disable_bundle_adjustment: true
   option_save_pose_graph:           false
+  
+landmark:
+
+  #ds maximum measured distance kernel for landmark optimization
+  maximum_error_squared_meters: 4.0
 
 local_map:
 
@@ -58,7 +63,7 @@ base_framepoint_generation:
   maximum_projection_tracking_distance_pixels: 25
 
   #ds dynamic thresholds for descriptor matching
-  matching_distance_tracking_threshold: 25
+  matching_distance_tracking_threshold: 50
   
   #ds maximum reliable depth with chosen sensor
   maximum_reliable_depth_meters: 2.5
@@ -77,8 +82,8 @@ stereo_framepoint_generation:
 depth_framepoint_generation:
 
   #ds depth sensor configuration
-  maximum_depth_near_meters: 5
-  maximum_depth_far_meters:  20
+  maximum_depth_meters: 5
+  minimum_depth_meters: 0.1
 
 base_tracking:
 
@@ -115,23 +120,23 @@ relocalization:
   maximum_descriptor_distance: 25
 
   #minimum query interspace
-  preliminary_minimum_interspace_queries: 50
+  preliminary_minimum_interspace_queries: 10
 
   #minimum relative number of matches
-  preliminary_minimum_matching_ratio: 0.1
+  preliminary_minimum_matching_ratio: 0.25
 
   #minimum absolute number of matches
-  minimum_number_of_matched_landmarks: 25
+  minimum_number_of_matched_landmarks: 100
 
   #correspondence retrieval
   minimum_matches_per_correspondence: 0
   
   #icp: aligner unit configuration
   aligner->error_delta_for_convergence:  1e-5
-  aligner->maximum_error_kernel:         1.0
+  aligner->maximum_error_kernel:         0.1
   aligner->damping:                      0.0
   aligner->maximum_number_of_iterations: 100
-  aligner->minimum_number_of_inliers:    25
+  aligner->minimum_number_of_inliers:    100
   aligner->minimum_inlier_ratio:         0.5
 
 graph_optimization:

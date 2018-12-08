@@ -44,7 +44,7 @@ public:
 protected:
 
   //! @brief right camera handle
-  const Camera* _camera_right = 0;
+  const Camera* _camera_right = nullptr;
 
   //! @brief derived triangulation properties - updated to current camera configuration before each compute
   Vector3 _baseline           = Vector3::Zero();
