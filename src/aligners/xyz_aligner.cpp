@@ -24,8 +24,8 @@ namespace proslam {
     _information_vector.resize(_number_of_measurements);
     _moving.resize(_number_of_measurements);
     _fixed.resize(_number_of_measurements);
-    const TransformMatrix3D& world_to_reference_local_map(context_->local_map_reference->worldToLocalMap());
-    const TransformMatrix3D& world_to_query_local_map(context_->local_map_query->worldToLocalMap());
+    const TransformMatrix3D& world_to_reference_local_map(context_->local_map_reference->worldToRobot());
+    const TransformMatrix3D& world_to_query_local_map(context_->local_map_query->worldToRobot());
     for (Index u = 0; u < _number_of_measurements; ++u) {
       const Closure::Correspondence* correspondence = _context->correspondences[u];
 

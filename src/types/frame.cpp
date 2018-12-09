@@ -56,7 +56,7 @@ void Frame::setRobotToWorld(const TransformMatrix3D& robot_to_world_, const bool
     assert(_local_map);
 
     //ds update the local map position
-    _local_map->setLocalMapToWorld(_robot_to_world);
+    _local_map->setRobotToWorld(_robot_to_world);
   }
 
   //ds update framepoint world coordinates

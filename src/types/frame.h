@@ -76,8 +76,8 @@ public:
   inline const TransformMatrix3D& cameraLeftToWorld() const {return _camera_left_to_world;}
   inline const TransformMatrix3D& worldToCameraLeft() const {return _world_to_camera_left;}
 
-  inline const TransformMatrix3D& frameToLocalMap() const {return _frame_to_local_map;}
-  inline const TransformMatrix3D& localMapToFrame() const {return _local_map_to_frame;}
+  inline const TransformMatrix3D& robotToLocalMap() const {return _robot_to_local_map;}
+  inline const TransformMatrix3D& localMapToRobot() const {return _local_map_to_robot;}
 
   //ds visualization only
   void setRobotToWorldGroundTruth(const TransformMatrix3D& robot_to_world_ground_truth_) {_robot_to_world_ground_truth = robot_to_world_ground_truth_;}
@@ -115,7 +115,7 @@ public:
   void setLocalMap(LocalMap* local_map_) {_local_map = local_map_;}
   inline LocalMap* localMap() {return _local_map;}
   inline const LocalMap* localMap() const {return _local_map;}
-  void setFrameToLocalMap(const TransformMatrix3D& frame_to_local_map_) {_frame_to_local_map = frame_to_local_map_; _local_map_to_frame = _frame_to_local_map.inverse();}
+  void setRobotToLocalMap(const TransformMatrix3D& frame_to_local_map_) {_robot_to_local_map = frame_to_local_map_; _local_map_to_robot = _robot_to_local_map.inverse();}
   void setIsKeyframe(const bool& is_keyframe_) {_is_keyframe = is_keyframe_;}
   inline const bool isKeyframe() const {return _is_keyframe;}
 
@@ -167,8 +167,8 @@ protected:
   FramePointPointerVector _active_points;
 
   //ds spatials
-  TransformMatrix3D _frame_to_local_map = TransformMatrix3D::Identity();
-  TransformMatrix3D _local_map_to_frame = TransformMatrix3D::Identity();
+  TransformMatrix3D _robot_to_local_map = TransformMatrix3D::Identity();
+  TransformMatrix3D _local_map_to_robot = TransformMatrix3D::Identity();
   TransformMatrix3D _robot_to_world     = TransformMatrix3D::Identity();
   TransformMatrix3D _world_to_robot     = TransformMatrix3D::Identity();
 

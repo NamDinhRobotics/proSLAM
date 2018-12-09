@@ -78,9 +78,9 @@ Landmark* WorldMap::createLandmark(FramePoint* origin_) {
   return landmark;
 }
 
-const bool WorldMap::createLocalMap(const bool& drop_framepoints_) {
+LocalMap* WorldMap::createLocalMap(const bool& drop_framepoints_) {
   if (_previous_frame == 0) {
-    return false;
+    return nullptr;
   }
 
   //ds reset closure status
@@ -95,7 +95,7 @@ const bool WorldMap::createLocalMap(const bool& drop_framepoints_) {
   if (_degrees_rotated_window   > _parameters->minimum_degrees_rotated_for_local_map                                    ||
      (_distance_traveled_window > _parameters->minimum_distance_traveled_for_local_map       &&
       _frame_queue_for_local_map.size() > _parameters->minimum_number_of_frames_for_local_map)                          ||
-     (_frame_queue_for_local_map.size() > _parameters->minimum_number_of_frames_for_local_map && _local_maps.size() < 5)) {
+     (_frame_queue_for_local_map.size() > _parameters->minimum_number_of_frames_for_local_map && _local_maps.empty())) {
 
     //ds create the new keyframe and add it to the keyframe database
     _current_local_map = new LocalMap(_frame_queue_for_local_map,
@@ -116,11 +116,11 @@ const bool WorldMap::createLocalMap(const bool& drop_framepoints_) {
     resetWindowForLocalMapCreation(drop_framepoints_);
 
     //ds local map generated
-    return true;
+    return _current_local_map;
   } else {
 
     //ds no local map generated
-    return false;
+    return nullptr;
   }
 }
 
@@ -147,7 +147,7 @@ void WorldMap::resetWindowForLocalMapCreation(const bool& drop_framepoints_) {
 }
 
 void WorldMap::addLoopClosure(LocalMap* query_,
-                              const LocalMap* reference_,
+                              LocalMap* reference_,
                               const TransformMatrix3D& query_to_reference_,
                               const Closure::CorrespondencePointerVector& landmark_correspondences_,
                               const real& information_) {
@@ -289,7 +289,7 @@ void WorldMap::setTrack(Frame* frame_) {
   _last_local_map_before_track_break = 0;
 }
 
-void WorldMap::mergeLandmarks(const LocalMap::ClosureConstraintVector& closures_) {
+void WorldMap::mergeLandmarks(const Closure::ClosureConstraintVector& closures_) {
   CHRONOMETER_START(landmark_merging)
 
   //ds keep track of the best merged references
@@ -299,7 +299,7 @@ void WorldMap::mergeLandmarks(const LocalMap::ClosureConstraintVector& closures_
   std::map<Identifier, std::pair<Identifier, Count>> landmark_references_to_queries_filtered;
 
   //ds determine landmark merge configuration
-  for (const LocalMap::ClosureConstraint& closure: closures_) {
+  for (const Closure::ClosureConstraint& closure: closures_) {
     for (const Closure::Correspondence* correspondence: closure.landmark_correspondences) {
       Identifier identifier_query     = correspondence->query->identifier();
       Identifier identifier_reference = correspondence->reference->identifier();

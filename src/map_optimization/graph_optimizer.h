@@ -57,21 +57,21 @@ public:
   //! @param[in] file_name_ desired file name for the g2o outfile
   void writePoseGraphToFile(const WorldMap* world_map_, const std::string& file_name_) const;
 
-  //! @brief adds a new frame to the pose graph
-  //! @param[in] frame_ the frame to add
-  void addFrame(Frame* frame_);
+  //! @brief adds a new local map to the pose graph
+  //! @param[in] frame_ the local map to add to the graph
+  void addPose(LocalMap* frame_);
 
-  //! @brief adds a new frame to the pose graph with all connected landmarks
+  //! @brief adds a new frame to the factor graph with all connected landmarks
   //! @param[in] frame_ the frame to add including its captured landmarks
-  void addFrameWithLandmarks(Frame* frame_);
+  void addPoseWithFactors(Frame* frame_);
 
   //! @brief triggers an adjustment of poses only
   //! @param[in] world_map_ map in which the optimization takes place
-  void optimizeFrames(WorldMap* world_map_);
+  void optimizePoseGraph(WorldMap* world_map_);
 
-  //! @brief triggers a full bundle adjustment optimization of the current pose graph
+  //! @brief triggers a full bundle adjustment optimization of the current factor graph
   //! @param[in] world_map_ map in which the optimization takes place
-  void optimizeFramesWithLandmarks(WorldMap* world_map_);
+  void optimizeFactorGraph(WorldMap* world_map_);
 
 //ds getters/setters
 public:
@@ -84,10 +84,8 @@ protected:
   void _setPoseEdge(g2o::OptimizableGraph* optimizer_,
                     g2o::OptimizableGraph::Vertex* vertex_from_,
                     g2o::OptimizableGraph::Vertex* vertex_to_,
-                    const TransformMatrix3D& transform_from_to_,
-                    const real& information_factor_,
-                    const bool& free_translation_ = true,
-                    const bool& enable_robust_kernel_ = false) const;
+                    const g2o::Isometry3& transform_from_to_,
+                    const real& information_factor_) const;
 
   void _setPointEdge(g2o::OptimizableGraph* optimizer_,
                      g2o::VertexSE3* vertex_frame_,
@@ -102,7 +100,7 @@ protected:
   g2o::SparseOptimizer* _optimizer;
 
   //! @brief last frame vertex added (to be locked for optimization)
-  g2o::VertexSE3* _vertex_frame_last_added;
+  g2o::VertexSE3* _vertex_local_map_last_added;
 
   //! @brief bookkeeping: added frames
   std::map<Frame*, g2o::VertexSE3*> _frames_in_pose_graph;

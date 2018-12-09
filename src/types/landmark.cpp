@@ -65,7 +65,7 @@ void Landmark::update(FramePoint* point_) {
   real total_error_squared_previous = 0;
 
   //ds gauss newton descent
-  for (uint32_t iteration = 0; iteration < 1000; ++iteration) {
+  for (uint32_t iteration = 0; iteration < _parameters->maximum_number_of_iterations; ++iteration) {
     H.setZero();
     b.setZero();
     real total_error_squared    = 0;
@@ -76,7 +76,7 @@ void Landmark::update(FramePoint* point_) {
       omega.setIdentity();
 
       //ds sample current state in measurement context
-      const PointCoordinates camera_coordinates_sampled = measurement.world_to_camera*world_coordinates;
+      const PointCoordinates camera_coordinates_sampled = measurement.frame->worldToCameraLeft()*world_coordinates;
       if (camera_coordinates_sampled.z() <= 0) {
         ++number_of_outliers;
         continue;
@@ -99,7 +99,7 @@ void Landmark::update(FramePoint* point_) {
       }
 
       //ds get the jacobian of the transform part: R
-      jacobian = measurement.world_to_camera.linear();
+      jacobian = measurement.frame->worldToCameraLeft().linear();
 
       //ds precompute transposed
       jacobian_transposed = jacobian.transpose();
@@ -121,7 +121,7 @@ void Landmark::update(FramePoint* point_) {
 
         //ds update landmark state
         _world_coordinates = world_coordinates;
-        _number_of_updates        = number_of_inliers;
+        _number_of_updates = number_of_inliers;
 
       //ds if optimization failed and we have less inliers than outliers - reset initial guess
       } else if (number_of_inliers < number_of_outliers) {
@@ -129,7 +129,7 @@ void Landmark::update(FramePoint* point_) {
         //ds reset estimate based on overall average
         PointCoordinates world_coordinates_accumulated(PointCoordinates::Zero());
         for (const Measurement& measurement: _measurements) {
-          world_coordinates_accumulated += measurement.world_coordinates;
+          world_coordinates_accumulated += measurement.frame->worldToCameraLeft()*measurement.camera_coordinates;
         }
 
         //ds set landmark state without increasing update count

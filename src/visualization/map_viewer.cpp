@@ -55,17 +55,29 @@ void MapViewer::update(const Frame* frame_) {
 }
 
 void MapViewer::_drawFrame(const Frame* frame_, const Vector3& color_rgb_) const {
-  glPushMatrix();
-  glMultMatrixf((frame_->robotToWorld()*_camera_left_to_robot).cast<float>().data());
 
   //ds check if the frame is closed and if so highlight it accordingly
   if (frame_->isKeyframe() && !frame_->localMap()->closures().empty()) {
     glColor3f(0.0, 1.0, 0.0);
+    const Vector3& closure_coordinates(frame_->robotToWorld().translation());
+
+    //ds draw closure lines
+    glBegin(GL_LINES);
+    for (const Closure::ClosureConstraint& constraint: frame_->localMap()->closures()) {
+      const Vector3& closure_coordinates_reference(constraint.local_map->robotToWorld().translation());
+      glVertex3f(closure_coordinates.x(), closure_coordinates.y(), closure_coordinates.z()+_parameters->object_scale);
+      glVertex3f(closure_coordinates_reference.x(), closure_coordinates_reference.y(), closure_coordinates_reference.z()+_parameters->object_scale);
+    }
+    glEnd();
   } else {
+
+    //ds default color
     glColor3f(color_rgb_.x(), color_rgb_.y(), color_rgb_.z());
   }
 
   //ds draw camera box
+  glPushMatrix();
+  glMultMatrixf((frame_->robotToWorld()*_camera_left_to_robot).cast<float>().data());
   drawPyramidWireframe(_parameters->object_scale, _parameters->object_scale);
   glPopMatrix();
 
@@ -84,13 +96,14 @@ void MapViewer::_drawLandmarks() const {
   glBegin(GL_POINTS);
 
   //ds highlight the currently seen landmarks
+  glColor3f(0, 0, 1);
   for (const Landmark* landmark: _world_map->currentlyTrackedLandmarks()) {
-    glColor3f(0, 0, 1);
     glVertex3f(landmark->coordinates().x(), landmark->coordinates().y(), landmark->coordinates().z());
   }
 
   //ds draw permanent landmarks
   for (const LandmarkPointerMapElement& landmark: _world_map->landmarks()) {
+    const Vector3& landmark_coordinates(landmark.second->coordinates());
 
     //ds specific coloring for closure landmarks
     if (landmark.second->isInLoopClosureQuery()) {
@@ -100,7 +113,7 @@ void MapViewer::_drawLandmarks() const {
     } else {
       glColor3f(0.5, 0.5, 0.5);
     }
-    glVertex3f(landmark.second->coordinates().x(), landmark.second->coordinates().y(), landmark.second->coordinates().z());
+    glVertex3f(landmark_coordinates.x(), landmark_coordinates.y(), landmark_coordinates.z());
   }
   glEnd();
 }

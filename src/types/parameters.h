@@ -101,8 +101,11 @@ public:
   //! @brief minimum number of measurements before optimization is filtering
 //  Count minimum_number_of_forced_updates = 2;
 
-  //! @brief maximum measured distance kernel for landmark optimization
+  //! @brief maximum measured distance kernel for landmark position optimization
   real maximum_error_squared_meters = 5*5;
+
+  //! @brief maximum number of LS iterations for landmark position optimization
+  Count maximum_number_of_iterations = 100;
 };
 
 //! @class local map parameters
@@ -261,9 +264,6 @@ public:
 
   //! @brief parameters of aligner unit
   AlignerParameters* aligner;
-
-  //! @brief transform that is applied to given odometry guess to result in camera_left_to_world
-  TransformMatrix3D transform_odometry;
 };
 
 //! @class stereo tracker parameters
@@ -365,6 +365,9 @@ public:
 
   //! @brief enable robust kernel for landmark measurements
   bool enable_robust_kernel_for_landmarks = false;
+
+  //! @brief minimum estimation correction to update the internal map
+  real minimum_estimation_delta_for_update = 0.01;
 };
 
 //! @class image viewer parameters

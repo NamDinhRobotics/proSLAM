@@ -49,7 +49,7 @@ protected:
   HBSTTree _place_database;
 
   //ds local maps that have been added to the place database (in order of calls)
-  ConstLocalMapPointerVector _added_local_maps;
+  LocalMapPointerVector _added_local_maps;
 
   //ds correspondence retrieval buffer
   std::set<Identifier> _mask_id_references_for_correspondences;

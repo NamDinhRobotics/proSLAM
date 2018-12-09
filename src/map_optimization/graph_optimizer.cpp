@@ -20,7 +20,7 @@ namespace proslam {
 
 GraphOptimizer::GraphOptimizer(GraphOptimizerParameters* parameters_): _parameters(parameters_),
                                                                        _optimizer(nullptr),
-                                                                       _vertex_frame_last_added(nullptr) {
+                                                                       _vertex_local_map_last_added(nullptr) {
   LOG_INFO(std::cerr << "GraphOptimizer::GraphOptimizer|constructed" << std::endl)
 }
 
@@ -90,7 +90,7 @@ void GraphOptimizer::configure() {
   _optimizer->setAlgorithm(solver);
 
   //ds clean bookkeeping
-  _vertex_frame_last_added = 0;
+  _vertex_local_map_last_added = 0;
   _frames_in_pose_graph.clear();
   _local_maps_in_graph.clear();
   _landmarks_in_pose_graph.clear();
@@ -156,9 +156,8 @@ void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std:
       _setPoseEdge(pose_graph,
                   vertex_frame_current,
                   vertex_frame_last_added,
-                  frame.second->previous()->worldToRobot()*frame.second->robotToWorld(),
-                  _parameters->base_information_frame,
-                  _parameters->free_translation_for_poses);
+                  (frame.second->previous()->worldToRobot()*frame.second->robotToWorld()).cast<double>(),
+                  _parameters->base_information_frame);
     }
 
     //ds add landmark measurements contained in the frame by scanning its framepoints
@@ -202,16 +201,14 @@ void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std:
     if (frame.second->localMap() && frame.second->localMap()->closures().size() > 0) {
 
       //ds for all linked loop closures
-      for (const LocalMap::ClosureConstraint& closure: frame.second->localMap()->closures()) {
+      for (const Closure::ClosureConstraint& closure: frame.second->localMap()->closures()) {
 
         //ds retrieve closure edge
         _setPoseEdge(pose_graph,
                      pose_graph->vertex(frame.second->localMap()->keyframe()->identifier()),
                      pose_graph->vertex(closure.local_map->keyframe()->identifier()),
                      closure.relation,
-                     _parameters->base_information_frame,
-                     _parameters->free_translation_for_poses,
-                     _parameters->enable_robust_kernel_for_poses);
+                     _parameters->base_information_frame);
       }
     }
   }
@@ -223,99 +220,61 @@ void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std:
   LOG_INFO(std::cerr << "GraphOptimizer::writePoseGraphToFile|pose graph saved" << std::endl)
 }
 
-void GraphOptimizer::addFrame(Frame* frame_) {
+void GraphOptimizer::addPose(LocalMap* local_map_) {
   CHRONOMETER_START(addition)
+  const g2o::Isometry3 local_map_to_world = local_map_->robotToWorld().cast<double>();
 
   //ds get the frames pose to g2o representation
-  g2o::VertexSE3* vertex_frame_current = new g2o::VertexSE3();
-  vertex_frame_current->setId(frame_->identifier());
-  vertex_frame_current->setEstimate(frame_->robotToWorld().cast<double>());
-  _optimizer->addVertex(vertex_frame_current);
+  g2o::VertexSE3* vertex_current = new g2o::VertexSE3();
+  vertex_current->setId(local_map_->identifier());
+  vertex_current->setEstimate(local_map_to_world);
+  _optimizer->addVertex(vertex_current);
 
   //ds if its the first frame to be added (start or recently cleared pose graph)
-  if (!_vertex_frame_last_added) {
+  if (!_vertex_local_map_last_added) {
 
     //ds fix the initial vertex - no measurement to add
-    vertex_frame_current->setFixed(true);
+    vertex_current->setFixed(true);
   } else {
+    const g2o::Isometry3& world_to_local_map_previous = local_map_->previous()->worldToRobot().cast<double>();
 
     //ds compute information value based on landmark content
     real information_factor = _parameters->base_information_frame;
 
-    //ds adjust information value according to frame state
-    if (frame_->isTrackBroken()) {
-
-      //ds set minimum information
-      information_factor = 1;
-    }
-    if (frame_->status() == Frame::Localizing) {
-
-      //ds reduce information value (we don't have landmarks in a localizing frame)
-      information_factor = _parameters->base_information_frame/10;
-    }
-
     //ds we can connect it to the preceeding frame by adding the odometry measurement
     _setPoseEdge(_optimizer,
-                vertex_frame_current,
-                _vertex_frame_last_added,
-                frame_->previous()->worldToRobot()*frame_->robotToWorld(),
-                information_factor,
-                _parameters->free_translation_for_poses,
-                _parameters->enable_robust_kernel_for_poses);
+                vertex_current,
+                _vertex_local_map_last_added,
+                world_to_local_map_previous*local_map_to_world,
+                information_factor);
   }
 
-  //ds if the frame is part of a local map
-  LocalMap* local_map = frame_->localMap();
-  if (local_map) {
+  //ds if the local map has not been checked in a previous frame
+  assert(_local_maps_in_graph.find(local_map_->identifier()) == _local_maps_in_graph.end());
 
-    //ds if the local map has not been checked in a previous frame
-    if (_local_maps_in_graph.find(local_map->identifier()) == _local_maps_in_graph.end()) {
-      _local_maps_in_graph.insert(std::make_pair(local_map->identifier(), local_map));
+  //ds add a new local map
+  _local_maps_in_graph.insert(std::make_pair(local_map_->identifier(), local_map_));
 
-      //ds for all linked loop closures
-      for (const LocalMap::ClosureConstraint& closure: local_map->closures()) {
+  //ds for all loop closures on this local map
+  for (const Closure::ClosureConstraint& closure: local_map_->closures()) {
 
-        //ds reference frame
-        Frame* reference_frame = closure.local_map->keyframe();
+    //ds compute information value
+    const real information_factor = _parameters->base_information_frame*closure.omega;
 
-        //ds check if the reference frame is not contained in the current graph
-        if (_frames_in_pose_graph.find(reference_frame) == _frames_in_pose_graph.end()) {
+    //ds retrieve reference frame (must be present)
+    g2o::VertexSE3* vertex_reference = dynamic_cast<g2o::VertexSE3*>(_optimizer->vertex(closure.local_map->identifier()));
+    assert(vertex_reference);
 
-          //ds the vertex was not found - we have to add it to the graph again and fix it
-          g2o::VertexSE3* vertex_reference = new g2o::VertexSE3();
-          vertex_reference->setId(reference_frame->identifier());
-          vertex_reference->setEstimate(reference_frame->robotToWorld().cast<double>());
-          vertex_reference->setFixed(true);
-          _optimizer->addVertex(vertex_reference);
-          _frames_in_pose_graph.insert(std::make_pair(reference_frame, vertex_reference));
-        } else {
-
-          //ds fix reference vertex
-          _optimizer->vertex(reference_frame->identifier())->setFixed(true);
-        }
-
-        //ds compute information value
-        const real information_factor = _parameters->base_information_frame*closure.omega;
-
-        //ds retrieve closure edge
-        _setPoseEdge(_optimizer,
-                     _optimizer->vertex(local_map->keyframe()->identifier()),
-                     _optimizer->vertex(reference_frame->identifier()),
-                     closure.relation,
-                     information_factor,
-                     _parameters->free_translation_for_poses,
-                     _parameters->enable_robust_kernel_for_poses);
-      }
-    }
+    //ds introduce loop closure constraint between the two local maps
+    _setPoseEdge(_optimizer, vertex_current, vertex_reference, closure.relation, information_factor);
   }
 
   //ds bookkeep the added frame
-  _vertex_frame_last_added = vertex_frame_current;
-  _frames_in_pose_graph.insert(std::make_pair(frame_, vertex_frame_current));
+  _vertex_local_map_last_added = vertex_current;
   CHRONOMETER_STOP(addition)
 }
 
-void GraphOptimizer::addFrameWithLandmarks(Frame* frame_) {
+void GraphOptimizer::addPoseWithFactors(Frame* frame_) {
   CHRONOMETER_START(addition)
 
   //ds get the frames pose to g2o representation
@@ -325,7 +284,7 @@ void GraphOptimizer::addFrameWithLandmarks(Frame* frame_) {
   _optimizer->addVertex(vertex_frame_current);
 
   //ds if its the first frame to be added (start or recently cleared pose graph)
-  if (!_vertex_frame_last_added) {
+  if (!_vertex_local_map_last_added) {
 
     //ds add landmark measurements contained in the frame by scanning its framepoints - porting weights from previous optimization
     for (FramePoint* framepoint: frame_->points()) {
@@ -394,54 +353,68 @@ void GraphOptimizer::addFrameWithLandmarks(Frame* frame_) {
     //ds we can connect it to the preceeding frame by adding the odometry measurement
     _setPoseEdge(_optimizer,
                 vertex_frame_current,
-                _vertex_frame_last_added,
+                _vertex_local_map_last_added,
                 frame_->previous()->worldToRobot()*frame_->robotToWorld(),
-                _parameters->base_information_frame,
-                _parameters->free_translation_for_poses);
+                _parameters->base_information_frame);
   }
 
   //ds bookkeep the added frame
-  _vertex_frame_last_added = vertex_frame_current;
+  _vertex_local_map_last_added = vertex_frame_current;
   _frames_in_pose_graph.insert(std::make_pair(frame_, vertex_frame_current));
   CHRONOMETER_STOP(addition)
 }
 
-void GraphOptimizer::optimizeFrames(WorldMap* world_map_) {
+void GraphOptimizer::optimizePoseGraph(WorldMap* world_map_) {
   CHRONOMETER_START(optimization)
 
-  //ds optimize graph (uncomment lines below for g2o graph dumping)
-//  const std::string file_name = "pose_graph_"+std::to_string(world_map_->currentFrame()->identifier())+".g2o";
-//  _optimizer->save(file_name.c_str());
+  //ds save current graph to file
+  //  const std::string file_name = "pose_graph_"+std::to_string(world_map_->currentFrame()->identifier())+".g2o";
+  //  _optimizer->save(file_name.c_str());
+
+  //ds optimize graph
   _optimizer->initializeOptimization();
   _optimizer->optimize(_parameters->maximum_number_of_iterations);
 
-  //ds directly backpropagate solution to frames - without updating the local maps (we want to keep the fine-grained, frame-wise g2o estimate)
-  for(std::pair<Frame*, g2o::VertexSE3*> frame_in_pose_graph: _frames_in_pose_graph) {
-    frame_in_pose_graph.first->setRobotToWorld(frame_in_pose_graph.second->estimate().cast<real>());
-  }
+  //ds directly backpropagate solution to frames and landmarks of local maps
+  Count number_of_negligible_updates = 0;
+  for (const std::pair<const Identifier, LocalMap*>& local_map_entry: _local_maps_in_graph) {
+    LocalMap* local_map                = local_map_entry.second;
+    g2o::VertexSE3* local_map_in_graph = dynamic_cast<g2o::VertexSE3*>(_optimizer->vertex(local_map_entry.first));
+    assert(local_map && local_map_in_graph);
 
-  //ds update all active landmark positions based on their last local map presence TODO make this more efficient
-  for (std::pair<const Identifier, LocalMap*>& local_map_entry: _local_maps_in_graph) {
-    LocalMap* local_map = local_map_entry.second;
-    local_map->setLocalMapToWorld(local_map->keyframe()->robotToWorld(), true);
+    const TransformMatrix3D robot_to_world_optimized = local_map_in_graph->estimate().cast<real>();
+
+    //ds check if change is insignificant enough (happens for already optimal poses)
+    const real delta = (robot_to_world_optimized.matrix()-local_map->robotToWorld().matrix()).norm();
+    if (delta < _parameters->minimum_estimation_delta_for_update) {
+      ++number_of_negligible_updates;
+      continue;
+    }
+
+    //ds update local map pose with optimized estimate (will automatically update contained frames and landmarks)
+    local_map->setRobotToWorld(robot_to_world_optimized, true);
+
+    //ds unlock the vertex for the next optimization
+    local_map_in_graph->setFixed(false);
   }
+  LOG_INFO(std::cerr << "GraphOptimizer::optimizePoseGraph|negligible pose backpropagations: "
+                     << number_of_negligible_updates << "/" << _local_maps_in_graph.size()
+                     << " (" << static_cast<real>(number_of_negligible_updates)/_local_maps_in_graph.size() << ")" << std::endl)
+
+  //ds keep map origin locked (by construction the first frame added to the bookkeeping)
+  _optimizer->vertex(0)->setFixed(true);
+
+  //ds move current head to the new optimized position
   world_map_->setRobotToWorld(world_map_->currentFrame()->robotToWorld());
   ++_number_of_optimizations;
-
-  //ds reset graph for next optimization
-  _optimizer->clear();
-  _vertex_frame_last_added = 0;
-  _frames_in_pose_graph.clear();
-  _local_maps_in_graph.clear();
-  _landmarks_in_pose_graph.clear();
   CHRONOMETER_STOP(optimization)
 }
 
-void GraphOptimizer::optimizeFramesWithLandmarks(WorldMap* world_map_) {
+void GraphOptimizer::optimizeFactorGraph(WorldMap* world_map_) {
   CHRONOMETER_START(optimization)
 
   //ds optimize graph (uncomment lines below for g2o graph dumping)
-//  const std::string file_name = "pose_graph_"+std::to_string(world_map_->currentFrame()->identifier())+".g2o";
+//  const std::string file_name = "factor_graph_"+std::to_string(world_map_->currentFrame()->identifier())+".g2o";
 //  _optimizer->save(file_name.c_str());
   _optimizer->initializeOptimization();
   _optimizer->optimize(_parameters->maximum_number_of_iterations);
@@ -458,7 +431,7 @@ void GraphOptimizer::optimizeFramesWithLandmarks(WorldMap* world_map_) {
 
   //ds reset graph for next optimization
   _optimizer->clear();
-  _vertex_frame_last_added = 0;
+  _vertex_local_map_last_added = 0;
   _frames_in_pose_graph.clear();
   _landmarks_in_pose_graph.clear();
   CHRONOMETER_STOP(optimization)
@@ -467,22 +440,20 @@ void GraphOptimizer::optimizeFramesWithLandmarks(WorldMap* world_map_) {
 void GraphOptimizer::_setPoseEdge(g2o::OptimizableGraph* optimizer_,
                                   g2o::OptimizableGraph::Vertex* vertex_from_,
                                   g2o::OptimizableGraph::Vertex* vertex_to_,
-                                  const TransformMatrix3D& transform_from_to_,
-                                  const real& information_factor_,
-                                  const bool& free_translation_,
-                                  const bool& enable_robust_kernel_) const {
+                                  const g2o::Isometry3& transform_from_to_,
+                                  const real& information_factor_) const {
   g2o::EdgeSE3* edge_pose = new g2o::EdgeSE3();
   edge_pose->setVertex(1, vertex_from_);
   edge_pose->setVertex(0, vertex_to_);
-  edge_pose->setMeasurement(transform_from_to_.cast<double>());
+  edge_pose->setMeasurement(transform_from_to_);
 
   //ds information value
   Eigen::Matrix<double, 6, 6> information(information_factor_*Eigen::Matrix<double, 6, 6>::Identity());
-  if (free_translation_) {
+  if (_parameters->free_translation_for_poses) {
     information.block<3,3>(0,0) *= _parameters->base_information_frame_factor_for_translation;
   }
   edge_pose->setInformation(information);
-  if (enable_robust_kernel_) {edge_pose->setRobustKernel(new g2o::RobustKernelCauchy());}
+  if (_parameters->enable_robust_kernel_for_poses) {edge_pose->setRobustKernel(new g2o::RobustKernelCauchy());}
   optimizer_->addEdge(edge_pose);
 }
 

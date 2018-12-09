@@ -30,7 +30,7 @@ public:
   Landmark* createLandmark(FramePoint* origin_);
 
   //ds attempts to create a new local map if the generation criteria are met (returns true if a local map was generated)
-  const bool createLocalMap(const bool& drop_framepoints_ = false);
+  LocalMap* createLocalMap(const bool& drop_framepoints_ = false);
 
   //ds resets the window for the local map generation
   void resetWindowForLocalMapCreation(const bool& drop_framepoints_ = false);
@@ -42,7 +42,7 @@ public:
   //! @param[in] landmark_correspondences_ landmark correspondences of the loop closure
   //! @param[in] information_ information value
   void addLoopClosure(LocalMap* query_,
-                      const LocalMap* reference_,
+                      LocalMap* reference_,
                       const TransformMatrix3D& query_to_reference_,
                       const Closure::CorrespondencePointerVector& landmark_correspondences_,
                       const real& information_ = 1);
@@ -109,7 +109,7 @@ public:
   const LandmarkPointerMap& landmarks() const {return _landmarks;}
   LandmarkPointerVector& currentlyTrackedLandmarks() {return _currently_tracked_landmarks;}
   const LandmarkPointerVector& currentlyTrackedLandmarks() const {return _currently_tracked_landmarks;}
-  void mergeLandmarks(const LocalMap::ClosureConstraintVector& closures_);
+  void mergeLandmarks(const Closure::ClosureConstraintVector& closures_);
 
   LocalMap* currentLocalMap() {return _current_local_map;}
   const LocalMapPointerVector& localMaps() const {return _local_maps;}

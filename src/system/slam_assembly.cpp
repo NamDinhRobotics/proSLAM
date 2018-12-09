@@ -533,23 +533,23 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
 
       //ds local map generation - regardless of tracker state
       if (_map_viewer) {_map_viewer->lock();}
-      const bool created_local_map = _world_map->createLocalMap(_parameters->command_line_parameters->option_drop_framepoints);
+      LocalMap* created_local_map = _world_map->createLocalMap(_parameters->command_line_parameters->option_drop_framepoints);
       if (_map_viewer) {_map_viewer->unlock();}
 
       //ds if we successfully created a local map
       if (created_local_map) {
 
         //ds localize in database (not yet optimizing the graph)
-        _relocalizer->detectClosures(_world_map->currentLocalMap());
+        _relocalizer->detectClosures(created_local_map);
         _relocalizer->registerClosures();
 
         //ds check the closures
         for(Closure* closure: _relocalizer->closures()) {
           if (closure->is_valid) {
-            assert(_world_map->currentLocalMap() == closure->local_map_query);
+            assert(created_local_map == closure->local_map_query);
 
             //ds add loop closure constraint (merging corresponding landmarks)
-            _world_map->addLoopClosure(_world_map->currentLocalMap(),
+            _world_map->addLoopClosure(created_local_map,
                                        closure->local_map_reference,
                                        closure->query_to_reference,
                                        closure->correspondences,
@@ -565,45 +565,45 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
 
         //ds clear buffer (automatically purges invalidated closures)
         _relocalizer->clear();
-      }
 
-      //ds if bundle-adjustment is desired
-      if (!_parameters->command_line_parameters->option_disable_bundle_adjustment) {
+        //ds if bundle-adjustment is desired
+        if (!_parameters->command_line_parameters->option_disable_bundle_adjustment) {
 
-        //ds add frame and its landmarks to the pose graph
-        _graph_optimizer->addFrameWithLandmarks(_world_map->currentFrame());
+          //ds add frame and its landmarks to the pose graph
+          _graph_optimizer->addPoseWithFactors(_world_map->currentFrame());
 
-        //ds check if a periodic bundle adjustment is required
-        if (_world_map->frames().size() % _parameters->graph_optimizer_parameters->number_of_frames_per_bundle_adjustment == 0) {
+          //ds check if a periodic bundle adjustment is required
+          if (_world_map->frames().size() % _parameters->graph_optimizer_parameters->number_of_frames_per_bundle_adjustment == 0) {
 
-          //ds check if we're running with a GUI and lock the GUI before the critical phase
-          if (_map_viewer) {_map_viewer->lock();}
+            //ds check if we're running with a GUI and lock the GUI before the critical phase
+            if (_map_viewer) {_map_viewer->lock();}
 
-          //ds optimize graph
-          _graph_optimizer->optimizeFramesWithLandmarks(_world_map);
+            //ds optimize graph
+            _graph_optimizer->optimizeFactorGraph(_world_map);
 
-          //ds reenable the GUI
-          if (_map_viewer) {_map_viewer->unlock();}
-        }
-      } else {
+            //ds reenable the GUI
+            if (_map_viewer) {_map_viewer->unlock();}
+          }
+        } else {
 
-        //ds just add the frame to the pose graph
-        _graph_optimizer->addFrame(_world_map->currentFrame());
+          //ds just add the frame to the pose graph
+          _graph_optimizer->addPose(created_local_map);
 
-        //ds if we closed a local map - otherwise there is no need to optimize the pose graph
-        if (_world_map->relocalized()) {
+          //ds if we closed a local map - otherwise there is no need to optimize the pose graph
+          if (_world_map->relocalized()) {
 
-          //ds check if we're running with a GUI and lock the GUI before the critical phase
-          if (_map_viewer) {_map_viewer->lock();}
+            //ds check if we're running with a GUI and lock the GUI before the critical phase
+            if (_map_viewer) {_map_viewer->lock();}
 
-          //ds optimize pose graph with the loop closure constraint
-          _graph_optimizer->optimizeFrames(_world_map);
+            //ds optimize pose graph with the loop closure constraint
+            _graph_optimizer->optimizePoseGraph(_world_map);
 
-          //ds merge landmarks for the current local map and its closures
-          _world_map->mergeLandmarks(_world_map->currentLocalMap()->closures());
+            //ds merge landmarks for the current local map and its closures
+            _world_map->mergeLandmarks(created_local_map->closures());
 
-          //ds re-enable the GUI
-          if (_map_viewer) {_map_viewer->unlock();}
+            //ds re-enable the GUI
+            if (_map_viewer) {_map_viewer->unlock();}
+          }
         }
       }
     } else if (_parameters->command_line_parameters->option_drop_framepoints) {

@@ -19,19 +19,16 @@ public:
   //ds a landmark measurement (used for position optimization)
   struct Measurement {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    Measurement(const FramePoint* framepoint_): world_to_camera(framepoint_->frame()->worldToCameraLeft()),
+    Measurement(const FramePoint* framepoint_): frame(framepoint_->frame()),
                                                 camera_coordinates(framepoint_->cameraCoordinatesLeft()),
-                                                world_coordinates(framepoint_->worldCoordinates()),
                                                 inverse_depth_meters(1/framepoint_->cameraCoordinatesLeft().z()) {}
 
-    Measurement(): world_to_camera(TransformMatrix3D::Identity()),
+    Measurement(): frame(nullptr),
                    camera_coordinates(PointCoordinates::Zero()),
-                   world_coordinates(PointCoordinates::Zero()),
                    inverse_depth_meters(0) {}
 
-    TransformMatrix3D world_to_camera;
+    const Frame* frame;
     PointCoordinates camera_coordinates;
-    PointCoordinates world_coordinates;
     real inverse_depth_meters;
   };
 

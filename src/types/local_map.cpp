@@ -10,7 +10,6 @@ LocalMap::LocalMap(FramePointerVector& frames_,
                    LocalMap* local_map_previous_): _identifier(_instances),
                                                    _root(local_map_root_),
                                                    _previous(local_map_previous_),
-                                                   _next(nullptr),
                                                    _parameters(parameters_) {
   assert(!frames_.empty());
   ++_instances;
@@ -26,12 +25,11 @@ LocalMap::LocalMap(FramePointerVector& frames_,
   }
 
   //ds define keyframe (currently the last frame)
-  _frames   = frames_;
-  _keyframe = _frames.back();
+  _keyframe = frames_.back();
   _keyframe->setIsKeyframe(true);
 
-  //ds define local map position relative in the world (currently using last frame's pose)
-  setLocalMapToWorld(_keyframe->robotToWorld(), false);
+  //ds define local map position relative in the world based on the key frame
+  const TransformMatrix3D& world_to_local_map = _keyframe->worldToRobot();
 
   //ds keep track of added landmarks in order to add them only once
   std::set<Identifier> landmarks_added;
@@ -41,9 +39,9 @@ LocalMap::LocalMap(FramePointerVector& frames_,
 
   //ds create item context for this local map: loop over all frames
   for (Frame* frame: frames_) {
-    const TransformMatrix3D& frame_to_local_map = _world_to_local_map*frame->robotToWorld();
+    const TransformMatrix3D& robot_to_local_map = world_to_local_map*frame->robotToWorld();
     frame->setLocalMap(this);
-    frame->setFrameToLocalMap(frame_to_local_map);
+    frame->setRobotToLocalMap(robot_to_local_map);
 
     //ds for all framepoints in this frame
     for (FramePoint* frame_point: frame->points()) {
@@ -65,8 +63,8 @@ LocalMap::LocalMap(FramePointerVector& frames_,
         landmark->_local_maps.insert(this);
 
         //ds create a landmark snapshot and add it to the local map
-        const PointCoordinates coordinates_in_local_map = _world_to_local_map*landmark->coordinates();
-        _landmarks.insert(std::make_pair(landmark->identifier(), LandmarkState(landmark, coordinates_in_local_map)));
+        const PointCoordinates coordinates_in_local_map = world_to_local_map*landmark->coordinates();
+        _landmarks.insert(std::make_pair(landmark->identifier(), Closure::LandmarkState(landmark, coordinates_in_local_map)));
 
         //ds we're only interested in the appearances generated in this local map
         _appearances.insert(_appearances.end(), matchables.begin(), matchables.end());
@@ -76,6 +74,9 @@ LocalMap::LocalMap(FramePointerVector& frames_,
       }
     }
   }
+
+  //ds set proper identity transform for keyframe (above loop might cause numerical imprecision)
+  _keyframe->setRobotToLocalMap(TransformMatrix3D::Identity());
 
   //ds check if we have to sparsify the landmarks TODO implement, check how to trim appearance vector as well
   if (_landmarks.size() > maximum_number_of_landmarks) {
@@ -89,6 +90,9 @@ LocalMap::LocalMap(FramePointerVector& frames_,
   if (_parameters->minimum_number_of_landmarks > landmarks_added.size()) {
     LOG_WARNING(std::cerr << "LocalMap::LocalMap|creating local map with low landmark number: " << landmarks_added.size() << std::endl)
   }
+
+  //ds gobble up frames
+  _frames.insert(_frames.end(), frames_.begin(), frames_.end());
 }
 
 LocalMap::~LocalMap() {
@@ -102,15 +106,6 @@ void LocalMap::clear() {
   _appearances.clear();
 }
 
-void LocalMap::update(const TransformMatrix3D& local_map_to_world_) {
-  setLocalMapToWorld(local_map_to_world_);
-
-  //ds update frame poses for all contained frames
-  for (Frame* frame: _frames) {
-    frame->setRobotToWorld(_local_map_to_world*frame->frameToLocalMap());
-  }
-}
-
 void LocalMap::replace(Landmark* landmark_old_, Landmark* landmark_new_) {
 
   //ds remove the old landmark from the local map and check for failure
@@ -119,26 +114,29 @@ void LocalMap::replace(Landmark* landmark_old_, Landmark* landmark_new_) {
   }
 
   //ds look if the new landmark is already present (can happen through merging)
-  LandmarkStateMap::iterator iterator = _landmarks.find(landmark_new_->identifier());
+  Closure::LandmarkStateMap::iterator iterator = _landmarks.find(landmark_new_->identifier());
   if (iterator != _landmarks.end()) {
 
     //ds update the entry
-    iterator->second.coordinates_in_local_map = _world_to_local_map*landmark_new_->coordinates();
+    iterator->second.coordinates_in_local_map = _keyframe->worldToRobot()*landmark_new_->coordinates();
   } else {
 
     //ds create a new entry with updated landmark coordinates
-    _landmarks.insert(std::make_pair(landmark_new_->identifier(), LandmarkState(landmark_new_, _world_to_local_map*landmark_new_->coordinates())));
+    _landmarks.insert(std::make_pair(landmark_new_->identifier(), Closure::LandmarkState(landmark_new_, _keyframe->worldToRobot()*landmark_new_->coordinates())));
   }
 }
 
-void LocalMap::setLocalMapToWorld(const TransformMatrix3D& local_map_to_world_, const bool update_landmark_world_coordinates_) {
-  _local_map_to_world = local_map_to_world_;
-  _world_to_local_map = _local_map_to_world.inverse();
+void LocalMap::setRobotToWorld(const TransformMatrix3D& robot_to_world_, const bool update_landmark_world_coordinates_) {
+
+  //ds update frame poses for all contained frames
+  for (Frame* frame: _frames) {
+    frame->setRobotToWorld(robot_to_world_*frame->robotToLocalMap(), false);
+  }
 
   //ds update landmark world coordinates according to this local map estimate
   if (update_landmark_world_coordinates_) {
-    for (LandmarkStateMapElement& element: _landmarks) {
-      element.second.updateCoordinatesInWorld(_local_map_to_world);
+    for (Closure::LandmarkStateMapElement& element: _landmarks) {
+      element.second.landmark->setCoordinates(robot_to_world_*element.second.coordinates_in_local_map);
     }
   }
 }

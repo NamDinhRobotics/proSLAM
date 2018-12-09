@@ -49,12 +49,45 @@ public: EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   typedef std::vector<Correspondence*> CorrespondencePointerVector;
 
+  //ds loop closure constraint element between 2 local maps
+  struct ClosureConstraint {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    ClosureConstraint(LocalMap* local_map_,
+                      const TransformMatrix3D& relation_,
+                      const Closure::CorrespondencePointerVector& landmark_correspondences_,
+                      const real& omega_ = 1): local_map(local_map_),
+                                               relation(relation_),
+                                               landmark_correspondences(landmark_correspondences_),
+                                               omega(omega_){}
+
+    LocalMap* local_map;
+    const TransformMatrix3D relation;
+    const Closure::CorrespondencePointerVector landmark_correspondences;
+    const real omega;
+  };
+
+  typedef std::vector<ClosureConstraint, Eigen::aligned_allocator<ClosureConstraint>> ClosureConstraintVector;
+
+  //ds landmark snapshot at creation of local map
+  struct LandmarkState {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    LandmarkState(Landmark* landmark_,
+                  PointCoordinates coordinates_in_local_map_): landmark(landmark_),
+                                                               coordinates_in_local_map(coordinates_in_local_map_) {}
+
+    Landmark* landmark;
+    PointCoordinates coordinates_in_local_map;
+  };
+
+  typedef std::pair<const Identifier, LandmarkState> LandmarkStateMapElement;
+  typedef std::map<const Identifier, LandmarkState, std::less<Identifier>, Eigen::aligned_allocator<LandmarkStateMapElement> > LandmarkStateMap;
+
 //ds object life
 public:
 
 //ds ctor
-Closure(const LocalMap* local_map_query_,
-        const LocalMap* local_map_reference_,
+Closure(LocalMap* local_map_query_,
+        LocalMap* local_map_reference_,
         const Count& absolute_number_of_matches_,
         const real& relative_number_of_matches_,
         const CorrespondencePointerVector& correspondences_): local_map_query(local_map_query_),
@@ -78,8 +111,8 @@ Closure(const LocalMap* local_map_query_,
 //ds attributes
 public:
 
-  const LocalMap* local_map_query;
-  const LocalMap* local_map_reference;
+  LocalMap* local_map_query;
+  LocalMap* local_map_reference;
   const Count absolute_number_of_matches;
   const real relative_number_of_matches;
   CorrespondencePointerVector correspondences;
