@@ -256,10 +256,11 @@ void GraphOptimizer::addPose(LocalMap* local_map_) {
   _local_maps_in_graph.insert(std::make_pair(local_map_->identifier(), local_map_));
 
   //ds for all loop closures on this local map
+//  g2o::VertexSE3* vertex_reference_oldest = nullptr;
   for (const Closure::ClosureConstraint& closure: local_map_->closures()) {
 
-    //ds compute information value
-    const real information_factor = _parameters->base_information_frame*closure.omega;
+    //ds compute information value (closure edges weight much more than pose edges to be able to deform the graph properly)
+    const real information_factor = _parameters->base_information_frame*closure.omega*10;
 
     //ds retrieve reference frame (must be present)
     g2o::VertexSE3* vertex_reference = dynamic_cast<g2o::VertexSE3*>(_optimizer->vertex(closure.local_map->identifier()));
@@ -267,7 +268,17 @@ void GraphOptimizer::addPose(LocalMap* local_map_) {
 
     //ds introduce loop closure constraint between the two local maps
     _setPoseEdge(_optimizer, vertex_current, vertex_reference, closure.relation, information_factor);
+
+//    //ds update oldest
+//    if (!vertex_reference_oldest || vertex_reference->id() < vertex_reference_oldest->id()) {
+//      vertex_reference_oldest = vertex_reference;
+//    }
   }
+
+//  //ds always lock the oldest reference vertex (only set when loop closures occured)
+//  if (vertex_reference_oldest) {
+//    vertex_reference_oldest->setFixed(true);
+//  }
 
   //ds bookkeep the added frame
   _vertex_local_map_last_added = vertex_current;

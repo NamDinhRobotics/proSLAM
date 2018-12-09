@@ -112,13 +112,7 @@ void DepthFramePointGeneratorParameters::print() const {
   BaseFramePointGeneratorParameters::print();
 }
 
-BaseTrackerParameters::BaseTrackerParameters(): aligner(new AlignerParameters()) {
-
-  //ds set specific default parameters
-  aligner->error_delta_for_convergence  = 1e-3;
-  aligner->maximum_error_kernel         = 16;
-  aligner->maximum_number_of_iterations = 1000;
-}
+BaseTrackerParameters::BaseTrackerParameters(): aligner(new AlignerParameters()) {}
 
 void BaseTrackerParameters::print() const {
   std::cerr << "BaseTrackerParameters::print|minimum_number_of_landmarks_to_track: " << minimum_number_of_landmarks_to_track << std::endl;

@@ -247,6 +247,7 @@ void BaseTracker::_registerRecursive(Frame* previous_frame_,
                                      Frame* current_frame_,
                                      const Count& recursion_) {
   assert(_number_of_tracked_landmarks_previous != 0);
+  ++_number_of_recursive_registrations;
 
   //ds current number of tracked landmarks
   real relative_number_of_tracked_landmarks_to_previous = static_cast<real>(_number_of_tracked_landmarks)/_number_of_tracked_landmarks_previous;
@@ -257,21 +258,27 @@ void BaseTracker::_registerRecursive(Frame* previous_frame_,
     //ds if we have recursions left (currently only two)
     if (recursion_ < 2) {
 
-      //ds fallback to no motion model
-      _previous_to_current_camera.setIdentity();
+      //ds fallback to no motion model if no external info is available
+      if (_parameters->motion_model != Parameters::MotionModel::CAMERA_ODOMETRY) {
+        _previous_to_current_camera.setIdentity();
 
-      //ds attempt tracking by appearance (maximum window size)
-      _framepoint_generator->initialize(current_frame_, false);
-      _track(previous_frame_, current_frame_, true);
-      _registerRecursive(previous_frame_, current_frame_, recursion_+1);
-      ++_number_of_recursive_registrations;
+        //ds attempt tracking by appearance (maximum window size)
+        _framepoint_generator->initialize(current_frame_, false);
+        _track(previous_frame_, current_frame_, true);
+        _registerRecursive(previous_frame_, current_frame_, recursion_+1);
+      } else {
+
+        //ds stick to odometry guess
+        const TransformMatrix3D camera_left_to_world = previous_frame_->cameraLeftToWorld()*_previous_to_current_camera.inverse();
+        current_frame_->setRobotToWorld(camera_left_to_world*_camera_left->robotToCamera());
+      }
       return;
     } else {
 
       //ds if we have some information about the camera pose (e.g. odometry)
       if (_parameters->motion_model == Parameters::MotionModel::CAMERA_ODOMETRY) {
 
-        //ds try fallback estimate
+        //ds use fallback estimate
         _fallbackEstimate(current_frame_, previous_frame_);
       } else {
 
@@ -298,42 +305,33 @@ void BaseTracker::_registerRecursive(Frame* previous_frame_,
 
   //ds solver deltas
   const Count number_of_inliers = _pose_optimizer->numberOfInliers();
-  const real average_error      = _pose_optimizer->totalError()/number_of_inliers;
+//  const real average_error      = _pose_optimizer->totalError()/number_of_inliers;
 
   //ds if we have enough inliers in the pose optimization
   if (number_of_inliers > _parameters->minimum_number_of_landmarks_to_track) {
 
-    //ds info
-    if (recursion_ > 0) {
-      LOG_INFO(std::cerr << current_frame_->identifier() << "|BaseTracker::_registerRecursive|recursion: " << recursion_
-                         << "|inliers: " << number_of_inliers << " average error: " << average_error << std::endl)
-    }
+//    //ds info
+//    if (recursion_ > 0) {
+//      LOG_INFO(std::cerr << current_frame_->identifier() << "|BaseTracker::_registerRecursive|recursion: " << recursion_
+//                         << "|inliers: " << number_of_inliers << " average error: " << average_error << std::endl)
+//    }
 
     //ds setup
-    _previous_to_current_camera    = _pose_optimizer->previousToCurrent();
-    const real delta_angular       = WorldMap::toOrientationRodrigues(_previous_to_current_camera.linear()).norm();
-    const real delta_translational = _previous_to_current_camera.translation().norm();
+    const TransformMatrix3D& previous_to_current_camera = _pose_optimizer->previousToCurrent();
+    const real delta_angular       = WorldMap::toOrientationRodrigues(previous_to_current_camera.linear()).norm();
+    const real delta_translational = previous_to_current_camera.translation().norm();
 
     //ds if the posit result is significant enough
     if (delta_angular > _parameters->minimum_delta_angular_for_movement || delta_translational > _parameters->minimum_delta_translational_for_movement) {
+      _previous_to_current_camera = previous_to_current_camera;
 
       //ds compute current robot pose
       const TransformMatrix3D camera_left_to_world = previous_frame_->cameraLeftToWorld()*_previous_to_current_camera.inverse();
       current_frame_->setRobotToWorld(camera_left_to_world*_camera_left->robotToCamera());
     } else {
 
-      //ds if we have some information about the camera pose (e.g. odometry)
-      if (_parameters->motion_model == Parameters::MotionModel::CAMERA_ODOMETRY) {
-
-        //ds compute current robot pose
-        const TransformMatrix3D camera_left_to_world = previous_frame_->cameraLeftToWorld()*_previous_to_current_camera.inverse();
-        current_frame_->setRobotToWorld(camera_left_to_world*_camera_left->robotToCamera());
-      } else {
-
-        //ds keep previous solution
-        current_frame_->setRobotToWorld(previous_frame_->robotToWorld());
-        _previous_to_current_camera = TransformMatrix3D::Identity();
-      }
+      //ds use fallback estimate
+      _fallbackEstimate(current_frame_, previous_frame_);
     }
 
     //ds visualization only (we need to clear and push_back in order to not crash the gui since its decoupled - otherwise we could use resize)
@@ -351,8 +349,8 @@ void BaseTracker::_registerRecursive(Frame* previous_frame_,
       CHRONOMETER_STOP(point_recovery)
     }
   } else {
-    LOG_WARNING(std::cerr << current_frame_->identifier() << "|BaseTracker::_registerRecursive|recursion: " << recursion_
-                          << "|inliers: " << number_of_inliers << " average error: " << average_error << std::endl)
+//    LOG_WARNING(std::cerr << current_frame_->identifier() << "|BaseTracker::_registerRecursive|recursion: " << recursion_
+//                          << "|inliers: " << number_of_inliers << " average error: " << average_error << std::endl)
 
     //ds if we have recursions left (currently only two)
     if (recursion_ < 2) {
@@ -366,7 +364,6 @@ void BaseTracker::_registerRecursive(Frame* previous_frame_,
       _framepoint_generator->initialize(current_frame_, false);
       _track(previous_frame_, current_frame_);
       _registerRecursive(previous_frame_, current_frame_, recursion_+1);
-      ++_number_of_recursive_registrations;
     } else {
 
       //ds if we have some information about the camera pose (e.g. odometry)

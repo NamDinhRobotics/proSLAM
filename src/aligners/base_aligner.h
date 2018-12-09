@@ -51,10 +51,11 @@ protected:
   std::vector<bool> _inliers;
   uint64_t _number_of_inliers  = 0;
   uint64_t _number_of_outliers = 0;
+  Count _number_of_measurements = 0;
 
   //ds linearization
-  bool _has_system_converged          = false;
-  real _total_error                   = 0;
+  bool _has_system_converged = false;
+  real _total_error          = 0;
 
   //! @brief configurable parameters
   AlignerParameters* _parameters = 0;
@@ -79,6 +80,7 @@ public:
 
   typedef Eigen::Matrix<real, states_, states_> StateMatrix;
   typedef Eigen::Matrix<real, states_, 1> StateVector;
+  typedef Eigen::Matrix<real, dimension_, 1> MeasurementVector;
   typedef Eigen::Matrix<real, dimension_, dimension_> DimensionMatrix;
   typedef Eigen::Matrix<real, dimension_, states_> JacobianMatrix;
 
@@ -90,5 +92,8 @@ protected:
   DimensionMatrix _omega          = DimensionMatrix::Identity();
   JacobianMatrix _jacobian        = JacobianMatrix::Zero();
   StateMatrix _information_matrix = StateMatrix::Identity();
+
+  std::vector<DimensionMatrix, Eigen::aligned_allocator<DimensionMatrix> > _information_matrix_vector;
+  std::vector<MeasurementVector, Eigen::aligned_allocator<MeasurementVector> > _fixed;
 };
 }

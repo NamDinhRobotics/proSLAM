@@ -43,7 +43,7 @@ world_map:
   #ds key frame generation properties
   minimum_distance_traveled_for_local_map: 1.0
   minimum_degrees_rotated_for_local_map:   0.5
-  minimum_number_of_frames_for_local_map:  4
+  minimum_number_of_frames_for_local_map:  10
 
 base_framepoint_generation:
 
@@ -91,7 +91,7 @@ base_tracking:
   minimum_track_length_for_landmark_creation: 2
 
   #ds track lost criteria
-  minimum_number_of_landmarks_to_track: 5
+  minimum_number_of_landmarks_to_track: 50
 
   #point tracking thresholds
   tunnel_vision_ratio: 0.75
@@ -107,8 +107,8 @@ base_tracking:
   minimum_delta_translational_for_movement: 0.01
   
   #pose optimization: aligner unit configuration
-  aligner->error_delta_for_convergence:  1e-3
-  aligner->maximum_error_kernel:         9
+  aligner->error_delta_for_convergence:  1e-5
+  aligner->maximum_error_kernel:         5
   aligner->damping:                      0
   aligner->maximum_number_of_iterations: 1000
   aligner->minimum_number_of_inliers:    0
@@ -123,20 +123,20 @@ relocalization:
   preliminary_minimum_interspace_queries: 10
 
   #minimum relative number of matches
-  preliminary_minimum_matching_ratio: 0.25
+  preliminary_minimum_matching_ratio: 0.5
 
   #minimum absolute number of matches
-  minimum_number_of_matched_landmarks: 100
+  minimum_number_of_matched_landmarks: 50
 
   #correspondence retrieval
   minimum_matches_per_correspondence: 0
   
   #icp: aligner unit configuration
   aligner->error_delta_for_convergence:  1e-5
-  aligner->maximum_error_kernel:         0.1
+  aligner->maximum_error_kernel:         0.05
   aligner->damping:                      0.0
   aligner->maximum_number_of_iterations: 100
-  aligner->minimum_number_of_inliers:    100
+  aligner->minimum_number_of_inliers:    50
   aligner->minimum_inlier_ratio:         0.9
 
 graph_optimization:
@@ -169,7 +169,7 @@ graph_optimization:
   base_information_frame_factor_for_translation: 1e-5
 
   #enable robust kernel for loop closure measurements
-  enable_robust_kernel_for_poses: true
+  enable_robust_kernel_for_poses: false
 
   #enable robust kernel for landmark measurements
   enable_robust_kernel_for_landmarks: false

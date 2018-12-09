@@ -5,7 +5,6 @@ namespace proslam {
   using namespace srrg_core;
 
   StereoUVAligner::StereoUVAligner(AlignerParameters* parameters_): BaseFrameAligner(parameters_) {}
-
   StereoUVAligner::~StereoUVAligner() {}
 
   //ds initialize aligner with minimal entity
@@ -20,7 +19,7 @@ namespace proslam {
     _number_of_measurements = _frame_current->points().size();
     _errors.resize(_number_of_measurements);
     _inliers.resize(_number_of_measurements);
-    _information_vector.resize(_number_of_measurements);
+    _information_matrix_vector.resize(_number_of_measurements);
     _weights_translation.resize(_number_of_measurements, 1);
     _moving.resize(_number_of_measurements);
     _fixed.resize(_number_of_measurements);
@@ -28,8 +27,7 @@ namespace proslam {
     //ds fill buffers
     for (Index u = 0; u < _number_of_measurements; ++u) {
       const FramePoint* frame_point = _frame_current->points()[u];
-      _information_vector[u].setIdentity();
-
+      _information_matrix_vector[u].setIdentity();
       assert(_frame_current->cameraLeft()->isInFieldOfView(frame_point->imageCoordinatesLeft()));
       assert(_frame_current->cameraRight()->isInFieldOfView(frame_point->imageCoordinatesRight()));
       assert(frame_point->previous());
@@ -47,7 +45,7 @@ namespace proslam {
         _moving[u] = frame_point->previous()->cameraCoordinatesLeftLandmark();
 
         //ds increase weight linear in the number of updates
-        _information_vector[u] *= (1+frame_point->landmark()->numberOfUpdates());
+        _information_matrix_vector[u] *= (1+frame_point->landmark()->numberOfUpdates());
       } else {
 
         //ds set moving part (3D point coordinates)
@@ -55,7 +53,7 @@ namespace proslam {
       }
 
       //ds scale information proportional to disparity of the measurement (the bigger, the closer, the better the triangulation)
-      _information_vector[u] *= std::log(1+frame_point->disparityPixels())/(1+std::fabs(frame_point->epipolarOffset()));
+      _information_matrix_vector[u] *= std::log(1+frame_point->disparityPixels())/(1+std::fabs(frame_point->epipolarOffset()));
     }
 
     //ds if individual weighting is desired
@@ -85,7 +83,7 @@ namespace proslam {
     for (Index u = 0; u < _number_of_measurements; ++u) {
       _errors[u]  = -1;
       _inliers[u] = false;
-      _omega      = _information_vector[u];
+      _omega      = _information_matrix_vector[u];
 
       //ds compute the point in the camera frame - prefering a landmark estimate if available
       const PointCoordinates sampled_point_in_camera_left = _previous_to_current*_moving[u];
@@ -201,8 +199,6 @@ namespace proslam {
       _H += jacobian_transposed*_omega*_jacobian;
       _b += jacobian_transposed*_omega*error;
     }
-
-    //ds update statistics
     _number_of_outliers = _number_of_measurements-_number_of_inliers;
   }
 
@@ -215,9 +211,9 @@ namespace proslam {
     //ds damping
     _H += _parameters->damping*_number_of_measurements*Matrix6::Identity();
 
-    //ds compute solution transformation after perturbation
-    const Vector6 dx     = _H.fullPivLu().solve(-_b);
-    _previous_to_current = v2t(dx)*_previous_to_current;
+    //ds compute dense LS solution transformation after perturbation
+    const Vector6 perturbation = _H.fullPivLu().solve(-_b);
+    _previous_to_current       = v2t(perturbation)*_previous_to_current;
 
     //ds enforce proper rotation matrix
     const Matrix3 rotation               = _previous_to_current.linear();

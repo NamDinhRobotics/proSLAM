@@ -144,6 +144,10 @@ void SLAMAssembly::loadCamerasFromMessageFile() {
         Eigen::Isometry3f offset_corrected(image_message->offset());
         offset_corrected.rotate(Eigen::AngleAxisf(0.3, Eigen::Vector3f::UnitX()));
         image_message->setOffset(offset_corrected);
+        Eigen::Matrix3f camera_calibration_matrix_corrected(image_message->cameraMatrix());
+        camera_calibration_matrix_corrected      *= 0.95;
+        camera_calibration_matrix_corrected(2, 2) = 1.0;
+        image_message->setCameraMatrix(camera_calibration_matrix_corrected);
       }
 
       //ds check for the two set topics to set the camera objects
@@ -544,6 +548,7 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
         _relocalizer->registerClosures();
 
         //ds check the closures
+        if (_map_viewer) {_map_viewer->lock();}
         for(Closure* closure: _relocalizer->closures()) {
           if (closure->is_valid) {
             assert(created_local_map == closure->local_map_query);
@@ -562,6 +567,7 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
             }
           }
         }
+        if (_map_viewer) {_map_viewer->unlock();}
 
         //ds clear buffer (automatically purges invalidated closures)
         _relocalizer->clear();
@@ -574,14 +580,10 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
 
           //ds check if a periodic bundle adjustment is required
           if (_world_map->frames().size() % _parameters->graph_optimizer_parameters->number_of_frames_per_bundle_adjustment == 0) {
-
-            //ds check if we're running with a GUI and lock the GUI before the critical phase
             if (_map_viewer) {_map_viewer->lock();}
 
             //ds optimize graph
             _graph_optimizer->optimizeFactorGraph(_world_map);
-
-            //ds reenable the GUI
             if (_map_viewer) {_map_viewer->unlock();}
           }
         } else {
@@ -591,17 +593,13 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
 
           //ds if we closed a local map - otherwise there is no need to optimize the pose graph
           if (_world_map->relocalized()) {
-
-            //ds check if we're running with a GUI and lock the GUI before the critical phase
             if (_map_viewer) {_map_viewer->lock();}
 
             //ds optimize pose graph with the loop closure constraint
             _graph_optimizer->optimizePoseGraph(_world_map);
 
             //ds merge landmarks for the current local map and its closures
-            _world_map->mergeLandmarks(created_local_map->closures());
-
-            //ds re-enable the GUI
+            //_world_map->mergeLandmarks(created_local_map->closures());
             if (_map_viewer) {_map_viewer->unlock();}
           }
         }

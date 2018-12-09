@@ -40,10 +40,8 @@ protected:
   //ds module paramaters
   real _maximum_reliable_depth_meters = 15;
 
-  Count _number_of_measurements = 0;
-  std::vector<DimensionMatrix, Eigen::aligned_allocator<DimensionMatrix> > _information_vector;
+  //ds 3D points in camera frame
   std::vector<Vector3, Eigen::aligned_allocator<Vector3> > _moving;
-  std::vector<Vector4, Eigen::aligned_allocator<Vector4> > _fixed;
   std::vector<real> _weights_translation;
 };
 }
