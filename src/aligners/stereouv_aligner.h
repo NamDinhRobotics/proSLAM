@@ -37,7 +37,7 @@ protected:
   Vector3 _offset_camera_right              = Vector3::Zero();
   real _minimum_depth                       = 1.0;
 
-  //ds module paramaters
+  //ds module parameters
   real _maximum_reliable_depth_meters = 15;
 
   //ds 3D points in camera frame

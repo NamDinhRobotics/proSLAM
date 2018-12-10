@@ -130,6 +130,25 @@ void ImageViewer::_drawTracking() {
         cv::line(_current_image, point->keypointLeft().pt, point->previous()->keypointLeft().pt, CV_COLOR_CODE_GREEN);
       }
     }
+
+    //ds for all temporary points in the current frame
+    for (const FramePoint* point: _current_frame->temporaryPoints()) {
+      if (point->previous()) {
+
+        //ds for points without landmark, draw a little green dot
+        if (!point->landmark()) {
+          cv::circle(_current_image, point->keypointLeft().pt, 2, CV_COLOR_CODE_VIOLETT, -1);
+          cv::line(_current_image, point->keypointLeft().pt, point->previous()->keypointLeft().pt, CV_COLOR_CODE_VIOLETT);
+        }
+
+        //ds draw projected point and error
+        cv::circle(_current_image, point->projectionEstimateLeft(), 4, CV_COLOR_CODE_BLUE, 1);
+
+        //ds draw tracking line and circle
+        cv::circle(_current_image, point->keypointLeft().pt, tracking_distance_pixels, CV_COLOR_CODE_VIOLETT);
+        cv::line(_current_image, point->keypointLeft().pt, point->previous()->keypointLeft().pt, CV_COLOR_CODE_VIOLETT);
+      }
+    }
   }
 }
 }

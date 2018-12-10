@@ -17,7 +17,7 @@ command_line:
 
   #ds options
   option_use_gui:                   true
-  option_disable_relocalization:    true
+  option_disable_relocalization:    false
   option_show_top_viewer:           false
   option_drop_framepoints:          false
   option_equalize_histogram:        false
@@ -48,7 +48,7 @@ world_map:
 base_framepoint_generation:
 
   #ds feature descriptor type (BRIEF-128/256/512, ORB-256, BRISK-512, FREAK-512, A-KAZE-486, BinBoost-064)
-  descriptor_type: BRIEF-256
+  descriptor_type: ORB-256
 
   #ds dynamic thresholds for feature detection
   target_number_of_keypoints_tolerance: 0.1
@@ -63,7 +63,7 @@ base_framepoint_generation:
   maximum_projection_tracking_distance_pixels: 10
 
   #ds dynamic thresholds for descriptor matching
-  matching_distance_tracking_threshold: 50
+  matching_distance_tracking_threshold: 25
   
   #ds maximum reliable depth with chosen sensor
   maximum_reliable_depth_meters: 2.5
@@ -82,7 +82,7 @@ stereo_framepoint_generation:
 depth_framepoint_generation:
 
   #ds depth sensor configuration
-  maximum_depth_meters: 5
+  maximum_depth_meters: 7.5
   minimum_depth_meters: 0.1
 
 base_tracking:
@@ -91,7 +91,7 @@ base_tracking:
   minimum_track_length_for_landmark_creation: 2
 
   #ds track lost criteria
-  minimum_number_of_landmarks_to_track: 25
+  minimum_number_of_landmarks_to_track: 75
 
   #point tracking thresholds
   tunnel_vision_ratio: 0.75
@@ -108,7 +108,7 @@ base_tracking:
   
   #pose optimization: aligner unit configuration
   aligner->error_delta_for_convergence:  1e-5
-  aligner->maximum_error_kernel:         5
+  aligner->maximum_error_kernel:         10
   aligner->damping:                      0
   aligner->maximum_number_of_iterations: 1000
   aligner->minimum_number_of_inliers:    0
@@ -120,10 +120,10 @@ relocalization:
   maximum_descriptor_distance: 25
 
   #minimum query interspace
-  preliminary_minimum_interspace_queries: 10
+  preliminary_minimum_interspace_queries: 5
 
   #minimum relative number of matches
-  preliminary_minimum_matching_ratio: 0.5
+  preliminary_minimum_matching_ratio: 0.25
 
   #minimum absolute number of matches
   minimum_number_of_matched_landmarks: 50

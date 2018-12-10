@@ -84,12 +84,8 @@ FramePoint* Frame::createFramepoint(const cv::KeyPoint& keypoint_left_,
 
   //ds if there is a previous point
   if (previous_point_) {
-
-    //ds connect the framepoints
     frame_point->setPrevious(previous_point_);
   } else {
-
-    //ds this point has no predecessor
     frame_point->setOrigin(frame_point);
   }
 

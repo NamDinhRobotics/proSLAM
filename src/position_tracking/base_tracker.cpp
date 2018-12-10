@@ -176,6 +176,18 @@ void BaseTracker::compute() {
     _status = Frame::Tracking;
   }
 
+//  //ds dump to file
+//  std::ofstream stream_wheel_odometry("wheel_odometry.txt", std::ofstream::app);
+//  Vector6 v = srrg_core::t2v(_camera_left_in_world_guess);
+//  stream_wheel_odometry << current_frame->identifier()
+//                        << " " << v(0) << " " << v(1) << " " << v(2)<< " " << 1 << " " << v(3)<< " " << v(4)<< " " << v(5) << std::endl;
+//  stream_wheel_odometry.close();
+//  std::ofstream stream_visual_odometry("visual_odometry.txt", std::ofstream::app);
+//  v = srrg_core::t2v(current_frame->cameraLeftToWorld());
+//  stream_visual_odometry << current_frame->identifier()
+//                        << " " << v(0) << " " << v(1) << " " << v(2)<< " " << 1 << " " << v(3)<< " " << v(4)<< " " << v(5) << std::endl;
+//  stream_visual_odometry.close();
+
   //ds compute remaining points in frame
   CHRONOMETER_START(track_creation)
   _framepoint_generator->compute(current_frame);
@@ -394,30 +406,17 @@ void BaseTracker::breakTrack(Frame* frame_) {
   _context->breakTrack(frame_);
 }
 
-//ds prunes invalid points after pose optimization
 void BaseTracker::_prunePoints(Frame* frame_) {
-
-  //ds filter invalid points of pose optimization
   _number_of_tracked_points = 0;
   for (Index index_point = 0; index_point < frame_->points().size(); index_point++) {
     assert(frame_->points()[index_point]->previous());
 
     //ds keep points which were not suppressed in the optimization
     if (_pose_optimizer->errors()[index_point] != -1) {
-
-      //ds if we have a new point keep it
-      //if (!frame_->points()[index_point]->landmark()) {
-        frame_->points()[_number_of_tracked_points] = frame_->points()[index_point];
-        ++_number_of_tracked_points;
-
-      //ds keep landmarks only if they were inliers
-      //} else if (_pose_optimizer->inliers()[index_point]) {
-      //  frame_->points()[_number_of_tracked_points] = frame_->points()[index_point];
-      //  ++_number_of_tracked_points;
-      //}
+      frame_->points()[_number_of_tracked_points] = frame_->points()[index_point];
+      ++_number_of_tracked_points;
     }
   }
-//  std::cerr << "dropped points REGISTRATION: " << frame_->points().size()-_number_of_tracked_points << "/" << frame_->points().size() << std::endl;
   frame_->points().resize(_number_of_tracked_points);
 }
 
@@ -433,8 +432,10 @@ void BaseTracker::_updatePoints(WorldMap* context_, Frame* frame_) {
   for (FramePoint* point: frame_->points()) {
     point->setWorldCoordinates(robot_to_world*point->robotCoordinates());
 
-    //ds skip point if tracking and not mature enough to be a landmark - for localizing state this is skipped
-    if (point->trackLength() < _parameters->minimum_track_length_for_landmark_creation) {
+    //ds skip point if tracking and not mature enough to be a landmark
+    //ds skip point if its depth was estimated (i.e. not measured) TODO enable proper triangulation to allow landmarks
+    if (point->trackLength() < _parameters->minimum_track_length_for_landmark_creation ||
+        point->hasEstimatedDepth()) {
       continue;
     }
 
@@ -460,8 +461,7 @@ void BaseTracker::_updatePoints(WorldMap* context_, Frame* frame_) {
   LOG_DEBUG(std::cerr << "BaseTracker::_updatePoints|updated landmarks: " << _number_of_active_landmarks << std::endl)
 
   //ds update secondary points
-  Count number_of_triangulated_points = 0;
-  Count number_of_new_active_points   = 0;
+  Count number_of_temporary_points = 0;
   for (FramePoint* point: frame_->temporaryPoints()) {
     assert(point->previous());
 
@@ -480,24 +480,11 @@ void BaseTracker::_updatePoints(WorldMap* context_, Frame* frame_) {
     point->setCameraCoordinatesLeft(camera_coordinates_refined);
     point->setRobotCoordinates(_camera_left->cameraToRobot()*camera_coordinates_refined);
     point->setWorldCoordinates(robot_to_world*point->robotCoordinates());
-
-    //ds if point is mature enough
-    if (point->trackLength() > _parameters->minimum_track_length_for_landmark_creation) {
-
-      //ds add it to the active points (so in the next iteration it will be considered in the pose optimization)
-      frame_->points().push_back(point);
-      ++number_of_new_active_points;
-      ++_number_of_tracked_points;
-    } else {
-
-      //ds keep the point in the temporary buffer
-      frame_->temporaryPoints()[number_of_triangulated_points] = point;
-      ++number_of_triangulated_points;
-    }
+    frame_->temporaryPoints()[number_of_temporary_points] = point;
+    ++number_of_temporary_points;
   }
-  frame_->temporaryPoints().resize(number_of_triangulated_points);
-  LOG_INFO(std::cerr << "BaseTracker::_updatePoints|updated temporary points: " << number_of_triangulated_points
-                     << " new active points: " << number_of_new_active_points << std::endl)
+  frame_->temporaryPoints().resize(number_of_temporary_points);
+  LOG_DEBUG(std::cerr << "BaseTracker::_updatePoints|updated temporary points: " << frame_->temporaryPoints().size() << std::endl)
   CHRONOMETER_STOP(landmark_optimization)
 }
 

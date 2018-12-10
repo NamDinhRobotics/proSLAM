@@ -44,6 +44,7 @@ void FramePoint::setPrevious(FramePoint* previous_) {
   //ds update linked list
   previous_->_next = this;
   _previous = previous_;
+  _has_estimated_depth = previous_->_has_estimated_depth;
 
   //ds update current
   setLandmark(previous_->landmark());

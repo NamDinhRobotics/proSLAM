@@ -80,40 +80,36 @@ void DepthFramePointGenerator::compute(Frame* frame_) {
       continue;
     }
 
-    //ds framepoint instance can be generated from depth measurement (optimal) or from successive triangulation
-    FramePoint* framepoint = nullptr;
+    //ds if depth could not be retrieved
+    if (depth_point[2] >= _parameters->maximum_depth_meters) {
 
-    //ds if the measured depth is within a qualitatively high range
-    if (depth_point[2] < _parameters->maximum_depth_meters) {
+      //ds allocate a new framepoint (will be stored in temporary points) - currently not checked with binning!
+      FramePoint* framepoint = frame_->createFramepoint(feature_left);
 
-      //ds obtain coordinates in the depth image
-      cv::KeyPoint keypoint_right = feature_left->keypoint;
-      keypoint_right.pt.x = _col_map.at<short>(feature_left->row, feature_left->col);
-      keypoint_right.pt.y = _row_map.at<short>(feature_left->row, feature_left->col);
-
-      //ds allocate a new framepoint
-      framepoint = frame_->createFramepoint(feature_left->keypoint,
-                                            feature_left->descriptor,
-                                            keypoint_right,
-                                            feature_left->descriptor,
-                                            PointCoordinates(depth_point[0], depth_point[1], depth_point[2]));
-    } else {
-
-      //ds create framepoint with "infinity" depth - reverse homogeneous division
+      //ds set raw estimated depth - reverse homogeneous division
       const real depth_meters = _parameters->maximum_depth_meters;
       const PointCoordinates point_homogeneous(feature_left->col*depth_meters, feature_left->row*depth_meters, depth_meters);
-
-      //ds allocate a new framepoint
-      framepoint = frame_->createFramepoint(feature_left->keypoint,
-                                            feature_left->descriptor,
-                                            feature_left->keypoint,
-                                            feature_left->descriptor,
-                                            inverse_camera_matrix*point_homogeneous);
-
-      //ds only use this framepoint for orientation determination (in pose optimization)
+      framepoint->setCameraCoordinatesLeft(inverse_camera_matrix*point_homogeneous);
       framepoint->setHasEstimatedDepth(true);
       ++number_of_new_points_with_infinity_depth;
+      continue;
     }
+
+    //ds at this point we have a valid depth measurement - obtain coordinates in the depth image
+    cv::KeyPoint keypoint_right = feature_left->keypoint;
+    keypoint_right.pt.x = _col_map.at<short>(feature_left->row, feature_left->col);
+    keypoint_right.pt.y = _row_map.at<short>(feature_left->row, feature_left->col);
+
+    //ds allocate a new framepoint
+    FramePoint* framepoint = frame_->createFramepoint(feature_left->keypoint,
+                                                      feature_left->descriptor,
+                                                      keypoint_right,
+                                                      feature_left->descriptor,
+                                                      PointCoordinates(depth_point[0], depth_point[1], depth_point[2]));
+
+    //ds set point to buffer
+    framepoints_new[number_of_new_points] = framepoint;
+    ++number_of_new_points;
 
     //ds store point for optional binning
     if (_parameters->enable_keypoint_binning) {
@@ -136,10 +132,6 @@ void DepthFramePointGenerator::compute(Frame* frame_) {
         _bin_map_left[row_bin][col_bin] = framepoint;
       }
     }
-
-    //ds set point to buffer
-    framepoints_new[number_of_new_points] = framepoint;
-    ++number_of_new_points;
   }
   framepoints_new.resize(number_of_new_points);
   LOG_INFO(std::cerr << "DepthFramePointGenerator::compute|number of new points with measured depth: "
@@ -183,7 +175,9 @@ void DepthFramePointGenerator::track(Frame* frame_,
   frame_->clear();
   const Matrix3& camera_calibration_matrix = _camera_left->cameraMatrix();
   FramePointPointerVector& framepoints(frame_->points());
-  FramePointPointerVector& framepoints_previous(frame_previous_->points());
+
+  //ds obtain a copy of the previous framepoints as a working buffer
+  FramePointPointerVector framepoints_previous(frame_previous_->points());
 
   //ds add secondary points to tracking as well
   framepoints_previous.insert(framepoints_previous.end(), frame_previous_->temporaryPoints().begin(), frame_previous_->temporaryPoints().end());
@@ -199,6 +193,7 @@ void DepthFramePointGenerator::track(Frame* frame_,
   Count number_of_points       = 0;
   Count number_of_points_lost  = 0;
   _number_of_tracked_landmarks = 0;
+  Count number_of_points_upgraded_from_estimated_depth = 0;
 
   //ds for each previous point
   for (FramePoint* point_previous: framepoints_previous) {
@@ -252,12 +247,15 @@ void DepthFramePointGenerator::track(Frame* frame_,
       //ds if depth could not be retrieved
       if (depth_point[2] >= _parameters->maximum_depth_meters) {
 
-        //ds allocate a new framepoint to the temporary framepoints buffer
-        frame_->createFramepoint(feature_left, point_previous);
+        //ds allocate a new framepoint to the temporary framepoints buffer (points without measured depth)
+        FramePoint* framepoint = frame_->createFramepoint(feature_left, point_previous);
+
+        //ds VSUALIZATION ONLY
+        framepoint->setProjectionEstimateLeft(cv::Point2f(col_projection_left, row_projection_left));
         continue;
       }
 
-      //ds obtain coordinates in the depth image
+      //ds at this point we have a valid depth measurement - obtain coordinates in the depth image
       cv::KeyPoint keypoint_right = feature_left->keypoint;
       keypoint_right.pt.x = _col_map.at<short>(feature_left->row, feature_left->col);
       keypoint_right.pt.y = _row_map.at<short>(feature_left->row, feature_left->col);
@@ -269,6 +267,11 @@ void DepthFramePointGenerator::track(Frame* frame_,
                                                         feature_left->descriptor,
                                                         PointCoordinates(depth_point[0], depth_point[1], depth_point[2]),
                                                         point_previous);
+
+      //ds check if we have an estimated depth point that entered the active point set
+      if (framepoint->hasEstimatedDepth()) {
+        ++number_of_points_upgraded_from_estimated_depth;
+      }
 
       //ds VSUALIZATION ONLY
       framepoint->setProjectionEstimateLeft(cv::Point2f(col_projection_left, row_projection_left));
@@ -288,8 +291,8 @@ void DepthFramePointGenerator::track(Frame* frame_,
       }
     }
 
-    //ds if we couldn't track the point
-    if (!point_previous->next()) {
+    //ds if we couldn't track the point and it was not estimated (not that valuable)
+    if (!point_previous->next() && !point_previous->hasEstimatedDepth()) {
       previous_framepoints_without_tracks_[number_of_points_lost] = point_previous;
       ++number_of_points_lost;
     }
@@ -302,6 +305,7 @@ void DepthFramePointGenerator::track(Frame* frame_,
   LOG_INFO(std::cerr << "DepthFramePointGenerator::track|tracked points with depth: " << number_of_points
                       << "/" << framepoints_previous.size() << " (landmarks: " << _number_of_tracked_landmarks << ")" << std::endl)
   LOG_INFO(std::cerr << "DepthFramePointGenerator::track|tracked points with infinity depth: " << frame_->temporaryPoints().size() << std::endl)
+  LOG_INFO(std::cerr << "DepthFramePointGenerator::track|tracked points with depth and previous infinity depth: " << number_of_points_upgraded_from_estimated_depth << std::endl)
   LOG_DEBUG(std::cerr << "DepthFramePointGenerator::track|lost points: " << number_of_points_lost
                       << "/" << framepoints_previous.size() << std::endl)
 }

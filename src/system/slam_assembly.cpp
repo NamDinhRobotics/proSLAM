@@ -145,7 +145,7 @@ void SLAMAssembly::loadCamerasFromMessageFile() {
         offset_corrected.rotate(Eigen::AngleAxisf(0.3, Eigen::Vector3f::UnitX()));
         image_message->setOffset(offset_corrected);
         Eigen::Matrix3f camera_calibration_matrix_corrected(image_message->cameraMatrix());
-        camera_calibration_matrix_corrected      *= 0.95;
+        camera_calibration_matrix_corrected *= 0.95;
         camera_calibration_matrix_corrected(2, 2) = 1.0;
         image_message->setCameraMatrix(camera_calibration_matrix_corrected);
       }

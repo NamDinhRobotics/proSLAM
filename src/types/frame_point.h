@@ -139,8 +139,8 @@ public:
 public:
 
   //! @brief the framepoints position in the image
-  const uint32_t row;
-  const uint32_t col;
+  const int32_t row;
+  const int32_t col;
 
 //ds attributes
 protected:

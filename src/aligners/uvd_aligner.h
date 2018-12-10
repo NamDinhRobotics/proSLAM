@@ -32,7 +32,11 @@ protected:
   //ds buffers
   CameraMatrix _camera_calibration_matrix = CameraMatrix::Zero();
 
+  //ds minimum reliable depth
   real _minimum_depth = 0.1;
+
+  //ds module parameters
+  real _maximum_reliable_depth_meters = 2.5;
 
   //ds 3D points in camera frame
   std::vector<Vector3, Eigen::aligned_allocator<Vector3> > _moving;
