@@ -86,21 +86,31 @@ public:
   inline const FramePointPointerVector& points() const {return _active_points;}
   inline FramePointPointerVector& points() {return _active_points;}
 
-  //ds request a new framepoint instance with an optional link to a previous point (track)
+  //! @brief request a new framepoint instance with an optional link to a previous point (track)
+  //! @brief point has a valid, measured position in the camera
   FramePoint* createFramepoint(const cv::KeyPoint& keypoint_left_,
-                     const cv::Mat& descriptor_left_,
-                     const cv::KeyPoint& keypoint_right_,
-                     const cv::Mat& descriptor_right_,
-                     const PointCoordinates& camera_coordinates_left_,
-                     FramePoint* previous_point_ = nullptr);
+                               const cv::Mat& descriptor_left_,
+                               const cv::KeyPoint& keypoint_right_,
+                               const cv::Mat& descriptor_right_,
+                               const PointCoordinates& camera_coordinates_left_,
+                               FramePoint* previous_point_ = nullptr);
 
-  //ds request a new framepoint instance with an optional link to a previous point (track)
+  //! @brief a new framepoint instance with an optional link to a previous point (track)
+  //! @brief point has a valid, measured position in the camera
   FramePoint* createFramepoint(const IntensityFeature* feature_left_,
                                const IntensityFeature* feature_right_,
                                const PointCoordinates& camera_coordinates_left_,
                                FramePoint* previous_point_ = nullptr);
 
-  //! @brief request a new framepoint that has to be triangulated first before entering in the active points
+  //! @brief request a new framepoint instance with an optional link to a previous point (track) without right keypoint/descriptor
+  //! @brief point has a valid, measured position in the camera
+  FramePoint* createFramepoint(const cv::KeyPoint& keypoint_left_,
+                               const cv::Mat& descriptor_left_,
+                               const PointCoordinates& camera_coordinates_left_,
+                               FramePoint* previous_point_ = nullptr);
+
+  //! @brief request a new framepoint that has to be triangulated first before entering in the active points  without right keypoint/descriptor
+  //! @brief point has NOT a valid, measured position in the camera
   FramePoint* createFramepoint(const IntensityFeature* feature_left_,
                                FramePoint* previous_point_ = nullptr);
 

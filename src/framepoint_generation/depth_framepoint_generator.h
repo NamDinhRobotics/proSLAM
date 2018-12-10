@@ -13,10 +13,10 @@ PROSLAM_MAKE_PROCESSING_CLASS(DepthFramePointGenerator)
 public:
 
   //ds initializes the framepoint generator (e.g. detects keypoints and computes descriptors)
-  virtual void initialize(Frame* frame_, const bool& extract_features_ = true);
+  virtual void initialize(Frame* frame_, const bool& extract_features_ = true) override;
 
   //ds computes framepoints stored in a image-like matrix (_framepoints_in_image) for provided stereo images
-  virtual void compute(Frame* frame_);
+  virtual void compute(Frame* frame_) override;
 
   //! @brief computes first tracks between previous framepoints, estimates the projection error
   //! @brief and uses the prior on the right camera for fast and reliable stereo matching
@@ -24,11 +24,15 @@ public:
   //! @param[in] frame_previous_ previous frame that contains valid framepoints on which we will track
   //! @param[in] camera_left_previous_in_current_ the relative camera motion guess between frame_ and frame_previous_
   //! @param[out] previous_points_without_tracks_ lost points
-  void track(Frame* frame_,
-             Frame* frame_previous_,
-             const TransformMatrix3D& camera_left_previous_in_current_,
-             FramePointPointerVector& previous_framepoints_without_tracks_,
-             const bool track_by_appearance_ = true) override;
+  virtual void track(Frame* frame_,
+                     Frame* frame_previous_,
+                     const TransformMatrix3D& camera_left_previous_in_current_,
+                     FramePointPointerVector& previous_framepoints_without_tracks_,
+                     const bool track_by_appearance_ = true) override;
+
+  //! @brief attempts to recover framepoints in the current image using the more precise pose estimate, retrieved after pose optimization
+  //! @brief param[in] current_frame_ the affected frame carrying points to be recovered
+  virtual void recoverPoints(Frame* current_frame_, const FramePointPointerVector& lost_points_) const override;
 
 //ds setters/getters
 public:

@@ -1,4 +1,5 @@
 #include "depth_framepoint_generator.h"
+#include "types/landmark.h"
 
 namespace proslam {
 
@@ -11,11 +12,7 @@ DepthFramePointGenerator::DepthFramePointGenerator(DepthFramePointGeneratorParam
 void DepthFramePointGenerator::configure(){
   LOG_INFO(std::cerr << "DepthFramePointGenerator::configure|configuring" << std::endl)
   assert(_camera_right);
-
-  //ds update base
   BaseFramePointGenerator::configure();
-
-  //ds info
   LOG_INFO(std::cerr << "DepthFramePointGenerator::configure|configured" << std::endl)
 }
 
@@ -95,15 +92,8 @@ void DepthFramePointGenerator::compute(Frame* frame_) {
       continue;
     }
 
-    //ds at this point we have a valid depth measurement - obtain coordinates in the depth image
-    cv::KeyPoint keypoint_right = feature_left->keypoint;
-    keypoint_right.pt.x = _col_map.at<short>(feature_left->row, feature_left->col);
-    keypoint_right.pt.y = _row_map.at<short>(feature_left->row, feature_left->col);
-
     //ds allocate a new framepoint
     FramePoint* framepoint = frame_->createFramepoint(feature_left->keypoint,
-                                                      feature_left->descriptor,
-                                                      keypoint_right,
                                                       feature_left->descriptor,
                                                       PointCoordinates(depth_point[0], depth_point[1], depth_point[2]));
 
@@ -255,15 +245,8 @@ void DepthFramePointGenerator::track(Frame* frame_,
         continue;
       }
 
-      //ds at this point we have a valid depth measurement - obtain coordinates in the depth image
-      cv::KeyPoint keypoint_right = feature_left->keypoint;
-      keypoint_right.pt.x = _col_map.at<short>(feature_left->row, feature_left->col);
-      keypoint_right.pt.y = _row_map.at<short>(feature_left->row, feature_left->col);
-
       //ds allocate a framepoint
       FramePoint* framepoint = frame_->createFramepoint(feature_left->keypoint,
-                                                        feature_left->descriptor,
-                                                        keypoint_right,
                                                         feature_left->descriptor,
                                                         PointCoordinates(depth_point[0], depth_point[1], depth_point[2]),
                                                         point_previous);
@@ -308,6 +291,116 @@ void DepthFramePointGenerator::track(Frame* frame_,
   LOG_INFO(std::cerr << "DepthFramePointGenerator::track|tracked points with depth and previous infinity depth: " << number_of_points_upgraded_from_estimated_depth << std::endl)
   LOG_DEBUG(std::cerr << "DepthFramePointGenerator::track|lost points: " << number_of_points_lost
                       << "/" << framepoints_previous.size() << std::endl)
+}
+
+void DepthFramePointGenerator::recoverPoints(Frame* current_frame_, const FramePointPointerVector& lost_points_) const {
+
+  //ds precompute transforms
+  const TransformMatrix3D world_to_camera_left  = current_frame_->worldToCameraLeft();
+  const CameraMatrix& camera_calibration_matrix = _camera_left->cameraMatrix();
+
+  //ds buffers
+  const cv::Mat& intensity_image_left = current_frame_->intensityImageLeft();
+  std::vector<cv::KeyPoint> keypoint_buffer_left(1);
+
+  //ds recover lost landmarks
+  const Count number_of_tracked_points = current_frame_->points().size();
+  Index index_lost_point_recovered     = number_of_tracked_points;
+  current_frame_->points().resize(number_of_tracked_points+lost_points_.size());
+  for (FramePoint* point_previous: lost_points_) {
+
+    //ds skip non landmarks for now (TODO parametrize)
+    if (!point_previous->landmark()) {
+      continue;
+    }
+
+    //ds get point into current camera - based on last track
+    PointCoordinates point_in_camera_homogeneous(Vector3::Zero());
+
+    //ds if we have a landmark at hand
+    if (point_previous->landmark()) {
+      point_previous->landmark()->incrementNumberOfRecoveries();
+
+      //ds get point in camera frame based on landmark coordinates
+      point_in_camera_homogeneous = world_to_camera_left*point_previous->landmark()->coordinates();
+    } else {
+
+      //ds get point in camera frame based on point coordinates
+      point_in_camera_homogeneous = world_to_camera_left*point_previous->worldCoordinates();
+    }
+
+    //ds obtain point projection on camera image plane
+    PointCoordinates point_in_image_left = camera_calibration_matrix*point_in_camera_homogeneous;
+    point_in_image_left /= point_in_image_left.z();
+
+    //ds if out of FOV
+    if (point_in_image_left.x() < 0 || point_in_image_left.x() > _camera_left->numberOfImageCols()  ||
+        point_in_image_left.y() < 0 || point_in_image_left.y() > _camera_left->numberOfImageRows()  ) {
+      continue;
+    }
+
+    //ds set projections - at subpixel accuarcy
+    const cv::Point2f projection_left(point_in_image_left.x(), point_in_image_left.y());
+
+    //ds check if we have depth information at this pixel, retrieve depth point at given pixel
+    const cv::Vec3f& depth_point = _space_map_left_meters.at<const cv::Vec3f>(std::rint(projection_left.y), std::rint(projection_left.x));
+
+    //ds if depth is in the invalid range - skip the point
+    if (depth_point[2] < _parameters->minimum_depth_meters ||
+        depth_point[2] >= _parameters->maximum_depth_meters) {
+      continue;
+    }
+
+    //ds this can be moved outside of the loop if keypoint sizes are constant
+    const float regional_border_center = 5*point_previous->keypointLeft().size;
+    const cv::Point2f offset_keypoint_half(regional_border_center, regional_border_center);
+    const float regional_full_height = regional_border_center+regional_border_center+1;
+
+    //ds if available search range is insufficient
+    if (projection_left.x <= regional_border_center+1                                   ||
+        projection_left.x >= _camera_left->numberOfImageCols()-regional_border_center-1 ||
+        projection_left.y <= regional_border_center+1                                   ||
+        projection_left.y >= _camera_left->numberOfImageRows()-regional_border_center-1 ) {
+
+      //ds skip complete tracking
+      continue;
+    }
+
+    //ds left search regions
+    const cv::Point2f corner_left(projection_left-offset_keypoint_half);
+    const cv::Rect_<float> region_of_interest_left(corner_left.x, corner_left.y, regional_full_height, regional_full_height);
+
+    //ds extract descriptors at this position: LEFT
+    keypoint_buffer_left[0]    = point_previous->keypointLeft();
+    keypoint_buffer_left[0].pt = offset_keypoint_half;
+    cv::Mat descriptor_left;
+    const cv::Mat roi_left(intensity_image_left(region_of_interest_left));
+    _descriptor_extractor->compute(roi_left, keypoint_buffer_left, descriptor_left);
+
+    //ds if no descriptor could be computed
+    if (descriptor_left.rows == 0) {
+      continue;
+    }
+
+    //ds if descriptor distance is to high
+    if (cv::norm(point_previous->descriptorLeft(), descriptor_left, SRRG_PROSLAM_DESCRIPTOR_NORM) > _parameters->matching_distance_tracking_threshold) {
+      continue;
+    }
+    keypoint_buffer_left[0].pt += corner_left;
+
+    //ds at this point we have a valid depth measurement - obtain coordinates in the depth image
+    FramePoint* framepoint = current_frame_->createFramepoint(keypoint_buffer_left[0],
+                                                              descriptor_left,
+                                                              PointCoordinates(depth_point[0], depth_point[1], depth_point[2]),
+                                                              point_previous);
+
+    //ds set the point to the control structure
+    current_frame_->points()[index_lost_point_recovered] = framepoint;
+    ++index_lost_point_recovered;
+  }
+  current_frame_->points().resize(index_lost_point_recovered);
+  LOG_INFO(std::cerr << "DepthFramePointGenerator::recoverPoints|recovered points: "
+                      << current_frame_->points().size()-number_of_tracked_points << "/" << lost_points_.size() << std::endl)
 }
 
 void DepthFramePointGenerator::_computeDepthMap(const cv::Mat& right_depth_image) {

@@ -1,6 +1,7 @@
 #include "slam_assembly.h"
-#include "position_tracking/depth_tracker.h"
-#include "position_tracking/stereo_tracker.h"
+#include "position_tracking/base_tracker.h"
+#include "framepoint_generation/stereo_framepoint_generator.h"
+#include "framepoint_generation/depth_framepoint_generator.h"
 #include "aligners/stereouv_aligner.h"
 #include "aligners/uvd_aligner.h"
 
@@ -67,13 +68,12 @@ void SLAMAssembly::_createStereoTracker(Camera* camera_left_, Camera* camera_rig
   pose_optimizer->configure();
 
   //ds allocate and configure the tracker
-  StereoTracker* tracker = new StereoTracker(_parameters->stereo_tracker_parameters);
-  tracker->setCameraLeft(camera_left_);
-  tracker->setCameraRight(camera_right_);
-  tracker->setFramePointGenerator(framepoint_generator);
-  tracker->setAligner(pose_optimizer);
-  tracker->configure();
-  _tracker = tracker;
+  _tracker = new BaseTracker(_parameters->stereo_tracker_parameters);
+  _tracker->setCameraLeft(camera_left_);
+  _tracker->setCameraSecondary(camera_right_);
+  _tracker->setFramePointGenerator(framepoint_generator);
+  _tracker->setAligner(pose_optimizer);
+  _tracker->configure();
   _tracker->setWorldMap(_world_map);
 
   //ds configure components
@@ -96,13 +96,12 @@ void SLAMAssembly::_createDepthTracker(Camera* camera_left_, Camera* camera_righ
   pose_optimizer->configure();
 
   //ds allocate and configure the tracker
-  DepthTracker* tracker = new DepthTracker(_parameters->depth_tracker_parameters);
-  tracker->setCameraLeft(camera_left_);
-  tracker->setDepthCamera(camera_right_);
-  tracker->setFramePointGenerator(framepoint_generator);
-  tracker->setAligner(pose_optimizer);
-  tracker->configure();
-  _tracker = tracker;
+  _tracker = new BaseTracker(_parameters->depth_tracker_parameters);
+  _tracker->setCameraLeft(camera_left_);
+  _tracker->setCameraSecondary(camera_right_);
+  _tracker->setFramePointGenerator(framepoint_generator);
+  _tracker->setAligner(pose_optimizer);
+  _tracker->configure();
   _tracker->setWorldMap(_world_map);
 
   //ds configure components
@@ -243,7 +242,6 @@ void SLAMAssembly::loadCameras(Camera* camera_left_, Camera* camera_right_) {
   //ds set system handles
   _camera_left  = camera_left_;
   _camera_right = camera_right_;
-
   LOG_INFO(std::cerr << "SLAMAssembly::loadCameras|loaded cameras: " << 2 << std::endl)
   LOG_INFO(std::cerr << "SLAMAssembly::loadCameras|LEFT resolution: " << camera_left_->numberOfImageCols() << " x " << camera_left_->numberOfImageRows()
             << ", aspect ratio: " << static_cast<real>(camera_left_->numberOfImageCols())/camera_left_->numberOfImageRows() << std::endl)

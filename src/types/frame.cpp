@@ -109,6 +109,18 @@ FramePoint* Frame::createFramepoint(const IntensityFeature* feature_left_,
                           previous_point_);
 }
 
+FramePoint* Frame::createFramepoint(const cv::KeyPoint& keypoint_left_,
+                                    const cv::Mat& descriptor_left_,
+                                    const PointCoordinates& camera_coordinates_left_,
+                                    FramePoint* previous_point_) {
+  return createFramepoint(keypoint_left_,
+                          descriptor_left_,
+                          keypoint_left_,
+                          descriptor_left_,
+                          camera_coordinates_left_,
+                          previous_point_);
+}
+
 FramePoint* Frame::createFramepoint(const IntensityFeature* feature_left_,
                                     FramePoint* previous_point_) {
 

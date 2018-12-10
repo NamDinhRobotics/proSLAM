@@ -21,19 +21,18 @@ public:
   //! @param[in] frame_ target frame to break the track at
   void breakTrack(Frame* frame_);
 
-  //! @brief auxilary data (handled by subclasses)
-  virtual void setImageSecondary(const cv::Mat& image_) = 0;
-
 //ds getters/setters
 public:
 
   const uint64_t& numberOfRecursiveRegistrations() const {return _number_of_recursive_registrations;}
-  void setCameraLeft(const Camera* camera_left_) {_camera_left = camera_left_; _has_guess = false;}
+  void setCameraLeft(const Camera* camera_) {_camera_left = camera_;}
   void setCameraLeftInWorldGuess(const TransformMatrix3D& camera_left_in_world_guess_) {_camera_left_in_world_guess = camera_left_in_world_guess_; _has_guess = true;}
+  void setCameraSecondary(const Camera* camera_) {_camera_secondary = camera_;}
   void setAligner(BaseFrameAligner* pose_optimizer_) {_pose_optimizer = pose_optimizer_;}
   void setFramePointGenerator(BaseFramePointGenerator * framepoint_generator_) {_framepoint_generator = framepoint_generator_;}
   void setWorldMap(WorldMap* context_) {_context = context_;}
-  void setIntensityImageLeft(const cv::Mat& intensity_image_left_) {_intensity_image_left = intensity_image_left_;}
+  void setIntensityImageLeft(const cv::Mat& image_) {_intensity_image_left = image_;}
+  void setImageSecondary(const cv::Mat& image_) {_image_secondary = image_;}
   BaseFrameAligner* aligner() {return _pose_optimizer;}
   void setMotionPreviousToCurrent(const TransformMatrix3D& motion_previous_to_current_) {_previous_to_current_camera = motion_previous_to_current_;}
   BaseFramePointGenerator* framepointGenerator() {return _framepoint_generator;}
@@ -65,12 +64,6 @@ protected:
   //ds updates existing or creates new landmarks for framepoints of the provided frame
   void _updatePoints(WorldMap* context_, Frame* frame_);
 
-  //ds attempts to recover framepoints in the current image using the more precise pose estimate, retrieved after pose optimization
-  virtual void _recoverPoints(Frame* current_frame_) = 0;
-
-  //ds creates a frame, which is filled by calling the framepoint generator
-  virtual Frame* _createFrame() = 0;
-
   //! @brief resets the pose estimate to a fallback estimate
   //! depending on the selected motion model and/or additinal sensors (e.g. odometry)
   void _fallbackEstimate(Frame* current_frame_,
@@ -84,7 +77,6 @@ protected:
 
   //ds running variables and buffered values
   Count _number_of_tracked_landmarks          = 0;
-  Count _number_of_potential_points           = 0;
   Count _number_of_tracked_points             = 0;
   Count _number_of_tracked_landmarks_previous = 0;
   Count _number_of_active_landmarks           = 0;
@@ -92,12 +84,14 @@ protected:
   real _mean_tracking_ratio                   = 0;
   Count _number_of_tracked_frames             = 0;
   const Camera* _camera_left                  = nullptr;
+  const Camera* _camera_secondary             = nullptr;
 
   //! @brief currently active projection tracking distance (adjusted dynamically at runtime)
   int32_t _projection_tracking_distance_pixels = 0;
 
   //gg working elements
   cv::Mat _intensity_image_left;
+  cv::Mat _image_secondary;
   WorldMap* _context = nullptr;
 
   //gg processing objects
@@ -110,10 +104,9 @@ protected:
   //ds additional information
   TransformMatrix3D _camera_left_in_world_guess;
   TransformMatrix3D _camera_left_in_world_guess_previous;
+  bool _has_guess = false;
 
-  //ds framepoint track recovery
-  Count _number_of_lost_points      = 0;
-  Count _number_of_recovered_points = 0;
+  //ds track recovery
   FramePointPointerVector _lost_points;
 
   //ds stats only
@@ -131,6 +124,5 @@ private:
   CREATE_CHRONOMETER(point_recovery)
   Count _total_number_of_tracked_points = 0;
   Count _total_number_of_landmarks      = 0;
-  bool _has_guess;
 };
 }

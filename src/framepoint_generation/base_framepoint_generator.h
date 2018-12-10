@@ -27,7 +27,7 @@ public:
   //ds extracts the defined descriptors for the given keypoints (called within compute)
   void computeDescriptors(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_, cv::Mat& descriptors_);
 
-  //@ brief computes tracks between current and previous image points based on appearance
+  //! @brief computes tracks between current and previous image points based on appearance
   //! @param[out] previous_points_without_tracks_ lost points
   virtual void track(Frame* frame_,
                      Frame* frame_previous_,
@@ -35,14 +35,18 @@ public:
                      FramePointPointerVector& previous_framepoints_without_tracks_,
                      const bool track_by_appearance_ = true) = 0;
 
-  //ds adjust detector thresholds (for all image streams)
+  //! @brief adjust detector thresholds (for all image streams)
   void adjustDetectorThresholds();
+
+  //! @brief attempts to recover framepoints in the current image using the more precise pose estimate, retrieved after pose optimization
+  //! @brief param[in] current_frame_ the affected frame carrying points to be recovered
+  virtual void recoverPoints(Frame* current_frame_, const FramePointPointerVector& lost_points_) const = 0;
 
   //! @brief brutal midpoint triangulation to obtain a 3D point in the current camera frame
   const PointCoordinates getPointInCamera(const cv::Point2f& image_point_previous_,
                                           const cv::Point2f& image_point_current_,
                                           const TransformMatrix3D& camera_previous_to_current_,
-                                          const Matrix3& camera_calibration_matrix_);
+                                          const Matrix3& camera_calibration_matrix_) const;
 
 //ds getters/setters
 public:

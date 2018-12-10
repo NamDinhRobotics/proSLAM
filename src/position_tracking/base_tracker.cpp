@@ -4,8 +4,7 @@
 namespace proslam {
 using namespace srrg_core;
 
-BaseTracker::BaseTracker(BaseTrackerParameters* parameters_): _parameters(parameters_),
-                                                              _has_guess(false) {
+BaseTracker::BaseTracker(BaseTrackerParameters* parameters_): _parameters(parameters_) {
   LOG_INFO(std::cerr << "BaseTracker::BaseTracker|constructed" << std::endl)
 }
 
@@ -37,9 +36,7 @@ void BaseTracker::compute() {
   assert(_context);
 
   //ds reset point configurations
-  _number_of_tracked_points   = 0;
-  _number_of_lost_points      = 0;
-  _number_of_recovered_points = 0;
+  _number_of_tracked_points = 0;
   _context->currentlyTrackedLandmarks().clear();
 
   //ds check if initial guess can be refined with a motion model or other input
@@ -70,8 +67,12 @@ void BaseTracker::compute() {
     }
   }
 
-  //ds create a new frame (specific)
-  Frame* current_frame = _createFrame();
+  //ds create a new frame
+  Frame* current_frame = _context->createFrame();
+  current_frame->setCameraLeft(_camera_left);
+  current_frame->setIntensityImageLeft(_intensity_image_left);
+  current_frame->setCameraRight(_camera_secondary);
+  current_frame->setIntensityImageRight(_image_secondary);
   current_frame->setStatus(_status);
 
   //ds the new frame is automatically linked to the previous
@@ -94,7 +95,6 @@ void BaseTracker::compute() {
   }
 
   //ds check previous tracker status
-  _number_of_potential_points = _framepoint_generator->numberOfDetectedKeypoints();
   switch(_status) {
 
     //ds localization mode - always running on tracking by appearance with maximum window size
@@ -220,7 +220,6 @@ void BaseTracker::_track(Frame* previous_frame_,
   _framepoint_generator->track(current_frame_, previous_frame_, _previous_to_current_camera, _lost_points, track_by_appearance_);
 
   //ds adjust bookkeeping
-  _number_of_lost_points       = _lost_points.size();
   _number_of_tracked_landmarks = _framepoint_generator->numberOfTrackedLandmarks();
   _number_of_tracked_points    = current_frame_->points().size();
 
@@ -355,7 +354,8 @@ void BaseTracker::_registerRecursive(Frame* previous_frame_,
     //ds recover lost points based on refined pose
     if (_parameters->enable_landmark_recovery) {
       CHRONOMETER_START(point_recovery)
-      _recoverPoints(current_frame_);
+      _framepoint_generator->recoverPoints(current_frame_, _lost_points);
+      _number_of_tracked_points = current_frame_->points().size();
       CHRONOMETER_STOP(point_recovery)
     }
   } else {
@@ -399,7 +399,6 @@ void BaseTracker::breakTrack(Frame* frame_) {
   //ds stick to previous solution - simulating a fresh start
   frame_->setRobotToWorld(frame_->previous()->robotToWorld());
   _previous_to_current_camera = TransformMatrix3D::Identity();
-  _number_of_recovered_points = 0;
   _number_of_tracked_points   = 0;
 
   //ds reset frame in world context, triggering a restart of the pipeline

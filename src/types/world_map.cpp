@@ -47,12 +47,11 @@ void WorldMap::clear() {
   _currently_tracked_landmarks.clear();
 }
 
-Frame* WorldMap::createFrame(const TransformMatrix3D& robot_to_world_,
-                             const double& timestamp_image_left_seconds_){
+Frame* WorldMap::createFrame(const double& timestamp_image_left_seconds_){
 
   //ds update current frame
   _previous_frame = _current_frame;
-  _current_frame  = new Frame(this, _previous_frame, 0, robot_to_world_, timestamp_image_left_seconds_);
+  _current_frame  = new Frame(this, _previous_frame, 0, robot_to_world, timestamp_image_left_seconds_);
 
   //ds check if the frame has a predecessor
   if (_previous_frame) {

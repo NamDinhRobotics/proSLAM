@@ -244,7 +244,7 @@ void BaseFramePointGenerator::adjustDetectorThresholds() {
 const PointCoordinates BaseFramePointGenerator::getPointInCamera(const cv::Point2f& image_point_previous_,
                                                                  const cv::Point2f& image_point_current_,
                                                                  const TransformMatrix3D& camera_previous_to_current_,
-                                                                 const Matrix3& camera_calibration_matrix_) {
+                                                                 const Matrix3& camera_calibration_matrix_) const {
   const Eigen::Matrix<real, 1, 3>& r_1 = camera_previous_to_current_.linear().block<1,3>(0,0);
   const Eigen::Matrix<real, 1, 3>& r_2 = camera_previous_to_current_.linear().block<1,3>(1,0);
   const Eigen::Matrix<real, 1, 3>& r_3 = camera_previous_to_current_.linear().block<1,3>(2,0);

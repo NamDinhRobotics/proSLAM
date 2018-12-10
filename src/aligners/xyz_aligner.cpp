@@ -21,7 +21,7 @@ namespace proslam {
     _inliers.resize(_number_of_measurements);
 
     //ds construct point cloud registration problem - compute landmark coordinates in local maps
-    _information_vector.resize(_number_of_measurements);
+    _information_matrix_vector.resize(_number_of_measurements);
     _moving.resize(_number_of_measurements);
     _fixed.resize(_number_of_measurements);
     const TransformMatrix3D& world_to_reference_local_map(context_->local_map_reference->worldToRobot());
@@ -34,8 +34,8 @@ namespace proslam {
       _moving[u] = world_to_query_local_map*correspondence->query->coordinates();
 
       //ds set information matrix
-      _information_vector[u].setIdentity();
-      _information_vector[u] *= correspondence->matching_ratio;
+      _information_matrix_vector[u].setIdentity();
+      _information_matrix_vector[u] *= correspondence->matching_ratio;
     }
   }
 
@@ -50,7 +50,7 @@ namespace proslam {
 
     //ds for all the points
     for (Index u = 0; u < _number_of_measurements; ++u) {
-      _omega = _information_vector[u];
+      _omega = _information_matrix_vector[u];
 
       //ds compute error based on items: local map merging
       const PointCoordinates sampled_point_in_reference   = _current_to_reference*_moving[u];
