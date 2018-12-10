@@ -26,6 +26,7 @@ Frame::Frame(const WorldMap* context_,
   _active_points.clear();
   _keypoints_left.clear();
   _keypoints_right.clear();
+  _temporary_points.clear();
 }
 
 Frame::~Frame() {
@@ -112,12 +113,39 @@ FramePoint* Frame::createFramepoint(const IntensityFeature* feature_left_,
                           previous_point_);
 }
 
+FramePoint* Frame::createFramepoint(const IntensityFeature* feature_left_,
+                                    FramePoint* previous_point_) {
+
+  //ds allocate a new point connected to the previous one
+  FramePoint* frame_point = new FramePoint(feature_left_->keypoint,
+                                           feature_left_->descriptor,
+                                           feature_left_->keypoint,
+                                           feature_left_->descriptor,
+                                           this);
+
+  //ds the point does not have a valid position yet
+  frame_point->_has_estimated_depth = true;
+
+  //ds connect the framepoints
+  if (previous_point_) {
+    frame_point->setPrevious(previous_point_);
+  } else {
+    frame_point->setOrigin(frame_point);
+  }
+
+  //ds bookkeep each generated point for resize immune memory management (TODO remove costly bookkeeping)
+  _created_points.push_back(frame_point);
+  _temporary_points.push_back(frame_point);
+  return frame_point;
+}
+
 void Frame::clear() {
   for (const FramePoint* frame_point: _created_points) {
     delete frame_point;
   }
   _created_points.clear();
   _active_points.clear();
+  _temporary_points.clear();
 }
 
 void Frame::updateActivePoints() {

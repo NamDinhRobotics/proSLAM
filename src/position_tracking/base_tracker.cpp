@@ -305,16 +305,14 @@ void BaseTracker::_registerRecursive(Frame* previous_frame_,
 
   //ds solver deltas
   const Count number_of_inliers = _pose_optimizer->numberOfInliers();
-//  const real average_error      = _pose_optimizer->totalError()/number_of_inliers;
 
   //ds if we have enough inliers in the pose optimization
   if (number_of_inliers > _parameters->minimum_number_of_landmarks_to_track) {
 
-//    //ds info
-//    if (recursion_ > 0) {
-//      LOG_INFO(std::cerr << current_frame_->identifier() << "|BaseTracker::_registerRecursive|recursion: " << recursion_
-//                         << "|inliers: " << number_of_inliers << " average error: " << average_error << std::endl)
-//    }
+    //ds info
+    if (recursion_ > 0) {
+      LOG_WARNING(std::cerr << current_frame_->identifier() << "|BaseTracker::_registerRecursive|recursion: " << recursion_ << "|inliers: " << number_of_inliers << std::endl)
+    }
 
     //ds setup
     const TransformMatrix3D& previous_to_current_camera = _pose_optimizer->previousToCurrent();
@@ -349,8 +347,7 @@ void BaseTracker::_registerRecursive(Frame* previous_frame_,
       CHRONOMETER_STOP(point_recovery)
     }
   } else {
-//    LOG_WARNING(std::cerr << current_frame_->identifier() << "|BaseTracker::_registerRecursive|recursion: " << recursion_
-//                          << "|inliers: " << number_of_inliers << " average error: " << average_error << std::endl)
+    LOG_WARNING(std::cerr << current_frame_->identifier() << "|BaseTracker::_registerRecursive|recursion: " << recursion_ << "|inliers: " << number_of_inliers << std::endl)
 
     //ds if we have recursions left (currently only two)
     if (recursion_ < 2) {
@@ -461,6 +458,46 @@ void BaseTracker::_updatePoints(WorldMap* context_, Frame* frame_) {
     context_->currentlyTrackedLandmarks().push_back(landmark);
   }
   LOG_DEBUG(std::cerr << "BaseTracker::_updatePoints|updated landmarks: " << _number_of_active_landmarks << std::endl)
+
+  //ds update secondary points
+  Count number_of_triangulated_points = 0;
+  Count number_of_new_active_points   = 0;
+  for (FramePoint* point: frame_->temporaryPoints()) {
+    assert(point->previous());
+
+    //ds compute coordinates with refined estimate
+    const PointCoordinates camera_coordinates_refined = _framepoint_generator->getPointInCamera(point->previous()->keypointLeft().pt,
+                                                                                                point->keypointLeft().pt,
+                                                                                                _previous_to_current_camera,
+                                                                                                _camera_left->cameraMatrix());
+
+    //ds skip invalid depths
+    if (camera_coordinates_refined.z() <= 0) {
+      continue;
+    }
+
+    //ds set coordinates
+    point->setCameraCoordinatesLeft(camera_coordinates_refined);
+    point->setRobotCoordinates(_camera_left->cameraToRobot()*camera_coordinates_refined);
+    point->setWorldCoordinates(robot_to_world*point->robotCoordinates());
+
+    //ds if point is mature enough
+    if (point->trackLength() > _parameters->minimum_track_length_for_landmark_creation) {
+
+      //ds add it to the active points (so in the next iteration it will be considered in the pose optimization)
+      frame_->points().push_back(point);
+      ++number_of_new_active_points;
+      ++_number_of_tracked_points;
+    } else {
+
+      //ds keep the point in the temporary buffer
+      frame_->temporaryPoints()[number_of_triangulated_points] = point;
+      ++number_of_triangulated_points;
+    }
+  }
+  frame_->temporaryPoints().resize(number_of_triangulated_points);
+  LOG_INFO(std::cerr << "BaseTracker::_updatePoints|updated temporary points: " << number_of_triangulated_points
+                     << " new active points: " << number_of_new_active_points << std::endl)
   CHRONOMETER_STOP(landmark_optimization)
 }
 

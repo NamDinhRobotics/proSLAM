@@ -17,7 +17,7 @@ command_line:
 
   #ds options
   option_use_gui:                   true
-  option_disable_relocalization:    false
+  option_disable_relocalization:    true
   option_show_top_viewer:           false
   option_drop_framepoints:          false
   option_equalize_histogram:        false
@@ -60,7 +60,7 @@ base_framepoint_generation:
 
   #point tracking thresholds
   minimum_projection_tracking_distance_pixels: 5
-  maximum_projection_tracking_distance_pixels: 25
+  maximum_projection_tracking_distance_pixels: 10
 
   #ds dynamic thresholds for descriptor matching
   matching_distance_tracking_threshold: 50
@@ -91,7 +91,7 @@ base_tracking:
   minimum_track_length_for_landmark_creation: 2
 
   #ds track lost criteria
-  minimum_number_of_landmarks_to_track: 50
+  minimum_number_of_landmarks_to_track: 25
 
   #point tracking thresholds
   tunnel_vision_ratio: 0.75

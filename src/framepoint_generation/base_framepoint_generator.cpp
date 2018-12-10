@@ -240,4 +240,37 @@ void BaseFramePointGenerator::adjustDetectorThresholds() {
     }
   }
 }
+
+const PointCoordinates BaseFramePointGenerator::getPointInCamera(const cv::Point2f& image_point_previous_,
+                                                                 const cv::Point2f& image_point_current_,
+                                                                 const TransformMatrix3D& camera_previous_to_current_,
+                                                                 const Matrix3& camera_calibration_matrix_) {
+  const Eigen::Matrix<real, 1, 3>& r_1 = camera_previous_to_current_.linear().block<1,3>(0,0);
+  const Eigen::Matrix<real, 1, 3>& r_2 = camera_previous_to_current_.linear().block<1,3>(1,0);
+  const Eigen::Matrix<real, 1, 3>& r_3 = camera_previous_to_current_.linear().block<1,3>(2,0);
+
+  //ds precomputations
+  const real a_0 = (image_point_previous_.x-camera_calibration_matrix_(0,2))/camera_calibration_matrix_(0,0);
+  const real b_0 = (image_point_previous_.y-camera_calibration_matrix_(1,2))/camera_calibration_matrix_(1,1);
+  const real a_1 = (image_point_current_.x-camera_calibration_matrix_(0,2))/camera_calibration_matrix_(0,0);
+  const real b_1 = (image_point_current_.y-camera_calibration_matrix_(1,2))/camera_calibration_matrix_(1,1);
+  const PointCoordinates x_0(a_0, b_0, 1);
+  const PointCoordinates x_1(a_1, b_1, 1);
+
+  //ds build constraint matrix
+  Eigen::Matrix<real, 3, 2> A(Eigen::Matrix<real, 3, 2>::Zero());
+  A << -r_1*x_0, a_1,
+       -r_2*x_0, b_1,
+       -r_3*x_0, 1;
+
+  //ds minimize squared error for both image points
+  const Vector2 z = A.jacobiSvd(Eigen::ComputeFullU|Eigen::ComputeFullV).solve(camera_previous_to_current_.translation());
+
+  //ds compute candidates
+  const PointCoordinates point_in_camera_previous = x_0*z(0);
+  const PointCoordinates point_in_camera_current  = x_1*z(1);
+
+  //ds compute midpoint in current frame
+  return (point_in_camera_current+camera_previous_to_current_*point_in_camera_previous)/2.0;
+}
 }

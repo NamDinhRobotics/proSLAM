@@ -36,5 +36,8 @@ protected:
 
   //ds 3D points in camera frame
   std::vector<Vector3, Eigen::aligned_allocator<Vector3> > _moving;
+
+  //ds translational contribution weight (disabled for points at infinity)
+  std::vector<real> _weights_translation;
 };
 }

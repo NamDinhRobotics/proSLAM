@@ -100,7 +100,7 @@ public:
   inline const PointCoordinates& imageCoordinatesRight() const {return _image_coordinates_right;}
 
   inline const PointCoordinates cameraCoordinatesLeft() const {return _camera_coordinates_left;}
-  void setCameraCoordinatesLeft(const PointCoordinates& coordinates_) {_camera_coordinates_left = coordinates_;}
+  void setCameraCoordinatesLeft(const PointCoordinates& coordinates_) {_camera_coordinates_left = coordinates_; _depth_meters = coordinates_.z();}
 
   inline const PointCoordinates robotCoordinates() const {return _robot_coordinates;}
   void setRobotCoordinates(const PointCoordinates& robot_coordinates_) {_robot_coordinates = robot_coordinates_;}
@@ -121,6 +121,9 @@ public:
 
   //ds reset allocated object counter
   static void reset() {_instances = 0;}
+
+  inline const bool& hasEstimatedDepth() const {return _has_estimated_depth;}
+  void setHasEstimatedDepth(const bool& has_estimated_depth_) {_has_estimated_depth = has_estimated_depth_;}
 
   //ds visualization only
   inline const cv::Point2f projectionEstimateLeft() const {return _projection_estimate_left;}
@@ -174,7 +177,10 @@ protected:
   PointCoordinates _world_coordinates       = PointCoordinates::Zero(); //ds 3D point in world coordinate frame (make sure they are updated!)
   real _depth_meters = -1;
 
-  //! @brief associated landmark coordinates in local camera frame (if any - CHECK)
+  //! @brief set if point is intended to be used only for orientation estimation (i.e. depth not estimated safely or point at infinity)
+  bool _has_estimated_depth = false;
+
+  //! @brief associated landmark coordinates in local camera frame (used in stereo uv alignment)
   PointCoordinates _camera_coordinates_left_landmark = PointCoordinates::Zero();
 
   //ds connected landmark (if any)

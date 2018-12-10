@@ -38,6 +38,12 @@ public:
   //ds adjust detector thresholds (for all image streams)
   void adjustDetectorThresholds();
 
+  //! @brief brutal midpoint triangulation to obtain a 3D point in the current camera frame
+  const PointCoordinates getPointInCamera(const cv::Point2f& image_point_previous_,
+                                          const cv::Point2f& image_point_current_,
+                                          const TransformMatrix3D& camera_previous_to_current_,
+                                          const Matrix3& camera_calibration_matrix_);
+
 //ds getters/setters
 public:
 

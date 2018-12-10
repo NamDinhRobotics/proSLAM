@@ -92,16 +92,23 @@ public:
                      const cv::KeyPoint& keypoint_right_,
                      const cv::Mat& descriptor_right_,
                      const PointCoordinates& camera_coordinates_left_,
-                     FramePoint* previous_point_ = 0);
+                     FramePoint* previous_point_ = nullptr);
 
   //ds request a new framepoint instance with an optional link to a previous point (track)
   FramePoint* createFramepoint(const IntensityFeature* feature_left_,
                                const IntensityFeature* feature_right_,
                                const PointCoordinates& camera_coordinates_left_,
-                               FramePoint* previous_point_ = 0);
+                               FramePoint* previous_point_ = nullptr);
+
+  //! @brief request a new framepoint that has to be triangulated first before entering in the active points
+  FramePoint* createFramepoint(const IntensityFeature* feature_left_,
+                               FramePoint* previous_point_ = nullptr);
 
   //! @brief created framepoints by this factory
   inline const FramePointPointerVector& createdPoints() const {return _created_points;}
+
+  inline FramePointPointerVector& temporaryPoints() {return _temporary_points;}
+  inline const FramePointPointerVector& temporaryPoints() const {return _temporary_points;}
 
   inline const cv::Mat& intensityImageLeft() const {return _intensity_image_left;}
   void setIntensityImageLeft(const cv::Mat intensity_image_)  {_intensity_image_left = intensity_image_;}
@@ -165,6 +172,9 @@ protected:
 
   //! @brief bookkeeping: active (used) framepoints in the pipeline (a subset of _created_points)
   FramePointPointerVector _active_points;
+
+  //! @brief bookkeeping: tracked framepoints that have to be estimated yet (e.g. triangulation)
+  FramePointPointerVector _temporary_points;
 
   //ds spatials
   TransformMatrix3D _robot_to_local_map = TransformMatrix3D::Identity();

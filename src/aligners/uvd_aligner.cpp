@@ -20,6 +20,7 @@ namespace proslam {
     _errors.resize(_number_of_measurements);
     _inliers.resize(_number_of_measurements);
     _information_matrix_vector.resize(_number_of_measurements);
+    _weights_translation.resize(_number_of_measurements, 1);
     _moving.resize(_number_of_measurements);
     _fixed.resize(_number_of_measurements);
 
@@ -47,9 +48,18 @@ namespace proslam {
         _moving[u] = frame_point->previous()->cameraCoordinatesLeft();
       }
 
-      //ds inverse depth as certainty estimate (points that are twice as far away are considered to be twice as uncertain)
-      //ds at the same time we scale the depth error by a factor of 10 to be competitive with the U V (pixel) error which is integer
-      _information_matrix_vector[u](2,2) = 10.0/frame_point->cameraCoordinatesLeft().z();
+      //ds we scale the depth error by a factor of 10 to be competitive with the U V (pixel) error which is integer
+      _information_matrix_vector[u](2,2) = 10.0;
+
+      //ds if we cannot consider the translation contribution of the point
+      if (frame_point->hasEstimatedDepth()) {
+
+        //ds block translation contribution
+        _weights_translation[u] = 0;
+
+        //ds no error on the depth
+        _information_matrix_vector[u](2,2) = 0;
+      }
     }
 
     //ds wrappers for optimization
@@ -128,7 +138,10 @@ namespace proslam {
       const real inverse_z_squared = inverse_z*inverse_z;
 
       //ds compute the jacobian of the transformation
-      Matrix3_6 jacobian_transform(Matrix3_6::Identity());
+      Matrix3_6 jacobian_transform;
+
+      //ds translation contribution
+      jacobian_transform.block<3,3>(0,0) = _weights_translation[u]*Matrix3::Identity();
 
       //ds always consider rotation
       jacobian_transform.block<3,3>(0,3) = -2*skew(predicted_point_in_camera);
