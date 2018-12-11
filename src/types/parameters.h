@@ -57,6 +57,9 @@ public:
   bool option_recover_landmarks         = true;
   bool option_disable_bundle_adjustment = true;
   bool option_save_pose_graph           = false;
+
+  //! @brief sensor data synchronization interval size
+  real maximum_time_interval_seconds = 0.001;
 };
 
 //! @class generic aligner parameters, present in modules with aligner units
@@ -225,11 +228,20 @@ public:
   //! @brief depth sensor configuration
   real maximum_depth_meters = 5;
   real minimum_depth_meters = 0.1;
+
+  //! @brief depth scale factor: from pixel intensity to meters
+  real depth_scale_factor_intensity_to_meters = 1e-3;
+
+  //! @brief enable bilateral filtering on the depth image
+  bool enable_bilateral_filtering = false;
+
+  //! @brief enable point triangulation (for pixels invalid depths)
+  bool enable_point_triangulation = false;
 };
 
 //! @class base tracker parameters
 class BaseTrackerParameters: public Parameters {
-protected:
+public:
 
   //! @brief default construction (only by subclasses)
   BaseTrackerParameters();
@@ -264,28 +276,6 @@ public:
 
   //! @brief parameters of aligner unit
   AlignerParameters* aligner;
-};
-
-//! @class stereo tracker parameters
-class StereoTrackerParameters: public BaseTrackerParameters {
-public:
-
-  //! @brief constructor
-  StereoTrackerParameters() {}
-
-  //! @brief parameter printing function
-  virtual void print() const;
-};
-
-//! @class depth tracker parameters
-class DepthTrackerParameters: public BaseTrackerParameters {
-public:
-
-  //! @brief constructor
-  DepthTrackerParameters() {}
-
-  //! @brief parameter printing function
-  virtual void print() const;
 };
 
 //! @class relocalization parameters
@@ -384,6 +374,9 @@ public:
   std::string window_title           = "input: images [OpenCV]";
   std::string window_title_secondary = "input: images [OpenCV] | secondary";
 
+  //! @brief show secondary image
+  bool display_secondary_image = false;
+
   //! @brief tracker mode (propagated)
   CommandLineParameters::TrackerMode tracker_mode = CommandLineParameters::TrackerMode::RGB_STEREO;
 };
@@ -462,8 +455,7 @@ public:
   WorldMapParameters* world_map_parameters                                    = 0;
   StereoFramePointGeneratorParameters* stereo_framepoint_generator_parameters = 0;
   DepthFramePointGeneratorParameters* depth_framepoint_generator_parameters   = 0;
-  StereoTrackerParameters* stereo_tracker_parameters                          = 0;
-  DepthTrackerParameters* depth_tracker_parameters                            = 0;
+  BaseTrackerParameters* tracker_parameters                                   = 0;
   RelocalizerParameters* relocalizer_parameters                               = 0;
   GraphOptimizerParameters* graph_optimizer_parameters                        = 0;
 

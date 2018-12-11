@@ -124,6 +124,7 @@ public:
   void setIntensityImageLeft(const cv::Mat intensity_image_)  {_intensity_image_left = intensity_image_;}
 
   inline const cv::Mat& intensityImageRight() const {return _intensity_image_right;}
+  inline cv::Mat& intensityImageRight() {return _intensity_image_right;}
   void setIntensityImageRight(const cv::Mat intensity_image_)  {_intensity_image_right = intensity_image_;}
 
   inline const Status& status() const {return _status;}

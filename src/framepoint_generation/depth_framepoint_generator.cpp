@@ -77,8 +77,8 @@ void DepthFramePointGenerator::compute(Frame* frame_) {
       continue;
     }
 
-    //ds if depth could not be retrieved
-    if (depth_point[2] >= _parameters->maximum_depth_meters) {
+    //ds if depth could not be retrieved and point triangulation is enabled
+    if (depth_point[2] >= _parameters->maximum_depth_meters && _parameters->enable_point_triangulation) {
 
       //ds allocate a new framepoint (will be stored in temporary points) - currently not checked with binning!
       FramePoint* framepoint = frame_->createFramepoint(feature_left);
@@ -124,9 +124,9 @@ void DepthFramePointGenerator::compute(Frame* frame_) {
     }
   }
   framepoints_new.resize(number_of_new_points);
-  LOG_INFO(std::cerr << "DepthFramePointGenerator::compute|number of new points with measured depth: "
-                     << number_of_new_points << " with infinity depth: "
-                     << number_of_new_points_with_infinity_depth << std::endl)
+  LOG_DEBUG(std::cerr << "DepthFramePointGenerator::compute|number of new points with measured depth: "
+                      << number_of_new_points << " with infinity depth: "
+                      << number_of_new_points_with_infinity_depth << std::endl)
 
   //ds update framepoints - optionally binning them
   if (_parameters->enable_keypoint_binning) {
@@ -234,8 +234,8 @@ void DepthFramePointGenerator::track(Frame* frame_,
         continue;
       }
 
-      //ds if depth could not be retrieved
-      if (depth_point[2] >= _parameters->maximum_depth_meters) {
+      //ds if depth could not be retrieved and point triangulation is enabled
+      if (depth_point[2] >= _parameters->maximum_depth_meters && _parameters->enable_point_triangulation) {
 
         //ds allocate a new framepoint to the temporary framepoints buffer (points without measured depth)
         FramePoint* framepoint = frame_->createFramepoint(feature_left, point_previous);
@@ -285,10 +285,10 @@ void DepthFramePointGenerator::track(Frame* frame_,
 
   //ds remove matched indices from candidate pools
   _feature_matcher_left.prune(matched_indices_left);
-  LOG_INFO(std::cerr << "DepthFramePointGenerator::track|tracked points with depth: " << number_of_points
+  LOG_DEBUG(std::cerr << "DepthFramePointGenerator::track|tracked points with depth: " << number_of_points
                       << "/" << framepoints_previous.size() << " (landmarks: " << _number_of_tracked_landmarks << ")" << std::endl)
-  LOG_INFO(std::cerr << "DepthFramePointGenerator::track|tracked points with infinity depth: " << frame_->temporaryPoints().size() << std::endl)
-  LOG_INFO(std::cerr << "DepthFramePointGenerator::track|tracked points with depth and previous infinity depth: " << number_of_points_upgraded_from_estimated_depth << std::endl)
+  LOG_DEBUG(std::cerr << "DepthFramePointGenerator::track|tracked points with infinity depth: " << frame_->temporaryPoints().size() << std::endl)
+  LOG_DEBUG(std::cerr << "DepthFramePointGenerator::track|tracked points with depth and previous infinity depth: " << number_of_points_upgraded_from_estimated_depth << std::endl)
   LOG_DEBUG(std::cerr << "DepthFramePointGenerator::track|lost points: " << number_of_points_lost
                       << "/" << framepoints_previous.size() << std::endl)
 }
@@ -399,13 +399,22 @@ void DepthFramePointGenerator::recoverPoints(Frame* current_frame_, const FrameP
     ++index_lost_point_recovered;
   }
   current_frame_->points().resize(index_lost_point_recovered);
-  LOG_INFO(std::cerr << "DepthFramePointGenerator::recoverPoints|recovered points: "
+  LOG_DEBUG(std::cerr << "DepthFramePointGenerator::recoverPoints|recovered points: "
                       << current_frame_->points().size()-number_of_tracked_points << "/" << lost_points_.size() << std::endl)
 }
 
-void DepthFramePointGenerator::_computeDepthMap(const cv::Mat& right_depth_image) {
+void DepthFramePointGenerator::_computeDepthMap(cv::Mat& right_depth_image) {
   if (right_depth_image.type()!=CV_16UC1){
     throw std::runtime_error("depth tracker requires a 16bit mono image to encode depth");
+  }
+
+  //ds check if bilateral filtering is required
+  if (_parameters->enable_bilateral_filtering) {
+    cv::Mat right_depth_image_float;
+    right_depth_image.convertTo(right_depth_image_float, CV_32FC1, _parameters->depth_scale_factor_intensity_to_meters);
+    cv::Mat right_depth_image_float_out;
+    cv::bilateralFilter(right_depth_image_float, right_depth_image_float_out, -1, 2, 2);
+    right_depth_image_float_out.convertTo(right_depth_image, CV_16UC1, 1.0/_parameters->depth_scale_factor_intensity_to_meters);
   }
 
   //ds allocate new space map and initialize fields with invalid maximum depth
@@ -424,7 +433,6 @@ void DepthFramePointGenerator::_computeDepthMap(const cv::Mat& right_depth_image
 
   const Matrix3 inverse_camera_matrix_right = _camera_right->cameraMatrix().inverse();
   const Matrix3 camera_matrix_left          = _camera_left->cameraMatrix();
-  const real _depth_pixel_to_meters         = 1e-3;
 
   TransformMatrix3D right_to_left_transform = _camera_left->robotToCamera()*_camera_right->cameraToRobot();
   for (int32_t r=0; r<_number_of_rows_image; ++r){
@@ -433,7 +441,7 @@ void DepthFramePointGenerator::_computeDepthMap(const cv::Mat& right_depth_image
       if (!*raw_depth)
         continue;
       // retrieve depth
-      const real depth_right_meters=(*raw_depth)*_depth_pixel_to_meters;
+      const real depth_right_meters=(*raw_depth)*_parameters->depth_scale_factor_intensity_to_meters;
       // retrieve point in right camers, meters
       Vector3 point_in_right_camera_meters=inverse_camera_matrix_right*Vector3(c*depth_right_meters, r*depth_right_meters,depth_right_meters);
       // map the point to the left camera

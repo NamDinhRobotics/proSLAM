@@ -258,13 +258,13 @@ void BaseTracker::_registerRecursive(Frame* previous_frame_,
                                      Frame* current_frame_,
                                      const Count& recursion_) {
   assert(_number_of_tracked_landmarks_previous != 0);
-  ++_number_of_recursive_registrations;
 
   //ds current number of tracked landmarks
   real relative_number_of_tracked_landmarks_to_previous = static_cast<real>(_number_of_tracked_landmarks)/_number_of_tracked_landmarks_previous;
 
   //ds if we got not enough tracks to evaluate for position tracking: robustness
   if (_number_of_tracked_landmarks == 0 || relative_number_of_tracked_landmarks_to_previous < 0.1) {
+    ++_number_of_recursive_registrations;
 
     //ds if we have recursions left (currently only two)
     if (recursion_ < 2) {
@@ -322,6 +322,7 @@ void BaseTracker::_registerRecursive(Frame* previous_frame_,
 
     //ds info
     if (recursion_ > 0) {
+      ++_number_of_recursive_registrations;
       LOG_WARNING(std::cerr << current_frame_->identifier() << "|BaseTracker::_registerRecursive|recursion: " << recursion_ << "|inliers: " << number_of_inliers << std::endl)
     }
 
@@ -359,6 +360,7 @@ void BaseTracker::_registerRecursive(Frame* previous_frame_,
       CHRONOMETER_STOP(point_recovery)
     }
   } else {
+    ++_number_of_recursive_registrations;
     LOG_WARNING(std::cerr << current_frame_->identifier() << "|BaseTracker::_registerRecursive|recursion: " << recursion_ << "|inliers: " << number_of_inliers << std::endl)
 
     //ds if we have recursions left (currently only two)

@@ -256,7 +256,6 @@ void GraphOptimizer::addPose(LocalMap* local_map_) {
   _local_maps_in_graph.insert(std::make_pair(local_map_->identifier(), local_map_));
 
   //ds for all loop closures on this local map
-//  g2o::VertexSE3* vertex_reference_oldest = nullptr;
   for (const Closure::ClosureConstraint& closure: local_map_->closures()) {
 
     //ds compute information value (closure edges weight much more than pose edges to be able to deform the graph properly)
@@ -268,17 +267,7 @@ void GraphOptimizer::addPose(LocalMap* local_map_) {
 
     //ds introduce loop closure constraint between the two local maps
     _setPoseEdge(_optimizer, vertex_current, vertex_reference, closure.relation, information_factor);
-
-//    //ds update oldest
-//    if (!vertex_reference_oldest || vertex_reference->id() < vertex_reference_oldest->id()) {
-//      vertex_reference_oldest = vertex_reference;
-//    }
   }
-
-//  //ds always lock the oldest reference vertex (only set when loop closures occured)
-//  if (vertex_reference_oldest) {
-//    vertex_reference_oldest->setFixed(true);
-//  }
 
   //ds bookkeep the added frame
   _vertex_local_map_last_added = vertex_current;
@@ -379,8 +368,8 @@ void GraphOptimizer::optimizePoseGraph(WorldMap* world_map_) {
   CHRONOMETER_START(optimization)
 
   //ds save current graph to file
-  //  const std::string file_name = "pose_graph_"+std::to_string(world_map_->currentFrame()->identifier())+".g2o";
-  //  _optimizer->save(file_name.c_str());
+//  const std::string file_name = "pose_graph_"+std::to_string(world_map_->currentFrame()->identifier())+".g2o";
+//  _optimizer->save(file_name.c_str());
 
   //ds optimize graph
   _optimizer->initializeOptimization();

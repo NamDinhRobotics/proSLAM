@@ -120,14 +120,6 @@ void BaseTrackerParameters::print() const {
   aligner->print();
 }
 
-void StereoTrackerParameters::print() const {
-  BaseTrackerParameters::print();
-}
-
-void DepthTrackerParameters::print() const {
-  BaseTrackerParameters::print();
-}
-
 void RelocalizerParameters::print() const {
   std::cerr << "RelocalizerParameters::print|preliminary_minimum_interspace_queries: " << preliminary_minimum_interspace_queries << std::endl;
   std::cerr << "RelocalizerParameters::print|preliminary_minimum_matching_ratio: " << preliminary_minimum_matching_ratio << std::endl;
@@ -161,6 +153,7 @@ ParameterCollection::ParameterCollection(): _parameters(this),
   world_map_parameters       = new WorldMapParameters();
   relocalizer_parameters     = new RelocalizerParameters();
   graph_optimizer_parameters = new GraphOptimizerParameters();
+  tracker_parameters         = new BaseTrackerParameters();
 
   image_viewer_parameters   = new ImageViewerParameters();
   map_viewer_parameters     = new MapViewerParameters();
@@ -182,8 +175,7 @@ ParameterCollection::~ParameterCollection() {
 
   delete stereo_framepoint_generator_parameters;
   delete depth_framepoint_generator_parameters;
-  delete stereo_tracker_parameters;
-  delete depth_tracker_parameters;
+  delete tracker_parameters;
   LOG_INFO(std::cerr << "ParameterCollection::~ParameterCollection|destroyed" << std::endl)
 }
 
@@ -312,6 +304,7 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_equalize_histogram, bool)
     PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_recover_landmarks, bool)
     PARSE_PARAMETER(configuration, command_line, command_line_parameters, option_disable_bundle_adjustment, bool)
+    PARSE_PARAMETER(configuration, command_line, command_line_parameters, maximum_time_interval_seconds, real)
 
     //Types
     PARSE_PARAMETER(configuration, world_map, world_map_parameters, minimum_distance_traveled_for_local_map, real)
@@ -322,11 +315,9 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
 
     //ds mode specific parameters
     BaseFramePointGeneratorParameters* framepoint_generation_parameters = 0;
-    BaseTrackerParameters* tracker_parameters = 0;
     switch (command_line_parameters->tracker_mode) {
       case CommandLineParameters::TrackerMode::RGB_STEREO: {
         framepoint_generation_parameters = stereo_framepoint_generator_parameters;
-        tracker_parameters               = stereo_tracker_parameters;
 
         //FramepointGeneration (SPECIFIC)
         PARSE_PARAMETER(configuration, stereo_framepoint_generation, stereo_framepoint_generator_parameters, maximum_matching_distance_triangulation, int32_t)
@@ -336,11 +327,13 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
       }
       case CommandLineParameters::TrackerMode::RGB_DEPTH: {
         framepoint_generation_parameters = depth_framepoint_generator_parameters;
-        tracker_parameters               = depth_tracker_parameters;
 
         //FramepointGeneration (SPECIFIC)
         PARSE_PARAMETER(configuration, depth_framepoint_generation, depth_framepoint_generator_parameters, maximum_depth_meters, real)
         PARSE_PARAMETER(configuration, depth_framepoint_generation, depth_framepoint_generator_parameters, minimum_depth_meters, real)
+        PARSE_PARAMETER(configuration, depth_framepoint_generation, depth_framepoint_generator_parameters, depth_scale_factor_intensity_to_meters, real)
+        PARSE_PARAMETER(configuration, depth_framepoint_generation, depth_framepoint_generator_parameters, enable_bilateral_filtering, bool)
+        PARSE_PARAMETER(configuration, depth_framepoint_generation, depth_framepoint_generator_parameters, enable_point_triangulation, bool)
         break;
       }
       default: {
@@ -419,6 +412,9 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, enable_robust_kernel_for_poses, bool)
     PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, enable_robust_kernel_for_landmarks, bool)
 
+    //ds viewers
+    PARSE_PARAMETER(configuration, visualization, image_viewer_parameters, display_secondary_image, bool)
+
     //ds done
     LOG_INFO(std::cerr << "ParameterCollection::parseFromFile|successfully loaded configuration from file: " << filename_ << std::endl)
     LOG_INFO(std::cerr << "ParameterCollection::parseFromFile|number of imported parameters: " << number_of_parameters_parsed << "/" << number_of_parameters_detected << std::endl)
@@ -446,18 +442,12 @@ void ParameterCollection::setMode(const CommandLineParameters::TrackerMode& mode
   switch (mode_) {
     case CommandLineParameters::TrackerMode::RGB_STEREO: {
       if (!stereo_framepoint_generator_parameters) {stereo_framepoint_generator_parameters = new StereoFramePointGeneratorParameters();}
-      if (!stereo_tracker_parameters) {
-        stereo_tracker_parameters = new StereoTrackerParameters();
-      }
-      stereo_tracker_parameters->enable_landmark_recovery = command_line_parameters->option_recover_landmarks;
+      tracker_parameters->enable_landmark_recovery = command_line_parameters->option_recover_landmarks;
       break;
     }
     case CommandLineParameters::TrackerMode::RGB_DEPTH: {
       if (!depth_framepoint_generator_parameters) {depth_framepoint_generator_parameters = new DepthFramePointGeneratorParameters();}
-      if (!depth_tracker_parameters) {
-        depth_tracker_parameters = new DepthTrackerParameters();
-      }
-      depth_tracker_parameters->enable_landmark_recovery = command_line_parameters->option_recover_landmarks;
+      tracker_parameters->enable_landmark_recovery = command_line_parameters->option_recover_landmarks;
       break;
     }
     default: {
@@ -472,8 +462,7 @@ void ParameterCollection::print() const {
   if (world_map_parameters) {world_map_parameters->print();}
   if (stereo_framepoint_generator_parameters) {stereo_framepoint_generator_parameters->print();}
   if (depth_framepoint_generator_parameters) {depth_framepoint_generator_parameters->print();}
-  if (stereo_tracker_parameters) {stereo_tracker_parameters->print();}
-  if (depth_tracker_parameters) {depth_tracker_parameters->print();}
+  if (tracker_parameters) {tracker_parameters->print();}
   if (relocalizer_parameters) {relocalizer_parameters->print();}
   if (graph_optimizer_parameters) {graph_optimizer_parameters->print();}
 }

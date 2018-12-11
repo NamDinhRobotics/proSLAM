@@ -80,12 +80,6 @@ stereo_framepoint_generation:
   minimum_disparity_pixels:                1
   maximum_epipolar_search_offset_pixels:   0
 
-depth_framepoint_generation:
-
-  #ds depth sensor configuration
-  maximum_depth_near_meters: 5
-  maximum_depth_far_meters:  20
-
 base_tracking:
 
   #ds this criteria is used for the decision of whether creating a landmark or not from a track of framepoints

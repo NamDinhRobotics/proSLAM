@@ -63,12 +63,12 @@ void SLAMAssembly::_createStereoTracker(Camera* camera_left_, Camera* camera_rig
   framepoint_generator->configure();
 
   //ds allocate and configure the aligner for motion estimation
-  StereoUVAligner* pose_optimizer = new StereoUVAligner(_parameters->stereo_tracker_parameters->aligner);
+  StereoUVAligner* pose_optimizer = new StereoUVAligner(_parameters->tracker_parameters->aligner);
   pose_optimizer->setMaximumReliableDepthMeters(_parameters->stereo_framepoint_generator_parameters->maximum_reliable_depth_meters);
   pose_optimizer->configure();
 
   //ds allocate and configure the tracker
-  _tracker = new BaseTracker(_parameters->stereo_tracker_parameters);
+  _tracker = new BaseTracker(_parameters->tracker_parameters);
   _tracker->setCameraLeft(camera_left_);
   _tracker->setCameraSecondary(camera_right_);
   _tracker->setFramePointGenerator(framepoint_generator);
@@ -92,11 +92,11 @@ void SLAMAssembly::_createDepthTracker(Camera* camera_left_, Camera* camera_righ
   framepoint_generator->configure();
 
   //ds allocate and configure the aligner for motion estimation
-  UVDAligner* pose_optimizer = new UVDAligner(_parameters->depth_tracker_parameters->aligner);
+  UVDAligner* pose_optimizer = new UVDAligner(_parameters->tracker_parameters->aligner);
   pose_optimizer->configure();
 
   //ds allocate and configure the tracker
-  _tracker = new BaseTracker(_parameters->depth_tracker_parameters);
+  _tracker = new BaseTracker(_parameters->tracker_parameters);
   _tracker->setCameraLeft(camera_left_);
   _tracker->setCameraSecondary(camera_right_);
   _tracker->setFramePointGenerator(framepoint_generator);
@@ -124,7 +124,7 @@ void SLAMAssembly::loadCamerasFromMessageFile() {
   std::vector<std::string> camera_topics_synchronized(0);
   camera_topics_synchronized.push_back(_parameters->command_line_parameters->topic_image_left);
   camera_topics_synchronized.push_back(_parameters->command_line_parameters->topic_image_right);
-  _synchronizer.setTimeInterval(0.001);
+  _synchronizer.setTimeInterval(_parameters->command_line_parameters->maximum_time_interval_seconds);
   _synchronizer.setTopics(camera_topics_synchronized);
 
   //ds quickly read the first messages to buffer camera info
@@ -393,8 +393,6 @@ void SLAMAssembly::playbackMessageFile() {
       //ds buffer sensor data
       srrg_core::PinholeImageMessage* image_message_left  = dynamic_cast<srrg_core::PinholeImageMessage*>(_synchronizer.messages()[0].get());
       srrg_core::PinholeImageMessage* image_message_right = dynamic_cast<srrg_core::PinholeImageMessage*>(_synchronizer.messages()[1].get());
-
-      //ds if message retrieval failed
       if (!image_message_left || !image_message_right) {
         throw std::runtime_error("SLAMAssembly::playbackMessageFile|unable to retrieve image data from srrg messages");
       }

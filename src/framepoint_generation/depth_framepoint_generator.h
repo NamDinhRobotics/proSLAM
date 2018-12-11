@@ -41,7 +41,7 @@ public:
 
 protected:
 
-  void _computeDepthMap(const cv::Mat& right_depth_image);
+  void _computeDepthMap(cv::Mat& right_depth_image);
 
 //ds settings
 protected:

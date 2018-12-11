@@ -65,8 +65,8 @@ void MapViewer::_drawFrame(const Frame* frame_, const Vector3& color_rgb_) const
     glBegin(GL_LINES);
     for (const Closure::ClosureConstraint& constraint: frame_->localMap()->closures()) {
       const Vector3& closure_coordinates_reference(constraint.local_map->robotToWorld().translation());
-      glVertex3f(closure_coordinates.x(), closure_coordinates.y(), closure_coordinates.z()+_parameters->object_scale);
-      glVertex3f(closure_coordinates_reference.x(), closure_coordinates_reference.y(), closure_coordinates_reference.z()+_parameters->object_scale);
+      glVertex3f(closure_coordinates.x(), closure_coordinates.y(), closure_coordinates.z());
+      glVertex3f(closure_coordinates_reference.x(), closure_coordinates_reference.y(), closure_coordinates_reference.z());
     }
     glEnd();
   } else {

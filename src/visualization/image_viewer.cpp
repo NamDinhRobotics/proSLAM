@@ -32,11 +32,14 @@ void ImageViewer::update(const Frame* frame_) {
   cv::cvtColor(frame_->intensityImageLeft(), _current_image, CV_GRAY2RGB);
 
   //ds buffer secondary image (if existing and desired)
-  if (!_current_image_secondary.empty()                                         &&
-      _parameters->tracker_mode == CommandLineParameters::TrackerMode::RGB_DEPTH) {
+  if (!frame_->intensityImageRight().empty() && _parameters->display_secondary_image) {
+    if (_parameters->tracker_mode == CommandLineParameters::TrackerMode::RGB_DEPTH) {
 
-    //ds upscale depth image to make it more visible
-    _current_image_secondary = frame_->intensityImageRight().clone()*5;
+      //ds upscale depth image to make it more visible
+      _current_image_secondary = frame_->intensityImageRight().clone()*5;
+    } else {
+      _current_image_secondary = frame_->intensityImageRight().clone();
+    }
   }
 }
 
@@ -56,8 +59,7 @@ void ImageViewer::draw() {
 
     //ds display the image(s)
     cv::imshow(_parameters->window_title.c_str(), _current_image);
-    if (!_current_image_secondary.empty()                                         &&
-        _parameters->tracker_mode == CommandLineParameters::TrackerMode::RGB_DEPTH) {
+    if (!_current_image_secondary.empty() && _parameters->display_secondary_image) {
       cv::imshow(_parameters->window_title_secondary.c_str(), _current_image_secondary);
     }
     cv::waitKey(1);
