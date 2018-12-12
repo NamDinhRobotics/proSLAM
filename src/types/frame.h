@@ -86,26 +86,15 @@ public:
   inline const FramePointPointerVector& points() const {return _active_points;}
   inline FramePointPointerVector& points() {return _active_points;}
 
-  //! @brief request a new framepoint instance with an optional link to a previous point (track)
-  //! @brief point has a valid, measured position in the camera
-  FramePoint* createFramepoint(const cv::KeyPoint& keypoint_left_,
-                               const cv::Mat& descriptor_left_,
-                               const cv::KeyPoint& keypoint_right_,
-                               const cv::Mat& descriptor_right_,
-                               const PointCoordinates& camera_coordinates_left_,
-                               FramePoint* previous_point_ = nullptr);
-
-  //! @brief a new framepoint instance with an optional link to a previous point (track)
-  //! @brief point has a valid, measured position in the camera
+  //! @brief request a new framepoint generated from rigid stereo RGB input - we always know the camera coordinates
   FramePoint* createFramepoint(const IntensityFeature* feature_left_,
                                const IntensityFeature* feature_right_,
+                               const real& descriptor_distance_triangulation_,
                                const PointCoordinates& camera_coordinates_left_,
                                FramePoint* previous_point_ = nullptr);
 
-  //! @brief request a new framepoint instance with an optional link to a previous point (track) without right keypoint/descriptor
-  //! @brief point has a valid, measured position in the camera
-  FramePoint* createFramepoint(const cv::KeyPoint& keypoint_left_,
-                               const cv::Mat& descriptor_left_,
+  //! @brief request a new framepoint generated from RGB-D input with a valid pixel depth - we always know the camera coordinates
+  FramePoint* createFramepoint(const IntensityFeature* feature_left_,
                                const PointCoordinates& camera_coordinates_left_,
                                FramePoint* previous_point_ = nullptr);
 

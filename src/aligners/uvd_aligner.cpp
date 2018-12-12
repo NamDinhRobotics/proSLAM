@@ -52,7 +52,7 @@ namespace proslam {
       _information_matrix_vector[u](2,2) = 10.0;
 
       //ds if we cannot consider the translation contribution of the point
-      if (frame_point->hasEstimatedDepth()) {
+      if (frame_point->hasUnreliableDepth()) {
 
         //ds block translation contribution
         _weights_translation[u] = 0;

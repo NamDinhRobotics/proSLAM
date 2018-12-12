@@ -22,17 +22,11 @@ Frame::Frame(const WorldMap* context_,
     _root = this;
   }
   setRobotToWorld(robot_to_world_);
-  _created_points.clear();
-  _active_points.clear();
-  _keypoints_left.clear();
-  _keypoints_right.clear();
-  _temporary_points.clear();
+  clear();
 }
 
 Frame::~Frame() {
   clear();
-  _keypoints_left.clear();
-  _keypoints_right.clear();
 }
 
 void Frame::setCameraLeft(const Camera* camera_) {
@@ -64,20 +58,15 @@ void Frame::setRobotToWorld(const TransformMatrix3D& robot_to_world_, const bool
   updateActivePoints();
 }
 
-FramePoint* Frame::createFramepoint(const cv::KeyPoint& keypoint_left_,
-                                    const cv::Mat& descriptor_left_,
-                                    const cv::KeyPoint& keypoint_right_,
-                                    const cv::Mat& descriptor_right_,
+FramePoint* Frame::createFramepoint(const IntensityFeature* feature_left_,
+                                    const IntensityFeature* feature_right_,
+                                    const real& descriptor_distance_triangulation_,
                                     const PointCoordinates& camera_coordinates_left_,
                                     FramePoint* previous_point_) {
   assert(_camera_left);
 
   //ds allocate a new point connected to the previous one
-  FramePoint* frame_point = new FramePoint(keypoint_left_,
-                                           descriptor_left_,
-                                           keypoint_right_,
-                                           descriptor_right_,
-                                           this);
+  FramePoint* frame_point = new FramePoint(feature_left_, feature_right_, descriptor_distance_triangulation_, this);
   frame_point->setCameraCoordinatesLeft(camera_coordinates_left_);
   frame_point->setRobotCoordinates(_camera_left->cameraToRobot()*camera_coordinates_left_);
   frame_point->setWorldCoordinates(_robot_to_world*frame_point->robotCoordinates());
@@ -89,8 +78,28 @@ FramePoint* Frame::createFramepoint(const cv::KeyPoint& keypoint_left_,
     frame_point->setOrigin(frame_point);
   }
 
-  //ds update depth based on quality
-  frame_point->setDepthMeters(camera_coordinates_left_.z());
+  //ds bookkeep each generated point for resize immune memory management (TODO remove costly bookkeeping)
+  _created_points.push_back(frame_point);
+  return frame_point;
+}
+
+FramePoint* Frame::createFramepoint(const IntensityFeature* feature_left_,
+                                    const PointCoordinates& camera_coordinates_left_,
+                                    FramePoint* previous_point_) {
+  assert(_camera_left);
+
+  //ds allocate a new point connected to the previous one
+  FramePoint* frame_point = new FramePoint(feature_left_, this);
+  frame_point->setCameraCoordinatesLeft(camera_coordinates_left_);
+  frame_point->setRobotCoordinates(_camera_left->cameraToRobot()*camera_coordinates_left_);
+  frame_point->setWorldCoordinates(_robot_to_world*frame_point->robotCoordinates());
+
+  //ds if there is a previous point
+  if (previous_point_) {
+    frame_point->setPrevious(previous_point_);
+  } else {
+    frame_point->setOrigin(frame_point);
+  }
 
   //ds bookkeep each generated point for resize immune memory management (TODO remove costly bookkeeping)
   _created_points.push_back(frame_point);
@@ -98,41 +107,14 @@ FramePoint* Frame::createFramepoint(const cv::KeyPoint& keypoint_left_,
 }
 
 FramePoint* Frame::createFramepoint(const IntensityFeature* feature_left_,
-                                    const IntensityFeature* feature_right_,
-                                    const PointCoordinates& camera_coordinates_left_,
                                     FramePoint* previous_point_) {
-  return createFramepoint(feature_left_->keypoint,
-                          feature_left_->descriptor,
-                          feature_right_->keypoint,
-                          feature_right_->descriptor,
-                          camera_coordinates_left_,
-                          previous_point_);
-}
-
-FramePoint* Frame::createFramepoint(const cv::KeyPoint& keypoint_left_,
-                                    const cv::Mat& descriptor_left_,
-                                    const PointCoordinates& camera_coordinates_left_,
-                                    FramePoint* previous_point_) {
-  return createFramepoint(keypoint_left_,
-                          descriptor_left_,
-                          keypoint_left_,
-                          descriptor_left_,
-                          camera_coordinates_left_,
-                          previous_point_);
-}
-
-FramePoint* Frame::createFramepoint(const IntensityFeature* feature_left_,
-                                    FramePoint* previous_point_) {
+  assert(_camera_left);
 
   //ds allocate a new point connected to the previous one
-  FramePoint* frame_point = new FramePoint(feature_left_->keypoint,
-                                           feature_left_->descriptor,
-                                           feature_left_->keypoint,
-                                           feature_left_->descriptor,
-                                           this);
+  FramePoint* frame_point = new FramePoint(feature_left_, this);
 
   //ds the point does not have a valid position yet
-  frame_point->_has_estimated_depth = true;
+  frame_point->_has_unreliable_depth = true;
 
   //ds connect the framepoints
   if (previous_point_) {
@@ -143,6 +125,8 @@ FramePoint* Frame::createFramepoint(const IntensityFeature* feature_left_,
 
   //ds bookkeep each generated point for resize immune memory management (TODO remove costly bookkeeping)
   _created_points.push_back(frame_point);
+
+  //ds this point enters in the temporary points buffer as it has unreliable depth
   _temporary_points.push_back(frame_point);
   return frame_point;
 }
@@ -154,6 +138,8 @@ void Frame::clear() {
   _created_points.clear();
   _active_points.clear();
   _temporary_points.clear();
+  _keypoints_left.clear();
+  _keypoints_right.clear();
 }
 
 void Frame::updateActivePoints() {

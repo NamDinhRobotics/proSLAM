@@ -74,13 +74,11 @@ void StereoFramePointGenerator::initialize(Frame* frame_, const bool& extract_fe
     //ds adjust detector thresholds for next frame
     adjustDetectorThresholds();
 
-    //ds overwrite with average
-    _number_of_detected_keypoints = (frame_->keypointsLeft().size()+frame_->keypointsRight().size())/2.0;
-    frame_->_number_of_detected_keypoints = _number_of_detected_keypoints;
-
     //ds extract descriptors for detected features
     computeDescriptors(frame_->intensityImageLeft(), frame_->keypointsLeft(), frame_->descriptorsLeft());
     computeDescriptors(frame_->intensityImageRight(), frame_->keypointsRight(), frame_->descriptorsRight());
+    _number_of_detected_keypoints         = (frame_->keypointsLeft().size()+frame_->keypointsRight().size())/2.0;
+    frame_->_number_of_detected_keypoints = _number_of_detected_keypoints;
     LOG_DEBUG(std::cerr << "StereoFramePointGenerator::initialize|extracted features L: " << frame_->keypointsLeft().size()
                         << " R: " << frame_->keypointsRight().size() << std::endl)
 
@@ -110,7 +108,7 @@ void StereoFramePointGenerator::track(Frame* frame_,
   if (!frame_ || !frame_previous_) {
     throw std::runtime_error("StereoFramePointGenerator::track|called with invalid frames");
   }
-  frame_->clear();
+  assert(frame_->points().empty());
   const Matrix3& camera_calibration_matrix = _camera_left->cameraMatrix();
   FramePointPointerVector& framepoints(frame_->points());
   FramePointPointerVector& framepoints_previous(frame_previous_->points());
@@ -207,10 +205,10 @@ void StereoFramePointGenerator::track(Frame* frame_,
       if (feature_right) {
         assert(feature_left->col >= feature_right->col);
 
-//        //ds skip feature if descriptor distance to previous is violated
-//        if (cv::norm(feature_right->descriptor, point_previous->descriptorRight(), SRRG_PROSLAM_DESCRIPTOR_NORM) > _parameters->matching_distance_tracking_threshold) {
-//          continue;
-//        }
+        //ds skip feature if descriptor distance to previous is violated
+        if (cv::norm(feature_right->descriptor, point_previous->descriptorRight(), SRRG_PROSLAM_DESCRIPTOR_NORM) > _parameters->matching_distance_tracking_threshold) {
+          continue;
+        }
 
         //ds skip points with insufficient stereo disparity
         if (feature_left->col-feature_right->col < _parameters->minimum_disparity_pixels) {
@@ -220,10 +218,10 @@ void StereoFramePointGenerator::track(Frame* frame_,
         //ds create a stereo match
         FramePoint* framepoint = frame_->createFramepoint(feature_left,
                                                           feature_right,
+                                                          descriptor_distance_best,
                                                           getPointInLeftCamera(feature_left->keypoint.pt, feature_right->keypoint.pt),
                                                           point_previous);
         framepoint->setEpipolarOffset(feature_right->row-feature_left->row);
-        framepoint->setDescriptorDistanceTriangulation(descriptor_distance_best);
 
         //ds VSUALIZATION ONLY
         framepoint->setProjectionEstimateLeft(cv::Point2f(col_projection_left, row_projection_left));
@@ -396,11 +394,20 @@ void StereoFramePointGenerator::recoverPoints(Frame* current_frame_, const Frame
       continue;
     }
 
+    //ds check stereo triangulation distance
+    const real descriptor_distance_triangulation = cv::norm(descriptor_left, descriptor_right, SRRG_PROSLAM_DESCRIPTOR_NORM);
+    if (descriptor_distance_triangulation > _current_maximum_descriptor_distance_triangulation) {
+      continue;
+    }
+
+    //ds instantiate features (will be owned by the framepoint)
+    IntensityFeature* feature_left  = new IntensityFeature(keypoint_buffer_left[0], descriptor_left, 0);
+    IntensityFeature* feature_right = new IntensityFeature(keypoint_buffer_right[0], descriptor_right, 0);
+
     //ds allocate a new point connected to the previous one
-    FramePoint* current_point = current_frame_->createFramepoint(keypoint_buffer_left[0],
-                                                                 descriptor_left,
-                                                                 keypoint_buffer_right[0],
-                                                                 descriptor_right,
+    FramePoint* current_point = current_frame_->createFramepoint(feature_left,
+                                                                 feature_right,
+                                                                 descriptor_distance_triangulation,
                                                                  getPointInLeftCamera(keypoint_buffer_left[0].pt, keypoint_buffer_right[0].pt),
                                                                  point_previous);
 
@@ -518,6 +525,7 @@ void StereoFramePointGenerator::compute(Frame* frame_) {
         //ds compute a new framepoint without track
         FramePoint* framepoint = frame_->createFramepoint(feature_left,
                                                           feature_right,
+                                                          descriptor_distance_best,
                                                           getPointInLeftCamera(feature_left->keypoint.pt, feature_right->keypoint.pt));
         framepoint->setEpipolarOffset(epipolar_offset);
         framepoint->setDescriptorDistanceTriangulation(descriptor_distance_best);

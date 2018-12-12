@@ -42,9 +42,14 @@ public:
 //ds attributes
 public:
 
+  //ds image dimensions
   int32_t number_of_rows = 0;
   int32_t number_of_cols = 0;
+
+  //ds feature information stored in a linear array (which is sorted and exploited for e.g. rigid stereo matching)
   IntensityFeaturePointerVector feature_vector;
+
+  //ds image which contains features at pixel positions
   IntensityFeature*** feature_lattice = nullptr;
 
 };

@@ -27,7 +27,6 @@ Camera::Camera(srrg_core::PinholeImageMessage* message_): _identifier(_instances
 }
 
 const bool Camera::isInFieldOfView(const ImageCoordinates& image_coordinates_) const {
-  assert(image_coordinates_.z() == 1);
   return ((image_coordinates_.x() >= 0 && image_coordinates_.x() <= _number_of_image_cols)&&
           (image_coordinates_.y() >= 0 && image_coordinates_.y() <= _number_of_image_rows));
 }

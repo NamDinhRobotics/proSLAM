@@ -34,6 +34,8 @@ void DepthFramePointGenerator::initialize(Frame* frame_, const bool& extract_fea
 
   //ds extract descriptors for detected features
   computeDescriptors(frame_->intensityImageLeft(), frame_->keypointsLeft(), frame_->descriptorsLeft());
+  _number_of_detected_keypoints         = frame_->keypointsLeft().size();
+  frame_->_number_of_detected_keypoints = _number_of_detected_keypoints;
 
   //ds initialize matchers for left frame
   _feature_matcher_left.setFeatures(frame_->keypointsLeft(), frame_->descriptorsLeft());
@@ -67,6 +69,7 @@ void DepthFramePointGenerator::compute(Frame* frame_) {
   Count number_of_new_points_with_infinity_depth = 0;
 
   //ds compute depth for all remaining features
+  std::set<uint32_t> matched_indices_left;
   for (const IntensityFeature* feature_left: features_left) {
 
     //ds retrieve depth point at given pixel
@@ -77,25 +80,27 @@ void DepthFramePointGenerator::compute(Frame* frame_) {
       continue;
     }
 
+    //ds remove feature from lattice as we will generate a framepoint with it that takes ownership
+    _feature_matcher_left.feature_lattice[feature_left->row][feature_left->col] = nullptr;
+    matched_indices_left.insert(feature_left->index_in_vector);
+
     //ds if depth could not be retrieved and point triangulation is enabled
     if (depth_point[2] >= _parameters->maximum_depth_meters && _parameters->enable_point_triangulation) {
 
       //ds allocate a new framepoint (will be stored in temporary points) - currently not checked with binning!
       FramePoint* framepoint = frame_->createFramepoint(feature_left);
 
-      //ds set raw estimated depth - reverse homogeneous division
+      //ds set raw estimated depth manually - reverse homogeneous division TODO wrap this in framepoint factory?
       const real depth_meters = _parameters->maximum_depth_meters;
       const PointCoordinates point_homogeneous(feature_left->col*depth_meters, feature_left->row*depth_meters, depth_meters);
       framepoint->setCameraCoordinatesLeft(inverse_camera_matrix*point_homogeneous);
-      framepoint->setHasEstimatedDepth(true);
+      framepoint->setHasUnreliableDepth(true);
       ++number_of_new_points_with_infinity_depth;
       continue;
     }
 
     //ds allocate a new framepoint
-    FramePoint* framepoint = frame_->createFramepoint(feature_left->keypoint,
-                                                      feature_left->descriptor,
-                                                      PointCoordinates(depth_point[0], depth_point[1], depth_point[2]));
+    FramePoint* framepoint = frame_->createFramepoint(feature_left, PointCoordinates(depth_point[0], depth_point[1], depth_point[2]));
 
     //ds set point to buffer
     framepoints_new[number_of_new_points] = framepoint;
@@ -127,6 +132,9 @@ void DepthFramePointGenerator::compute(Frame* frame_) {
   LOG_DEBUG(std::cerr << "DepthFramePointGenerator::compute|number of new points with measured depth: "
                       << number_of_new_points << " with infinity depth: "
                       << number_of_new_points_with_infinity_depth << std::endl)
+
+  //ds remove unmatched features from candidate pool
+  _feature_matcher_left.prune(matched_indices_left);
 
   //ds update framepoints - optionally binning them
   if (_parameters->enable_keypoint_binning) {
@@ -162,7 +170,7 @@ void DepthFramePointGenerator::track(Frame* frame_,
   if (!frame_ || !frame_previous_) {
     throw std::runtime_error("DepthFramePointGenerator::track|called with invalid frames");
   }
-  frame_->clear();
+  assert(frame_->points().empty());
   const Matrix3& camera_calibration_matrix = _camera_left->cameraMatrix();
   FramePointPointerVector& framepoints(frame_->points());
 
@@ -234,6 +242,10 @@ void DepthFramePointGenerator::track(Frame* frame_,
         continue;
       }
 
+      //ds remove feature from lattice as we will generate a framepoint with it that takes ownership
+      matched_indices_left.insert(feature_left->index_in_vector);
+      _feature_matcher_left.feature_lattice[feature_left->row][feature_left->col] = nullptr;
+
       //ds if depth could not be retrieved and point triangulation is enabled
       if (depth_point[2] >= _parameters->maximum_depth_meters && _parameters->enable_point_triangulation) {
 
@@ -246,13 +258,10 @@ void DepthFramePointGenerator::track(Frame* frame_,
       }
 
       //ds allocate a framepoint
-      FramePoint* framepoint = frame_->createFramepoint(feature_left->keypoint,
-                                                        feature_left->descriptor,
-                                                        PointCoordinates(depth_point[0], depth_point[1], depth_point[2]),
-                                                        point_previous);
+      FramePoint* framepoint = frame_->createFramepoint(feature_left, PointCoordinates(depth_point[0], depth_point[1], depth_point[2]), point_previous);
 
       //ds check if we have an estimated depth point that entered the active point set
-      if (framepoint->hasEstimatedDepth()) {
+      if (framepoint->hasUnreliableDepth()) {
         ++number_of_points_upgraded_from_estimated_depth;
       }
 
@@ -263,19 +272,13 @@ void DepthFramePointGenerator::track(Frame* frame_,
       framepoints[number_of_points] = framepoint;
       ++number_of_points;
 
-      //ds block matching in exhaustive matching (later)
-      matched_indices_left.insert(feature_left->index_in_vector);
-
-      //ds remove feature from lattices
-      _feature_matcher_left.feature_lattice[feature_left->row][feature_left->col]    = nullptr;
-
       if (framepoint->landmark()) {
         ++_number_of_tracked_landmarks;
       }
     }
 
     //ds if we couldn't track the point and it was not estimated (not that valuable)
-    if (!point_previous->next() && !point_previous->hasEstimatedDepth()) {
+    if (!point_previous->next() && !point_previous->hasUnreliableDepth()) {
       previous_framepoints_without_tracks_[number_of_points_lost] = point_previous;
       ++number_of_points_lost;
     }
@@ -388,11 +391,11 @@ void DepthFramePointGenerator::recoverPoints(Frame* current_frame_, const FrameP
     }
     keypoint_buffer_left[0].pt += corner_left;
 
+    //ds instantiate a new feature (will be owned by the framepoint)
+    IntensityFeature* feature = new IntensityFeature(keypoint_buffer_left[0], descriptor_left, 0);
+
     //ds at this point we have a valid depth measurement - obtain coordinates in the depth image
-    FramePoint* framepoint = current_frame_->createFramepoint(keypoint_buffer_left[0],
-                                                              descriptor_left,
-                                                              PointCoordinates(depth_point[0], depth_point[1], depth_point[2]),
-                                                              point_previous);
+    FramePoint* framepoint = current_frame_->createFramepoint(feature, PointCoordinates(depth_point[0], depth_point[1], depth_point[2]), point_previous);
 
     //ds set the point to the control structure
     current_frame_->points()[index_lost_point_recovered] = framepoint;

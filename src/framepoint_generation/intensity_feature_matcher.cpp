@@ -155,6 +155,11 @@ void IntensityFeatureMatcher::prune(const std::set<uint32_t>& matched_indices_) 
 
       //ds keep the element (this operation is not problemenatic since we do not loop reversely here)
       feature_vector[number_of_unmatched_elements] = feature_vector[index];
+
+      //ds adjust the index for the resulting vector
+      feature_vector[number_of_unmatched_elements]->index_in_vector = number_of_unmatched_elements;
+
+      //ds move on
       ++number_of_unmatched_elements;
     }
   }

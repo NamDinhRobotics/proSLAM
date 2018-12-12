@@ -436,7 +436,7 @@ void BaseTracker::_updatePoints(WorldMap* context_, Frame* frame_) {
     //ds skip point if tracking and not mature enough to be a landmark
     //ds skip point if its depth was estimated (i.e. not measured) TODO enable proper triangulation to allow landmarks
     if (point->trackLength() < _parameters->minimum_track_length_for_landmark_creation ||
-        point->hasEstimatedDepth()) {
+        point->hasUnreliableDepth()) {
       continue;
     }
 

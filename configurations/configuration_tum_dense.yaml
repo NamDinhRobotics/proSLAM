@@ -61,14 +61,14 @@ base_framepoint_generation:
   maximum_projection_tracking_distance_pixels: 50
 
   #ds dynamic thresholds for descriptor matching
-  matching_distance_tracking_threshold: 25
+  matching_distance_tracking_threshold: 50
   
   #ds maximum reliable depth with chosen sensor
   maximum_reliable_depth_meters: 2.5
   
   #feature density regularization
   enable_keypoint_binning: true
-  bin_size_pixels:         25
+  bin_size_pixels:         10
 
 depth_framepoint_generation:
 

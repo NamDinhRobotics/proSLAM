@@ -5,33 +5,38 @@ namespace proslam {
 
 Count FramePoint::_instances = 0;
 
-FramePoint::FramePoint(const cv::KeyPoint& keypoint_left_,
-                       const cv::Mat& descriptor_left_,
-                       const cv::KeyPoint& keypoint_right_,
-                       const cv::Mat& descriptor_right_,
-                       Frame* frame_): row(keypoint_left_.pt.y),
-                                       col(keypoint_left_.pt.x),
+FramePoint::FramePoint(const IntensityFeature* feature_left_,
+                       const IntensityFeature* feature_right_,
+                       const real& descriptor_distance_triangulation_,
+                       Frame* frame_): row(feature_left_->keypoint.pt.y),
+                                       col(feature_left_->keypoint.pt.x),
                                        _identifier(_instances),
-                                       _keypoint_left(keypoint_left_),
-                                       _keypoint_right(keypoint_right_),
-                                       _descriptor_left(descriptor_left_),
-                                       _descriptor_right(descriptor_right_),
-                                       _disparity_pixels(keypoint_left_.pt.x-keypoint_right_.pt.x),
-                                       _image_coordinates_left(PointCoordinates(keypoint_left_.pt.x, keypoint_left_.pt.y, 1)),
-                                       _image_coordinates_right(PointCoordinates(keypoint_right_.pt.x, keypoint_right_.pt.y, 1)) {
+                                       _frame(frame_),
+                                       _keypoint_left(feature_left_->keypoint),
+                                       _keypoint_right(feature_right_->keypoint),
+                                       _descriptor_left(feature_left_->descriptor),
+                                       _descriptor_right(feature_right_->descriptor),
+                                       _disparity_pixels(feature_left_->keypoint.pt.x-feature_right_->keypoint.pt.x),
+                                       _descriptor_distance_triangulation(descriptor_distance_triangulation_),
+                                       _image_coordinates_left(ImageCoordinates(feature_left_->keypoint.pt.x, feature_left_->keypoint.pt.y, 1)),
+                                       _image_coordinates_right(ImageCoordinates(feature_right_->keypoint.pt.x, feature_right_->keypoint.pt.y, 1)) {
   ++_instances;
-  setFrame(frame_);
+  _feature_left  = feature_left_;
+  _feature_right = feature_right_;
 }
 
 FramePoint::FramePoint(const IntensityFeature* feature_left_,
-                       const IntensityFeature* feature_right_,
-                       Frame* frame_): FramePoint(feature_left_->keypoint,
-                                                  feature_left_->descriptor,
-                                                  feature_right_->keypoint,
-                                                  feature_right_->descriptor,
-                                                  frame_) {
-  _feature_left  = feature_left_;
-  _feature_right = feature_right_;
+                       Frame* frame_): row(feature_left_->keypoint.pt.y),
+                                       col(feature_left_->keypoint.pt.x),
+                                       _identifier(_instances),
+                                       _frame(frame_),
+                                       _keypoint_left(feature_left_->keypoint),
+                                       _descriptor_left(feature_left_->descriptor),
+                                       _disparity_pixels(0),
+                                       _descriptor_distance_triangulation(0),
+                                       _image_coordinates_left(ImageCoordinates(feature_left_->keypoint.pt.x, feature_left_->keypoint.pt.y, 1)) {
+  ++_instances;
+  _feature_left = feature_left_;
 }
 
 FramePoint::~FramePoint() {
@@ -44,7 +49,7 @@ void FramePoint::setPrevious(FramePoint* previous_) {
   //ds update linked list
   previous_->_next = this;
   _previous = previous_;
-  _has_estimated_depth = previous_->_has_estimated_depth;
+  _has_unreliable_depth = previous_->_has_unreliable_depth;
 
   //ds update current
   setLandmark(previous_->landmark());

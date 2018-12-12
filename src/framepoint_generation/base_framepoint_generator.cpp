@@ -249,16 +249,18 @@ const PointCoordinates BaseFramePointGenerator::getPointInCamera(const cv::Point
   const Eigen::Matrix<real, 1, 3>& r_2 = camera_previous_to_current_.linear().block<1,3>(1,0);
   const Eigen::Matrix<real, 1, 3>& r_3 = camera_previous_to_current_.linear().block<1,3>(2,0);
 
-  //ds precomputations
+  //ds obtain normalized image coordinates
   const real a_0 = (image_point_previous_.x-camera_calibration_matrix_(0,2))/camera_calibration_matrix_(0,0);
   const real b_0 = (image_point_previous_.y-camera_calibration_matrix_(1,2))/camera_calibration_matrix_(1,1);
   const real a_1 = (image_point_current_.x-camera_calibration_matrix_(0,2))/camera_calibration_matrix_(0,0);
   const real b_1 = (image_point_current_.y-camera_calibration_matrix_(1,2))/camera_calibration_matrix_(1,1);
+
+  //ds initialize homogeneous coordinates in x and y
   const PointCoordinates x_0(a_0, b_0, 1);
   const PointCoordinates x_1(a_1, b_1, 1);
 
   //ds build constraint matrix
-  Eigen::Matrix<real, 3, 2> A(Eigen::Matrix<real, 3, 2>::Zero());
+  Eigen::Matrix<real, 3, 2> A;
   A << -r_1*x_0, a_1,
        -r_2*x_0, b_1,
        -r_3*x_0, 1;
