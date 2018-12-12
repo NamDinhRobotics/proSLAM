@@ -63,7 +63,7 @@ void DepthFramePointGenerator::compute(Frame* frame_) {
   IntensityFeaturePointerVector& features_left(_feature_matcher_left.feature_vector);
 
   //ds new framepoints - optionally filtered in a consecutive binning
-  FramePointPointerVector framepoints_new(features_left.size());
+  FramePointPointerVector framepoints_new(_number_of_detected_keypoints);
   Count number_of_new_points = 0;
   Count number_of_new_points_with_infinity_depth = 0;
 
@@ -164,7 +164,7 @@ void DepthFramePointGenerator::compute(Frame* frame_) {
 void DepthFramePointGenerator::track(Frame* frame_,
                                      Frame* frame_previous_,
                                      const TransformMatrix3D& camera_left_previous_in_current_,
-                                     FramePointPointerVector& previous_framepoints_without_tracks_,
+                                     FramePointPointerVector& lost_points_,
                                      const bool track_by_appearance_) {
   if (!frame_ || !frame_previous_) {
     throw std::runtime_error("DepthFramePointGenerator::track|called with invalid frames");
@@ -183,7 +183,7 @@ void DepthFramePointGenerator::track(Frame* frame_,
   framepoints.resize(framepoints_previous.size());
 
   //ds store points for which we couldn't find a track candidate
-  previous_framepoints_without_tracks_.resize(framepoints_previous.size());
+  lost_points_.resize(framepoints_previous.size());
 
   //ds tracked and triangulated features (to not consider them in the exhaustive stereo matching)
   std::set<uint32_t> matched_indices_left;
@@ -278,12 +278,12 @@ void DepthFramePointGenerator::track(Frame* frame_,
 
     //ds if we couldn't track the point and it was not estimated (not that valuable)
     if (!point_previous->next() && !point_previous->hasUnreliableDepth()) {
-      previous_framepoints_without_tracks_[number_of_points_lost] = point_previous;
+      lost_points_[number_of_points_lost] = point_previous;
       ++number_of_points_lost;
     }
   }
   framepoints.resize(number_of_points);
-  previous_framepoints_without_tracks_.resize(number_of_points_lost);
+  lost_points_.resize(number_of_points_lost);
 
   //ds remove matched indices from candidate pools
   _feature_matcher_left.prune(matched_indices_left);

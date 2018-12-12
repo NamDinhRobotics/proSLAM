@@ -73,6 +73,9 @@ void IntensityFeatureMatcher::sortFeatureVector() {
   std::sort(feature_vector.begin(), feature_vector.end(),  [](const IntensityFeature* a_, const IntensityFeature* b_){
     return ((a_->row < b_->row) || (a_->row == b_->row && a_->col < b_->col));
   });
+
+  //ds we do not want to update the IntensityFeature.index_in_vector fields for this operation (costly)
+  //ds the IntensityFeature.index_in_vector fields will be restored upon prune is called
 }
 
 IntensityFeature* IntensityFeatureMatcher::getMatchingFeatureInRectangularRegion(const int32_t& row_reference_,

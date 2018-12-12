@@ -48,7 +48,7 @@ namespace proslam {
         _moving[u] = frame_point->previous()->cameraCoordinatesLeft();
       }
 
-      //ds we scale the depth error by a factor of 10 to be competitive with the U V (pixel) error which is integer
+      //ds we scale the depth error by a factor of 10 to be competitive with the U V (pixel) error which is in integer format
       _information_matrix_vector[u](2,2) = 10.0;
 
       //ds if we cannot consider the translation contribution of the point
@@ -57,12 +57,13 @@ namespace proslam {
         //ds block translation contribution
         _weights_translation[u] = 0;
 
-        //ds no error on the depth
+        //ds and disable error on the depth
         _information_matrix_vector[u](2,2) = 0;
       } else {
 
-        //ds translation contribution is inversely proportional to depth TODO check if beneficial
-        //_weights_translation[u] = _maximum_reliable_depth_meters/frame_point->cameraCoordinatesLeft().z();
+        //ds translation contribution is inversely proportional to depth
+        //ds TODO check if this is truly beneficial since we already consider the depth in the error!
+        _weights_translation[u] = _maximum_reliable_depth_meters/frame_point->cameraCoordinatesLeft().z();
       }
     }
 

@@ -94,7 +94,7 @@ base_tracking:
   minimum_track_length_for_landmark_creation: 2
 
   #ds track lost criteria
-  minimum_number_of_landmarks_to_track: 75
+  minimum_number_of_landmarks_to_track: 25
 
   #point tracking thresholds
   tunnel_vision_ratio: 0.75
@@ -178,7 +178,7 @@ graph_optimization:
   enable_robust_kernel_for_landmarks: false
   
   #minimum estimation correction to update the internal map
-  minimum_estimation_delta_for_update: 0.01
+  minimum_estimation_delta_for_update_meters: 0.01
   
 visualization:
 

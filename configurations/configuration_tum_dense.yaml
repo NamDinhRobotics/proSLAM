@@ -175,7 +175,7 @@ graph_optimization:
   enable_robust_kernel_for_landmarks: false
   
   #minimum estimation correction to update the internal map
-  minimum_estimation_delta_for_update: 0.01
+  minimum_estimation_delta_for_update_meters: 0.01
 
 visualization:
 

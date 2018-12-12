@@ -22,6 +22,8 @@ public:
   void setFeatures(const std::vector<cv::KeyPoint>& keypoints_, const cv::Mat& descriptors_);
 
   //ds sort all input vectors by ascending row positions (preparation for stereo matching)
+  //ds NOTE: calling this function breaks the IntensityFeature.index_in_vector fields until prune is called
+  //ds this behavior is desired for high efficiency
   void sortFeatureVector();
 
   //ds performs a local search in a rectangular area on the feature lattice

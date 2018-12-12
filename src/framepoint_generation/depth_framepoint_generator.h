@@ -27,7 +27,7 @@ public:
   virtual void track(Frame* frame_,
                      Frame* frame_previous_,
                      const TransformMatrix3D& camera_left_previous_in_current_,
-                     FramePointPointerVector& previous_framepoints_without_tracks_,
+                     FramePointPointerVector& lost_points_,
                      const bool track_by_appearance_ = true) override;
 
   //! @brief attempts to recover framepoints in the current image using the more precise pose estimate, retrieved after pose optimization

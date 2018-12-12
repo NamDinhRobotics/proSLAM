@@ -19,10 +19,10 @@ FramePoint::FramePoint(const IntensityFeature* feature_left_,
                                        _disparity_pixels(feature_left_->keypoint.pt.x-feature_right_->keypoint.pt.x),
                                        _descriptor_distance_triangulation(descriptor_distance_triangulation_),
                                        _image_coordinates_left(ImageCoordinates(feature_left_->keypoint.pt.x, feature_left_->keypoint.pt.y, 1)),
-                                       _image_coordinates_right(ImageCoordinates(feature_right_->keypoint.pt.x, feature_right_->keypoint.pt.y, 1)) {
+                                       _image_coordinates_right(ImageCoordinates(feature_right_->keypoint.pt.x, feature_right_->keypoint.pt.y, 1)),
+                                       _feature_left(feature_left_),
+                                       _feature_right(feature_right_) {
   ++_instances;
-  _feature_left  = feature_left_;
-  _feature_right = feature_right_;
 }
 
 FramePoint::FramePoint(const IntensityFeature* feature_left_,
@@ -34,9 +34,9 @@ FramePoint::FramePoint(const IntensityFeature* feature_left_,
                                        _descriptor_left(feature_left_->descriptor),
                                        _disparity_pixels(0),
                                        _descriptor_distance_triangulation(0),
-                                       _image_coordinates_left(ImageCoordinates(feature_left_->keypoint.pt.x, feature_left_->keypoint.pt.y, 1)) {
+                                       _image_coordinates_left(ImageCoordinates(feature_left_->keypoint.pt.x, feature_left_->keypoint.pt.y, 1)),
+                                       _feature_left(feature_left_) {
   ++_instances;
-  _feature_left = feature_left_;
 }
 
 FramePoint::~FramePoint() {

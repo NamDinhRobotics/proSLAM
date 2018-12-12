@@ -4,7 +4,7 @@
 namespace proslam {
 
 //ds this class computes potential framepoints in a stereo image pair by triangulation
-class StereoFramePointGenerator : public BaseFramePointGenerator {
+class StereoFramePointGenerator: public BaseFramePointGenerator {
 
 //ds object handling
 PROSLAM_MAKE_PROCESSING_CLASS(StereoFramePointGenerator)
@@ -28,7 +28,7 @@ public:
   void virtual track(Frame* frame_,
                      Frame* frame_previous_,
                      const TransformMatrix3D& camera_left_previous_in_current_,
-                     FramePointPointerVector& previous_framepoints_without_tracks_,
+                     FramePointPointerVector& lost_points_,
                      const bool track_by_appearance_ = true) override;
 
   //! @brief attempts to recover framepoints in the current image using the more precise pose estimate, retrieved after pose optimization
@@ -51,9 +51,8 @@ protected:
   const Camera* _camera_right = nullptr;
 
   //! @brief derived triangulation properties - updated to current camera configuration before each compute
-  Vector3 _baseline           = Vector3::Zero();
-  real _baseline_pixelsmeters = 0;
-  real _baseline_meters       = 0;
+  Vector3 _baseline     = Vector3::Zero();
+  real _baseline_meters = 0;
   real _f_x = 0;
   real _f_y = 0;
   real _c_x = 0;

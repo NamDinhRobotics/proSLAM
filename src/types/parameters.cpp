@@ -411,6 +411,7 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, base_information_frame_factor_for_translation, real)
     PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, enable_robust_kernel_for_poses, bool)
     PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, enable_robust_kernel_for_landmarks, bool)
+    PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, minimum_estimation_delta_for_update_meters, real)
 
     //ds viewers
     PARSE_PARAMETER(configuration, visualization, image_viewer_parameters, display_secondary_image, bool)

@@ -15,8 +15,6 @@ void BaseTracker::configure() {
   _previous_to_current_camera.setIdentity();
   _lost_points.clear();
   _projection_tracking_distance_pixels = _framepoint_generator->parameters()->maximum_projection_tracking_distance_pixels;
-
-  //ds print tracker configuration (with dynamic type of parameters)
   LOG_INFO(std::cerr << "BaseTracker::configure|configured" << std::endl)
 }
 
@@ -24,8 +22,6 @@ void BaseTracker::configure() {
 BaseTracker::~BaseTracker() {
   LOG_INFO(std::cerr << "BaseTracker::~BaseTracker|destroying" << std::endl)
   _lost_points.clear();
-
-  //ds free dynamics
   delete _framepoint_generator;
   delete _pose_optimizer;
   LOG_INFO(std::cerr << "BaseTracker::~BaseTracker|destroyed" << std::endl)
@@ -175,18 +171,6 @@ void BaseTracker::compute() {
   if (_number_of_active_landmarks > _parameters->minimum_number_of_landmarks_to_track) {
     _status = Frame::Tracking;
   }
-
-//  //ds dump to file
-//  std::ofstream stream_wheel_odometry("wheel_odometry.txt", std::ofstream::app);
-//  Vector6 v = srrg_core::t2v(_camera_left_in_world_guess);
-//  stream_wheel_odometry << current_frame->identifier()
-//                        << " " << v(0) << " " << v(1) << " " << v(2)<< " " << 1 << " " << v(3)<< " " << v(4)<< " " << v(5) << std::endl;
-//  stream_wheel_odometry.close();
-//  std::ofstream stream_visual_odometry("visual_odometry.txt", std::ofstream::app);
-//  v = srrg_core::t2v(current_frame->cameraLeftToWorld());
-//  stream_visual_odometry << current_frame->identifier()
-//                        << " " << v(0) << " " << v(1) << " " << v(2)<< " " << 1 << " " << v(3)<< " " << v(4)<< " " << v(5) << std::endl;
-//  stream_visual_odometry.close();
 
   //ds compute remaining points in frame
   CHRONOMETER_START(track_creation)

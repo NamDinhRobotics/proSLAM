@@ -357,7 +357,7 @@ public:
   bool enable_robust_kernel_for_landmarks = false;
 
   //! @brief minimum estimation correction to update the internal map
-  real minimum_estimation_delta_for_update = 0.01;
+  real minimum_estimation_delta_for_update_meters = 0.01;
 };
 
 //! @class image viewer parameters
