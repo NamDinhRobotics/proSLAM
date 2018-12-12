@@ -34,8 +34,7 @@ void DepthFramePointGenerator::initialize(Frame* frame_, const bool& extract_fea
 
   //ds extract descriptors for detected features
   computeDescriptors(frame_->intensityImageLeft(), frame_->keypointsLeft(), frame_->descriptorsLeft());
-  _number_of_detected_keypoints         = frame_->keypointsLeft().size();
-  frame_->_number_of_detected_keypoints = _number_of_detected_keypoints;
+  _number_of_detected_keypoints = frame_->keypointsLeft().size();
 
   //ds initialize matchers for left frame
   _feature_matcher_left.setFeatures(frame_->keypointsLeft(), frame_->descriptorsLeft());

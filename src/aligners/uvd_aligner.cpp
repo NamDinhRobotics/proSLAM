@@ -61,8 +61,8 @@ namespace proslam {
         _information_matrix_vector[u](2,2) = 0;
       } else {
 
-        //ds translation contribution is inversely proportional to depth
-        _weights_translation[u] = _maximum_reliable_depth_meters/frame_point->cameraCoordinatesLeft().z();
+        //ds translation contribution is inversely proportional to depth TODO check if beneficial
+        //_weights_translation[u] = _maximum_reliable_depth_meters/frame_point->cameraCoordinatesLeft().z();
       }
     }
 

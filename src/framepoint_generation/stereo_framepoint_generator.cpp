@@ -78,7 +78,6 @@ void StereoFramePointGenerator::initialize(Frame* frame_, const bool& extract_fe
     computeDescriptors(frame_->intensityImageLeft(), frame_->keypointsLeft(), frame_->descriptorsLeft());
     computeDescriptors(frame_->intensityImageRight(), frame_->keypointsRight(), frame_->descriptorsRight());
     _number_of_detected_keypoints         = (frame_->keypointsLeft().size()+frame_->keypointsRight().size())/2.0;
-    frame_->_number_of_detected_keypoints = _number_of_detected_keypoints;
     LOG_DEBUG(std::cerr << "StereoFramePointGenerator::initialize|extracted features L: " << frame_->keypointsLeft().size()
                         << " R: " << frame_->keypointsRight().size() << std::endl)
 
@@ -235,8 +234,6 @@ void StereoFramePointGenerator::track(Frame* frame_,
         //ds block matching in exhaustive matching (later)
         matched_indices_left.insert(feature_left->index_in_vector);
         matched_indices_right.insert(feature_right->index_in_vector);
-
-        //ds remove feature from lattices
         _feature_matcher_left.feature_lattice[feature_left->row][feature_left->col]    = nullptr;
         _feature_matcher_right.feature_lattice[feature_right->row][feature_right->col] = nullptr;
 
@@ -558,8 +555,10 @@ void StereoFramePointGenerator::compute(Frame* frame_) {
         ++number_of_new_points;
 
         //ds block further matching against features_right[index_best_R] in a search on offset epipolar lines
-        matched_indices_left.insert(index_L);
-        matched_indices_right.insert(index_best_R);
+        matched_indices_left.insert(feature_left->index_in_vector);
+        matched_indices_right.insert(feature_right->index_in_vector);
+        _feature_matcher_left.feature_lattice[feature_left->row][feature_left->col]    = nullptr;
+        _feature_matcher_right.feature_lattice[feature_right->row][feature_right->col] = nullptr;
 
         //ds reduce search space (this eliminates all structurally conflicting matches)
         index_R = index_best_R+1;

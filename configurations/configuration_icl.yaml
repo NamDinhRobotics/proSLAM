@@ -1,41 +1,38 @@
 command_line:
 
-  #system log level (select one: DEBUG, INFO, WARNING, ERROR)
-  logging_level: DEBUG
-
   #ds processing mode (select one: RGB_STEREO, RGB_DEPTH)
-  tracker_mode: RGB_STEREO
+  tracker_mode: RGB_DEPTH
 
   #ds topic names
-  topic_image_left:        /camera_left/image_raw
-  topic_image_right:       /camera_right/image_raw
-  topic_camera_info_left:  /camera_left/camera_info
-  topic_camera_info_right: /camera_right/camera_info
+  topic_image_left:        /camera/rgb/image_color
+  topic_image_right:       /camera/depth/image
   
   #ds dataset file name
   dataset_file_name:
 
   #ds options
   option_use_gui:                   false
-  option_use_odometry:              false
-  option_disable_relocalization:    false
+  option_disable_relocalization:    true
   option_show_top_viewer:           false
   option_drop_framepoints:          false
   option_equalize_histogram:        false
   option_recover_landmarks:         true
   option_disable_bundle_adjustment: true
   option_save_pose_graph:           false
-
+  
+  #topic synchronization
+  maximum_time_interval_seconds:    0.01
+  
 landmark:
 
   #ds maximum measured distance kernel for landmark optimization
-  maximum_error_squared_meters: 25.0
+  maximum_error_squared_meters: 0.5
 
 local_map:
 
   #ds target minimum number of landmarks for local map creation
-  minimum_number_of_landmarks: 50
-  
+  minimum_number_of_landmarks: 100
+
   #ds target maximum number of landmarks for local map creation
   maximum_number_of_landmarks: 1000
 
@@ -44,41 +41,49 @@ world_map:
   #ds key frame generation properties
   minimum_distance_traveled_for_local_map: 1.0
   minimum_degrees_rotated_for_local_map:   0.5
-  minimum_number_of_frames_for_local_map:  4
+  minimum_number_of_frames_for_local_map:  10
 
 base_framepoint_generation:
 
   #ds feature descriptor type (BRIEF-128/256/512, ORB-256, BRISK-512, FREAK-512, A-KAZE-486, BinBoost-064)
-  descriptor_type: BRIEF-256
+  descriptor_type: ORB-256
 
   #ds dynamic thresholds for feature detection
   target_number_of_keypoints_tolerance: 0.1
-  detector_threshold_maximum_change:    0.2
-  detector_threshold_minimum:           20
+  detector_threshold_maximum_change:    1.0
+  detector_threshold_minimum:           5
   detector_threshold_maximum:           100
-  number_of_detectors_vertical:         3
-  number_of_detectors_horizontal:       3
+  number_of_detectors_vertical:         1
+  number_of_detectors_horizontal:       1
 
   #point tracking thresholds
-  minimum_projection_tracking_distance_pixels: 15
-  maximum_projection_tracking_distance_pixels: 50
+  minimum_projection_tracking_distance_pixels: 5
+  maximum_projection_tracking_distance_pixels: 25
 
   #ds dynamic thresholds for descriptor matching
-  matching_distance_tracking_threshold: 35
+  matching_distance_tracking_threshold: 30
   
-  #ds maximum reliable depth with chosen sensor
-  maximum_reliable_depth_meters: 15.0
+  #ds maximum reliable depth with chosen sensor (currently disabled)
+  maximum_reliable_depth_meters: 10.0
   
   #feature density regularization
   enable_keypoint_binning: true
-  bin_size_pixels:         14
+  bin_size_pixels:         16
 
-stereo_framepoint_generation:
+depth_framepoint_generation:
 
-  #ds stereo: triangulation
-  maximum_matching_distance_triangulation: 95
-  minimum_disparity_pixels:                1
-  maximum_epipolar_search_offset_pixels:   0
+  #depth sensor configuration
+  maximum_depth_meters: 10.0
+  minimum_depth_meters: 0.1
+  
+  #depth scale factor: from pixel intensity to meters
+  depth_scale_factor_intensity_to_meters: 1e-3
+  
+  #enable bilateral filtering on the depth image
+  enable_bilateral_filtering: false
+  
+  #enable point triangulation (for pixels invalid depths)
+  enable_point_triangulation: false
 
 base_tracking:
 
@@ -102,9 +107,9 @@ base_tracking:
   minimum_delta_translational_for_movement: 0.01
   
   #pose optimization: aligner unit configuration
-  aligner->error_delta_for_convergence:  1e-3
-  aligner->maximum_error_kernel:         16
-  aligner->damping:                      1000
+  aligner->error_delta_for_convergence:  1e-5
+  aligner->maximum_error_kernel:         5
+  aligner->damping:                      0
   aligner->maximum_number_of_iterations: 1000
   aligner->minimum_number_of_inliers:    0
   aligner->minimum_inlier_ratio:         0
@@ -115,24 +120,24 @@ relocalization:
   maximum_descriptor_distance: 25
 
   #minimum query interspace
-  preliminary_minimum_interspace_queries: 50
+  preliminary_minimum_interspace_queries: 5
 
   #minimum relative number of matches
   preliminary_minimum_matching_ratio: 0.1
 
   #minimum absolute number of matches
-  minimum_number_of_matched_landmarks: 25
+  minimum_number_of_matched_landmarks: 50
 
   #correspondence retrieval
   minimum_matches_per_correspondence: 0
   
   #icp: aligner unit configuration
   aligner->error_delta_for_convergence:  1e-5
-  aligner->maximum_error_kernel:         1.0
+  aligner->maximum_error_kernel:         0.1
   aligner->damping:                      0.0
   aligner->maximum_number_of_iterations: 100
-  aligner->minimum_number_of_inliers:    25
-  aligner->minimum_inlier_ratio:         0.5
+  aligner->minimum_number_of_inliers:    50
+  aligner->minimum_inlier_ratio:         0.9
 
 graph_optimization:
 
@@ -158,7 +163,7 @@ graph_optimization:
   base_information_frame: 1e5
   
   #free translation for pose to pose measurements
-  free_translation_for_poses: true
+  free_translation_for_poses: false
   
   #translational frame weight reduction in pose graph
   base_information_frame_factor_for_translation: 1e-5
@@ -173,3 +178,6 @@ graph_optimization:
   minimum_estimation_delta_for_update: 0.01
 
 visualization:
+
+  #show secondary image
+  display_secondary_image: true

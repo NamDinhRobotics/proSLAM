@@ -82,7 +82,7 @@ void MapViewer::_drawFrame(const Frame* frame_, const Vector3& color_rgb_) const
   glPopMatrix();
 
   //ds draw pure odometry pose in red
-  if (_parameters->ground_truth_drawn) {
+  if (_parameters->ground_truth_drawn && frame_->isGroundTruthSet()) {
     const TransformMatrix3D camera_to_world_ground_truth = frame_->robotToWorldGroundTruth()*_camera_left_to_robot;
     glPushMatrix();
     glMultMatrixf(camera_to_world_ground_truth.cast<float>().data());

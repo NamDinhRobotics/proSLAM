@@ -80,7 +80,7 @@ public:
   inline const TransformMatrix3D& localMapToRobot() const {return _local_map_to_robot;}
 
   //ds visualization only
-  void setRobotToWorldGroundTruth(const TransformMatrix3D& robot_to_world_ground_truth_) {_robot_to_world_ground_truth = robot_to_world_ground_truth_;}
+  void setRobotToWorldGroundTruth(const TransformMatrix3D& robot_to_world_ground_truth_) {_robot_to_world_ground_truth = robot_to_world_ground_truth_; _is_ground_truth_set = true;}
   const TransformMatrix3D& robotToWorldGroundTruth() const {return _robot_to_world_ground_truth;}
 
   inline const FramePointPointerVector& points() const {return _active_points;}
@@ -132,7 +132,8 @@ public:
   //ds update framepoint world coordinates
   void updateActivePoints();
 
-  Count _number_of_detected_keypoints = 0;
+  //ds visualization only
+  const bool& isGroundTruthSet() const {return _is_ground_truth_set;}
 
   //ds reset allocated object counter
   static void reset() {_instances = 0;}
@@ -202,6 +203,7 @@ protected:
 
   //ds visualization only
   TransformMatrix3D _robot_to_world_ground_truth = TransformMatrix3D::Identity();
+  bool _is_ground_truth_set                      = false;
   const Frame* _root;
 
   //ds class specific

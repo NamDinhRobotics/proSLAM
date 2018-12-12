@@ -40,7 +40,6 @@ public:
   const Count totalNumberOfTrackedPoints() const {return _total_number_of_tracked_points;}
   const Count totalNumberOfLandmarks() const {return _total_number_of_landmarks;}
   const real meanTrackingRatio() const {return _mean_tracking_ratio;}
-  const real meanNumberOfKeypoints() const {return _mean_number_of_keypoints;}
   const real meanNumberOfFramepoints() const {return _mean_number_of_framepoints;}
 
 //ds helpers
@@ -111,7 +110,6 @@ protected:
 
   //ds stats only
   uint64_t _number_of_recursive_registrations  = 0;
-  real _mean_number_of_keypoints   = 0;
   real _mean_number_of_framepoints = 0;
 
 private:

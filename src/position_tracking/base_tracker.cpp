@@ -199,7 +199,6 @@ void BaseTracker::compute() {
   _total_number_of_tracked_points      += _number_of_tracked_points;
 
   //ds update stats
-  _mean_number_of_keypoints   = (_mean_number_of_keypoints*(_context->frames().size()-1)+current_frame->_number_of_detected_keypoints)/_context->frames().size();
   _mean_number_of_framepoints = (_mean_number_of_framepoints*(_context->frames().size()-1)+current_frame->points().size())/_context->frames().size();
 }
 

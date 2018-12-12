@@ -83,7 +83,7 @@ depth_framepoint_generation:
   enable_bilateral_filtering: false
   
   #enable point triangulation (for pixels invalid depths)
-  enable_point_triangulation: false
+  enable_point_triangulation: true
 
 base_tracking:
 
@@ -108,7 +108,7 @@ base_tracking:
   
   #pose optimization: aligner unit configuration
   aligner->error_delta_for_convergence:  1e-5
-  aligner->maximum_error_kernel:         5
+  aligner->maximum_error_kernel:         10
   aligner->damping:                      0
   aligner->maximum_number_of_iterations: 1000
   aligner->minimum_number_of_inliers:    0
@@ -173,6 +173,9 @@ graph_optimization:
 
   #enable robust kernel for landmark measurements
   enable_robust_kernel_for_landmarks: false
+  
+  #minimum estimation correction to update the internal map
+  minimum_estimation_delta_for_update: 0.01
 
 visualization:
 

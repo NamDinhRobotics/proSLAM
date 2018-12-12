@@ -425,14 +425,10 @@ void SLAMAssembly::playbackMessageFile() {
 
         //ds get odometry into camera frame
         const TransformMatrix3D robot_to_world = image_message_left->odometry().cast<real>();
-        camera_left_to_world_guess = robot_to_world*_camera_left->cameraToRobot();
+        camera_left_to_world_guess             = robot_to_world*_camera_left->cameraToRobot();
 
-
-
-        //ds if first frame is available
-        if (_world_map->frames().size() == 0) {
-
-          //ds move current robot pose to odometry estimate (this only has an effect if the odometry starts not in the world origin)
+        //ds if we just started - move current robot pose to odometry estimate (this only has an effect if the odometry starts not in the world origin)
+        if (_world_map->frames().empty()) {
           _world_map->setRobotToWorld(robot_to_world);
           if (_parameters->command_line_parameters->option_use_gui) {
             _map_viewer->setWorldToRobotOrigin(_world_map->robotToWorld().inverse());
@@ -449,6 +445,11 @@ void SLAMAssembly::playbackMessageFile() {
               image_message_left->hasOdom(),
               camera_left_to_world_guess);
 
+      //ds set ground truth to generated frame if available
+      if (image_message_left->hasOdom()) {
+        _world_map->setRobotToWorldGroundTruth(image_message_left->odometry().cast<real>());
+      }
+
       //ds update timing stats
       const double processing_time_seconds = srrg_core::getTime()-time_start_seconds;
       _processing_times_seconds.push_back(processing_time_seconds);
@@ -457,11 +458,6 @@ void SLAMAssembly::playbackMessageFile() {
       ++_number_of_processed_frames;
       ++number_of_processed_frames_current;
       _current_fps = _number_of_processed_frames/_processing_time_total_seconds;
-
-      //ds record ground truth history for error computation
-      if (image_message_left->hasOdom()) {
-        _world_map->setRobotToWorldGroundTruth(image_message_left->odometry().cast<real>()*robot_to_camera_left);
-      }
 
       //ds runtime info
       if (processing_time_seconds_current > runtime_info_update_frequency_seconds) {
@@ -650,7 +646,6 @@ void SLAMAssembly::printReport() const {
   std::cerr << "            average velocity (km/h): " << 3.6*trajectory_length/_processing_time_total_seconds << std::endl;
   std::cerr << "     mean processing time (s/frame): " << processing_time_mean_seconds
             << " (standard deviation: " << processing_time_standard_deviation_seconds << ")" << std::endl;
-  std::cerr << "           mean number of keypoints: " << _tracker->meanNumberOfKeypoints() << std::endl;
   std::cerr << "         mean number of framepoints: " << _tracker->meanNumberOfFramepoints() << std::endl;
   std::cerr << "           mean landmarks per frame: " << _tracker->totalNumberOfLandmarks()/_number_of_processed_frames << std::endl;
   std::cerr << "              mean tracks per frame: " << _tracker->totalNumberOfTrackedPoints()/_number_of_processed_frames << std::endl;
