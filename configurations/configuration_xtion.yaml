@@ -156,8 +156,8 @@ graph_optimization:
   #g2o identifier space between frames and landmark vertices
   identifier_space: 1e9
   
-  #maximum number of iterations graph optimization
-  maximum_number_of_iterations: 100
+  #maximum number of iterations graph optimization TODO proper termination criterion for GAUSS_NEWTON
+  maximum_number_of_iterations: 10
 
   #determines window size for bundle adjustment
   number_of_frames_per_bundle_adjustment: 100
