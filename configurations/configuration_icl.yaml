@@ -39,8 +39,8 @@ local_map:
 world_map:
 
   #ds key frame generation properties
-  minimum_distance_traveled_for_local_map: 0.25
-  minimum_degrees_rotated_for_local_map:   0.5
+  minimum_distance_traveled_for_local_map: 0.1
+  minimum_degrees_rotated_for_local_map:   0.1
   minimum_number_of_frames_for_local_map:  5
 
 base_framepoint_generation:
@@ -53,15 +53,15 @@ base_framepoint_generation:
   detector_threshold_maximum_change:    1.0
   detector_threshold_minimum:           5
   detector_threshold_maximum:           100
-  number_of_detectors_vertical:         1
-  number_of_detectors_horizontal:       1
+  number_of_detectors_vertical:         2
+  number_of_detectors_horizontal:       2
 
   #point tracking thresholds
   minimum_projection_tracking_distance_pixels: 5
   maximum_projection_tracking_distance_pixels: 25
 
   #ds dynamic thresholds for descriptor matching
-  matching_distance_tracking_threshold: 25
+  matching_distance_tracking_threshold: 30
   
   #depth sensor configuration
   maximum_reliable_depth_meters: 2.5
@@ -70,7 +70,7 @@ base_framepoint_generation:
   
   #feature density regularization
   enable_keypoint_binning: true
-  bin_size_pixels:         16
+  bin_size_pixels:         25
 
 depth_framepoint_generation:
   
@@ -119,13 +119,13 @@ relocalization:
   maximum_descriptor_distance: 25
 
   #minimum query interspace
-  preliminary_minimum_interspace_queries: 3
+  preliminary_minimum_interspace_queries: 10
 
   #minimum relative number of matches
-  preliminary_minimum_matching_ratio: 0.25
+  preliminary_minimum_matching_ratio: 0.1
 
   #minimum absolute number of matches
-  minimum_number_of_matched_landmarks: 100
+  minimum_number_of_matched_landmarks: 75
 
   #correspondence retrieval
   minimum_matches_per_correspondence: 0
@@ -135,9 +135,10 @@ relocalization:
   aligner->maximum_error_kernel:         0.01
   aligner->damping:                      0.0
   aligner->maximum_number_of_iterations: 1000
-  aligner->minimum_number_of_inliers:    100
-  aligner->minimum_inlier_ratio:         0.85
+  aligner->minimum_number_of_inliers:    75
+  aligner->minimum_inlier_ratio:         0.8
 
+#TODO make the optimization much softer for ICL
 graph_optimization:
 
   #enable full bundle adjustment (default: only pose graph optimization upon loop closing)
@@ -159,10 +160,10 @@ graph_optimization:
   number_of_frames_per_bundle_adjustment: 100
 
   #base frame weight in pose graph (assuming 1 for landmarks)
-  base_information_frame: 1e5
+  base_information_frame: 1e10
   
   #free translation for pose to pose measurements
-  free_translation_for_poses: true
+  free_translation_for_poses: false
   
   #translational frame weight reduction in pose graph
   base_information_frame_factor_for_translation: 1e-5
@@ -174,7 +175,7 @@ graph_optimization:
   enable_robust_kernel_for_landmarks: false
   
   #minimum estimation correction to update the internal map
-  minimum_estimation_delta_for_update_meters: 0.0
+  minimum_estimation_delta_for_update_meters: 0.01
 
 visualization:
 

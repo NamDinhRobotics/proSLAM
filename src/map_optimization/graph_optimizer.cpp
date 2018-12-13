@@ -387,6 +387,7 @@ void GraphOptimizer::optimizePoseGraph(WorldMap* world_map_) {
     //ds check if change is insignificant enough (happens for already optimal poses)
     const real delta = (robot_to_world_optimized.matrix()-local_map->robotToWorld().matrix()).norm();
     if (delta < _parameters->minimum_estimation_delta_for_update_meters) {
+      local_map_in_graph->setEstimate(local_map->robotToWorld().cast<double>());
       ++number_of_negligible_updates;
       continue;
     }
