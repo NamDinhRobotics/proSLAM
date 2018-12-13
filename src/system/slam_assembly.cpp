@@ -65,6 +65,7 @@ void SLAMAssembly::_createStereoTracker(Camera* camera_left_, Camera* camera_rig
   //ds allocate and configure the aligner for motion estimation
   StereoUVAligner* pose_optimizer = new StereoUVAligner(_parameters->tracker_parameters->aligner);
   pose_optimizer->setMaximumReliableDepthMeters(_parameters->stereo_framepoint_generator_parameters->maximum_reliable_depth_meters);
+  pose_optimizer->setMinimumReliableDepthMeters(_parameters->stereo_framepoint_generator_parameters->minimum_depth_meters);
   pose_optimizer->configure();
 
   //ds allocate and configure the tracker
@@ -93,6 +94,8 @@ void SLAMAssembly::_createDepthTracker(Camera* camera_left_, Camera* camera_righ
 
   //ds allocate and configure the aligner for motion estimation
   UVDAligner* pose_optimizer = new UVDAligner(_parameters->tracker_parameters->aligner);
+  pose_optimizer->setMaximumReliableDepthMeters(_parameters->depth_framepoint_generator_parameters->maximum_reliable_depth_meters);
+  pose_optimizer->setMinimumReliableDepthMeters(_parameters->depth_framepoint_generator_parameters->minimum_depth_meters);
   pose_optimizer->configure();
 
   //ds allocate and configure the tracker
@@ -591,7 +594,7 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
             _graph_optimizer->optimizePoseGraph(_world_map);
 
             //ds merge landmarks for the current local map and its closures
-            //_world_map->mergeLandmarks(created_local_map->closures());
+            _world_map->mergeLandmarks(created_local_map->closures());
             if (_map_viewer) {_map_viewer->unlock();}
           }
         }

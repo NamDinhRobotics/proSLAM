@@ -48,8 +48,8 @@ namespace proslam {
         _moving[u] = frame_point->previous()->cameraCoordinatesLeft();
       }
 
-      //ds we scale the depth error by a factor of 10 to be competitive with the U V (pixel) error which is in integer format
-      _information_matrix_vector[u](2,2) = 10.0;
+      //ds we scale the depth error by a factor to be competitive with the U V (pixel) error which is in integer format
+      _information_matrix_vector[u](2,2) *= 10.0;
 
       //ds if we cannot consider the translation contribution of the point
       if (frame_point->hasUnreliableDepth()) {
@@ -59,7 +59,7 @@ namespace proslam {
 
         //ds and disable error on the depth
         _information_matrix_vector[u](2,2) = 0;
-      } else {
+      } else if (_parameters->enable_inverse_depth_information_for_translation_estimation) {
 
         //ds translation contribution is inversely proportional to depth
         //ds TODO check if this is truly beneficial since we already consider the depth in the error!
@@ -92,7 +92,7 @@ namespace proslam {
       //ds compute the point in the camera frame
       const PointCoordinates predicted_point_in_camera = _previous_to_current*_moving[u];
       const real depth_meters                          = predicted_point_in_camera.z();
-      if (depth_meters <= _minimum_depth) {
+      if (depth_meters <= _minimum_reliable_depth_meters) {
         continue;
       }
 

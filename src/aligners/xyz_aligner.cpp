@@ -153,7 +153,7 @@ namespace proslam {
           break;
         } else {
           LOG_DEBUG(std::printf("XYZAligner::converge|dropped registration for local maps [%06lu:{%06lu-%06lu}] > [%06lu:{%06lu-%06lu}] "
-                               "(correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu)\n",
+                                "(correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu)\n",
           _context->local_map_query->identifier(),
           _context->local_map_query->frames().front()->identifier(), _context->local_map_query->frames().back()->identifier(),
           _context->local_map_reference->identifier(),

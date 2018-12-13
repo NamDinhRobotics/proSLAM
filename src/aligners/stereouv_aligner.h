@@ -26,19 +26,12 @@ public:
   //ds solve alignment problem until convergence is reached
   virtual void converge();
 
-  //ds set maximum reliable depth for registration
-  void setMaximumReliableDepthMeters(const double& maximum_reliable_depth_meters_) {_maximum_reliable_depth_meters = maximum_reliable_depth_meters_;}
-
 //ds aligner specific
 protected:
 
   //ds buffers
   CameraMatrix _camera_calibration_matrix   = CameraMatrix::Zero();
   Vector3 _offset_camera_right              = Vector3::Zero();
-  real _minimum_depth                       = 1.0;
-
-  //ds module parameters
-  real _maximum_reliable_depth_meters = 15;
 
   //ds 3D points in camera frame
   std::vector<Vector3, Eigen::aligned_allocator<Vector3> > _moving;

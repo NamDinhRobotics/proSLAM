@@ -69,8 +69,10 @@ base_framepoint_generation:
   #ds dynamic thresholds for descriptor matching
   matching_distance_tracking_threshold: 35
   
-  #ds maximum reliable depth with chosen sensor
+  #rigid stereo sensor configuration
   maximum_reliable_depth_meters: 15.0
+  maximum_depth_meters:          1000
+  minimum_depth_meters:          0.1
   
   #feature density regularization
   enable_keypoint_binning: true
@@ -173,7 +175,7 @@ graph_optimization:
   enable_robust_kernel_for_landmarks: false
   
   #minimum estimation correction to update the internal map
-  minimum_estimation_delta_for_update_meters: 0.1
+  minimum_estimation_delta_for_update_meters: 0.01
 
 visualization:
 

@@ -78,7 +78,7 @@ Landmark* WorldMap::createLandmark(FramePoint* origin_) {
 }
 
 LocalMap* WorldMap::createLocalMap(const bool& drop_framepoints_) {
-  if (_previous_frame == 0) {
+  if (!_previous_frame) {
     return nullptr;
   }
 

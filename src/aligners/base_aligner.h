@@ -38,10 +38,12 @@ public:
   inline const std::vector<bool>& inliers() const {return _inliers;}
   inline const uint64_t numberOfInliers() const {return _number_of_inliers;}
   inline const uint64_t numberOfOutliers() const {return _number_of_outliers;}
-  inline const uint64_t numberOfCorrespondences() const {return _number_of_inliers+_number_of_outliers;}
+  inline const uint64_t numberOfCorrespondences() const {return _number_of_measurements;}
   inline const real totalError() const {return _total_error;}
   inline const bool hasSystemConverged() const {return _has_system_converged;}
   inline AlignerParameters* parameters() {return _parameters;}
+  void setMinimumReliableDepthMeters(const real& minimum_reliable_depth_meters_) {_minimum_reliable_depth_meters = minimum_reliable_depth_meters_;}
+  void setMaximumReliableDepthMeters(const real& maximum_reliable_depth_meters_) {_maximum_reliable_depth_meters = maximum_reliable_depth_meters_;}
 
 //ds aligner specific
 protected:
@@ -56,6 +58,10 @@ protected:
   //ds linearization
   bool _has_system_converged = false;
   real _total_error          = 0;
+
+  //ds generic thresholds (usally set by framepoint generator or tracker configuration)
+  real _minimum_reliable_depth_meters = 0.01;
+  real _maximum_reliable_depth_meters = 15;
 
   //! @brief configurable parameters
   AlignerParameters* _parameters = 0;

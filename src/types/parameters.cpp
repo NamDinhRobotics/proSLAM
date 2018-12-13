@@ -329,8 +329,6 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
         framepoint_generation_parameters = depth_framepoint_generator_parameters;
 
         //FramepointGeneration (SPECIFIC)
-        PARSE_PARAMETER(configuration, depth_framepoint_generation, depth_framepoint_generator_parameters, maximum_depth_meters, real)
-        PARSE_PARAMETER(configuration, depth_framepoint_generation, depth_framepoint_generator_parameters, minimum_depth_meters, real)
         PARSE_PARAMETER(configuration, depth_framepoint_generation, depth_framepoint_generator_parameters, depth_scale_factor_intensity_to_meters, real)
         PARSE_PARAMETER(configuration, depth_framepoint_generation, depth_framepoint_generator_parameters, enable_bilateral_filtering, bool)
         PARSE_PARAMETER(configuration, depth_framepoint_generation, depth_framepoint_generator_parameters, enable_point_triangulation, bool)
@@ -352,6 +350,8 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, number_of_detectors_horizontal, int32_t)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, matching_distance_tracking_threshold, int32_t)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, maximum_reliable_depth_meters, real)
+    PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, maximum_depth_meters, real)
+    PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, minimum_depth_meters, real)
 
     //MotionEstimation (GENERIC)
     PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, minimum_track_length_for_landmark_creation, Count)
@@ -370,6 +370,7 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->maximum_number_of_iterations, Count)
     PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->minimum_number_of_inliers, Count)
     PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->minimum_inlier_ratio, real)
+    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->enable_inverse_depth_information_for_translation_estimation, bool)
 
     //ds parse desired motion model as string
     const std::string& motion_model = configuration["base_tracking"]["motion_model"].as<std::string>();

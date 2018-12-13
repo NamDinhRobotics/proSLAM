@@ -12,7 +12,7 @@ command_line:
 
   #ds options
   option_use_gui:                   false
-  option_disable_relocalization:    true
+  option_disable_relocalization:    false
   option_show_top_viewer:           false
   option_drop_framepoints:          false
   option_equalize_histogram:        false
@@ -39,9 +39,9 @@ local_map:
 world_map:
 
   #ds key frame generation properties
-  minimum_distance_traveled_for_local_map: 1.0
+  minimum_distance_traveled_for_local_map: 0.25
   minimum_degrees_rotated_for_local_map:   0.5
-  minimum_number_of_frames_for_local_map:  10
+  minimum_number_of_frames_for_local_map:  5
 
 base_framepoint_generation:
 
@@ -61,20 +61,18 @@ base_framepoint_generation:
   maximum_projection_tracking_distance_pixels: 25
 
   #ds dynamic thresholds for descriptor matching
-  matching_distance_tracking_threshold: 30
+  matching_distance_tracking_threshold: 25
   
-  #ds maximum reliable depth with chosen sensor (currently disabled)
-  maximum_reliable_depth_meters: 10.0
+  #depth sensor configuration
+  maximum_reliable_depth_meters: 2.5
+  maximum_depth_meters:          10.0
+  minimum_depth_meters:          0.001
   
   #feature density regularization
   enable_keypoint_binning: true
   bin_size_pixels:         16
 
 depth_framepoint_generation:
-
-  #depth sensor configuration
-  maximum_depth_meters: 10.0
-  minimum_depth_meters: 0.1
   
   #depth scale factor: from pixel intensity to meters
   depth_scale_factor_intensity_to_meters: 1e-3
@@ -103,8 +101,8 @@ base_tracking:
   motion_model: CONSTANT_VELOCITY
 
   #pose optimization
-  minimum_delta_angular_for_movement:       0.001
-  minimum_delta_translational_for_movement: 0.01
+  minimum_delta_angular_for_movement:       0.0
+  minimum_delta_translational_for_movement: 0.0
   
   #pose optimization: aligner unit configuration
   aligner->error_delta_for_convergence:  1e-5
@@ -113,6 +111,7 @@ base_tracking:
   aligner->maximum_number_of_iterations: 1000
   aligner->minimum_number_of_inliers:    0
   aligner->minimum_inlier_ratio:         0
+  aligner->enable_inverse_depth_information_for_translation_estimation: false #we have perfect depth
 
 relocalization:
 
@@ -120,24 +119,24 @@ relocalization:
   maximum_descriptor_distance: 25
 
   #minimum query interspace
-  preliminary_minimum_interspace_queries: 5
+  preliminary_minimum_interspace_queries: 3
 
   #minimum relative number of matches
-  preliminary_minimum_matching_ratio: 0.1
+  preliminary_minimum_matching_ratio: 0.25
 
   #minimum absolute number of matches
-  minimum_number_of_matched_landmarks: 50
+  minimum_number_of_matched_landmarks: 100
 
   #correspondence retrieval
   minimum_matches_per_correspondence: 0
   
   #icp: aligner unit configuration
   aligner->error_delta_for_convergence:  1e-5
-  aligner->maximum_error_kernel:         0.1
+  aligner->maximum_error_kernel:         0.01
   aligner->damping:                      0.0
-  aligner->maximum_number_of_iterations: 100
-  aligner->minimum_number_of_inliers:    50
-  aligner->minimum_inlier_ratio:         0.9
+  aligner->maximum_number_of_iterations: 1000
+  aligner->minimum_number_of_inliers:    100
+  aligner->minimum_inlier_ratio:         0.85
 
 graph_optimization:
 
@@ -163,7 +162,7 @@ graph_optimization:
   base_information_frame: 1e5
   
   #free translation for pose to pose measurements
-  free_translation_for_poses: false
+  free_translation_for_poses: true
   
   #translational frame weight reduction in pose graph
   base_information_frame_factor_for_translation: 1e-5
@@ -175,9 +174,9 @@ graph_optimization:
   enable_robust_kernel_for_landmarks: false
   
   #minimum estimation correction to update the internal map
-  minimum_estimation_delta_for_update_meters: 0.01
+  minimum_estimation_delta_for_update_meters: 0.0
 
 visualization:
 
   #show secondary image
-  display_secondary_image: true
+  display_secondary_image: false

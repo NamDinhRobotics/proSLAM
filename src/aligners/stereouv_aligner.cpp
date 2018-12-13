@@ -87,7 +87,7 @@ namespace proslam {
 
       //ds compute the point in the camera frame - prefering a landmark estimate if available
       const PointCoordinates sampled_point_in_camera_left = _previous_to_current*_moving[u];
-      if (sampled_point_in_camera_left.z() <= _minimum_depth) {
+      if (sampled_point_in_camera_left.z() <= _minimum_reliable_depth_meters) {
         continue;
       }
 

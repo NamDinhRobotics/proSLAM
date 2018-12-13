@@ -89,6 +89,9 @@ public:
 
   //! @brief the minimum ratio of inliers to outliers required for a valid alignment
   real minimum_inlier_ratio          = 0.5;
+
+  //! @brief enable inverse depth as information matrix factor for translation
+  bool enable_inverse_depth_information_for_translation_estimation = true;
 };
 
 //! @class landmark parameters
@@ -188,7 +191,9 @@ public:
   int32_t matching_distance_tracking_threshold = 0.2*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS;
 
   //! @brief maximum reliable depth with chosen sensor (stereo, depth, sonar, ..)
-  real maximum_reliable_depth_meters = 15;
+  real maximum_reliable_depth_meters = 15;   //ds up to this value the depth is quite precise
+  real maximum_depth_meters          = 1000; //ds maximum depth considered
+  real minimum_depth_meters          = 0.1;  //ds minimum depth considered
 
   //! @brief feature density regularization
   bool enable_keypoint_binning = true;
@@ -224,10 +229,6 @@ public:
 
   //! @brief parameter printing function
   virtual void print() const;
-
-  //! @brief depth sensor configuration
-  real maximum_depth_meters = 5;
-  real minimum_depth_meters = 0.1;
 
   //! @brief depth scale factor: from pixel intensity to meters
   real depth_scale_factor_intensity_to_meters = 1e-3;
