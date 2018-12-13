@@ -11,8 +11,8 @@ command_line:
   dataset_file_name:
 
   #ds options
-  option_use_gui:                   false
-  option_disable_relocalization:    true
+  option_use_gui:                   true
+  option_disable_relocalization:    false
   option_show_top_viewer:           false
   option_drop_framepoints:          false
   option_equalize_histogram:        false
@@ -53,28 +53,26 @@ base_framepoint_generation:
   detector_threshold_maximum_change:    0.5
   detector_threshold_minimum:           10
   detector_threshold_maximum:           100
-  number_of_detectors_vertical:         1
-  number_of_detectors_horizontal:       1
+  number_of_detectors_vertical:         2
+  number_of_detectors_horizontal:       2
 
   #point tracking thresholds
   minimum_projection_tracking_distance_pixels: 10
   maximum_projection_tracking_distance_pixels: 50
 
   #ds dynamic thresholds for descriptor matching
-  matching_distance_tracking_threshold: 50
+  matching_distance_tracking_threshold: 30
   
-  #ds maximum reliable depth with chosen sensor
+  #depth sensor configuration
   maximum_reliable_depth_meters: 2.5
+  maximum_depth_meters:          10.0
+  minimum_depth_meters:          0.1
   
   #feature density regularization
   enable_keypoint_binning: true
-  bin_size_pixels:         10
+  bin_size_pixels:         15
 
 depth_framepoint_generation:
-
-  #depth sensor configuration
-  maximum_depth_meters: 10.0
-  minimum_depth_meters: 0.1
   
   #depth scale factor: from pixel intensity to meters
   depth_scale_factor_intensity_to_meters: 1e-3
@@ -113,6 +111,7 @@ base_tracking:
   aligner->maximum_number_of_iterations: 1000
   aligner->minimum_number_of_inliers:    0
   aligner->minimum_inlier_ratio:         0
+  aligner->enable_inverse_depth_information_for_translation_estimation: true
 
 relocalization:
 
@@ -137,7 +136,7 @@ relocalization:
   aligner->damping:                      0.0
   aligner->maximum_number_of_iterations: 100
   aligner->minimum_number_of_inliers:    50
-  aligner->minimum_inlier_ratio:         0.9
+  aligner->minimum_inlier_ratio:         0.5
 
 graph_optimization:
 
