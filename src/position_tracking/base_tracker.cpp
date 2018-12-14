@@ -392,15 +392,30 @@ void BaseTracker::breakTrack(Frame* frame_) {
 
 void BaseTracker::_prunePoints(Frame* frame_) {
   _number_of_tracked_points = 0;
-  for (Index index_point = 0; index_point < frame_->points().size(); index_point++) {
-    assert(frame_->points()[index_point]->previous());
 
-    //ds keep points which were not suppressed in the optimization
-    if (_pose_optimizer->errors()[index_point] != -1) {
-      frame_->points()[_number_of_tracked_points] = frame_->points()[index_point];
-      ++_number_of_tracked_points;
+  //ds if we had a sufficient pose optimization - TODO parametrize in tracker
+  if (_pose_optimizer->inlierRatio() > 0.5 && _pose_optimizer->numberOfInliers() > 100) {
+    for (Index index_point = 0; index_point < frame_->points().size(); index_point++) {
+      assert(frame_->points()[index_point]->previous());
+
+      //ds only keep inlier points
+      if (_pose_optimizer->inliers()[index_point]) {
+        frame_->points()[_number_of_tracked_points] = frame_->points()[index_point];
+        ++_number_of_tracked_points;
+      }
+    }
+  } else {
+    for (Index index_point = 0; index_point < frame_->points().size(); index_point++) {
+      assert(frame_->points()[index_point]->previous());
+
+      //ds keep all points which were not suppressed in the optimization and has an acceptable error
+      if (_pose_optimizer->errors()[index_point] != -1 && _pose_optimizer->errors()[index_point] < 10000) {
+        frame_->points()[_number_of_tracked_points] = frame_->points()[index_point];
+        ++_number_of_tracked_points;
+      }
     }
   }
+//  std::cerr << "dropped points REGISTRATION: " << frame_->points().size()-_number_of_tracked_points << "/" << frame_->points().size() << std::endl;
   frame_->points().resize(_number_of_tracked_points);
 }
 

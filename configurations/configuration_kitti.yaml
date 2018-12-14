@@ -9,8 +9,6 @@ command_line:
   #ds topic names
   topic_image_left:        /camera_left/image_raw
   topic_image_right:       /camera_right/image_raw
-  topic_camera_info_left:  /camera_left/camera_info
-  topic_camera_info_right: /camera_right/camera_info
   
   #ds dataset file name
   dataset_file_name:
@@ -56,32 +54,32 @@ base_framepoint_generation:
 
   #ds dynamic thresholds for feature detection
   target_number_of_keypoints_tolerance: 0.1
-  detector_threshold_maximum_change:    0.2
-  detector_threshold_minimum:           20
+  detector_threshold_maximum_change:    0.25
+  detector_threshold_minimum:           10
   detector_threshold_maximum:           100
-  number_of_detectors_vertical:         3
-  number_of_detectors_horizontal:       3
+  number_of_detectors_vertical:         1
+  number_of_detectors_horizontal:       1
 
   #point tracking thresholds
-  minimum_projection_tracking_distance_pixels: 15
+  minimum_projection_tracking_distance_pixels: 10
   maximum_projection_tracking_distance_pixels: 50
 
   #ds dynamic thresholds for descriptor matching
   matching_distance_tracking_threshold: 35
   
   #rigid stereo sensor configuration
-  maximum_reliable_depth_meters: 15.0
+  maximum_reliable_depth_meters: 20
   maximum_depth_meters:          1000
-  minimum_depth_meters:          0.1
+  minimum_depth_meters:          1
   
   #feature density regularization
   enable_keypoint_binning: true
-  bin_size_pixels:         14
+  bin_size_pixels:         10
 
 stereo_framepoint_generation:
 
   #ds stereo: triangulation
-  maximum_matching_distance_triangulation: 95
+  maximum_matching_distance_triangulation: 65
   minimum_disparity_pixels:                1
   maximum_epipolar_search_offset_pixels:   0
 
@@ -113,6 +111,7 @@ base_tracking:
   aligner->maximum_number_of_iterations: 1000
   aligner->minimum_number_of_inliers:    0
   aligner->minimum_inlier_ratio:         0
+  aligner->enable_inverse_depth_information_for_translation_estimation: true
 
 relocalization:
 
@@ -126,7 +125,7 @@ relocalization:
   preliminary_minimum_matching_ratio: 0.1
 
   #minimum absolute number of matches
-  minimum_number_of_matched_landmarks: 25
+  minimum_number_of_matched_landmarks: 50
 
   #correspondence retrieval
   minimum_matches_per_correspondence: 0
@@ -136,7 +135,7 @@ relocalization:
   aligner->maximum_error_kernel:         1.0
   aligner->damping:                      0.0
   aligner->maximum_number_of_iterations: 100
-  aligner->minimum_number_of_inliers:    25
+  aligner->minimum_number_of_inliers:    50
   aligner->minimum_inlier_ratio:         0.5
 
 graph_optimization:
@@ -178,6 +177,9 @@ graph_optimization:
   minimum_estimation_delta_for_update_meters: 0.01
 
 visualization:
+
+  #follow robot in 3D map/trajectory viewer
+  follow_robot: true
 
   #show secondary image
   display_secondary_image: false

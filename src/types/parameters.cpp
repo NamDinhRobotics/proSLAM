@@ -415,6 +415,7 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     PARSE_PARAMETER(configuration, graph_optimization, graph_optimizer_parameters, minimum_estimation_delta_for_update_meters, real)
 
     //ds viewers
+    PARSE_PARAMETER(configuration, visualization, map_viewer_parameters, follow_robot, bool)
     PARSE_PARAMETER(configuration, visualization, image_viewer_parameters, display_secondary_image, bool)
 
     //ds done

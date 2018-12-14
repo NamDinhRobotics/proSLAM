@@ -24,8 +24,6 @@ public:
 //ds setters/getters
 public:
 
-  void setMaximumDepthNearMeters(const real& maximum_depth_near_meters_) {_maximum_depth_near_meters = maximum_depth_near_meters_;}
-  void setMaximumDepthFarMeters(const real& maximum_depth_far_meters_) {_maximum_depth_far_meters = maximum_depth_far_meters_;}
   inline const TransformMatrix3D& previousToCurrent() const {return _previous_to_current;}
 
   //ds dynamic weighting
@@ -40,9 +38,6 @@ protected:
 
   //ds objective
   TransformMatrix3D _previous_to_current = TransformMatrix3D::Identity();
-
-  real _maximum_depth_near_meters = 0;
-  real _maximum_depth_far_meters  = 0;
 
   Count _number_of_rows_image = 0;
   Count _number_of_cols_image = 0;

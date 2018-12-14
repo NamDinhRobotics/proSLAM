@@ -188,7 +188,7 @@ public:
   int32_t maximum_projection_tracking_distance_pixels = 50;
 
   //! @brief dynamic thresholds for descriptor matching
-  int32_t matching_distance_tracking_threshold = 0.2*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS;
+  real matching_distance_tracking_threshold = 0.2*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS;
 
   //! @brief maximum reliable depth with chosen sensor (stereo, depth, sonar, ..)
   real maximum_reliable_depth_meters = 15;   //ds up to this value the depth is quite precise
@@ -211,7 +211,7 @@ public:
   virtual void print() const;
 
   //! @brief stereo: triangulation configuration
-  int32_t maximum_matching_distance_triangulation = 0.2*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS;
+  real maximum_matching_distance_triangulation = 0.2*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS;
 
   //! @brief minimum considered disparity for triangulation
   real minimum_disparity_pixels = 1;

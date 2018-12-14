@@ -9,8 +9,6 @@ command_line:
   #ds topic names
   topic_image_left:        /camera_left/image_raw
   topic_image_right:       /camera_right/image_raw
-  topic_camera_info_left:  /camera_left/camera_info
-  topic_camera_info_right: /camera_right/camera_info
   
   #ds dataset file name
   dataset_file_name:
@@ -26,6 +24,9 @@ command_line:
   option_disable_bundle_adjustment: true
   option_save_pose_graph:           false
 
+  #topic synchronization
+  maximum_time_interval_seconds:    0.01
+  
 landmark:
 
   #ds maximum measured distance kernel for landmark optimization

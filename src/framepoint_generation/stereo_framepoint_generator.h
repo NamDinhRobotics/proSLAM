@@ -60,7 +60,7 @@ protected:
   real _b_x = 0;
 
   //! @brief current epipolar search range
-  int32_t _maximum_epipolar_search_offset_pixels = 0;
+//  int32_t _maximum_epipolar_search_offset_pixels = 0;
 
   //! @brief current triangulation distance
   real _current_maximum_descriptor_distance_triangulation = 0.1*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS;

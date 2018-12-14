@@ -136,7 +136,7 @@ relocalization:
   aligner->damping:                      0.0
   aligner->maximum_number_of_iterations: 1000
   aligner->minimum_number_of_inliers:    75
-  aligner->minimum_inlier_ratio:         0.8
+  aligner->minimum_inlier_ratio:         0.9
 
 #TODO make the optimization much softer for ICL
 graph_optimization:
@@ -160,10 +160,10 @@ graph_optimization:
   number_of_frames_per_bundle_adjustment: 100
 
   #base frame weight in pose graph (assuming 1 for landmarks)
-  base_information_frame: 1e10
+  base_information_frame: 1e9
   
   #free translation for pose to pose measurements
-  free_translation_for_poses: false
+  free_translation_for_poses: true
   
   #translational frame weight reduction in pose graph
   base_information_frame_factor_for_translation: 1e-5

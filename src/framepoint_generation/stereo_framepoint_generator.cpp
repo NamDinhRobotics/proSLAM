@@ -36,9 +36,9 @@ void StereoFramePointGenerator::configure(){
   _feature_matcher_right.configure(_number_of_rows_image, _number_of_cols_image);
 
   //ds configure epipolar search ranges (minimum 0)
-  _maximum_epipolar_search_offset_pixels = _parameters->maximum_epipolar_search_offset_pixels;
+//  _maximum_epipolar_search_offset_pixels = _parameters->maximum_epipolar_search_offset_pixels;
   _epipolar_search_offsets_pixel.push_back(0);
-  for (int32_t u = 1; u <= _maximum_epipolar_search_offset_pixels; ++u) {
+  for (int32_t u = 1; u <= _parameters->maximum_epipolar_search_offset_pixels; ++u) {
     _epipolar_search_offsets_pixel.push_back(u);
     _epipolar_search_offsets_pixel.push_back(-u);
   }
@@ -82,7 +82,7 @@ void StereoFramePointGenerator::initialize(Frame* frame_, const bool& extract_fe
     if (frame_->status() == Frame::Localizing) {
 
       //ds be conservative while localizing
-      _current_maximum_descriptor_distance_triangulation = 0.1*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS;
+      _current_maximum_descriptor_distance_triangulation = std::min(0.1*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS, _parameters->maximum_matching_distance_triangulation);
     } else {
 
       //ds adjust triangulation distance: few point > narrow window as we cannot permit invalid triangulations
@@ -235,9 +235,9 @@ void StereoFramePointGenerator::compute(Frame* frame_) {
   framepoints_new.resize(number_of_new_points);
   LOG_DEBUG(std::cerr << "StereoFramePointGenerator::compute|number of new stereo points: " << number_of_new_points << std::endl)
 
-  //ds update framepoints - checking for the available points to optionally disable binning in very sparse scenarios
+  //ds update framepoints - checking for the available points to optionally disable binning in very sparse scenarios TODO expose as parameter
   const real available_point_ratio = static_cast<real>(number_of_points_tracked+framepoints_new.size())/_target_number_of_keypoints;
-  if (_parameters->enable_keypoint_binning && available_point_ratio > 0.1) {
+  if (_parameters->enable_keypoint_binning && available_point_ratio > 0.2) {
 
     //ds reserve space for the best case (all points can be added)
     Count number_of_points_binned = number_of_points_tracked;
@@ -262,7 +262,7 @@ void StereoFramePointGenerator::compute(Frame* frame_) {
 
     //ds clean up bins if skipped before
     if (_parameters->enable_keypoint_binning) {
-      LOG_WARNING(std::cerr << "StereoFramePointGenerator::compute|skipped binning due to low point density: " << available_point_ratio << std::endl)
+      LOG_WARNING(std::cerr << "|StereoFramePointGenerator::compute|" << frame_->identifier() << "|skipped binning due to low point density: " << available_point_ratio << std::endl)
       for (Index row = 0; row < _number_of_rows_bin; ++row) {
         for (Index col = 0; col < _number_of_cols_bin; ++col) {
           _bin_map_left[row][col] = nullptr;
@@ -405,8 +405,8 @@ void StereoFramePointGenerator::track(Frame* frame_,
       if (feature_right) {
         assert(feature_left->col >= feature_right->col);
 
-        //ds skip feature if descriptor distance to previous is violated
-        if (cv::norm(feature_right->descriptor, point_previous->descriptorRight(), SRRG_PROSLAM_DESCRIPTOR_NORM) > _parameters->matching_distance_tracking_threshold) {
+        //ds skip feature if descriptor distance to previous is violated (with higher tolerance than left matching)
+        if (cv::norm(feature_right->descriptor, point_previous->descriptorRight(), SRRG_PROSLAM_DESCRIPTOR_NORM) > 2*_parameters->matching_distance_tracking_threshold) {
           continue;
         }
 
@@ -468,9 +468,6 @@ void StereoFramePointGenerator::recoverPoints(Frame* current_frame_, const Frame
   const TransformMatrix3D world_to_camera_left  = current_frame_->worldToCameraLeft();
   const CameraMatrix& camera_calibration_matrix = _camera_left->cameraMatrix();
   const Vector3 baseline_homogeneous            = _camera_right->baselineHomogeneous();
-
-  //ds obtain currently active tracking distance
-  const real maximum_descriptor_distance = _parameters->matching_distance_tracking_threshold;
 
   //ds buffers
   const cv::Mat& intensity_image_left  = current_frame_->intensityImageLeft();
@@ -559,18 +556,20 @@ void StereoFramePointGenerator::recoverPoints(Frame* current_frame_, const Frame
       continue;
     }
 
+    //ds move keypoint to global image coordinates
+    keypoint_buffer_left[0].pt += corner_left;
+
     //ds if descriptor distance is to high
-    if (cv::norm(point_previous->descriptorLeft(), descriptor_left, SRRG_PROSLAM_DESCRIPTOR_NORM) > maximum_descriptor_distance) {
+    if (cv::norm(point_previous->descriptorLeft(), descriptor_left, SRRG_PROSLAM_DESCRIPTOR_NORM) > _parameters->matching_distance_tracking_threshold) {
       continue;
     }
-    keypoint_buffer_left[0].pt += corner_left;
 
     //ds right search region
     const cv::Point2f corner_right(projection_right-offset_keypoint_half);
     const cv::Rect_<float> region_of_interest_right(corner_right.x, corner_right.y, regional_full_height, regional_full_height);
 
     //ds extract descriptors at this position: RIGHT
-    keypoint_buffer_right[0] = point_previous->keypointRight();
+    keypoint_buffer_right[0]    = point_previous->keypointRight();
     keypoint_buffer_right[0].pt = offset_keypoint_half;
     cv::Mat descriptor_right;
     const cv::Mat roi_right(intensity_image_right(region_of_interest_right));
@@ -581,14 +580,16 @@ void StereoFramePointGenerator::recoverPoints(Frame* current_frame_, const Frame
       continue;
     }
 
-    //ds if descriptor distance is to high
-    if (cv::norm(point_previous->descriptorRight(), descriptor_right, SRRG_PROSLAM_DESCRIPTOR_NORM) > maximum_descriptor_distance) {
-      continue;
-    }
+    //ds move keypoint to global image coordinates
     keypoint_buffer_right[0].pt += corner_right;
 
     //ds skip points with insufficient stereo disparity
     if (keypoint_buffer_left[0].pt.x-keypoint_buffer_right[0].pt.x < _parameters->minimum_disparity_pixels) {
+      continue;
+    }
+
+    //ds if descriptor distance is to high
+    if (cv::norm(point_previous->descriptorRight(), descriptor_right, SRRG_PROSLAM_DESCRIPTOR_NORM) > 2*_parameters->matching_distance_tracking_threshold) {
       continue;
     }
 

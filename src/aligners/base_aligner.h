@@ -39,6 +39,7 @@ public:
   inline const uint64_t numberOfInliers() const {return _number_of_inliers;}
   inline const uint64_t numberOfOutliers() const {return _number_of_outliers;}
   inline const uint64_t numberOfCorrespondences() const {return _number_of_measurements;}
+  inline const real inlierRatio() const {return static_cast<real>(_number_of_inliers)/_number_of_measurements;}
   inline const real totalError() const {return _total_error;}
   inline const bool hasSystemConverged() const {return _has_system_converged;}
   inline AlignerParameters* parameters() {return _parameters;}
