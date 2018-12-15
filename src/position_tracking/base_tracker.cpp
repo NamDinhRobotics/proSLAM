@@ -113,7 +113,7 @@ void BaseTracker::compute() {
 
       //ds solve pose on frame points only
       CHRONOMETER_START(pose_optimization);
-      _pose_optimizer->setEnableWeightsTranslation(false);
+      _pose_optimizer->parameters()->enable_inverse_depth_as_information = false;
       _pose_optimizer->initialize(previous_frame, current_frame, _previous_to_current_camera);
       _pose_optimizer->converge();
       CHRONOMETER_STOP(pose_optimization);
@@ -301,7 +301,7 @@ void BaseTracker::_registerRecursive(Frame* previous_frame_,
 
   //ds call pose solver
   CHRONOMETER_START(pose_optimization)
-  _pose_optimizer->setEnableWeightsTranslation(true);
+  _pose_optimizer->parameters()->enable_inverse_depth_as_information = true;
   _pose_optimizer->initialize(previous_frame_, current_frame_, _previous_to_current_camera);
   _pose_optimizer->converge();
   CHRONOMETER_STOP(pose_optimization)

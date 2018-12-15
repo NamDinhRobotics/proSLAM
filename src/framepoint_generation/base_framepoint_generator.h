@@ -66,7 +66,6 @@ public:
   const int32_t matchingDistanceTrackingThreshold() const {return _parameters->matching_distance_tracking_threshold;}
   const Count& numberOfDetectedKeypoints() const {return _number_of_detected_keypoints;}
   const Count& numberOfTrackedLandmarks() const {return _number_of_tracked_landmarks;}
-  const Count& numberOfAvailablePoints() const {return _number_of_available_points;}
 
 //ds settings
 protected:
@@ -81,7 +80,6 @@ protected:
   Count _target_number_of_keypoints;
   Count _target_number_of_keypoints_per_detector;
   Count _number_of_detected_keypoints;
-  Count _number_of_available_points;
 
   //ds quick access
   real _focal_length_pixels;

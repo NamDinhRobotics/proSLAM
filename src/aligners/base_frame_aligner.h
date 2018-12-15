@@ -26,9 +26,6 @@ public:
 
   inline const TransformMatrix3D& previousToCurrent() const {return _previous_to_current;}
 
-  //ds dynamic weighting
-  void setEnableWeightsTranslation(const bool enable_weights_translation_) {_enable_weights_translation = enable_weights_translation_;}
-
 //ds attributes
 protected:
 
@@ -41,7 +38,5 @@ protected:
 
   Count _number_of_rows_image = 0;
   Count _number_of_cols_image = 0;
-
-  bool _enable_weights_translation = true;
 };
 }

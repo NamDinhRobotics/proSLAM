@@ -1,8 +1,5 @@
 command_line:
 
-  #system log level (select one: DEBUG, INFO, WARNING, ERROR)
-  logging_level: DEBUG
-
   #ds processing mode (select one: RGB_STEREO, RGB_DEPTH)
   tracker_mode: RGB_STEREO
 
@@ -54,7 +51,7 @@ base_framepoint_generation:
 
   #ds dynamic thresholds for feature detection
   target_number_of_keypoints_tolerance: 0.1
-  detector_threshold_maximum_change:    0.25
+  detector_threshold_maximum_change:    0.1
   detector_threshold_minimum:           20
   detector_threshold_maximum:           100
   number_of_detectors_vertical:         1
@@ -65,7 +62,7 @@ base_framepoint_generation:
   maximum_projection_tracking_distance_pixels: 50
 
   #ds dynamic thresholds for descriptor matching
-  matching_distance_tracking_threshold: 40
+  matching_distance_tracking_threshold: 35
   
   #rigid stereo sensor configuration
   maximum_reliable_depth_meters: 20
@@ -79,7 +76,7 @@ base_framepoint_generation:
 stereo_framepoint_generation:
 
   #ds stereo: triangulation
-  maximum_matching_distance_triangulation: 65
+  maximum_matching_distance_triangulation: 70
   minimum_disparity_pixels:                1
   maximum_epipolar_search_offset_pixels:   0
 

@@ -236,7 +236,7 @@ void StereoFramePointGenerator::compute(Frame* frame_) {
                         << " number of unmatched features L: " << features_left.size() << " R: " << features_right.size() << std::endl)
   }
   framepoints_new.resize(number_of_new_points);
-  LOG_DEBUG(std::cerr << "StereoFramePointGenerator::compute|number of new stereo points: " << number_of_new_points << std::endl)
+  LOG_DEBUG(std::cerr << "StereoFramePointGenerator::compute|number of new stereo points: " << number_of_new_points << "/" << _number_of_detected_keypoints << std::endl)
 
   //ds update framepoints - checking for the available points to optionally disable binning in very sparse scenarios TODO expose as parameter
   //const real available_point_ratio = static_cast<real>(number_of_points_tracked+framepoints_new.size())/_target_number_of_keypoints;

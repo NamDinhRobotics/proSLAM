@@ -8,7 +8,6 @@ BaseFramePointGenerator::BaseFramePointGenerator(BaseFramePointGeneratorParamete
                                                                                                   _target_number_of_keypoints(1000),
                                                                                                   _target_number_of_keypoints_per_detector(1000),
                                                                                                   _number_of_detected_keypoints(0),
-                                                                                                  _number_of_available_points(0),
                                                                                                   _focal_length_pixels(0),
                                                                                                   _principal_point_offset_u_pixels(0),
                                                                                                   _principal_point_offset_v_pixels(0),

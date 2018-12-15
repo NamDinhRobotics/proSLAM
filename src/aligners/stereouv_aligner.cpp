@@ -54,11 +54,9 @@ namespace proslam {
 
       //ds scale information proportional to disparity of the measurement (the bigger, the closer, the better the triangulation)
       _information_matrix_vector[u] *= std::log(1+frame_point->disparityPixels())/(1+std::fabs(frame_point->epipolarOffset()));
-    }
 
-    //ds if individual weighting is desired
-    if (_enable_weights_translation) {
-      for (Index u = 0; u < _number_of_measurements; ++u) {
+      //ds if individual weighting is desired
+      if (_parameters->enable_inverse_depth_as_information) {
         _weights_translation[u] = _maximum_reliable_depth_meters/_moving[u].z();
       }
     }
@@ -87,15 +85,11 @@ namespace proslam {
 
       //ds compute the point in the camera frame - prefering a landmark estimate if available
       const PointCoordinates sampled_point_in_camera_left = _previous_to_current*_moving[u];
-      if (sampled_point_in_camera_left.z() <= _minimum_reliable_depth_meters) {
+      if (sampled_point_in_camera_left.z() < _minimum_reliable_depth_meters) {
         continue;
       }
 
-      //ds retrieve homogeneous projections
-      const Vector4 sampled_point_in_camera_left_homogeneous(sampled_point_in_camera_left.x(),
-                                                             sampled_point_in_camera_left.y(),
-                                                             sampled_point_in_camera_left.z(),
-                                                             1);
+      //ds retrieve projections on left and right camera image plane
       const PointCoordinates sampled_abc_in_camera_left  = _camera_calibration_matrix*sampled_point_in_camera_left;
       const PointCoordinates sampled_abc_in_camera_right = sampled_abc_in_camera_left+_offset_camera_right;
       const real& sampled_c_left  = sampled_abc_in_camera_left.z();
@@ -123,12 +117,6 @@ namespace proslam {
                           sampled_point_in_image_right.x()-_fixed[u](2),
                           sampled_point_in_image_right.y()-_fixed[u](3));
 
-      //ds weight all measurements proportional to their distance to the sensor (squared to damp the effect)
-      //const real weight_translation = 1/std::sqrt(depth_meters);
-      //const real weight_translation = _maximum_reliable_depth_meters/depth_meters;
-      //const real weight_translation = exp(-depth_meters/_maximum_reliable_depth_meters);
-      //const real weight_translation = 1; //std::sqrt(frame_point->disparityPixels());
-
       //ds compute squared error
       const real chi = error.transpose()*_omega*error;
 
@@ -155,7 +143,6 @@ namespace proslam {
       Matrix3_6 jacobian_transform;
 
       //ds translation contribution (will be scaled with omega)
-//      const real translation_weight = _maximum_reliable_depth_meters/sampled_point_in_camera_left.z();
       jacobian_transform.block<3,3>(0,0) = _weights_translation[u]*Matrix3::Identity();
 
       //ds rotation contribution - compensate for inverse depth (far points should have an equally strong contribution as close ones)
@@ -179,9 +166,6 @@ namespace proslam {
       Matrix2_3 jacobian_right;
       jacobian_right << inverse_sampled_c_right, 0, -sampled_abc_in_camera_right.x()*inverse_sampled_c_squared_right,
                         0, inverse_sampled_c_right, -sampled_abc_in_camera_right.y()*inverse_sampled_c_squared_right;
-
-      //ds the last rows of jacobian_left and jacobian_right are identical for perfect, horizontally triangulated points
-      //ds in a horizontal stereo camera configuration
 
       //ds assemble final jacobian
       _jacobian.setZero();
