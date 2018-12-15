@@ -21,8 +21,10 @@ public:
   //ds computes framepoints stored in a image-like matrix (_framepoints_in_image)
   virtual void compute(Frame* frame_) = 0;
 
-  //ds detects keypoints and stores them in a vector (called within compute)
-  void detectKeypoints(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_);
+  //ds detects keypoints and stores them in a vector (called within initialize)
+  void detectKeypoints(const cv::Mat& intensity_image_,
+                       std::vector<cv::KeyPoint>& keypoints_,
+                       const bool ignore_minimum_detector_threshold_ = false);
 
   //ds extracts the defined descriptors for the given keypoints (called within compute)
   void computeDescriptors(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_, cv::Mat& descriptors_);
@@ -97,6 +99,9 @@ protected:
   //! @brief image region for each detector
   //! @brief the same for all image streams
   cv::Rect** _detector_regions = nullptr;
+
+  //! @brief number of detections since last adjustDetectorThresholds() call
+  Count _number_of_detections = 0;
 
   //ds descriptor extraction
   cv::Ptr<cv::DescriptorExtractor> _descriptor_extractor;

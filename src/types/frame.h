@@ -54,7 +54,9 @@ public:
   void setNext(Frame* next_) {_next = next_;}
 
   void breakTrack() {_is_track_broken = true;}
-  const bool isTrackBroken() const {return _is_track_broken;}
+  const bool& isTrackBroken() const {return _is_track_broken;}
+  void setHasReliablePoseEstimate(const bool& has_reliable_pose_estimate_) {_has_reliable_pose_estimate = has_reliable_pose_estimate_;}
+  const bool& hasReliablePoseEstimate() const {return _has_reliable_pose_estimate;}
 
   void setProjectionTrackingDistancePixels(const uint32_t& projection_tracking_distance_pixels_) {_projection_tracking_distance_pixels = projection_tracking_distance_pixels_;}
   const uint32_t& projectionTrackingDistancePixels() const {return _projection_tracking_distance_pixels;}
@@ -156,6 +158,9 @@ protected:
 
   //! @brief flag, set if track broke during processing this
   bool _is_track_broken =  false;
+
+  //! @brief flag, set if pose optimization produced a reliable result (based on average chi and inliers ..)
+  bool _has_reliable_pose_estimate = false;
 
   //! @brief pixel tracking distance used for this frame
   uint32_t _projection_tracking_distance_pixels = 0;

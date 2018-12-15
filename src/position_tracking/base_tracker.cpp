@@ -161,6 +161,15 @@ void BaseTracker::compute() {
     }
   }
 
+  //ds check final optimization outcome
+  if (previous_frame) {
+    if (_pose_optimizer->averageError() < _pose_optimizer->parameters()->maximum_error_kernel) {
+      current_frame->setHasReliablePoseEstimate(true);
+    } else {
+      LOG_WARNING(std::cerr << "BaseTracker::compute|high average pose optimization error: " << _pose_optimizer->averageError() << std::endl)
+    }
+  }
+
   //ds update context pose
   _context->setRobotToWorld(current_frame->robotToWorld());
 
@@ -394,7 +403,9 @@ void BaseTracker::_prunePoints(Frame* frame_) {
   _number_of_tracked_points = 0;
 
   //ds if we had a sufficient pose optimization - TODO parametrize in tracker
-  if (_pose_optimizer->inlierRatio() > 0.5 && _pose_optimizer->numberOfInliers() > 100) {
+  if (_pose_optimizer->inlierRatio() > 0.5     &&
+      _pose_optimizer->numberOfInliers() > 100 &&
+      frame_->status() == Frame::Tracking      ) {
     for (Index index_point = 0; index_point < frame_->points().size(); index_point++) {
       assert(frame_->points()[index_point]->previous());
 
@@ -408,7 +419,7 @@ void BaseTracker::_prunePoints(Frame* frame_) {
     for (Index index_point = 0; index_point < frame_->points().size(); index_point++) {
       assert(frame_->points()[index_point]->previous());
 
-      //ds keep all points which were not suppressed in the optimization and has an acceptable error
+      //ds keep all points which were not suppressed in the optimization and have an acceptable error
       if (_pose_optimizer->errors()[index_point] != -1 && _pose_optimizer->errors()[index_point] < 10000) {
         frame_->points()[_number_of_tracked_points] = frame_->points()[index_point];
         ++_number_of_tracked_points;

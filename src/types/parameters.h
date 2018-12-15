@@ -91,7 +91,7 @@ public:
   real minimum_inlier_ratio          = 0.5;
 
   //! @brief enable inverse depth as information matrix factor for translation
-  bool enable_inverse_depth_information_for_translation_estimation = true;
+  bool enable_inverse_depth_as_information = true;
 };
 
 //! @class landmark parameters

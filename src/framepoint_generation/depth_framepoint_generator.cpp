@@ -26,10 +26,12 @@ void DepthFramePointGenerator::initialize(Frame* frame_, const bool& extract_fea
   _computeDepthMap(frame_->intensityImageRight());
   CHRONOMETER_STOP(depth_map_generation)
 
-  //ds detect new features
-  detectKeypoints(frame_->intensityImageLeft(), frame_->keypointsLeft());
-
-  //ds adjust detector thresholds for next frame
+  //ds detect new features - check if we have information from a previous computation
+  if (frame_->previous()) {
+    detectKeypoints(frame_->intensityImageLeft(), frame_->keypointsLeft(), frame_->previous()->hasReliablePoseEstimate());
+  } else {
+    detectKeypoints(frame_->intensityImageLeft(), frame_->keypointsLeft());
+  }
   adjustDetectorThresholds();
 
   //ds extract descriptors for detected features

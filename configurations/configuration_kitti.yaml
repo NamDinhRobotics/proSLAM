@@ -55,7 +55,7 @@ base_framepoint_generation:
   #ds dynamic thresholds for feature detection
   target_number_of_keypoints_tolerance: 0.1
   detector_threshold_maximum_change:    0.25
-  detector_threshold_minimum:           10
+  detector_threshold_minimum:           20
   detector_threshold_maximum:           100
   number_of_detectors_vertical:         1
   number_of_detectors_horizontal:       1
@@ -65,7 +65,7 @@ base_framepoint_generation:
   maximum_projection_tracking_distance_pixels: 50
 
   #ds dynamic thresholds for descriptor matching
-  matching_distance_tracking_threshold: 35
+  matching_distance_tracking_threshold: 40
   
   #rigid stereo sensor configuration
   maximum_reliable_depth_meters: 20
@@ -111,7 +111,7 @@ base_tracking:
   aligner->maximum_number_of_iterations: 1000
   aligner->minimum_number_of_inliers:    0
   aligner->minimum_inlier_ratio:         0
-  aligner->enable_inverse_depth_information_for_translation_estimation: true
+  aligner->enable_inverse_depth_as_information: true
 
 relocalization:
 

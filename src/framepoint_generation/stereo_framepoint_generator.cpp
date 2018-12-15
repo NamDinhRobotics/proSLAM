@@ -64,11 +64,14 @@ void StereoFramePointGenerator::initialize(Frame* frame_, const bool& extract_fe
   //ds check if a new feature extraction is desired (the frame might already be set up)
   if (extract_features_) {
 
-    //ds detect new features to generate frame points from (fixed thresholds)
-    detectKeypoints(frame_->intensityImageLeft(), frame_->keypointsLeft());
-    detectKeypoints(frame_->intensityImageRight(), frame_->keypointsRight());
-
-    //ds adjust detector thresholds for next frame
+    //ds detect new features - check if we have information from a previous computation
+    if (frame_->previous()) {
+      detectKeypoints(frame_->intensityImageLeft(), frame_->keypointsLeft(), frame_->previous()->hasReliablePoseEstimate());
+      detectKeypoints(frame_->intensityImageRight(), frame_->keypointsRight(), frame_->previous()->hasReliablePoseEstimate());
+    } else {
+      detectKeypoints(frame_->intensityImageLeft(), frame_->keypointsLeft());
+      detectKeypoints(frame_->intensityImageRight(), frame_->keypointsRight());
+    }
     adjustDetectorThresholds();
 
     //ds extract descriptors for detected features
@@ -236,8 +239,8 @@ void StereoFramePointGenerator::compute(Frame* frame_) {
   LOG_DEBUG(std::cerr << "StereoFramePointGenerator::compute|number of new stereo points: " << number_of_new_points << std::endl)
 
   //ds update framepoints - checking for the available points to optionally disable binning in very sparse scenarios TODO expose as parameter
-  const real available_point_ratio = static_cast<real>(number_of_points_tracked+framepoints_new.size())/_target_number_of_keypoints;
-  if (_parameters->enable_keypoint_binning && available_point_ratio > 0.2) {
+  //const real available_point_ratio = static_cast<real>(number_of_points_tracked+framepoints_new.size())/_target_number_of_keypoints;
+  if (_parameters->enable_keypoint_binning) {
 
     //ds reserve space for the best case (all points can be added)
     Count number_of_points_binned = number_of_points_tracked;
@@ -260,15 +263,15 @@ void StereoFramePointGenerator::compute(Frame* frame_) {
     //ds add all points to frame
     framepoints.insert(framepoints.end(), framepoints_new.begin(), framepoints_new.end());
 
-    //ds clean up bins if skipped before
-    if (_parameters->enable_keypoint_binning) {
-      LOG_WARNING(std::cerr << "|StereoFramePointGenerator::compute|" << frame_->identifier() << "|skipped binning due to low point density: " << available_point_ratio << std::endl)
-      for (Index row = 0; row < _number_of_rows_bin; ++row) {
-        for (Index col = 0; col < _number_of_cols_bin; ++col) {
-          _bin_map_left[row][col] = nullptr;
-        }
-      }
-    }
+//    //ds clean up bins if skipped before
+//    if (_parameters->enable_keypoint_binning) {
+//      LOG_WARNING(std::cerr << "|StereoFramePointGenerator::compute|" << frame_->identifier() << "|skipped binning due to low point density: " << available_point_ratio << std::endl)
+//      for (Index row = 0; row < _number_of_rows_bin; ++row) {
+//        for (Index col = 0; col < _number_of_cols_bin; ++col) {
+//          _bin_map_left[row][col] = nullptr;
+//        }
+//      }
+//    }
   }
 
 //  //ds compute final triangulation ratio
@@ -405,8 +408,8 @@ void StereoFramePointGenerator::track(Frame* frame_,
       if (feature_right) {
         assert(feature_left->col >= feature_right->col);
 
-        //ds skip feature if descriptor distance to previous is violated (with higher tolerance than left matching)
-        if (cv::norm(feature_right->descriptor, point_previous->descriptorRight(), SRRG_PROSLAM_DESCRIPTOR_NORM) > 2*_parameters->matching_distance_tracking_threshold) {
+        //ds skip feature if descriptor distance to previous is violated
+        if (cv::norm(feature_right->descriptor, point_previous->descriptorRight(), SRRG_PROSLAM_DESCRIPTOR_NORM) > _parameters->matching_distance_tracking_threshold) {
           continue;
         }
 
@@ -589,7 +592,7 @@ void StereoFramePointGenerator::recoverPoints(Frame* current_frame_, const Frame
     }
 
     //ds if descriptor distance is to high
-    if (cv::norm(point_previous->descriptorRight(), descriptor_right, SRRG_PROSLAM_DESCRIPTOR_NORM) > 2*_parameters->matching_distance_tracking_threshold) {
+    if (cv::norm(point_previous->descriptorRight(), descriptor_right, SRRG_PROSLAM_DESCRIPTOR_NORM) > _parameters->matching_distance_tracking_threshold) {
       continue;
     }
 

@@ -370,7 +370,7 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->maximum_number_of_iterations, Count)
     PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->minimum_number_of_inliers, Count)
     PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->minimum_inlier_ratio, real)
-    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->enable_inverse_depth_information_for_translation_estimation, bool)
+    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->enable_inverse_depth_as_information, bool)
 
     //ds parse desired motion model as string
     const std::string& motion_model = configuration["base_tracking"]["motion_model"].as<std::string>();

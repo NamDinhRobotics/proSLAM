@@ -101,7 +101,7 @@ void  BaseFramePointGenerator::configure(){
                                          std::round(r*pixel_rows_per_detector),
                                          pixel_cols_per_detector,
                                          pixel_rows_per_detector);
-      _detector_thresholds[r][c] = _parameters->detector_threshold_minimum;
+      _detector_thresholds[r][c] = 0;
     }
   }
   _number_of_detectors = _parameters->number_of_detectors_vertical*_parameters->number_of_detectors_horizontal;
@@ -157,7 +157,9 @@ BaseFramePointGenerator::~BaseFramePointGenerator() {
   LOG_INFO(std::cerr << "BaseFramePointGenerator::~BaseFramePointGenerator|destroyed" << std::endl)
 }
 
-void BaseFramePointGenerator::detectKeypoints(const cv::Mat& intensity_image_, std::vector<cv::KeyPoint>& keypoints_) {
+void BaseFramePointGenerator::detectKeypoints(const cv::Mat& intensity_image_,
+                                              std::vector<cv::KeyPoint>& keypoints_,
+                                              const bool ignore_minimum_detector_threshold_) {
   CHRONOMETER_START(keypoint_detection)
 
   //ds detect new keypoints in each image region
@@ -168,7 +170,7 @@ void BaseFramePointGenerator::detectKeypoints(const cv::Mat& intensity_image_, s
       std::vector<cv::KeyPoint> keypoints_per_detector(0);
       _detectors[r][c]->detect(intensity_image_(_detector_regions[r][c]), keypoints_per_detector);
 
-      //ds current threshold for this detector
+      //ds retrieve currently set threshold for this detector
 #if CV_MAJOR_VERSION == 2
       real detector_threshold = _detectors[r][c]->getInt("threshold");
 #else
@@ -181,22 +183,25 @@ void BaseFramePointGenerator::detectKeypoints(const cv::Mat& intensity_image_, s
       //ds check if there's a significant loss of target points (delta is negative)
       if (delta < -_parameters->target_number_of_keypoints_tolerance) {
 
-        //ds compute new, lower threshold, capped and damped
+        //ds compute new, lower threshold, capped (negative value)
         const real change = std::max(delta, -_parameters->detector_threshold_maximum_change);
 
         //ds always lower threshold by at least 1
-        detector_threshold += std::min(change*detector_threshold, -1.0);
+        real detector_threshold_new = detector_threshold+std::min(change*detector_threshold, -1.0);
 
-        //ds check minimum threshold
-        if (detector_threshold < _parameters->detector_threshold_minimum) {
-          detector_threshold = _parameters->detector_threshold_minimum;
+        //ds minimum feasible threshold is 0
+        detector_threshold_new = std::max(detector_threshold_new, 0.0);
+
+        //ds check if we can below the minimum threshold
+        if (detector_threshold_new >= _parameters->detector_threshold_minimum || ignore_minimum_detector_threshold_) {
+          detector_threshold = detector_threshold_new;
         }
       }
 
       //ds or if there's a significant gain of target points (delta is positive)
       else if (delta > _parameters->target_number_of_keypoints_tolerance) {
 
-        //ds compute new, higher threshold - capped and damped
+        //ds compute new, higher threshold, capped (positive value)
         const real change = std::min(delta, _parameters->detector_threshold_maximum_change);
 
         //ds always increase threshold by at least 1
@@ -208,8 +213,8 @@ void BaseFramePointGenerator::detectKeypoints(const cv::Mat& intensity_image_, s
         }
       }
 
-      //ds set treshold (no effect if not changed)
-      _detector_thresholds[r][c] = detector_threshold;
+      //ds set treshold variable (will be effectively changed by calling adjustDetectorThresholds)
+      _detector_thresholds[r][c] += detector_threshold;
 
       //ds shift keypoint coordinates to whole image region
       const cv::Point2f& offset = _detector_regions[r][c].tl();
@@ -219,6 +224,7 @@ void BaseFramePointGenerator::detectKeypoints(const cv::Mat& intensity_image_, s
       keypoints_.insert(keypoints_.end(), keypoints_per_detector.begin(), keypoints_per_detector.end());
     }
   }
+  ++_number_of_detections;
   _number_of_detected_keypoints = keypoints_.size();
   CHRONOMETER_STOP(keypoint_detection)
 }
@@ -232,13 +238,21 @@ void BaseFramePointGenerator::computeDescriptors(const cv::Mat& intensity_image_
 void BaseFramePointGenerator::adjustDetectorThresholds() {
   for (uint32_t r = 0; r < _parameters->number_of_detectors_vertical; ++r) {
     for (uint32_t c = 0; c < _parameters->number_of_detectors_horizontal; ++c) {
+
+      //ds compute average threshold over last detections
+      _detector_thresholds[r][c] /= _number_of_detections;
+
 #if CV_MAJOR_VERSION == 2
-      _detectors[r][c]->setInt("threshold", _detector_thresholds[r][c]);
+      _detectors[r][c]->setInt("threshold", std::rint(_detector_thresholds[r][c]));
 #else
-      _detectors[r][c]->setThreshold(_detector_thresholds[r][c]);
+      _detectors[r][c]->setThreshold(std::rint(_detector_thresholds[r][c]));
 #endif
+
+      //ds reset bookkeeping for next detection(s)
+      _detector_thresholds[r][c] = 0;
     }
   }
+  _number_of_detections = 0;
 }
 
 const PointCoordinates BaseFramePointGenerator::getPointInCamera(const cv::Point2f& image_point_previous_,

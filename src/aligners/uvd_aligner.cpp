@@ -59,7 +59,7 @@ namespace proslam {
 
         //ds and disable error on the depth
         _information_matrix_vector[u](2,2) = 0;
-      } else if (_parameters->enable_inverse_depth_information_for_translation_estimation) {
+      } else if (_parameters->enable_inverse_depth_as_information) {
 
         //ds translation contribution is inversely proportional to depth
         //ds TODO check if this is truly beneficial since we already consider the depth in the error!
