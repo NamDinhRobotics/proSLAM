@@ -39,4 +39,7 @@ protected:
   Count _number_of_rows_image = 0;
   Count _number_of_cols_image = 0;
 };
+
+typedef std::shared_ptr<BaseFrameAligner> BaseFrameAlignerPtr;
+
 }

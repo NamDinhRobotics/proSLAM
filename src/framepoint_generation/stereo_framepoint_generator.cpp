@@ -17,9 +17,6 @@ void StereoFramePointGenerator::configure(){
   _parameters->number_of_cameras = 2;
   BaseFramePointGenerator::configure();
 
-  //ds set initial tracking distance (changes at runtime)
-  _projection_tracking_distance_pixels = _parameters->maximum_projection_tracking_distance_pixels;
-
   //ds configure stereo triangulation parameters
   _baseline        = _camera_right->baselineHomogeneous();
   _b_x             = _baseline(0);
@@ -347,7 +344,7 @@ void StereoFramePointGenerator::track(Frame* frame_,
     }
 
     //ds TRACKING obtain matching feature in left image (if any)
-    real descriptor_distance_best = _parameters->matching_distance_tracking_threshold;
+    real descriptor_distance_best = _maximum_descriptor_distance_tracking;
 
     //ds define search region (rectangular ROI)
     int32_t row_start_point = std::max(row_projection_left-_projection_tracking_distance_pixels, 0);
@@ -363,7 +360,7 @@ void StereoFramePointGenerator::track(Frame* frame_,
                                                                                                  row_end_point,
                                                                                                  col_start_point,
                                                                                                  col_end_point,
-                                                                                                 _parameters->matching_distance_tracking_threshold,
+                                                                                                 _maximum_descriptor_distance_tracking,
                                                                                                  track_by_appearance_,
                                                                                                  descriptor_distance_best);
 
@@ -408,13 +405,13 @@ void StereoFramePointGenerator::track(Frame* frame_,
       if (feature_right) {
         assert(feature_left->col >= feature_right->col);
 
-        //ds skip feature if descriptor distance to previous is violated
-        if (cv::norm(feature_right->descriptor, point_previous->descriptorRight(), SRRG_PROSLAM_DESCRIPTOR_NORM) > _parameters->matching_distance_tracking_threshold) {
+        //ds skip points with insufficient stereo disparity
+        if (feature_left->col-feature_right->col < _parameters->minimum_disparity_pixels) {
           continue;
         }
 
-        //ds skip points with insufficient stereo disparity
-        if (feature_left->col-feature_right->col < _parameters->minimum_disparity_pixels) {
+        //ds skip feature if descriptor distance to previous is violated
+        if (cv::norm(feature_right->descriptor, point_previous->descriptorRight(), SRRG_PROSLAM_DESCRIPTOR_NORM) > _maximum_descriptor_distance_tracking) {
           continue;
         }
 
@@ -563,7 +560,7 @@ void StereoFramePointGenerator::recoverPoints(Frame* current_frame_, const Frame
     keypoint_buffer_left[0].pt += corner_left;
 
     //ds if descriptor distance is to high
-    if (cv::norm(point_previous->descriptorLeft(), descriptor_left, SRRG_PROSLAM_DESCRIPTOR_NORM) > _parameters->matching_distance_tracking_threshold) {
+    if (cv::norm(point_previous->descriptorLeft(), descriptor_left, SRRG_PROSLAM_DESCRIPTOR_NORM) > _maximum_descriptor_distance_tracking) {
       continue;
     }
 
@@ -592,7 +589,7 @@ void StereoFramePointGenerator::recoverPoints(Frame* current_frame_, const Frame
     }
 
     //ds if descriptor distance is to high
-    if (cv::norm(point_previous->descriptorRight(), descriptor_right, SRRG_PROSLAM_DESCRIPTOR_NORM) > _parameters->matching_distance_tracking_threshold) {
+    if (cv::norm(point_previous->descriptorRight(), descriptor_right, SRRG_PROSLAM_DESCRIPTOR_NORM) > _maximum_descriptor_distance_tracking) {
       continue;
     }
 

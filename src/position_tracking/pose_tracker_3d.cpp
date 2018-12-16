@@ -1,33 +1,34 @@
-#include "base_tracker.h"
+#include "pose_tracker_3d.h"
 #include "aligners/stereouv_aligner.h"
 
 namespace proslam {
 using namespace srrg_core;
 
-BaseTracker::BaseTracker(BaseTrackerParameters* parameters_): _parameters(parameters_) {
-  LOG_INFO(std::cerr << "BaseTracker::BaseTracker|constructed" << std::endl)
+PoseTracker3D::PoseTracker3D(PoseTracker3DParameters* parameters_): _parameters(parameters_) {
+  LOG_INFO(std::cerr << "PoseTracker3D::PoseTracker3D|constructed" << std::endl)
 }
 
-void BaseTracker::configure() {
-  LOG_INFO(std::cerr << "BaseTracker::configure|configuring" << std::endl)
+void PoseTracker3D::configure() {
+  LOG_INFO(std::cerr << "PoseTracker3D::configure|configuring" << std::endl)
   assert(_camera_left);
   assert(_pose_optimizer);
   _previous_to_current_camera.setIdentity();
   _lost_points.clear();
-  _projection_tracking_distance_pixels = _framepoint_generator->parameters()->maximum_projection_tracking_distance_pixels;
-  LOG_INFO(std::cerr << "BaseTracker::configure|configured" << std::endl)
+  _projection_tracking_distance_pixels  = _framepoint_generator->parameters()->maximum_projection_tracking_distance_pixels;
+  _current_descriptor_distance_tracking = _framepoint_generator->parameters()->maximum_descriptor_distance_tracking;
+  LOG_INFO(std::cerr << "PoseTracker3D::configure|configured" << std::endl)
 }
 
 //ds dynamic cleanup
-BaseTracker::~BaseTracker() {
-  LOG_INFO(std::cerr << "BaseTracker::~BaseTracker|destroying" << std::endl)
+PoseTracker3D::~PoseTracker3D() {
+  LOG_INFO(std::cerr << "PoseTracker3D::~PoseTracker3D|destroying" << std::endl)
   _lost_points.clear();
   delete _framepoint_generator;
   delete _pose_optimizer;
-  LOG_INFO(std::cerr << "BaseTracker::~BaseTracker|destroyed" << std::endl)
+  LOG_INFO(std::cerr << "PoseTracker3D::~PoseTracker3D|destroyed" << std::endl)
 }
 
-void BaseTracker::compute() {
+void PoseTracker3D::compute() {
   assert(_camera_left);
   assert(_context);
 
@@ -107,7 +108,7 @@ void BaseTracker::compute() {
         break;
       }
 
-      LOG_INFO(std::cerr << "BaseTracker::compute|STATE: LOCALIZING|current tracks: "
+      LOG_INFO(std::cerr << "PoseTracker3D::compute|STATE: LOCALIZING|current tracks: "
                          << _number_of_tracked_points << "/" << previous_frame->points().size()
                          << " at image: " << current_frame->identifier() << std::endl)
 
@@ -140,7 +141,7 @@ void BaseTracker::compute() {
         //ds compute current robot pose
         const TransformMatrix3D camera_left_to_world = previous_frame->cameraLeftToWorld()*_previous_to_current_camera.inverse();
         current_frame->setRobotToWorld(camera_left_to_world*_camera_left->robotToCamera());
-        LOG_WARNING(std::cerr << "BaseTracker::compute|using posit on frame points (experimental) inliers: " << _pose_optimizer->numberOfInliers()
+        LOG_WARNING(std::cerr << "PoseTracker3D::compute|using posit on frame points (experimental) inliers: " << _pose_optimizer->numberOfInliers()
                   << " outliers: " << _pose_optimizer->numberOfOutliers() << " average error: " << _pose_optimizer->totalError()/_pose_optimizer->numberOfInliers() <<  std::endl)
       } else {
 
@@ -166,7 +167,7 @@ void BaseTracker::compute() {
     if (_pose_optimizer->averageError() < _pose_optimizer->parameters()->maximum_error_kernel) {
       current_frame->setHasReliablePoseEstimate(true);
     } else {
-      LOG_WARNING(std::cerr << "BaseTracker::compute|high average pose optimization error: " << _pose_optimizer->averageError() << std::endl)
+      LOG_WARNING(std::cerr << "PoseTracker3D::compute|high average pose optimization error: " << _pose_optimizer->averageError() << std::endl)
     }
   }
 
@@ -196,9 +197,9 @@ void BaseTracker::compute() {
 }
 
 //ds retrieves framepoint correspondences between previous and current frame
-void BaseTracker::_track(Frame* previous_frame_,
-                         Frame* current_frame_,
-                         const bool& track_by_appearance_) {
+void PoseTracker3D::_track(Frame* previous_frame_,
+                           Frame* current_frame_,
+                           const bool& track_by_appearance_) {
 
   //ds check state for current framepoint tracking configuration
   if (track_by_appearance_) {
@@ -209,6 +210,7 @@ void BaseTracker::_track(Frame* previous_frame_,
 
   //ds configure and track points in current frame
   _framepoint_generator->setProjectionTrackingDistancePixels(_projection_tracking_distance_pixels);
+  _framepoint_generator->setMaximumDescriptorDistanceTracking(_current_descriptor_distance_tracking);
   _framepoint_generator->track(current_frame_, previous_frame_, _previous_to_current_camera, _lost_points, track_by_appearance_);
 
   //ds adjust bookkeeping
@@ -219,8 +221,8 @@ void BaseTracker::_track(Frame* previous_frame_,
 
   //ds if we're below the target - raise tracking window for next image
   if (_tracking_ratio < 0.1) {
-    LOG_WARNING(std::cerr << "BaseTracker::_trackFramepoints|low point tracking ratio: " << _tracking_ratio
-              << " (" << _number_of_tracked_points << "/" << previous_frame_->points().size() << ")" << std::endl)
+    LOG_WARNING(std::cerr << "PoseTracker3D::_trackFramepoints|low point tracking ratio: " << _tracking_ratio
+                          << " (" << _number_of_tracked_points << "/" << previous_frame_->points().size() << ")" << std::endl)
 
     //ds maximimze tracking range
     _projection_tracking_distance_pixels = _framepoint_generator->parameters()->maximum_projection_tracking_distance_pixels;
@@ -235,6 +237,23 @@ void BaseTracker::_track(Frame* previous_frame_,
     }
   }
 
+  //ds if the tracking ratio is insufficient or we do not have enough tracks
+  if (_tracking_ratio < _parameters->good_tracking_ratio || _number_of_tracked_points < _parameters->good_number_of_tracked_points) {
+
+    //ds be less restrictive in tracking
+    if (_current_descriptor_distance_tracking < _framepoint_generator->parameters()->maximum_descriptor_distance_tracking) {
+      ++_current_descriptor_distance_tracking;
+    }
+
+  //ds if we have a good tracking ratio and many tracks
+  } else {
+
+    //ds be more restrictive in tracking
+    if (_current_descriptor_distance_tracking > _framepoint_generator->parameters()->minimum_descriptor_distance_tracking) {
+      --_current_descriptor_distance_tracking;
+    }
+  }
+
   //ds stats
   _mean_tracking_ratio = (_number_of_tracked_frames*_mean_tracking_ratio+_tracking_ratio)/(1+_number_of_tracked_frames);
   ++_number_of_tracked_frames;
@@ -246,9 +265,9 @@ void BaseTracker::_track(Frame* previous_frame_,
   current_frame_->setProjectionTrackingDistancePixels(_projection_tracking_distance_pixels);
 }
 
-void BaseTracker::_registerRecursive(Frame* previous_frame_,
-                                     Frame* current_frame_,
-                                     const Count& recursion_) {
+void PoseTracker3D::_registerRecursive(Frame* previous_frame_,
+                                       Frame* current_frame_,
+                                       const Count& recursion_) {
   assert(_number_of_tracked_landmarks_previous != 0);
 
   //ds current number of tracked landmarks
@@ -295,7 +314,7 @@ void BaseTracker::_registerRecursive(Frame* previous_frame_,
   //ds compute ratio between landmarks and tracked points: informative only
   const real percentage_landmarks = static_cast<real>(_number_of_tracked_landmarks)/_number_of_tracked_points;
   if (percentage_landmarks < 0.1) {
-    LOG_WARNING(std::cerr << "BaseTracker::compute|low percentage of tracked landmarks over framepoints: " << percentage_landmarks
+    LOG_WARNING(std::cerr << "PoseTracker3D::compute|low percentage of tracked landmarks over framepoints: " << percentage_landmarks
               << " (landmarks/framepoints: " << _number_of_tracked_landmarks << "/" << _number_of_tracked_points << ")" << std::endl)
   }
 
@@ -315,7 +334,7 @@ void BaseTracker::_registerRecursive(Frame* previous_frame_,
     //ds info
     if (recursion_ > 0) {
       ++_number_of_recursive_registrations;
-      LOG_WARNING(std::cerr << current_frame_->identifier() << "|BaseTracker::_registerRecursive|recursion: " << recursion_ << "|inliers: " << number_of_inliers << std::endl)
+      LOG_WARNING(std::cerr << current_frame_->identifier() << "|PoseTracker3D::_registerRecursive|recursion: " << recursion_ << "|inliers: " << number_of_inliers << std::endl)
     }
 
     //ds setup
@@ -353,7 +372,7 @@ void BaseTracker::_registerRecursive(Frame* previous_frame_,
     }
   } else {
     ++_number_of_recursive_registrations;
-    LOG_WARNING(std::cerr << current_frame_->identifier() << "|BaseTracker::_registerRecursive|recursion: " << recursion_ << "|inliers: " << number_of_inliers << std::endl)
+    LOG_WARNING(std::cerr << current_frame_->identifier() << "|PoseTracker3D::_registerRecursive|recursion: " << recursion_ << "|inliers: " << number_of_inliers << std::endl)
 
     //ds if we have recursions left (currently only two)
     if (recursion_ < 2) {
@@ -384,10 +403,10 @@ void BaseTracker::_registerRecursive(Frame* previous_frame_,
 }
 
 //! @breaks the track at the current frame
-void BaseTracker::breakTrack(Frame* frame_) {
+void PoseTracker3D::breakTrack(Frame* frame_) {
 
   //ds reset state
-  LOG_WARNING(std::printf("BaseTracker::breakTrack|LOST TRACK at frame [%06lu] with tracks: %lu\n", frame_->identifier(), _number_of_tracked_points))
+  LOG_WARNING(std::printf("PoseTracker3D::breakTrack|LOST TRACK at frame [%06lu] with tracks: %lu\n", frame_->identifier(), _number_of_tracked_points))
   _status = Frame::Localizing;
 
   //ds stick to previous solution - simulating a fresh start
@@ -399,13 +418,13 @@ void BaseTracker::breakTrack(Frame* frame_) {
   _context->breakTrack(frame_);
 }
 
-void BaseTracker::_prunePoints(Frame* frame_) {
+void PoseTracker3D::_prunePoints(Frame* frame_) {
   _number_of_tracked_points = 0;
 
   //ds if we had a sufficient pose optimization - TODO parametrize in tracker
-  if (_pose_optimizer->inlierRatio() > 0.5     &&
-      _pose_optimizer->numberOfInliers() > 100 &&
-      frame_->status() == Frame::Tracking      ) {
+  if (_pose_optimizer->inlierRatio() > 0.5 &&
+      _pose_optimizer->numberOfInliers() > _parameters->good_number_of_tracked_points &&
+      frame_->status() == Frame::Tracking) {
     for (Index index_point = 0; index_point < frame_->points().size(); index_point++) {
       assert(frame_->points()[index_point]->previous());
 
@@ -419,19 +438,18 @@ void BaseTracker::_prunePoints(Frame* frame_) {
     for (Index index_point = 0; index_point < frame_->points().size(); index_point++) {
       assert(frame_->points()[index_point]->previous());
 
-      //ds keep all points which were not suppressed in the optimization and have an acceptable error
+      //ds keep all points which were not suppressed in the optimization
       if (_pose_optimizer->errors()[index_point] != -1 && _pose_optimizer->errors()[index_point] < 10000) {
         frame_->points()[_number_of_tracked_points] = frame_->points()[index_point];
         ++_number_of_tracked_points;
       }
     }
   }
-//  std::cerr << "dropped points REGISTRATION: " << frame_->points().size()-_number_of_tracked_points << "/" << frame_->points().size() << std::endl;
   frame_->points().resize(_number_of_tracked_points);
 }
 
 //ds updates existing or creates new landmarks for framepoints of the provided frame
-void BaseTracker::_updatePoints(WorldMap* context_, Frame* frame_) {
+void PoseTracker3D::_updatePoints(WorldMap* context_, Frame* frame_) {
   CHRONOMETER_START(landmark_optimization)
 
   //ds buffer current pose
@@ -468,7 +486,7 @@ void BaseTracker::_updatePoints(WorldMap* context_, Frame* frame_) {
     landmark->setIsCurrentlyTracked(true);
     context_->currentlyTrackedLandmarks().push_back(landmark);
   }
-  LOG_DEBUG(std::cerr << "BaseTracker::_updatePoints|updated landmarks: " << _number_of_active_landmarks << std::endl)
+  LOG_DEBUG(std::cerr << "PoseTracker3D::_updatePoints|updated landmarks: " << _number_of_active_landmarks << std::endl)
 
   //ds update secondary points
   Count number_of_temporary_points = 0;
@@ -494,12 +512,12 @@ void BaseTracker::_updatePoints(WorldMap* context_, Frame* frame_) {
     ++number_of_temporary_points;
   }
   frame_->temporaryPoints().resize(number_of_temporary_points);
-  LOG_DEBUG(std::cerr << "BaseTracker::_updatePoints|updated temporary points: " << frame_->temporaryPoints().size() << std::endl)
+  LOG_DEBUG(std::cerr << "PoseTracker3D::_updatePoints|updated temporary points: " << frame_->temporaryPoints().size() << std::endl)
   CHRONOMETER_STOP(landmark_optimization)
 }
 
-void BaseTracker::_fallbackEstimate(Frame* current_frame_,
-                                    Frame* previous_frame_) {
+void PoseTracker3D::_fallbackEstimate(Frame* current_frame_,
+                                      Frame* previous_frame_) {
 
   //ds if we have some information about the camera pose (e.g. odometry)
   if (_parameters->motion_model == Parameters::MotionModel::CAMERA_ODOMETRY) {

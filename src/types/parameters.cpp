@@ -97,7 +97,7 @@ void BaseFramePointGeneratorParameters::print() const {
   std::cerr << "BaseFramepointGeneratorParameters::print|target_number_of_keypoints_tolerance: " << target_number_of_keypoints_tolerance << std::endl;
   std::cerr << "BaseFramepointGeneratorParameters::print|detector_threshold_minimum: " << detector_threshold_minimum << std::endl;
   std::cerr << "BaseFramepointGeneratorParameters::print|detector_threshold_maximum_change: " << detector_threshold_maximum_change << std::endl;
-  std::cerr << "BaseFramepointGeneratorParameters::print|matching_distance_tracking_threshold: " << matching_distance_tracking_threshold << std::endl;
+  std::cerr << "BaseFramepointGeneratorParameters::print|matching_distance_tracking_threshold: " << minimum_descriptor_distance_tracking << std::endl;
   std::cerr << "BaseFramepointGeneratorParameters::print|enable_keypoint_binning: " << enable_keypoint_binning << std::endl;
   std::cerr << "BaseFramepointGeneratorParameters::print|bin_size_pixels: " << bin_size_pixels << std::endl;
 }
@@ -112,9 +112,9 @@ void DepthFramePointGeneratorParameters::print() const {
   BaseFramePointGeneratorParameters::print();
 }
 
-BaseTrackerParameters::BaseTrackerParameters(): aligner(new AlignerParameters()) {}
+PoseTracker3DParameters::PoseTracker3DParameters(): aligner(new AlignerParameters()) {}
 
-void BaseTrackerParameters::print() const {
+void PoseTracker3DParameters::print() const {
   std::cerr << "BaseTrackerParameters::print|minimum_number_of_landmarks_to_track: " << minimum_number_of_landmarks_to_track << std::endl;
   std::cerr << "BaseTrackerParameters::print|maximum_number_of_landmark_recoveries: " << maximum_number_of_landmark_recoveries << std::endl;
   aligner->print();
@@ -153,7 +153,7 @@ ParameterCollection::ParameterCollection(): _parameters(this),
   world_map_parameters       = new WorldMapParameters();
   relocalizer_parameters     = new RelocalizerParameters();
   graph_optimizer_parameters = new GraphOptimizerParameters();
-  tracker_parameters         = new BaseTrackerParameters();
+  tracker_parameters         = new PoseTracker3DParameters();
 
   image_viewer_parameters   = new ImageViewerParameters();
   map_viewer_parameters     = new MapViewerParameters();
@@ -348,32 +348,35 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, detector_threshold_maximum_change, real)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, number_of_detectors_vertical, int32_t)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, number_of_detectors_horizontal, int32_t)
-    PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, matching_distance_tracking_threshold, int32_t)
+    PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, minimum_descriptor_distance_tracking, real)
+    PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, maximum_descriptor_distance_tracking, real)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, maximum_reliable_depth_meters, real)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, maximum_depth_meters, real)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, minimum_depth_meters, real)
-
-    //MotionEstimation (GENERIC)
-    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, minimum_track_length_for_landmark_creation, Count)
-    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, minimum_number_of_landmarks_to_track, Count)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, minimum_projection_tracking_distance_pixels, int32_t)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, maximum_projection_tracking_distance_pixels, int32_t)
-    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, tunnel_vision_ratio, real)
-    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, maximum_number_of_landmark_recoveries, Count)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, enable_keypoint_binning, bool)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, bin_size_pixels, Count)
-    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, minimum_delta_angular_for_movement, real)
-    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, minimum_delta_translational_for_movement, real)
-    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->error_delta_for_convergence, real)
-    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->maximum_error_kernel, real)
-    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->damping, real)
-    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->maximum_number_of_iterations, Count)
-    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->minimum_number_of_inliers, Count)
-    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->minimum_inlier_ratio, real)
-    PARSE_PARAMETER(configuration, base_tracking, tracker_parameters, aligner->enable_inverse_depth_as_information, bool)
+
+    //MotionEstimation (GENERIC)
+    PARSE_PARAMETER(configuration, tracking, tracker_parameters, minimum_track_length_for_landmark_creation, Count)
+    PARSE_PARAMETER(configuration, tracking, tracker_parameters, minimum_number_of_landmarks_to_track, Count)
+    PARSE_PARAMETER(configuration, tracking, tracker_parameters, tunnel_vision_ratio, real)
+    PARSE_PARAMETER(configuration, tracking, tracker_parameters, maximum_number_of_landmark_recoveries, Count)
+    PARSE_PARAMETER(configuration, tracking, tracker_parameters, minimum_delta_angular_for_movement, real)
+    PARSE_PARAMETER(configuration, tracking, tracker_parameters, minimum_delta_translational_for_movement, real)
+    PARSE_PARAMETER(configuration, tracking, tracker_parameters, aligner->error_delta_for_convergence, real)
+    PARSE_PARAMETER(configuration, tracking, tracker_parameters, aligner->maximum_error_kernel, real)
+    PARSE_PARAMETER(configuration, tracking, tracker_parameters, aligner->damping, real)
+    PARSE_PARAMETER(configuration, tracking, tracker_parameters, aligner->maximum_number_of_iterations, Count)
+    PARSE_PARAMETER(configuration, tracking, tracker_parameters, aligner->minimum_number_of_inliers, Count)
+    PARSE_PARAMETER(configuration, tracking, tracker_parameters, aligner->minimum_inlier_ratio, real)
+    PARSE_PARAMETER(configuration, tracking, tracker_parameters, aligner->enable_inverse_depth_as_information, bool)
+    PARSE_PARAMETER(configuration, tracking, tracker_parameters, good_tracking_ratio, real)
+    PARSE_PARAMETER(configuration, tracking, tracker_parameters, good_number_of_tracked_points, Count)
 
     //ds parse desired motion model as string
-    const std::string& motion_model = configuration["base_tracking"]["motion_model"].as<std::string>();
+    const std::string& motion_model = configuration["tracking"]["motion_model"].as<std::string>();
     ++number_of_parameters_detected;
     if (motion_model == "NONE") {
       tracker_parameters->motion_model = Parameters::MotionModel::NONE;

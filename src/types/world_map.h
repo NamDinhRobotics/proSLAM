@@ -183,4 +183,7 @@ private:
   //ds informative/visualization only
   Count _number_of_closures = 0;
 };
+
+typedef std::shared_ptr<WorldMap> WorldMapPtr;
+
 }

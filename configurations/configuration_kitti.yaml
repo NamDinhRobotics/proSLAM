@@ -61,9 +61,10 @@ base_framepoint_generation:
   minimum_projection_tracking_distance_pixels: 10
   maximum_projection_tracking_distance_pixels: 50
 
-  #ds dynamic thresholds for descriptor matching
-  matching_distance_tracking_threshold: 35
-  
+  #ds dynamic thresholds for descriptor tracking
+  minimum_descriptor_distance_tracking: 25
+  maximum_descriptor_distance_tracking: 50
+
   #rigid stereo sensor configuration
   maximum_reliable_depth_meters: 20
   maximum_depth_meters:          1000
@@ -76,11 +77,11 @@ base_framepoint_generation:
 stereo_framepoint_generation:
 
   #ds stereo: triangulation
-  maximum_matching_distance_triangulation: 70
+  maximum_matching_distance_triangulation: 75
   minimum_disparity_pixels:                1
   maximum_epipolar_search_offset_pixels:   0
 
-base_tracking:
+tracking:
 
   #ds this criteria is used for the decision of whether creating a landmark or not from a track of framepoints
   minimum_track_length_for_landmark_creation: 2
@@ -89,7 +90,9 @@ base_tracking:
   minimum_number_of_landmarks_to_track: 5
 
   #point tracking thresholds
-  tunnel_vision_ratio: 0.75
+  tunnel_vision_ratio:           0.75
+  good_tracking_ratio:           0.3
+  good_number_of_tracked_points: 200
 
   #landmark track recovery (if enabled)
   maximum_number_of_landmark_recoveries: 10

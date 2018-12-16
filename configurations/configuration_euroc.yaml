@@ -59,8 +59,9 @@ base_framepoint_generation:
   number_of_detectors_vertical:         1
   number_of_detectors_horizontal:       1
 
-  #ds dynamic thresholds for descriptor matching
-  matching_distance_tracking_threshold: 35
+  #ds dynamic thresholds for descriptor tracking
+  minimum_descriptor_distance_tracking: 25
+  maximum_descriptor_distance_tracking: 50
   
   #ds maximum reliable depth with chosen sensor
   maximum_reliable_depth_meters: 5.0
@@ -82,13 +83,18 @@ depth_framepoint_generation:
   maximum_depth_near_meters: 5
   maximum_depth_far_meters:  20
 
-base_tracking:
+tracking:
 
   #ds this criteria is used for the decision of whether creating a landmark or not from a track of framepoints
   minimum_track_length_for_landmark_creation: 2
 
   #ds track lost criteria
   minimum_number_of_landmarks_to_track: 5
+
+  #point tracking thresholds
+  tunnel_vision_ratio:           0.75
+  good_tracking_ratio:           0.3
+  good_number_of_tracked_points: 100
 
   #point tracking thresholds
   minimum_projection_tracking_distance_pixels: 10

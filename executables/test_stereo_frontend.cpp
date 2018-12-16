@@ -99,7 +99,7 @@ int32_t main(int32_t argc_, char** argv_) {
   parameters->detector_threshold_maximum              = fast_detector_threshold;
   parameters->minimum_projection_tracking_distance_pixels = range_point_tracking_pixels;
   parameters->maximum_projection_tracking_distance_pixels = range_point_tracking_pixels;
-  parameters->matching_distance_tracking_threshold    = 25; //ds number of mismatching bits
+  parameters->minimum_descriptor_distance_tracking    = 25; //ds number of mismatching bits
   parameters->maximum_matching_distance_triangulation = 35; //ds number of mismatching bits
   parameters->maximum_epipolar_search_offset_pixels   = 3;  //ds number of horizontal epipolar lines to check for triangulation
 

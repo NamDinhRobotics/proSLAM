@@ -62,8 +62,9 @@ public:
   const int32_t& numberOfColsImage() const {return _number_of_cols_image;}
   const Count& targetNumberOfKeypoints() const {return _target_number_of_keypoints;}
   void setProjectionTrackingDistancePixels(const int32_t& projection_tracking_distance_pixels_) {_projection_tracking_distance_pixels = projection_tracking_distance_pixels_;}
+  void setMaximumDescriptorDistanceTracking(const real& maximum_descriptor_distance_tracking_) {_maximum_descriptor_distance_tracking = maximum_descriptor_distance_tracking_;}
 
-  const int32_t matchingDistanceTrackingThreshold() const {return _parameters->matching_distance_tracking_threshold;}
+  const int32_t matchingDistanceTrackingThreshold() const {return _parameters->minimum_descriptor_distance_tracking;}
   const Count& numberOfDetectedKeypoints() const {return _number_of_detected_keypoints;}
   const Count& numberOfTrackedLandmarks() const {return _number_of_tracked_landmarks;}
 
@@ -73,18 +74,18 @@ protected:
   const Camera* _camera_left = nullptr;
 
   //ds image dimensions
-  int32_t _number_of_rows_image;
-  int32_t _number_of_cols_image;
+  int32_t _number_of_rows_image = 0;
+  int32_t _number_of_cols_image = 0;
 
   //ds point detection properties
-  Count _target_number_of_keypoints;
-  Count _target_number_of_keypoints_per_detector;
-  Count _number_of_detected_keypoints;
+  Count _target_number_of_keypoints              = 0;
+  Count _target_number_of_keypoints_per_detector = 0;
+  Count _number_of_detected_keypoints            = 0;
 
   //ds quick access
-  real _focal_length_pixels;
-  real _principal_point_offset_u_pixels;
-  real _principal_point_offset_v_pixels;
+  real _focal_length_pixels             = 0;
+  real _principal_point_offset_u_pixels = 0;
+  real _principal_point_offset_v_pixels = 0;
 
   //! @brief grid of detectors (equally distributed over the image with size=number_of_detectors_per_dimension*number_of_detectors_per_dimension)
   cv::Ptr<cv::FastFeatureDetector>** _detectors = nullptr;
@@ -92,7 +93,7 @@ protected:
 
   //! @brief number of detectors
   //! @brief the same for all image streams
-  uint32_t _number_of_detectors;
+  uint32_t _number_of_detectors = 0;
 
   //! @brief image region for each detector
   //! @brief the same for all image streams
@@ -114,7 +115,10 @@ protected:
   std::vector<IntensityFeature> _keypoints_with_descriptors_left;
 
   //! @brief currently active projection tracking distance (adjusted dynamically at runtime)
-  int32_t _projection_tracking_distance_pixels = 10;
+  int32_t _projection_tracking_distance_pixels = 0;
+
+  //! @brief current maximum descriptor distance for tracking
+  real _maximum_descriptor_distance_tracking   = 0;
 
   //! @brief status
   Count _number_of_tracked_landmarks = 0;
@@ -126,4 +130,7 @@ private:
   CREATE_CHRONOMETER(descriptor_extraction)
 
 };
+
+typedef std::shared_ptr<BaseFramePointGenerator> BaseFramePointGeneratorPtr;
+
 } //namespace proslam

@@ -2,16 +2,7 @@
 
 namespace proslam {
 
-BaseFramePointGenerator::BaseFramePointGenerator(BaseFramePointGeneratorParameters* parameters_): _parameters(parameters_),
-                                                                                                  _number_of_rows_image(0),
-                                                                                                  _number_of_cols_image(0),
-                                                                                                  _target_number_of_keypoints(1000),
-                                                                                                  _target_number_of_keypoints_per_detector(1000),
-                                                                                                  _number_of_detected_keypoints(0),
-                                                                                                  _focal_length_pixels(0),
-                                                                                                  _principal_point_offset_u_pixels(0),
-                                                                                                  _principal_point_offset_v_pixels(0),
-                                                                                                  _number_of_detectors(0) {
+BaseFramePointGenerator::BaseFramePointGenerator(BaseFramePointGeneratorParameters* parameters_): _parameters(parameters_) {
   LOG_INFO(std::cerr << "BaseFramePointGenerator::BaseFramePointGenerator|constructed" << std::endl)
 }
 
@@ -30,7 +21,8 @@ void  BaseFramePointGenerator::configure(){
   _feature_matcher_left.configure(_number_of_rows_image, _number_of_cols_image);
 
   //ds configure tracking window
-  _projection_tracking_distance_pixels = _parameters->maximum_projection_tracking_distance_pixels;
+  _projection_tracking_distance_pixels  = _parameters->maximum_projection_tracking_distance_pixels;
+  _maximum_descriptor_distance_tracking = _parameters->maximum_descriptor_distance_tracking;
 
   //ds allocate descriptor extractor TODO enable further support and check BIT SIZES
 #if CV_MAJOR_VERSION == 2

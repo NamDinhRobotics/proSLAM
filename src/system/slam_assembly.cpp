@@ -1,5 +1,6 @@
 #include "slam_assembly.h"
-#include "position_tracking/base_tracker.h"
+
+#include "position_tracking/pose_tracker_3d.h"
 #include "framepoint_generation/stereo_framepoint_generator.h"
 #include "framepoint_generation/depth_framepoint_generator.h"
 #include "aligners/stereouv_aligner.h"
@@ -10,7 +11,7 @@ SLAMAssembly::SLAMAssembly(ParameterCollection* parameters_): _parameters(parame
                                                               _world_map(new WorldMap(_parameters->world_map_parameters)),
                                                               _graph_optimizer(new GraphOptimizer(_parameters->graph_optimizer_parameters)),
                                                               _relocalizer(new Relocalizer(_parameters->relocalizer_parameters)),
-                                                              _tracker(0),
+                                                              _tracker(new PoseTracker3D(_parameters->tracker_parameters)),
                                                               _camera_left(0),
                                                               _camera_right(0),
                                                               _ui_server(0),
@@ -22,6 +23,7 @@ SLAMAssembly::SLAMAssembly(ParameterCollection* parameters_): _parameters(parame
                                                               _is_viewer_open(false) {
   _synchronizer.reset();
   _processing_times_seconds.clear();
+  _tracker->setWorldMap(_world_map);
 
   //ds reset all static object counters
   Frame::reset();
@@ -68,25 +70,15 @@ void SLAMAssembly::_createStereoTracker(Camera* camera_left_, Camera* camera_rig
   pose_optimizer->setMinimumReliableDepthMeters(_parameters->stereo_framepoint_generator_parameters->minimum_depth_meters);
   pose_optimizer->configure();
 
-  //ds allocate and configure the tracker
-  _tracker = new BaseTracker(_parameters->tracker_parameters);
-  _tracker->setCameraLeft(camera_left_);
-  _tracker->setCameraSecondary(camera_right_);
+  //ds configure the tracker
   _tracker->setFramePointGenerator(framepoint_generator);
   _tracker->setAligner(pose_optimizer);
   _tracker->configure();
-  _tracker->setWorldMap(_world_map);
-
-  //ds configure components
-  _graph_optimizer->configure();
-  _relocalizer->configure();
 }
 
 void SLAMAssembly::_createDepthTracker(Camera* camera_left_, Camera* camera_right_){
 
   //ds allocate and configure the framepoint generator
-  _camera_left  = camera_left_;
-  _camera_right = camera_right_;
   DepthFramePointGenerator* framepoint_generator = new DepthFramePointGenerator(_parameters->depth_framepoint_generator_parameters);
   framepoint_generator->setCameraLeft(camera_left_);
   framepoint_generator->setCameraRight(camera_right_);
@@ -98,18 +90,10 @@ void SLAMAssembly::_createDepthTracker(Camera* camera_left_, Camera* camera_righ
   pose_optimizer->setMinimumReliableDepthMeters(_parameters->depth_framepoint_generator_parameters->minimum_depth_meters);
   pose_optimizer->configure();
 
-  //ds allocate and configure the tracker
-  _tracker = new BaseTracker(_parameters->tracker_parameters);
-  _tracker->setCameraLeft(camera_left_);
-  _tracker->setCameraSecondary(camera_right_);
+  //ds configure the tracker
   _tracker->setFramePointGenerator(framepoint_generator);
   _tracker->setAligner(pose_optimizer);
   _tracker->configure();
-  _tracker->setWorldMap(_world_map);
-
-  //ds configure components
-  _graph_optimizer->configure();
-  _relocalizer->configure();
 }
 
 void SLAMAssembly::loadCamerasFromMessageFile() {
@@ -222,34 +206,37 @@ void SLAMAssembly::loadCamerasFromMessageFile() {
 }
 
 void SLAMAssembly::loadCameras(Camera* camera_left_, Camera* camera_right_) {
+  assert(_tracker);
 
-  //ds if tracker is set
-  if (!_tracker) {
-
-    //ds allocate the tracker module with the given cameras
-    switch (_parameters->command_line_parameters->tracker_mode){
-      case CommandLineParameters::TrackerMode::RGB_STEREO: {
-        _createStereoTracker(camera_left_, camera_right_);
-        break;
-      }
-      case CommandLineParameters::TrackerMode::RGB_DEPTH: {
-        _createDepthTracker(camera_left_, camera_right_);
-        break;
-      }
-      default: {
-        throw std::runtime_error("unknown tracker");
-      }
+  //ds allocate the tracker module with the given cameras
+  switch (_parameters->command_line_parameters->tracker_mode){
+    case CommandLineParameters::TrackerMode::RGB_STEREO: {
+      _createStereoTracker(camera_left_, camera_right_);
+      break;
+    }
+    case CommandLineParameters::TrackerMode::RGB_DEPTH: {
+      _createDepthTracker(camera_left_, camera_right_);
+      break;
+    }
+    default: {
+      throw std::runtime_error("unknown tracker");
     }
   }
 
   //ds set system handles
   _camera_left  = camera_left_;
   _camera_right = camera_right_;
+  _tracker->setCameraLeft(_camera_left);
+  _tracker->setCameraSecondary(_camera_right);
   LOG_INFO(std::cerr << "SLAMAssembly::loadCameras|loaded cameras: " << 2 << std::endl)
   LOG_INFO(std::cerr << "SLAMAssembly::loadCameras|LEFT resolution: " << camera_left_->numberOfImageCols() << " x " << camera_left_->numberOfImageRows()
             << ", aspect ratio: " << static_cast<real>(camera_left_->numberOfImageCols())/camera_left_->numberOfImageRows() << std::endl)
   LOG_INFO(std::cerr << "SLAMAssembly::loadCameras|RIGHT resolution: " << camera_right_->numberOfImageCols() << " x " << camera_right_->numberOfImageRows()
             << ", aspect ratio: " << static_cast<real>(camera_right_->numberOfImageCols())/camera_right_->numberOfImageRows() << std::endl)
+
+  //ds configure remaining components
+  _graph_optimizer->configure();
+  _relocalizer->configure();
 }
 
 void SLAMAssembly::initializeGUI(std::shared_ptr<QApplication> ui_server_) {

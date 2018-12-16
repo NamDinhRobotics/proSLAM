@@ -5,7 +5,7 @@
 #include "srrg_messages/message_reader.h"
 #include "srrg_messages/message_timestamp_synchronizer.h"
 
-#include "position_tracking/base_tracker.h"
+#include "../position_tracking/pose_tracker_3d.h"
 #include "map_optimization/graph_optimizer.h"
 #include "relocalization/relocalizer.h"
 #include "visualization/image_viewer.h"
@@ -122,7 +122,7 @@ protected:
   Relocalizer* _relocalizer;
 
   //ds tracking component, deriving the robots odometry
-  BaseTracker* _tracker;
+  PoseTracker3D* _tracker;
 
   //ds loaded sensors
   Camera* _camera_left;

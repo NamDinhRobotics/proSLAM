@@ -188,7 +188,8 @@ public:
   int32_t maximum_projection_tracking_distance_pixels = 50;
 
   //! @brief dynamic thresholds for descriptor matching
-  real matching_distance_tracking_threshold = 0.2*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS;
+  real minimum_descriptor_distance_tracking = 0.1*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS;
+  real maximum_descriptor_distance_tracking = 0.2*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS;
 
   //! @brief maximum reliable depth with chosen sensor (stereo, depth, sonar, ..)
   real maximum_reliable_depth_meters = 15;   //ds up to this value the depth is quite precise
@@ -241,14 +242,14 @@ public:
 };
 
 //! @class base tracker parameters
-class BaseTrackerParameters: public Parameters {
+class PoseTracker3DParameters: public Parameters {
 public:
 
   //! @brief default construction (only by subclasses)
-  BaseTrackerParameters();
+  PoseTracker3DParameters();
 
   //! @brief destructor: clean inner parameters
-  ~BaseTrackerParameters() {delete aligner;}
+  ~PoseTracker3DParameters() {delete aligner;}
 
 public:
 
@@ -263,6 +264,10 @@ public:
 
   //! @brief point tracking thresholds
   real tunnel_vision_ratio = 0.75;
+
+  //! @brief good tracking situation
+  real good_tracking_ratio            = 0.3;
+  Count good_number_of_tracked_points = 100;
 
   //! @brief framepoint track recovery
   bool enable_landmark_recovery               = true;
@@ -450,19 +455,19 @@ public:
   static std::string banner;
 
   //! @brief inner parameters (required for logging inside parameter collection)
-  Parameters* _parameters = 0;
+  Parameters* _parameters = nullptr;
 
-  CommandLineParameters* command_line_parameters                              = 0;
-  WorldMapParameters* world_map_parameters                                    = 0;
-  StereoFramePointGeneratorParameters* stereo_framepoint_generator_parameters = 0;
-  DepthFramePointGeneratorParameters* depth_framepoint_generator_parameters   = 0;
-  BaseTrackerParameters* tracker_parameters                                   = 0;
-  RelocalizerParameters* relocalizer_parameters                               = 0;
-  GraphOptimizerParameters* graph_optimizer_parameters                        = 0;
+  CommandLineParameters* command_line_parameters                              = nullptr;
+  WorldMapParameters* world_map_parameters                                    = nullptr;
+  StereoFramePointGeneratorParameters* stereo_framepoint_generator_parameters = nullptr;
+  DepthFramePointGeneratorParameters* depth_framepoint_generator_parameters   = nullptr;
+  PoseTracker3DParameters* tracker_parameters                                 = nullptr;
+  RelocalizerParameters* relocalizer_parameters                               = nullptr;
+  GraphOptimizerParameters* graph_optimizer_parameters                        = nullptr;
 
-  ImageViewerParameters* image_viewer_parameters = 0;
-  MapViewerParameters* map_viewer_parameters     = 0;
-  MapViewerParameters* top_map_viewer_parameters = 0;
+  ImageViewerParameters* image_viewer_parameters = nullptr;
+  MapViewerParameters* map_viewer_parameters     = nullptr;
+  MapViewerParameters* top_map_viewer_parameters = nullptr;
 
 //ds inner attributes
 protected:

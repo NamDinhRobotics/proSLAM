@@ -6,10 +6,10 @@
 namespace proslam {
 
 //ds this class processes two subsequent Frames and establishes Framepoint correspondences (tracks) based on the corresponding images
-class BaseTracker {
+class PoseTracker3D {
 
 //ds object handling
-PROSLAM_MAKE_PROCESSING_CLASS(BaseTracker)
+PROSLAM_MAKE_PROCESSING_CLASS(PoseTracker3D)
 
 //ds functionality
 public:
@@ -87,6 +87,7 @@ protected:
 
   //! @brief currently active projection tracking distance (adjusted dynamically at runtime)
   int32_t _projection_tracking_distance_pixels = 0;
+  real _current_descriptor_distance_tracking   = 0;
 
   //gg working elements
   cv::Mat _intensity_image_left;
@@ -123,4 +124,7 @@ private:
   Count _total_number_of_tracked_points = 0;
   Count _total_number_of_landmarks      = 0;
 };
+
+typedef std::shared_ptr<PoseTracker3D> PoseTracker3DPtr;
+
 }
