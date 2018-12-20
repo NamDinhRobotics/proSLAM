@@ -11,7 +11,7 @@ command_line:
   dataset_file_name:
 
   #ds options
-  option_use_gui:                   false
+  option_use_gui:                   true
   option_use_odometry:              false
   option_disable_relocalization:    false
   option_show_top_viewer:           false
@@ -72,7 +72,7 @@ base_framepoint_generation:
   
   #feature density regularization
   enable_keypoint_binning: true
-  bin_size_pixels:         10
+  bin_size_pixels:         15
 
 stereo_framepoint_generation:
 
@@ -92,7 +92,7 @@ tracking:
   #point tracking thresholds
   tunnel_vision_ratio:           0.75
   good_tracking_ratio:           0.3
-  good_number_of_tracked_points: 200
+  good_number_of_tracked_points: 100
 
   #landmark track recovery (if enabled)
   maximum_number_of_landmark_recoveries: 10
@@ -125,7 +125,7 @@ relocalization:
   preliminary_minimum_matching_ratio: 0.1
 
   #minimum absolute number of matches
-  minimum_number_of_matched_landmarks: 50
+  minimum_number_of_matched_landmarks: 25
 
   #correspondence retrieval
   minimum_matches_per_correspondence: 0
@@ -135,7 +135,7 @@ relocalization:
   aligner->maximum_error_kernel:         1.0
   aligner->damping:                      0.0
   aligner->maximum_number_of_iterations: 100
-  aligner->minimum_number_of_inliers:    50
+  aligner->minimum_number_of_inliers:    25
   aligner->minimum_inlier_ratio:         0.5
 
 graph_optimization:

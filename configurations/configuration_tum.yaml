@@ -26,7 +26,7 @@ command_line:
 landmark:
 
   #ds maximum measured distance kernel for landmark optimization
-  maximum_error_squared_meters: 4.0
+  maximum_error_squared_meters: 1.0
 
 local_map:
 
@@ -39,7 +39,7 @@ local_map:
 world_map:
 
   #ds key frame generation properties
-  minimum_distance_traveled_for_local_map: 1.0
+  minimum_distance_traveled_for_local_map: 0.5
   minimum_degrees_rotated_for_local_map:   0.5
   minimum_number_of_frames_for_local_map:  10
 
@@ -53,16 +53,16 @@ base_framepoint_generation:
   detector_threshold_maximum_change:    0.5
   detector_threshold_minimum:           10
   detector_threshold_maximum:           100
-  number_of_detectors_vertical:         2
-  number_of_detectors_horizontal:       2
+  number_of_detectors_vertical:         1
+  number_of_detectors_horizontal:       1
 
   #point tracking thresholds
   minimum_projection_tracking_distance_pixels: 10
   maximum_projection_tracking_distance_pixels: 50
 
   #ds dynamic thresholds for descriptor tracking
-  minimum_descriptor_distance_tracking: 25
-  maximum_descriptor_distance_tracking: 50
+  minimum_descriptor_distance_tracking: 40
+  maximum_descriptor_distance_tracking: 40
   
   #depth sensor configuration
   maximum_reliable_depth_meters: 2.5
@@ -117,7 +117,7 @@ tracking:
   aligner->maximum_number_of_iterations: 1000
   aligner->minimum_number_of_inliers:    0
   aligner->minimum_inlier_ratio:         0
-  aligner->enable_inverse_depth_information_for_translation_estimation: true
+  aligner->enable_inverse_depth_as_information: true
 
 relocalization:
 
@@ -128,10 +128,10 @@ relocalization:
   preliminary_minimum_interspace_queries: 5
 
   #minimum relative number of matches
-  preliminary_minimum_matching_ratio: 0.1
+  preliminary_minimum_matching_ratio: 0.05
 
   #minimum absolute number of matches
-  minimum_number_of_matched_landmarks: 50
+  minimum_number_of_matched_landmarks: 100
 
   #correspondence retrieval
   minimum_matches_per_correspondence: 0
@@ -141,7 +141,7 @@ relocalization:
   aligner->maximum_error_kernel:         0.1
   aligner->damping:                      0.0
   aligner->maximum_number_of_iterations: 100
-  aligner->minimum_number_of_inliers:    50
+  aligner->minimum_number_of_inliers:    100
   aligner->minimum_inlier_ratio:         0.5
 
 graph_optimization:
@@ -168,13 +168,13 @@ graph_optimization:
   base_information_frame: 1e5
   
   #free translation for pose to pose measurements
-  free_translation_for_poses: false
+  free_translation_for_poses: true
   
   #translational frame weight reduction in pose graph
   base_information_frame_factor_for_translation: 1e-5
 
   #enable robust kernel for loop closure measurements
-  enable_robust_kernel_for_poses: true
+  enable_robust_kernel_for_poses: false
 
   #enable robust kernel for landmark measurements
   enable_robust_kernel_for_landmarks: false
