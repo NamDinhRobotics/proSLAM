@@ -221,7 +221,7 @@ namespace proslam {
         total_error_previous = _total_error;
 
         //ds if we have at least a certain number of inliers and more inliers than outliers - trigger inlier only runs
-        if (_number_of_inliers > 100 && _number_of_inliers > _number_of_outliers) {
+        if (_number_of_inliers > _parameters->minimum_number_of_inliers && _number_of_inliers > _number_of_outliers) {
           for (Count iteration_inlier = 0; iteration_inlier < _parameters->maximum_number_of_iterations; ++iteration_inlier) {
             oneRound(true);
 

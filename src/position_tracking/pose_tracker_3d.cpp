@@ -237,8 +237,8 @@ void PoseTracker3D::_track(Frame* previous_frame_,
     }
   }
 
-  //ds if the tracking ratio is insufficient or we do not have enough tracks
-  if (_tracking_ratio < _parameters->good_tracking_ratio || _number_of_tracked_points < _parameters->good_number_of_tracked_points) {
+  //ds if the tracking ratio is insufficient or we do not have enough landmark tracks (framepoint tracks are too volatile)
+  if (_tracking_ratio < _parameters->good_tracking_ratio) {
 
     //ds be less restrictive in tracking
     if (_current_descriptor_distance_tracking < _framepoint_generator->parameters()->maximum_descriptor_distance_tracking) {
@@ -422,9 +422,7 @@ void PoseTracker3D::_prunePoints(Frame* frame_) {
   _number_of_tracked_points = 0;
 
   //ds if we had a sufficient pose optimization - TODO parametrize in tracker
-  if (_pose_optimizer->inlierRatio() > 0.5 &&
-      _pose_optimizer->numberOfInliers() > _parameters->good_number_of_tracked_points &&
-      frame_->status() == Frame::Tracking) {
+  if (_pose_optimizer->averageError() < _pose_optimizer->parameters()->maximum_error_kernel) {
     for (Index index_point = 0; index_point < frame_->points().size(); index_point++) {
       assert(frame_->points()[index_point]->previous());
 
@@ -439,7 +437,7 @@ void PoseTracker3D::_prunePoints(Frame* frame_) {
       assert(frame_->points()[index_point]->previous());
 
       //ds keep all points which were not suppressed in the optimization
-      if (_pose_optimizer->errors()[index_point] != -1 && _pose_optimizer->errors()[index_point] < 10000) {
+      if (_pose_optimizer->errors()[index_point] != -1) {
         frame_->points()[_number_of_tracked_points] = frame_->points()[index_point];
         ++_number_of_tracked_points;
       }

@@ -76,13 +76,15 @@ void  BaseFramePointGenerator::configure(){
   _detectors           = new cv::Ptr<cv::FastFeatureDetector>*[_parameters->number_of_detectors_vertical];
   _detector_regions    = new cv::Rect*[_parameters->number_of_detectors_vertical];
   _detector_thresholds = new real*[_parameters->number_of_detectors_vertical];
+  _detector_thresholds_accumulated = new real*[_parameters->number_of_detectors_vertical];
   const real pixel_rows_per_detector = static_cast<real>(_number_of_rows_image)/_parameters->number_of_detectors_vertical;
   const real pixel_cols_per_detector = static_cast<real>(_number_of_cols_image)/_parameters->number_of_detectors_horizontal;
-  for (uint32_t r = 0; r < _parameters->number_of_detectors_vertical; ++r) {
+  for (int32_t r = 0; r < _parameters->number_of_detectors_vertical; ++r) {
     _detectors[r]           = new cv::Ptr<cv::FastFeatureDetector>[_parameters->number_of_detectors_horizontal];
     _detector_regions[r]    = new cv::Rect[_parameters->number_of_detectors_horizontal];
     _detector_thresholds[r] = new real[_parameters->number_of_detectors_horizontal];
-    for (uint32_t c = 0; c < _parameters->number_of_detectors_horizontal; ++c) {
+    _detector_thresholds_accumulated[r] = new real[_parameters->number_of_detectors_horizontal];
+    for (int32_t c = 0; c < _parameters->number_of_detectors_horizontal; ++c) {
 #if CV_MAJOR_VERSION == 2
       _detectors[r][c] = new cv::FastFeatureDetector(_parameters->detector_threshold_minimum);
 #else
@@ -93,6 +95,7 @@ void  BaseFramePointGenerator::configure(){
                                          pixel_cols_per_detector,
                                          pixel_rows_per_detector);
       _detector_thresholds[r][c] = 0;
+      _detector_thresholds_accumulated[r][c] = 0;
     }
   }
   _number_of_detectors = _parameters->number_of_detectors_vertical*_parameters->number_of_detectors_horizontal;
@@ -130,14 +133,16 @@ BaseFramePointGenerator::~BaseFramePointGenerator() {
 
   //ds deallocate dynamic data structures: detectors
   if (_detectors && _detector_regions && _detector_thresholds) {
-    for (uint32_t r = 0; r < _parameters->number_of_detectors_vertical; ++r) {
+    for (int32_t r = 0; r < _parameters->number_of_detectors_vertical; ++r) {
       delete[] _detectors[r];
       delete[] _detector_regions[r];
       delete[] _detector_thresholds[r];
+      delete[] _detector_thresholds_accumulated[r];
     }
     delete [] _detectors;
     delete [] _detector_regions;
     delete [] _detector_thresholds;
+    delete[] _detector_thresholds_accumulated;
   }
 
   //ds free bin map
@@ -154,8 +159,8 @@ void BaseFramePointGenerator::detectKeypoints(const cv::Mat& intensity_image_,
   CHRONOMETER_START(keypoint_detection)
 
   //ds detect new keypoints in each image region
-  for (uint32_t r = 0; r < _parameters->number_of_detectors_vertical; ++r) {
-    for (uint32_t c = 0; c < _parameters->number_of_detectors_horizontal; ++c) {
+  for (int32_t r = 0; r < _parameters->number_of_detectors_vertical; ++r) {
+    for (int32_t c = 0; c < _parameters->number_of_detectors_horizontal; ++c) {
 
       //ds detect keypoints in current region
       std::vector<cv::KeyPoint> keypoints_per_detector(0);
@@ -183,8 +188,8 @@ void BaseFramePointGenerator::detectKeypoints(const cv::Mat& intensity_image_,
         //ds minimum feasible threshold is 0
         detector_threshold_new = std::max(detector_threshold_new, 0.0);
 
-        //ds check if we can below the minimum threshold
-        if (detector_threshold_new >= _parameters->detector_threshold_minimum || ignore_minimum_detector_threshold_) {
+        //ds check if we don't violate the minimum threshold
+        if (detector_threshold_new > _parameters->detector_threshold_minimum || ignore_minimum_detector_threshold_) {
           detector_threshold = detector_threshold_new;
         }
       }
@@ -227,20 +232,68 @@ void BaseFramePointGenerator::computeDescriptors(const cv::Mat& intensity_image_
 }
 
 void BaseFramePointGenerator::adjustDetectorThresholds() {
-  for (uint32_t r = 0; r < _parameters->number_of_detectors_vertical; ++r) {
-    for (uint32_t c = 0; c < _parameters->number_of_detectors_horizontal; ++c) {
 
-      //ds compute average threshold over last detections
-      _detector_thresholds[r][c] /= _number_of_detections;
+  //ds single detector configuration - no smoothing to be done
+  if (_parameters->number_of_detectors_vertical == 1 && _parameters->number_of_detectors_horizontal == 1) {
 
+    //ds compute average threshold over last detections
+    _detector_thresholds[0][0] /= _number_of_detections;
+
+    //ds set threshold to detector
 #if CV_MAJOR_VERSION == 2
-      _detectors[r][c]->setInt("threshold", std::rint(_detector_thresholds[r][c]));
+    _detectors[0][0]->setInt("threshold", std::rint(_detector_thresholds[0][0]));
 #else
-      _detectors[r][c]->setThreshold(std::rint(_detector_thresholds[r][c]));
+    _detectors[0][0]->setThreshold(std::rint(_detector_thresholds[0][0]));
 #endif
 
-      //ds reset bookkeeping for next detection(s)
-      _detector_thresholds[r][c] = 0;
+    //ds reset bookkeeping for next detection(s)
+    _detector_thresholds[0][0] = 0;
+  }
+
+  //ds multiple detector configuration
+  else {
+
+    for (int32_t r = 0; r < _parameters->number_of_detectors_vertical; ++r) {
+      for (int32_t c = 0; c < _parameters->number_of_detectors_horizontal; ++c) {
+
+        //ds compute average threshold over last detections
+        _detector_thresholds[r][c] /= _number_of_detections;
+
+        //ds add this threshold to its maximally 8 neighbors
+        for (int32_t rr = std::max(0, r-1); rr < std::min(_parameters->number_of_detectors_vertical, r+2); ++rr) {
+          for (int32_t cc = std::max(0, c-1); cc < std::min(_parameters->number_of_detectors_horizontal, c+2); ++cc) {
+            if (rr != r || cc != c) {
+              _detector_thresholds_accumulated[rr][cc] += _detector_thresholds[r][c];
+            }
+          }
+        }
+      }
+    }
+
+    //ds compute smooth thresholds based on neighboring averages
+    for (int32_t r = 0; r < _parameters->number_of_detectors_vertical; ++r) {
+      for (int32_t c = 0; c < _parameters->number_of_detectors_horizontal; ++c) {
+        uint32_t number_of_neighbors_rows = 3;
+        uint32_t number_of_neighbors_cols = 3;
+        if (r == 0 || r == _parameters->number_of_detectors_vertical-1) {number_of_neighbors_rows = 2;}
+        if (c == 0 || c == _parameters->number_of_detectors_horizontal-1) {number_of_neighbors_cols = 2;}
+        const uint32_t number_of_neighbors = number_of_neighbors_rows*number_of_neighbors_cols-1;
+
+        //ds weight neighbors at 10%
+        _detector_thresholds[r][c] += 0.1*_detector_thresholds_accumulated[r][c]/number_of_neighbors;
+        _detector_thresholds[r][c] /= 1.1;
+
+        //ds set threshold to detector
+  #if CV_MAJOR_VERSION == 2
+        _detectors[r][c]->setInt("threshold", std::rint(_detector_thresholds[r][c]));
+  #else
+        _detectors[r][c]->setThreshold(std::rint(_detector_thresholds[r][c]));
+  #endif
+
+        //ds reset bookkeeping for next detection(s)
+        _detector_thresholds[r][c] = 0;
+        _detector_thresholds_accumulated[r][c] = 0;
+      }
     }
   }
   _number_of_detections = 0;

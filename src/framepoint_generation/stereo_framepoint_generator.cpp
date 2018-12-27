@@ -85,7 +85,7 @@ void StereoFramePointGenerator::initialize(Frame* frame_, const bool& extract_fe
       _current_maximum_descriptor_distance_triangulation = std::min(0.1*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS, _parameters->maximum_matching_distance_triangulation);
     } else {
 
-      //ds adjust triangulation distance: few point > narrow window as we cannot permit invalid triangulations
+      //ds adjust triangulation distance: few points > narrow window as we cannot permit invalid triangulations
       const real ratio_available_points = std::min(static_cast<real>(_number_of_detected_keypoints)/_target_number_of_keypoints, 1.0);
       _current_maximum_descriptor_distance_triangulation = std::max(ratio_available_points*_parameters->maximum_matching_distance_triangulation, 0.1*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS);
     }
@@ -236,8 +236,8 @@ void StereoFramePointGenerator::compute(Frame* frame_) {
   LOG_DEBUG(std::cerr << "StereoFramePointGenerator::compute|number of new stereo points: " << number_of_new_points << "/" << _number_of_detected_keypoints << std::endl)
 
   //ds update framepoints - checking for the available points to optionally disable binning in very sparse scenarios TODO expose as parameter
-  //const real available_point_ratio = static_cast<real>(number_of_points_tracked+framepoints_new.size())/_target_number_of_keypoints;
-  if (_parameters->enable_keypoint_binning) {
+  const real available_point_ratio = static_cast<real>(number_of_points_tracked+framepoints_new.size())/_target_number_of_keypoints;
+  if (_parameters->enable_keypoint_binning && available_point_ratio > _parameters->minimum_point_ratio_for_binning) {
 
     //ds reserve space for the best case (all points can be added)
     Count number_of_points_binned = number_of_points_tracked;
@@ -260,15 +260,15 @@ void StereoFramePointGenerator::compute(Frame* frame_) {
     //ds add all points to frame
     framepoints.insert(framepoints.end(), framepoints_new.begin(), framepoints_new.end());
 
-//    //ds clean up bins if skipped before
-//    if (_parameters->enable_keypoint_binning) {
-//      LOG_WARNING(std::cerr << "|StereoFramePointGenerator::compute|" << frame_->identifier() << "|skipped binning due to low point density: " << available_point_ratio << std::endl)
-//      for (Index row = 0; row < _number_of_rows_bin; ++row) {
-//        for (Index col = 0; col < _number_of_cols_bin; ++col) {
-//          _bin_map_left[row][col] = nullptr;
-//        }
-//      }
-//    }
+    //ds clean up bins if skipped before
+    if (_parameters->enable_keypoint_binning) {
+      LOG_WARNING(std::cerr << "|StereoFramePointGenerator::compute|" << frame_->identifier() << "|skipped binning due to low point density: " << available_point_ratio << std::endl)
+      for (Index row = 0; row < _number_of_rows_bin; ++row) {
+        for (Index col = 0; col < _number_of_cols_bin; ++col) {
+          _bin_map_left[row][col] = nullptr;
+        }
+      }
+    }
   }
 
 //  //ds compute final triangulation ratio
@@ -325,6 +325,8 @@ void StereoFramePointGenerator::track(Frame* frame_,
   Count number_of_points       = 0;
   Count number_of_points_lost  = 0;
   _number_of_tracked_landmarks = 0;
+
+//  std::cerr << "tracking: " << _maximum_descriptor_distance_tracking << " detection: " << _detectors[0][0]->getThreshold() << std::endl;
 
   //ds for each previous point
   for (FramePoint* point_previous: framepoints_previous) {
@@ -413,6 +415,14 @@ void StereoFramePointGenerator::track(Frame* frame_,
         //ds skip feature if descriptor distance to previous is violated
         if (cv::norm(feature_right->descriptor, point_previous->descriptorRight(), SRRG_PROSLAM_DESCRIPTOR_NORM) > _maximum_descriptor_distance_tracking) {
           continue;
+        }
+
+        //ds remove remaining matches in parallax between left and right point in the right image
+        for (int32_t col = feature_right->col+1; col < feature_left->col; ++col) {
+          if (_feature_matcher_right.feature_lattice[feature_right->row][col]) {
+            matched_indices_right.insert(_feature_matcher_right.feature_lattice[feature_right->row][col]->index_in_vector);
+            _feature_matcher_right.feature_lattice[feature_right->row][col] = nullptr;
+          }
         }
 
         //ds create a stereo match
@@ -609,6 +619,9 @@ void StereoFramePointGenerator::recoverPoints(Frame* current_frame_, const Frame
                                                                  descriptor_distance_triangulation,
                                                                  getPointInLeftCamera(keypoint_buffer_left[0].pt, keypoint_buffer_right[0].pt),
                                                                  point_previous);
+
+    delete feature_left;
+    delete feature_right;
 
     //ds set the point to the control structure
     current_frame_->points()[index_lost_point_recovered] = current_point;

@@ -154,10 +154,6 @@ protected:
   //! @brief epipolar offset at triangulation (0 for regular, horizontal triangulation)
   int32_t _epipolar_offset = 0;
 
-  //! @brief feature objects
-  const IntensityFeature* _feature_left  = nullptr;
-  const IntensityFeature* _feature_right = nullptr;
-
   //ds point position in various coordinate frames
   PointCoordinates _camera_coordinates_left = PointCoordinates::Zero(); //ds 3D point in left camera coordinate frame
   PointCoordinates _robot_coordinates       = PointCoordinates::Zero(); //ds 3D point in robot coordinate frame

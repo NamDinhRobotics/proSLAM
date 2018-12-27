@@ -122,8 +122,8 @@ IntensityFeature* IntensityFeatureMatcher::getMatchingFeatureInRectangularRegion
           if (descriptor_distance < maximum_descriptor_distance_tracking_) {
 
             //ds compute projection distance
-            const uint32_t row_distance_pixels        = row_reference_-row;
-            const uint32_t col_distance_pixels        = col_reference_-col;
+            const int32_t row_distance_pixels         = row_reference_-row;
+            const int32_t col_distance_pixels         = col_reference_-col;
             const uint32_t projection_distance_pixels = row_distance_pixels*row_distance_pixels+col_distance_pixels*col_distance_pixels;
 
             //ds if better than best so far
@@ -164,6 +164,8 @@ void IntensityFeatureMatcher::prune(const std::set<uint32_t>& matched_indices_) 
 
       //ds move on
       ++number_of_unmatched_elements;
+    } else {
+      delete feature_vector[index];
     }
   }
   feature_vector.resize(number_of_unmatched_elements);

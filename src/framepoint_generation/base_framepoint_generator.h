@@ -90,6 +90,7 @@ protected:
   //! @brief grid of detectors (equally distributed over the image with size=number_of_detectors_per_dimension*number_of_detectors_per_dimension)
   cv::Ptr<cv::FastFeatureDetector>** _detectors = nullptr;
   real** _detector_thresholds                   = nullptr;
+  real** _detector_thresholds_accumulated       = nullptr;
 
   //! @brief number of detectors
   //! @brief the same for all image streams

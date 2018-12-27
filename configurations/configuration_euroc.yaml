@@ -94,7 +94,6 @@ tracking:
   #point tracking thresholds
   tunnel_vision_ratio:           0.75
   good_tracking_ratio:           0.3
-  good_number_of_tracked_points: 100
 
   #point tracking thresholds
   minimum_projection_tracking_distance_pixels: 10

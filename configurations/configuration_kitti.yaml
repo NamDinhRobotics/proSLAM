@@ -92,7 +92,6 @@ tracking:
   #point tracking thresholds
   tunnel_vision_ratio:           0.75
   good_tracking_ratio:           0.3
-  good_number_of_tracked_points: 100
 
   #landmark track recovery (if enabled)
   maximum_number_of_landmark_recoveries: 10

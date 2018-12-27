@@ -85,7 +85,7 @@ public:
   Count maximum_number_of_iterations = 1000;
 
   //! @brief the minimum number of inliers required for a valid alignment
-  Count minimum_number_of_inliers    = 25;
+  Count minimum_number_of_inliers    = 100;
 
   //! @brief the minimum ratio of inliers to outliers required for a valid alignment
   real minimum_inlier_ratio          = 0.5;
@@ -177,8 +177,8 @@ public:
   real detector_threshold_maximum_change    = 0.1;
 
   //! @brief detector number per image dimension
-  uint32_t number_of_detectors_vertical   = 1;
-  uint32_t number_of_detectors_horizontal = 1;
+  int32_t number_of_detectors_vertical   = 1;
+  int32_t number_of_detectors_horizontal = 1;
 
   //! @brief number of camera image streams (required for detector regions)
   uint32_t number_of_cameras = 1;
@@ -199,6 +199,7 @@ public:
   //! @brief feature density regularization
   bool enable_keypoint_binning = true;
   Count bin_size_pixels        = 15;
+  real minimum_point_ratio_for_binning = 0.0;
 };
 
 //! @class framepoint generation parameters for a stereo camera setup
@@ -266,8 +267,7 @@ public:
   real tunnel_vision_ratio = 0.75;
 
   //! @brief good tracking situation
-  real good_tracking_ratio            = 0.3;
-  Count good_number_of_tracked_points = 100;
+  real good_tracking_ratio = 0.3;
 
   //! @brief framepoint track recovery
   bool enable_landmark_recovery               = true;
