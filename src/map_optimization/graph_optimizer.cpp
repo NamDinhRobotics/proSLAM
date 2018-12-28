@@ -156,7 +156,7 @@ void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std:
       _setPoseEdge(pose_graph,
                   vertex_frame_current,
                   vertex_frame_last_added,
-                  (frame.second->previous()->worldToRobot()*frame.second->robotToWorld()).cast<double>(),
+                  frame.second->previous()->worldToRobot()*frame.second->robotToWorld(),
                   _parameters->base_information_frame);
     }
 
@@ -441,12 +441,12 @@ void GraphOptimizer::optimizeFactorGraph(WorldMap* world_map_) {
 void GraphOptimizer::_setPoseEdge(g2o::OptimizableGraph* optimizer_,
                                   g2o::OptimizableGraph::Vertex* vertex_from_,
                                   g2o::OptimizableGraph::Vertex* vertex_to_,
-                                  const g2o::Isometry3& transform_from_to_,
+                                  const TransformMatrix3D& transform_from_to_,
                                   const real& information_factor_) const {
   g2o::EdgeSE3* edge_pose = new g2o::EdgeSE3();
   edge_pose->setVertex(1, vertex_from_);
   edge_pose->setVertex(0, vertex_to_);
-  edge_pose->setMeasurement(transform_from_to_);
+  edge_pose->setMeasurement(transform_from_to_.cast<double>());
 
   //ds information value
   Eigen::Matrix<double, 6, 6> information(information_factor_*Eigen::Matrix<double, 6, 6>::Identity());

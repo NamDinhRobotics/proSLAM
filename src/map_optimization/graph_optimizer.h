@@ -84,7 +84,7 @@ protected:
   void _setPoseEdge(g2o::OptimizableGraph* optimizer_,
                     g2o::OptimizableGraph::Vertex* vertex_from_,
                     g2o::OptimizableGraph::Vertex* vertex_to_,
-                    const g2o::Isometry3& transform_from_to_,
+                    const TransformMatrix3D& transform_from_to_,
                     const real& information_factor_) const;
 
   void _setPointEdge(g2o::OptimizableGraph* optimizer_,
