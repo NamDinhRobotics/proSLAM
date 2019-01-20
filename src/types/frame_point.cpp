@@ -36,9 +36,11 @@ FramePoint::FramePoint(const IntensityFeature* feature_left_,
   ++_instances;
 }
 
-FramePoint::~FramePoint() {}
+FramePoint::~FramePoint() {
+  clear();
+}
 
-void FramePoint::setPrevious(FramePoint* previous_) {
+void FramePoint::setPrevious(FramePoint* previous_, const bool& move_origin_) {
 
   //ds update linked list
   previous_->_next = this;
@@ -46,8 +48,36 @@ void FramePoint::setPrevious(FramePoint* previous_) {
   _has_unreliable_depth = previous_->_has_unreliable_depth;
 
   //ds update current
-  setLandmark(previous_->landmark());
   setTrackLength(previous_->trackLength()+1);
-  setOrigin(previous_->origin());
+  if (move_origin_) {
+    setOrigin(previous_->origin());
+  }
 }
-} //namespace proslam
+
+void FramePoint::clear() {
+
+  //ds detach from track
+  if (_previous) {
+    _previous->_next = nullptr;
+    _previous        = nullptr;
+  }
+  if (_next) {
+    _next->_previous = nullptr;
+    if (_next->_origin == this) {
+      _next->_origin = _next;
+    }
+  }
+  if (_landmark) {
+    if (_landmark->origin() == this) {
+      assert(_next);
+      _landmark->setOrigin(_next);
+    }
+    _landmark = nullptr;
+  }
+
+  //ds reset
+  _next = nullptr;
+  setTrackLength(0);
+  setOrigin(this);
+}
+} //proslam

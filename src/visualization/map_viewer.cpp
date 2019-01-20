@@ -18,6 +18,7 @@ MapViewer::MapViewer(MapViewerParameters* parameters_): _parameters(parameters_)
                                                         _world_to_robot(TransformMatrix3D::Identity()) {
   setWindowTitle(_parameters->window_title.c_str());
 //  setFPSIsDisplayed(true);
+  _visible_landmarks.clear();
 
   //ds set keyboard descriptions
   setKeyDescription(Qt::Key_1, "Toggles map points display");
@@ -38,6 +39,7 @@ MapViewer::MapViewer(MapViewerParameters* parameters_): _parameters(parameters_)
 
 MapViewer::~MapViewer() {
   LOG_DEBUG(std::cerr << "MapViewer::~MapViewer|destroying" << std::endl)
+  _visible_landmarks.clear();
   LOG_DEBUG(std::cerr << "MapViewer::~MapViewer|destroyed" << std::endl)
 }
 
@@ -52,6 +54,16 @@ void MapViewer::update(const Frame* frame_) {
 
   //ds update the current frame
   _current_frame = frame_;
+
+  //ds update visible landmarks
+  update(_world_map->currentlyTrackedLandmarks());
+}
+
+void MapViewer::update(const LandmarkPointerVector visible_landmarks_) {
+  _visible_landmarks.resize(visible_landmarks_.size());
+  for (Index u = 0; u < visible_landmarks_.size(); ++u) {
+    _visible_landmarks[u] = visible_landmarks_[u];
+  }
 }
 
 void MapViewer::_drawFrame(const Frame* frame_, const Vector3& color_rgb_) const {
@@ -97,7 +109,7 @@ void MapViewer::_drawLandmarks() const {
 
   //ds highlight the currently seen landmarks
   glColor3f(0, 0, 1);
-  for (const Landmark* landmark: _world_map->currentlyTrackedLandmarks()) {
+  for (const Landmark* landmark: _visible_landmarks) {
     glVertex3f(landmark->coordinates().x(), landmark->coordinates().y(), landmark->coordinates().z());
   }
 
@@ -116,15 +128,29 @@ void MapViewer::_drawLandmarks() const {
     glVertex3f(landmark_coordinates.x(), landmark_coordinates.y(), landmark_coordinates.z());
   }
   glEnd();
+
+  glBegin(GL_LINES);
+  const PointCoordinates& robot_in_world = _world_map->robotToWorld().translation();
+  for (const Landmark* point: _visible_landmarks) {
+
+    //ds draw old landmarks with a darker color
+    const real intensity = 0.9-std::min(point->numberOfUpdates()/100.0, 0.9);
+    glColor3f(intensity, intensity, intensity);
+    glVertex3f(robot_in_world.x(), robot_in_world.y(), robot_in_world.z());
+    glVertex3f(point->coordinates().x(), point->coordinates().y(), point->coordinates().z());
+  }
+  glEnd();
 }
 
 void MapViewer::_drawFramepoints() const {
+  if (!_current_frame) {
+    return;
+  }
+
   glBegin(GL_POINTS);
-  if (_current_frame) {
-    for (const FramePoint* point: _current_frame->points()) {
-      glColor3f(0.75, 0.75, 0.75);
-      glVertex3f(point->worldCoordinates().x(), point->worldCoordinates().y(), point->worldCoordinates().z());
-    }
+  for (const FramePoint* point: _current_frame->points()) {
+    glColor3f(0.75, 0.75, 0.75);
+    glVertex3f(point->worldCoordinates().x(), point->worldCoordinates().y(), point->worldCoordinates().z());
   }
   glEnd();
 }
@@ -139,7 +165,10 @@ void MapViewer::draw(){
 
     //ds no specific lighting
     glDisable(GL_LIGHTING);
+
+    //ds disable blending (e.g. transparency)
     glDisable(GL_BLEND);
+//    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     //ds set viewpoint
     TransformMatrix3D world_to_robot(_world_to_robot_origin);

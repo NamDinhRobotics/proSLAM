@@ -5,8 +5,7 @@ namespace proslam {
 
 Count Landmark::_instances = 0;
 
-Landmark::Landmark(FramePoint* origin_, const LandmarkParameters* parameters_): _identifier(_instances),
-                                                                                _origin(origin_),
+Landmark::Landmark(FramePoint* point_, const LandmarkParameters* parameters_): _identifier(_instances),
                                                                                 _parameters(parameters_) {
   ++_instances;
   _measurements.clear();
@@ -18,19 +17,30 @@ Landmark::Landmark(FramePoint* origin_, const LandmarkParameters* parameters_): 
   //ds we do not weight the measurements with disparity/inverse depth here
   //ds since invalid, small depths can lead to a fatal initial guess
   _world_coordinates.setZero();
-  FramePoint* framepoint = origin_;
+  FramePoint* framepoint = point_;
   while (framepoint) {
     framepoint->setLandmark(this);
     _measurements.push_back(Measurement(framepoint));
+    _descriptors.push_back(framepoint->descriptorLeft());
     _origin = framepoint;
     _world_coordinates += framepoint->worldCoordinates();
     framepoint = framepoint->previous();
   }
   _world_coordinates /= _measurements.size();
   _number_of_updates = _measurements.size();
+  _last_update = point_;
 }
 
 Landmark::~Landmark() {
+
+  //ds decouple itself from all framepoints
+  assert(!_origin->previous());
+  FramePoint* point = _origin;
+  while (point) {
+    point->setLandmark(nullptr);
+    point = point->next();
+  }
+
   _appearance_map.clear();
   _measurements.clear();
   _descriptors.clear();
@@ -49,11 +59,13 @@ void Landmark::replace(const HBSTMatchable* matchable_old_, HBSTMatchable* match
 }
 
 void Landmark::update(FramePoint* point_) {
+  assert(point_->previous() == _last_update);
   _last_update = point_;
+  _last_update->setLandmark(this);
 
   //ds update appearance history (left descriptors only)
-  _descriptors.push_back(point_->descriptorLeft());
-  _measurements.push_back(Measurement(point_));
+  _descriptors.push_back(_last_update->descriptorLeft());
+  _measurements.push_back(Measurement(_last_update));
 
   //ds trigger classic ICP in camera update of landmark coordinates - setup
   Vector3 world_coordinates(_world_coordinates);
@@ -129,7 +141,7 @@ void Landmark::update(FramePoint* point_) {
         //ds reset estimate based on overall average
         PointCoordinates world_coordinates_accumulated(PointCoordinates::Zero());
         for (const Measurement& measurement: _measurements) {
-          world_coordinates_accumulated += measurement.frame->worldToCameraLeft()*measurement.camera_coordinates;
+          world_coordinates_accumulated += measurement.frame->cameraLeftToWorld()*measurement.camera_coordinates;
         }
 
         //ds set landmark state without increasing update count

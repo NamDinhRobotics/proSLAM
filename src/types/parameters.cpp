@@ -357,7 +357,6 @@ void ParameterCollection::parseFromFile(const std::string& filename_) {
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, maximum_projection_tracking_distance_pixels, int32_t)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, enable_keypoint_binning, bool)
     PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, bin_size_pixels, Count)
-    PARSE_PARAMETER(configuration, base_framepoint_generation, framepoint_generation_parameters, minimum_point_ratio_for_binning, real)
 
     //MotionEstimation (GENERIC)
     PARSE_PARAMETER(configuration, tracking, tracker_parameters, minimum_track_length_for_landmark_creation, Count)

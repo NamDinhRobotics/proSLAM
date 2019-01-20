@@ -2,7 +2,6 @@
 #include "types/landmark.h"
 
 namespace proslam {
-  using namespace srrg_core;
 
   StereoUVAligner::StereoUVAligner(AlignerParameters* parameters_): BaseFrameAligner(parameters_) {}
   StereoUVAligner::~StereoUVAligner() {}
@@ -31,6 +30,7 @@ namespace proslam {
       assert(_frame_current->cameraLeft()->isInFieldOfView(frame_point->imageCoordinatesLeft()));
       assert(_frame_current->cameraRight()->isInFieldOfView(frame_point->imageCoordinatesRight()));
       assert(frame_point->previous());
+      const FramePoint* previous = frame_point->previous();
 
       //ds set fixed part (image coordinates)
       _fixed[u](0) = frame_point->imageCoordinatesLeft().x();
@@ -39,25 +39,25 @@ namespace proslam {
       _fixed[u](3) = frame_point->imageCoordinatesRight().y();
 
       //ds if we have a landmark
-      if (frame_point->landmark()) {
+      if (previous->landmark()) {
+        assert(previous->landmark()->numberOfUpdates() > 1);
 
         //ds prefer landmark estimate
-        _moving[u] = frame_point->previous()->cameraCoordinatesLeftLandmark();
+        _moving[u] = previous->cameraCoordinatesLeftLandmark();
 
-        //ds increase weight linear in the number of updates
-        _information_matrix_vector[u] *= (1+frame_point->landmark()->numberOfUpdates());
+        //ds increase weight with the number of updates - purely additive
+        _information_matrix_vector[u] *= (1+log(previous->landmark()->numberOfUpdates()));
       } else {
 
         //ds set moving part (3D point coordinates)
-        _moving[u] = frame_point->previous()->cameraCoordinatesLeft();
+        _moving[u] = previous->cameraCoordinatesLeft();
       }
-
-      //ds scale information proportional to disparity of the measurement (the bigger, the closer, the better the triangulation)
-      _information_matrix_vector[u] *= std::log(1+frame_point->disparityPixels())/(1+std::fabs(frame_point->epipolarOffset()));
 
       //ds if individual weighting is desired
       if (_parameters->enable_inverse_depth_as_information) {
-        _weights_translation[u] = _maximum_reliable_depth_meters/_moving[u].z();
+
+        //ds use inverse depth as weight for translation contribution in jacobian: )0,1) * I
+        _weights_translation[u] = std::min(_maximum_reliable_depth_meters/frame_point->depthMeters(), 1.0);
       }
     }
 
@@ -146,7 +146,7 @@ namespace proslam {
       jacobian_transform.block<3,3>(0,0) = _weights_translation[u]*Matrix3::Identity();
 
       //ds rotation contribution - compensate for inverse depth (far points should have an equally strong contribution as close ones)
-      jacobian_transform.block<3,3>(0,3) = -2*skew(sampled_point_in_camera_left);
+      jacobian_transform.block<3,3>(0,3) = -2*srrg_core::skew(sampled_point_in_camera_left);
 
       //ds precompute
       const Matrix3_6 camera_matrix_per_jacobian_transform(_camera_calibration_matrix*jacobian_transform);
@@ -197,7 +197,7 @@ namespace proslam {
 
     //ds compute dense LS solution transformation after perturbation
     const Vector6 perturbation = _H.fullPivLu().solve(-_b);
-    _previous_to_current       = v2t(perturbation)*_previous_to_current;
+    _previous_to_current       = srrg_core::v2t(perturbation)*_previous_to_current;
 
     //ds enforce proper rotation matrix
     const Matrix3 rotation               = _previous_to_current.linear();

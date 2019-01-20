@@ -33,7 +33,6 @@ void StereoFramePointGenerator::configure(){
   _feature_matcher_right.configure(_number_of_rows_image, _number_of_cols_image);
 
   //ds configure epipolar search ranges (minimum 0)
-//  _maximum_epipolar_search_offset_pixels = _parameters->maximum_epipolar_search_offset_pixels;
   _epipolar_search_offsets_pixel.push_back(0);
   for (int32_t u = 1; u <= _parameters->maximum_epipolar_search_offset_pixels; ++u) {
     _epipolar_search_offsets_pixel.push_back(u);
@@ -85,7 +84,7 @@ void StereoFramePointGenerator::initialize(Frame* frame_, const bool& extract_fe
       _current_maximum_descriptor_distance_triangulation = std::min(0.1*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS, _parameters->maximum_matching_distance_triangulation);
     } else {
 
-      //ds adjust triangulation distance: few points > narrow window as we cannot permit invalid triangulations
+      //ds adjust triangulation distance: few points > narrow window as we cannot permit a relatively high ratio of invalid triangulations
       const real ratio_available_points = std::min(static_cast<real>(_number_of_detected_keypoints)/_target_number_of_keypoints, 1.0);
       _current_maximum_descriptor_distance_triangulation = std::max(ratio_available_points*_parameters->maximum_matching_distance_triangulation, 0.1*SRRG_PROSLAM_DESCRIPTOR_SIZE_BITS);
     }
@@ -194,11 +193,12 @@ void StereoFramePointGenerator::compute(Frame* frame_) {
 
           //ds if there is already a point in the bin
           if (_bin_map_left[row_bin][col_bin]) {
+            const FramePoint* current = _bin_map_left[row_bin][col_bin];
 
             //ds if the point in the bin is not tracked, we prefer points with maximal disparity (= maximally accurate depth estimate)
-            if (!_bin_map_left[row_bin][col_bin]->previous() &&
-                framepoint->disparityPixels() > _bin_map_left[row_bin][col_bin]->disparityPixels() &&
-                framepoint->descriptorDistanceTriangulation() <= _bin_map_left[row_bin][col_bin]->descriptorDistanceTriangulation()) {
+            if (!current->previous() &&
+                framepoint->disparityPixels() > current->disparityPixels() &&
+                framepoint->descriptorDistanceTriangulation() <= current->descriptorDistanceTriangulation()) {
 
               //ds overwrite the entry
               _bin_map_left[row_bin][col_bin] = framepoint;
@@ -235,9 +235,8 @@ void StereoFramePointGenerator::compute(Frame* frame_) {
   framepoints_new.resize(number_of_new_points);
   LOG_DEBUG(std::cerr << "StereoFramePointGenerator::compute|number of new stereo points: " << number_of_new_points << "/" << _number_of_detected_keypoints << std::endl)
 
-  //ds update framepoints - checking for the available points to optionally disable binning in very sparse scenarios TODO expose as parameter
-  const real available_point_ratio = static_cast<real>(number_of_points_tracked+framepoints_new.size())/_target_number_of_keypoints;
-  if (_parameters->enable_keypoint_binning && available_point_ratio > _parameters->minimum_point_ratio_for_binning) {
+  //ds update framepoints
+  if (_parameters->enable_keypoint_binning) {
 
     //ds reserve space for the best case (all points can be added)
     Count number_of_points_binned = number_of_points_tracked;
@@ -259,45 +258,7 @@ void StereoFramePointGenerator::compute(Frame* frame_) {
 
     //ds add all points to frame
     framepoints.insert(framepoints.end(), framepoints_new.begin(), framepoints_new.end());
-
-    //ds clean up bins if skipped before
-    if (_parameters->enable_keypoint_binning) {
-      LOG_WARNING(std::cerr << "|StereoFramePointGenerator::compute|" << frame_->identifier() << "|skipped binning due to low point density: " << available_point_ratio << std::endl)
-      for (Index row = 0; row < _number_of_rows_bin; ++row) {
-        for (Index col = 0; col < _number_of_cols_bin; ++col) {
-          _bin_map_left[row][col] = nullptr;
-        }
-      }
-    }
   }
-
-//  //ds compute final triangulation ratio
-//  const real triangulation_ratio = static_cast<real>(framepoints.size())/_number_of_detected_keypoints;
-//
-//  //ds if we managed to triangulate only few points
-//  if (triangulation_ratio < 0.25) {
-//
-//    //ds only one line (otherwise ignore request)
-//    if (_maximum_epipolar_search_offset_pixels == _parameters->maximum_epipolar_search_offset_pixels) {
-//
-//      //ds update offset and loop once more
-//      ++_maximum_epipolar_search_offset_pixels;
-//
-//      //ds add scan candidates
-//      _epipolar_search_offsets_pixel.push_back(_maximum_epipolar_search_offset_pixels);
-//      _epipolar_search_offsets_pixel.push_back(-_maximum_epipolar_search_offset_pixels);
-//      LOG_DEBUG(std::cerr << "StereoFramePointGenerator::compute|checking more epipolar lines in next input because of low triangulation ratio: " << triangulation_ratio << std::endl)
-//    }
-//  }
-//
-//  //ds triangulation ratio is fine, return to original configuration
-//  else if (_maximum_epipolar_search_offset_pixels > _parameters->maximum_epipolar_search_offset_pixels) {
-//
-//    //ds reset the last offset and finish loop
-//    _maximum_epipolar_search_offset_pixels = _parameters->maximum_epipolar_search_offset_pixels;
-//    _epipolar_search_offsets_pixel.pop_back();
-//    _epipolar_search_offsets_pixel.pop_back();
-//  }
 }
 
 void StereoFramePointGenerator::track(Frame* frame_,
@@ -322,11 +283,10 @@ void StereoFramePointGenerator::track(Frame* frame_,
   //ds tracked and triangulated features (to not consider them in the exhaustive stereo matching)
   std::set<uint32_t> matched_indices_left;
   std::set<uint32_t> matched_indices_right;
-  Count number_of_points       = 0;
+  Count number_of_tracked_points       = 0;
   Count number_of_points_lost  = 0;
   _number_of_tracked_landmarks = 0;
-
-//  std::cerr << "tracking: " << _maximum_descriptor_distance_tracking << " detection: " << _detectors[0][0]->getThreshold() << std::endl;
+  real accumulated_descriptor_distance = 0;
 
   //ds for each previous point
   for (FramePoint* point_previous: framepoints_previous) {
@@ -432,6 +392,7 @@ void StereoFramePointGenerator::track(Frame* frame_,
                                                           getPointInLeftCamera(feature_left->keypoint.pt, feature_right->keypoint.pt),
                                                           point_previous);
         framepoint->setEpipolarOffset(feature_right->row-feature_left->row);
+        accumulated_descriptor_distance += descriptor_distance_best;
 
         //ds VSUALIZATION ONLY
         framepoint->setProjectionEstimateLeft(cv::Point2f(col_projection_left, row_projection_left));
@@ -439,8 +400,8 @@ void StereoFramePointGenerator::track(Frame* frame_,
         framepoint->setProjectionEstimateRightCorrected(cv::Point2f(col_projection_right_corrected, row_projection_right_corrected));
 
         //ds store and move to next slot
-        framepoints[number_of_points] = framepoint;
-        ++number_of_points;
+        framepoints[number_of_tracked_points] = framepoint;
+        ++number_of_tracked_points;
 
         //ds block matching in exhaustive matching (later)
         matched_indices_left.insert(feature_left->index_in_vector);
@@ -448,7 +409,7 @@ void StereoFramePointGenerator::track(Frame* frame_,
         _feature_matcher_left.feature_lattice[feature_left->row][feature_left->col]    = nullptr;
         _feature_matcher_right.feature_lattice[feature_right->row][feature_right->col] = nullptr;
 
-        if (framepoint->landmark()) {
+        if (point_previous->landmark()) {
           ++_number_of_tracked_landmarks;
         }
       }
@@ -460,13 +421,14 @@ void StereoFramePointGenerator::track(Frame* frame_,
       ++number_of_points_lost;
     }
   }
-  framepoints.resize(number_of_points);
+  framepoints.resize(number_of_tracked_points);
   lost_points_.resize(number_of_points_lost);
+  frame_previous_->setAverageDescriptorDistanceTracking(accumulated_descriptor_distance/number_of_tracked_points);
 
   //ds remove matched indices from candidate pools
   _feature_matcher_left.prune(matched_indices_left);
   _feature_matcher_right.prune(matched_indices_right);
-  LOG_DEBUG(std::cerr << "StereoFramePointGenerator::track|tracked and triangulated points: " << number_of_points
+  LOG_DEBUG(std::cerr << "StereoFramePointGenerator::track|tracked and triangulated points: " << number_of_tracked_points
                       << "/" << framepoints_previous.size() << " (landmarks: " << _number_of_tracked_landmarks << ")" << std::endl)
   LOG_DEBUG(std::cerr << "StereoFramePointGenerator::track|lost points: " << number_of_points_lost
                       << "/" << framepoints_previous.size() << std::endl)
@@ -491,7 +453,7 @@ void StereoFramePointGenerator::recoverPoints(Frame* current_frame_, const Frame
   current_frame_->points().resize(number_of_tracked_points+lost_points_.size());
   for (FramePoint* point_previous: lost_points_) {
 
-    //ds skip non landmarks for now (TODO parametrize)
+    //ds only recover landmarks (TODO parametrize)
     if (!point_previous->landmark()) {
       continue;
     }
@@ -515,40 +477,32 @@ void StereoFramePointGenerator::recoverPoints(Frame* current_frame_, const Frame
     PointCoordinates point_in_image_left  = camera_calibration_matrix*point_in_camera_homogeneous;
     PointCoordinates point_in_image_right = point_in_image_left+baseline_homogeneous;
 
-    //ds normalize point and update prediction based on landmark position: LEFT
+    //ds skip invalid depths
+    if (point_in_image_left.z() < _parameters->minimum_depth_meters || point_in_image_left.z() > _parameters->maximum_depth_meters  ||
+        point_in_image_right.z() < _parameters->minimum_depth_meters || point_in_image_right.z() > _parameters->maximum_depth_meters) {
+      continue;
+    }
+
+    //ds normalize point and update prediction based on landmark position
     point_in_image_left  /= point_in_image_left.z();
     point_in_image_right /= point_in_image_right.z();
 
-    //ds check for invalid projections
-    if (point_in_image_left.x() < 0 || point_in_image_left.x() > _camera_left->numberOfImageCols()  ||
-        point_in_image_right.x() < 0 || point_in_image_right.x() > _camera_left->numberOfImageCols()||
-        point_in_image_left.y() < 0 || point_in_image_left.y() > _camera_left->numberOfImageRows()  ) {
+    //ds set projections - at pixel accuarcy
+    const cv::Point2f projection_left(std::rint(point_in_image_left.x()), std::rint(point_in_image_left.y()));
+    const cv::Point2f projection_right(std::rint(point_in_image_right.x()), std::rint(point_in_image_right.y()));
 
-      //ds out of FOV
+    //ds check if projection range is insufficient for recovery
+    const float regional_border_center = 5*point_previous->keypointLeft().size;
+    if (projection_left.x < regional_border_center+1 || projection_left.x > _camera_left->numberOfImageCols()-regional_border_center-1  ||
+        projection_right.x < regional_border_center+1 || projection_right.x > _camera_left->numberOfImageCols()-regional_border_center-1||
+        projection_left.y < regional_border_center+1 || projection_left.y > _camera_left->numberOfImageRows()-regional_border_center-1  ||
+        projection_right.y < regional_border_center+1 || projection_right.y > _camera_left->numberOfImageRows()-regional_border_center-1) {
       continue;
     }
-    assert(point_in_image_left.y() == point_in_image_right.y());
-
-    //ds set projections - at subpixel accuarcy
-    const cv::Point2f projection_left(point_in_image_left.x(), point_in_image_left.y());
-    const cv::Point2f projection_right(point_in_image_right.x(), point_in_image_right.y());
 
     //ds this can be moved outside of the loop if keypoint sizes are constant
-    const float regional_border_center = 5*point_previous->keypointLeft().size;
     const cv::Point2f offset_keypoint_half(regional_border_center, regional_border_center);
     const float regional_full_height = regional_border_center+regional_border_center+1;
-
-    //ds if available search range is insufficient
-    if (projection_left.x <= regional_border_center+1                                   ||
-        projection_left.x >= _camera_left->numberOfImageCols()-regional_border_center-1 ||
-        projection_left.y <= regional_border_center+1                                   ||
-        projection_left.y >= _camera_left->numberOfImageRows()-regional_border_center-1 ||
-        projection_right.x <= regional_border_center+1                                  ||
-        projection_right.x >= _camera_left->numberOfImageCols()-regional_border_center-1) {
-
-      //ds skip complete tracking
-      continue;
-    }
 
     //ds left search regions
     const cv::Point2f corner_left(projection_left-offset_keypoint_half);

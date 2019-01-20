@@ -77,6 +77,20 @@ Landmark* WorldMap::createLandmark(FramePoint* origin_) {
   return landmark;
 }
 
+void WorldMap::removeLandmark(const Identifier& identifier_) {
+  auto iterator = _landmarks.find(identifier_);
+  if (iterator != _landmarks.end()) {
+    Landmark* landmark_to_remove = iterator->second;
+    if (_landmarks.erase(identifier_) != 1) {
+      LOG_WARNING(std::cerr << "WorldMap::removeLandmark|unable to remove landmark with ID: " << identifier_ << std::endl)
+    } else {
+      delete landmark_to_remove;
+    }
+  } else {
+    LOG_WARNING(std::cerr << "WorldMap::removeLandmark|unable to remove landmark with ID: " << identifier_ << std::endl)
+  }
+}
+
 LocalMap* WorldMap::createLocalMap(const bool& drop_framepoints_) {
   if (!_previous_frame) {
     return nullptr;
@@ -267,7 +281,7 @@ void WorldMap::breakTrack(Frame* frame_) {
 void WorldMap::setTrack(Frame* frame_) {
   assert(frame_->localMap());
   assert(_last_local_map_before_track_break);
-  LOG_INFO(std::printf("WorldMap::setTrack|RELOCALIZED - connecting [Frame] < [LocalMap]: [%06lu] < [%06lu] with [%06lu] < [%06lu]\n",
+  LOG_INFO(std::printf("WorldMap::setTrack|RELOCALIZED - connecting [Frame] < [LocalMap]: [%06u] < [%06u] with [%06u] < [%06u]\n",
               _last_frame_before_track_break->identifier(), _last_local_map_before_track_break->identifier(), frame_->identifier(), frame_->localMap()->identifier()))
 
   //ds return to original roots

@@ -24,7 +24,7 @@ public:
 //ds getters/setters
 public:
 
-  const uint64_t& numberOfRecursiveRegistrations() const {return _number_of_recursive_registrations;}
+  const Count& numberOfRecursiveRegistrations() const {return _number_of_recursive_registrations;}
   void setCameraLeft(const Camera* camera_) {_camera_left = camera_;}
   void setCameraLeftInWorldGuess(const TransformMatrix3D& camera_left_in_world_guess_) {_camera_left_in_world_guess = camera_left_in_world_guess_; _has_guess = true;}
   void setCameraSecondary(const Camera* camera_) {_camera_secondary = camera_;}
@@ -81,7 +81,6 @@ protected:
   Count _number_of_active_landmarks           = 0;
   real _tracking_ratio                        = 0;
   real _mean_tracking_ratio                   = 0;
-  Count _number_of_tracked_frames             = 0;
   const Camera* _camera_left                  = nullptr;
   const Camera* _camera_secondary             = nullptr;
 
@@ -110,7 +109,7 @@ protected:
   FramePointPointerVector _lost_points;
 
   //ds stats only
-  uint64_t _number_of_recursive_registrations  = 0;
+  Count _number_of_recursive_registrations = 0;
   real _mean_number_of_framepoints = 0;
 
 private:

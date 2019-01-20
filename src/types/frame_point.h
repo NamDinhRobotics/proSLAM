@@ -66,8 +66,12 @@ public:
 
   //ds FramePoint in the previous image
   inline FramePoint* previous() const {return _previous;}
-  void setPrevious(FramePoint* previous_);
+  void setPrevious(FramePoint* previous_, const bool& move_origin_ = true);
   inline FramePoint* next() const {return _next;}
+  void setNext(FramePoint* next_) {_next = next_;}
+
+  //! @brief removes framepoint from track
+  void clear();
 
   //ds FramePoint in the image where it was first detected (track start)
   inline const FramePoint* origin() const {return _origin;}

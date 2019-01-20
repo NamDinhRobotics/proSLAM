@@ -194,24 +194,24 @@ void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std:
     vertex_frame_last_added = vertex_frame_current;
   }
 
-  //ds loop over all frames - adding loop closures
-  for (const FramePointerMapElement& frame: world_map_->frames()) {
-
-    //ds if the frame carries loop closures
-    if (frame.second->localMap() && frame.second->localMap()->closures().size() > 0) {
-
-      //ds for all linked loop closures
-      for (const Closure::ClosureConstraint& closure: frame.second->localMap()->closures()) {
-
-        //ds retrieve closure edge
-        _setPoseEdge(pose_graph,
-                     pose_graph->vertex(frame.second->localMap()->keyframe()->identifier()),
-                     pose_graph->vertex(closure.local_map->keyframe()->identifier()),
-                     closure.relation,
-                     _parameters->base_information_frame);
-      }
-    }
-  }
+//  //ds loop over all frames - adding loop closures TODO re-enable
+//  for (const FramePointerMapElement& frame: world_map_->frames()) {
+//
+//    //ds if the frame carries loop closures
+//    if (frame.second->localMap() && frame.second->localMap()->closures().size() > 0) {
+//
+//      //ds for all linked loop closures
+//      for (const Closure::ClosureConstraint& closure: frame.second->localMap()->closures()) {
+//
+//        //ds retrieve closure edge
+//        _setPoseEdge(pose_graph,
+//                     pose_graph->vertex(frame.second->localMap()->keyframe()->identifier()),
+//                     pose_graph->vertex(closure.local_map->keyframe()->identifier()),
+//                     closure.relation,
+//                     _parameters->base_information_frame);
+//      }
+//    }
+//  }
 
   //ds save the graph to disk
   pose_graph->save(file_name_.c_str());
@@ -222,12 +222,11 @@ void GraphOptimizer::writePoseGraphToFile(const WorldMap* world_map_, const std:
 
 void GraphOptimizer::addPose(LocalMap* local_map_) {
   CHRONOMETER_START(addition)
-  const g2o::Isometry3 local_map_to_world = local_map_->robotToWorld().cast<double>();
 
   //ds get the frames pose to g2o representation
   g2o::VertexSE3* vertex_current = new g2o::VertexSE3();
   vertex_current->setId(local_map_->identifier());
-  vertex_current->setEstimate(local_map_to_world);
+  vertex_current->setEstimate(local_map_->robotToWorld().cast<double>());
   _optimizer->addVertex(vertex_current);
 
   //ds if its the first frame to be added (start or recently cleared pose graph)
@@ -236,7 +235,7 @@ void GraphOptimizer::addPose(LocalMap* local_map_) {
     //ds fix the initial vertex - no measurement to add
     vertex_current->setFixed(true);
   } else {
-    const g2o::Isometry3& world_to_local_map_previous = local_map_->previous()->worldToRobot().cast<double>();
+    const TransformMatrix3D& world_to_local_map_previous = local_map_->previous()->worldToRobot().cast<double>();
 
     //ds compute information value based on landmark content
     real information_factor = _parameters->base_information_frame;
@@ -245,7 +244,7 @@ void GraphOptimizer::addPose(LocalMap* local_map_) {
     _setPoseEdge(_optimizer,
                 vertex_current,
                 _vertex_local_map_last_added,
-                world_to_local_map_previous*local_map_to_world,
+                world_to_local_map_previous*local_map_->robotToWorld(),
                 information_factor);
   }
 
@@ -368,8 +367,8 @@ void GraphOptimizer::optimizePoseGraph(WorldMap* world_map_) {
   CHRONOMETER_START(optimization)
 
   //ds save current graph to file
-//  const std::string file_name = "pose_graph_"+std::to_string(world_map_->currentFrame()->identifier())+".g2o";
-//  _optimizer->save(file_name.c_str());
+  const std::string file_name = "pose_graph_"+std::to_string(world_map_->currentFrame()->identifier())+".g2o";
+  _optimizer->save(file_name.c_str());
 
   //ds optimize graph
   _optimizer->initializeOptimization();
@@ -381,7 +380,6 @@ void GraphOptimizer::optimizePoseGraph(WorldMap* world_map_) {
     LocalMap* local_map                = local_map_entry.second;
     g2o::VertexSE3* local_map_in_graph = dynamic_cast<g2o::VertexSE3*>(_optimizer->vertex(local_map_entry.first));
     assert(local_map && local_map_in_graph);
-
     const TransformMatrix3D robot_to_world_optimized = local_map_in_graph->estimate().cast<real>();
 
     //ds check if change is insignificant enough (happens for already optimal poses)
@@ -439,8 +437,8 @@ void GraphOptimizer::optimizeFactorGraph(WorldMap* world_map_) {
 }
 
 void GraphOptimizer::_setPoseEdge(g2o::OptimizableGraph* optimizer_,
-                                  g2o::OptimizableGraph::Vertex* vertex_from_,
-                                  g2o::OptimizableGraph::Vertex* vertex_to_,
+                                  g2o::VertexSE3* vertex_from_,
+                                  g2o::VertexSE3* vertex_to_,
                                   const TransformMatrix3D& transform_from_to_,
                                   const real& information_factor_) const {
   g2o::EdgeSE3* edge_pose = new g2o::EdgeSE3();
@@ -449,11 +447,11 @@ void GraphOptimizer::_setPoseEdge(g2o::OptimizableGraph* optimizer_,
   edge_pose->setMeasurement(transform_from_to_.cast<double>());
 
   //ds information value
-  Eigen::Matrix<double, 6, 6> information(information_factor_*Eigen::Matrix<double, 6, 6>::Identity());
+  Matrix6 information(information_factor_*Matrix6::Identity());
   if (_parameters->free_translation_for_poses) {
     information.block<3,3>(0,0) *= _parameters->base_information_frame_factor_for_translation;
   }
-  edge_pose->setInformation(information);
+  edge_pose->setInformation(information.cast<double>());
   if (_parameters->enable_robust_kernel_for_poses) {edge_pose->setRobustKernel(new g2o::RobustKernelCauchy());}
   optimizer_->addEdge(edge_pose);
 }
@@ -469,7 +467,8 @@ void GraphOptimizer::_setPointEdge(g2o::OptimizableGraph* optimizer_,
   landmark_edge->setVertex(0, vertex_frame_);
   landmark_edge->setVertex(1, vertex_landmark_);
   landmark_edge->setMeasurement(framepoint_robot_coordinates);
-  landmark_edge->setInformation(information_factor_*Eigen::Matrix<double, 3, 3>::Identity());
+  Matrix3 information(information_factor_*Matrix3::Identity());
+  landmark_edge->setInformation(information.cast<double>());
   landmark_edge->setParameterId(0, G2oParameter::WORLD_OFFSET);
   if (_parameters->enable_robust_kernel_for_landmarks) {landmark_edge->setRobustKernel(new g2o::RobustKernelCauchy());}
   optimizer_->addEdge(landmark_edge);

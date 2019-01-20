@@ -19,6 +19,9 @@ public:
   //! @param[in] frame_ the frame to display
   void update(const Frame* frame_);
 
+  //! @brief GUI update function, copies a list of landmarks into the currently visible buffer, we want to create a copy to be non-blocking
+  void update(const LandmarkPointerVector visible_landmarks_);
+
   //! @brief manual data transfer locking (generally used to block the GUI from drawing during critical operations e.g. global map updates)
   void lock() {_mutex_data_exchange.lock();}
 
@@ -81,6 +84,9 @@ protected:
 
   //! @brief current frame handle (drawn in draw function)
   const Frame* _current_frame;
+
+  //! @brief current visible (i.e. tracked) landmarks - buffered for continuous display
+  LandmarkPointerVector _visible_landmarks;
 
   //! @brief enable stepwise playback
   std::atomic<bool> _option_stepwise_playback;

@@ -27,6 +27,10 @@ public:
   //! @param[in] origin_ initial framepoint, describing the landmark
   Landmark* createLandmark(FramePoint* origin_);
 
+  //! @brief removes a landmark from the map and frees all related memory
+  //! @param[in] identifier_ the identifier of the landmark to remove
+  void removeLandmark(const Identifier& identifier_);
+
   //ds attempts to create a new local map if the generation criteria are met (returns true if a local map was generated)
   LocalMap* createLocalMap(const bool& drop_framepoints_ = false);
 

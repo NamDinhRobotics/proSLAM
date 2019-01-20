@@ -61,9 +61,9 @@ namespace proslam {
   typedef Eigen::Transform<real, 3, Eigen::Isometry> TransformMatrix3D;
   typedef Eigen::Matrix<real, 6, 1> TransformVector3D;
   typedef Eigen::Quaternion<real> Quaternion;
-  typedef uint64_t Identifier;
-  typedef uint64_t Index;
-  typedef uint64_t Count;
+  typedef uint32_t Identifier;
+  typedef uint32_t Index;
+  typedef uint32_t Count;
   typedef cv::Mat IntensityImage;
   typedef std::vector<IntensityImage> IntensityImageVector;
   typedef cv::Mat DepthImage;

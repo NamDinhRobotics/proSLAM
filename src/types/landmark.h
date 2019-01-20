@@ -38,7 +38,7 @@ public:
 protected:
 
   //ds initial landmark coordinates must be provided
-  Landmark(FramePoint* origin_, const LandmarkParameters* parameters_);
+  Landmark(FramePoint* point_, const LandmarkParameters* parameters_);
 
   //ds cleanup of dynamic structures
   ~Landmark();
@@ -54,6 +54,7 @@ public:
 
   //ds framepoint in an image at the time when the landmark was created
   inline FramePoint* origin() const {return _origin;}
+  void setOrigin(FramePoint* origin_) {_origin = origin_;}
 
   inline const PointCoordinates& coordinates() const {return _world_coordinates;}
   void setCoordinates(const PointCoordinates& coordinates_) {_world_coordinates = coordinates_;}

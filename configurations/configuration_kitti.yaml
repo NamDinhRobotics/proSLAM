@@ -11,7 +11,7 @@ command_line:
   dataset_file_name:
 
   #ds options
-  option_use_gui:                   true
+  option_use_gui:                   false
   option_use_odometry:              false
   option_disable_relocalization:    false
   option_show_top_viewer:           false
@@ -27,7 +27,7 @@ command_line:
 landmark:
 
   #ds maximum measured distance kernel for landmark optimization
-  maximum_error_squared_meters: 25.0
+  maximum_error_squared_meters: 100
 
 local_map:
 
@@ -47,37 +47,37 @@ world_map:
 base_framepoint_generation:
 
   #ds feature descriptor type (BRIEF-128/256/512, ORB-256, BRISK-512, FREAK-512, A-KAZE-486, BinBoost-064)
-  descriptor_type: BRIEF-256
+  descriptor_type: ORB-256
 
   #ds dynamic thresholds for feature detection
-  target_number_of_keypoints_tolerance: 0.1
-  detector_threshold_maximum_change:    0.1
-  detector_threshold_minimum:           20
-  detector_threshold_maximum:           100
-  number_of_detectors_vertical:         1
-  number_of_detectors_horizontal:       1
+  target_number_of_keypoints_tolerance: 0.2
+  detector_threshold_maximum_change:    0.2
+  detector_threshold_minimum:           15
+  detector_threshold_maximum:           30
+  number_of_detectors_vertical:         2
+  number_of_detectors_horizontal:       2
 
   #point tracking thresholds
-  minimum_projection_tracking_distance_pixels: 10
+  minimum_projection_tracking_distance_pixels: 15
   maximum_projection_tracking_distance_pixels: 50
 
   #ds dynamic thresholds for descriptor tracking
-  minimum_descriptor_distance_tracking: 25
-  maximum_descriptor_distance_tracking: 50
+  minimum_descriptor_distance_tracking: 30
+  maximum_descriptor_distance_tracking: 85
 
   #rigid stereo sensor configuration
-  maximum_reliable_depth_meters: 20
+  maximum_reliable_depth_meters: 10
   maximum_depth_meters:          1000
   minimum_depth_meters:          1
   
   #feature density regularization
   enable_keypoint_binning: true
-  bin_size_pixels:         15
+  bin_size_pixels:         20
 
 stereo_framepoint_generation:
 
   #ds stereo: triangulation
-  maximum_matching_distance_triangulation: 75
+  maximum_matching_distance_triangulation: 90
   minimum_disparity_pixels:                1
   maximum_epipolar_search_offset_pixels:   0
 
@@ -90,8 +90,8 @@ tracking:
   minimum_number_of_landmarks_to_track: 5
 
   #point tracking thresholds
-  tunnel_vision_ratio:           0.75
-  good_tracking_ratio:           0.3
+  tunnel_vision_ratio:           0.5
+  good_tracking_ratio:           0.2
 
   #landmark track recovery (if enabled)
   maximum_number_of_landmark_recoveries: 10
@@ -105,10 +105,10 @@ tracking:
   
   #pose optimization: aligner unit configuration
   aligner->error_delta_for_convergence:  1e-3
-  aligner->maximum_error_kernel:         16
-  aligner->damping:                      1000
+  aligner->maximum_error_kernel:         4
+  aligner->damping:                      5
   aligner->maximum_number_of_iterations: 1000
-  aligner->minimum_number_of_inliers:    0
+  aligner->minimum_number_of_inliers:    100
   aligner->minimum_inlier_ratio:         0
   aligner->enable_inverse_depth_as_information: true
 
@@ -121,7 +121,7 @@ relocalization:
   preliminary_minimum_interspace_queries: 50
 
   #minimum relative number of matches
-  preliminary_minimum_matching_ratio: 0.1
+  preliminary_minimum_matching_ratio: 0.05
 
   #minimum absolute number of matches
   minimum_number_of_matched_landmarks: 25
@@ -134,7 +134,7 @@ relocalization:
   aligner->maximum_error_kernel:         1.0
   aligner->damping:                      0.0
   aligner->maximum_number_of_iterations: 100
-  aligner->minimum_number_of_inliers:    25
+  aligner->minimum_number_of_inliers:    10
   aligner->minimum_inlier_ratio:         0.5
 
 graph_optimization:

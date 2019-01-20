@@ -67,6 +67,7 @@ public:
   const int32_t matchingDistanceTrackingThreshold() const {return _parameters->minimum_descriptor_distance_tracking;}
   const Count& numberOfDetectedKeypoints() const {return _number_of_detected_keypoints;}
   const Count& numberOfTrackedLandmarks() const {return _number_of_tracked_landmarks;}
+  const real meanDetectorThreshold() const {return _mean_detector_threshold;}
 
 //ds settings
 protected:
@@ -90,7 +91,7 @@ protected:
   //! @brief grid of detectors (equally distributed over the image with size=number_of_detectors_per_dimension*number_of_detectors_per_dimension)
   cv::Ptr<cv::FastFeatureDetector>** _detectors = nullptr;
   real** _detector_thresholds                   = nullptr;
-  real** _detector_thresholds_accumulated       = nullptr;
+  real _mean_detector_threshold                 = 0;
 
   //! @brief number of detectors
   //! @brief the same for all image streams

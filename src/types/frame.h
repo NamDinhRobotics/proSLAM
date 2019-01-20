@@ -117,6 +117,7 @@ public:
   inline const cv::Mat& intensityImageRight() const {return _intensity_image_right;}
   inline cv::Mat& intensityImageRight() {return _intensity_image_right;}
   void setIntensityImageRight(const cv::Mat intensity_image_)  {_intensity_image_right = intensity_image_;}
+  void releaseImages() {_intensity_image_left.release(); _intensity_image_right.release();}
 
   inline const Status& status() const {return _status;}
   void setStatus(const Status& status_) {_status = status_;}
@@ -136,6 +137,9 @@ public:
 
   //ds visualization only
   const bool& isGroundTruthSet() const {return _is_ground_truth_set;}
+
+  void setAverageDescriptorDistanceTracking(const real& distance_) {_average_descriptor_distance = distance_;}
+  const real& averageDescriptorDistanceTracking() const {return _average_descriptor_distance;}
 
   //ds reset allocated object counter
   static void reset() {_instances = 0;}
@@ -172,6 +176,9 @@ protected:
   //! @brief extracted descriptors associated to the keypoints at the time of creation of the Frame
   cv::Mat _descriptors_left;
   cv::Mat _descriptors_right;
+
+  //! @brief mean descriptor distance for tracking
+  real _average_descriptor_distance = 0;
 
   //! @brief bookkeeping: all created framepoints for this frame (create function)
   FramePointPointerVector _created_points;

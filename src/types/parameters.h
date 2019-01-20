@@ -177,8 +177,8 @@ public:
   real detector_threshold_maximum_change    = 0.1;
 
   //! @brief detector number per image dimension
-  int32_t number_of_detectors_vertical   = 1;
-  int32_t number_of_detectors_horizontal = 1;
+  uint32_t number_of_detectors_vertical   = 1;
+  uint32_t number_of_detectors_horizontal = 1;
 
   //! @brief number of camera image streams (required for detector regions)
   uint32_t number_of_cameras = 1;
@@ -199,7 +199,6 @@ public:
   //! @brief feature density regularization
   bool enable_keypoint_binning = true;
   Count bin_size_pixels        = 15;
-  real minimum_point_ratio_for_binning = 0.0;
 };
 
 //! @class framepoint generation parameters for a stereo camera setup
@@ -342,7 +341,7 @@ public:
   Count maximum_number_of_iterations = 100;
 
   //! @brief g2o identifier space between frames and landmark vertices
-  Count identifier_space = 1e6;
+  Count identifier_space = 1e9;
 
   //! @brief determines window size for bundle adjustment
   Count number_of_frames_per_bundle_adjustment = 100;

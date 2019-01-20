@@ -36,9 +36,9 @@ public:
 
   inline const std::vector<real>& errors() const {return _errors;}
   inline const std::vector<bool>& inliers() const {return _inliers;}
-  inline const uint64_t numberOfInliers() const {return _number_of_inliers;}
-  inline const uint64_t numberOfOutliers() const {return _number_of_outliers;}
-  inline const uint64_t numberOfCorrespondences() const {return _number_of_measurements;}
+  inline const Count numberOfInliers() const {return _number_of_inliers;}
+  inline const Count numberOfOutliers() const {return _number_of_outliers;}
+  inline const Count numberOfCorrespondences() const {return _number_of_measurements;}
   inline const real inlierRatio() const {assert(_number_of_measurements > 0); return static_cast<real>(_number_of_inliers)/_number_of_measurements;}
   inline const real totalError() const {return _total_error;}
   inline const real averageError() const {assert(_number_of_measurements > 0); return _total_error/_number_of_measurements;}
@@ -53,8 +53,8 @@ protected:
   //ds control
   std::vector<real> _errors;
   std::vector<bool> _inliers;
-  uint64_t _number_of_inliers  = 0;
-  uint64_t _number_of_outliers = 0;
+  Count _number_of_inliers      = 0;
+  Count _number_of_outliers     = 0;
   Count _number_of_measurements = 0;
 
   //ds linearization
@@ -71,7 +71,7 @@ protected:
 };
 
 //ds class that holds all generic (running) variables used in an aligner - to be used in conjunction with an aligner
-template<uint64_t states_, uint64_t dimension_>
+template<Count states_, Count dimension_>
 class AlignerWorkspace {
 
 //ds object handling

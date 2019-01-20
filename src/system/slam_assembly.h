@@ -128,6 +128,8 @@ protected:
   Camera* _camera_left;
   Camera* _camera_right;
 
+  Identifier _last_freed_landmark_identifier = 0;
+
 //ds visualization only
 protected:
 

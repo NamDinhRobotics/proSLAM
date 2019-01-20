@@ -134,8 +134,8 @@ namespace proslam {
 
         //ds if the solution is acceptable
         if (_number_of_inliers > _parameters->minimum_number_of_inliers && inlier_ratio > _parameters->minimum_inlier_ratio) {
-          LOG_INFO(std::printf("XYZAligner::converge|registered local maps [%06lu:{%06lu-%06lu}] > [%06lu:{%06lu-%06lu}] "
-                               "(correspondences: %3lu, iterations: %2lu, inlier ratio: %5.3f, inliers: %2lu)\n",
+          LOG_INFO(std::printf("XYZAligner::converge|registered local maps [%06u:{%06u-%06u}] > [%06u:{%06u-%06u}] "
+                               "(correspondences: %3lu, iterations: %2u, inlier ratio: %5.3f, inliers: %2u)\n",
           _context->local_map_query->identifier(),
           _context->local_map_query->frames().front()->identifier(), _context->local_map_query->frames().back()->identifier(),
           _context->local_map_reference->identifier(),

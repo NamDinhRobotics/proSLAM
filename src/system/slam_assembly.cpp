@@ -454,7 +454,7 @@ void SLAMAssembly::playbackMessageFile() {
 
         //ds runtime info - depending on set modes and available information
         if (!_parameters->command_line_parameters->option_disable_relocalization && !_world_map->localMaps().empty()) {
-          LOG_INFO(std::printf("SLAMAssembly::playbackMessageFile|frames: %5lu <FPS: %6.2f>|landmarks: %6lu|local maps: %4lu (%3.2f)|closures: %3lu (%3.2f)\n",
+          LOG_INFO(std::printf("SLAMAssembly::playbackMessageFile|frames: %5u <FPS: %6.2f>|landmarks: %6lu|local maps: %4lu (%3.2f)|closures: %3u (%3.2f)\n",
                       _number_of_processed_frames,
                       number_of_processed_frames_current/processing_time_seconds_current,
                       _world_map->landmarks().size(),
@@ -463,7 +463,7 @@ void SLAMAssembly::playbackMessageFile() {
                       _world_map->numberOfClosures(),
                       _world_map->numberOfClosures()/static_cast<real>(_world_map->localMaps().size())))
         } else {
-          LOG_INFO(std::printf("SLAMAssembly::playbackMessageFile|frames: %5lu <FPS: %6.2f>|landmarks: %6lu|map updates: %3lu\n",
+          LOG_INFO(std::printf("SLAMAssembly::playbackMessageFile|frames: %5u <FPS: %6.2f>|landmarks: %6lu|map updates: %3u\n",
                       _number_of_processed_frames,
                       number_of_processed_frames_current/processing_time_seconds_current,
                       _world_map->landmarks().size(),
@@ -549,7 +549,6 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
             }
           }
         }
-        if (_map_viewer) {_map_viewer->unlock();}
 
         //ds clear buffer (automatically purges invalidated closures)
         _relocalizer->clear();
@@ -562,11 +561,9 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
 
           //ds check if a periodic bundle adjustment is required
           if (_world_map->frames().size() % _parameters->graph_optimizer_parameters->number_of_frames_per_bundle_adjustment == 0) {
-            if (_map_viewer) {_map_viewer->lock();}
 
             //ds optimize graph
             _graph_optimizer->optimizeFactorGraph(_world_map);
-            if (_map_viewer) {_map_viewer->unlock();}
           }
         } else {
 
@@ -575,22 +572,47 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
 
           //ds if we closed a local map - otherwise there is no need to optimize the pose graph
           if (_world_map->relocalized()) {
-            if (_map_viewer) {_map_viewer->lock();}
 
             //ds optimize pose graph with the loop closure constraint
             _graph_optimizer->optimizePoseGraph(_world_map);
 
-            //ds merge landmarks for the current local map and its closures
-            _world_map->mergeLandmarks(created_local_map->closures());
-            if (_map_viewer) {_map_viewer->unlock();}
+            //ds merge landmarks for the current local map and its closures FIXME update for fixed framepoint chains
+            //_world_map->mergeLandmarks(created_local_map->closures());
           }
+        }
+
+        //ds update viewer
+        if (_map_viewer) {
+          _map_viewer->update(_world_map->currentlyTrackedLandmarks());
+          _map_viewer->unlock();
         }
       }
     } else if (_parameters->command_line_parameters->option_drop_framepoints) {
 
       //ds free disconnected framepoints if available: TODO safe window
-      if (_world_map->frames().size() >= 500) {
-        _world_map->frames().at(_world_map->frames().size()-500)->clear();
+      if (_world_map->frames().size() >= 250) {
+        Frame* frame_to_clear = _world_map->frames().at(_world_map->frames().size()-250);
+
+        //ds free all landmarks that are in this frame or older
+        Identifier landmark_identifier_end = _last_freed_landmark_identifier;
+        for (const FramePoint* point: frame_to_clear->points()) {
+          if (point->landmark()) {
+            if (point->landmark()->identifier() > landmark_identifier_end) {
+              landmark_identifier_end = point->landmark()->identifier();
+            }
+          }
+        }
+
+        //ds if we have landmarks to free
+        if (landmark_identifier_end > _last_freed_landmark_identifier) {
+          for (Identifier u = _last_freed_landmark_identifier; u < landmark_identifier_end; ++u) {
+            _world_map->removeLandmark(u);
+          }
+          _last_freed_landmark_identifier = landmark_identifier_end;
+        }
+
+        //ds free framepoints
+        frame_to_clear->clear();
       }
     }
   }
