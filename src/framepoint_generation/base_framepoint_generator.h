@@ -130,7 +130,6 @@ private:
   //ds informative only
   CREATE_CHRONOMETER(keypoint_detection)
   CREATE_CHRONOMETER(descriptor_extraction)
-
 };
 
 typedef std::shared_ptr<BaseFramePointGenerator> BaseFramePointGeneratorPtr;

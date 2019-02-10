@@ -11,7 +11,8 @@ command_line:
   dataset_file_name:
 
   #ds options
-  option_use_gui:                   false
+  option_use_gui:                   true
+  option_use_odometry:              false
   option_disable_relocalization:    false
   option_show_top_viewer:           false
   option_drop_framepoints:          false
@@ -93,12 +94,8 @@ tracking:
   minimum_number_of_landmarks_to_track: 10
 
   #point tracking thresholds
-  tunnel_vision_ratio:           0.75
-  good_tracking_ratio:           0.5
-  good_number_of_tracked_points: 100
-
-  #point tracking thresholds
-  tunnel_vision_ratio: 0.75
+  tunnel_vision_ratio: 0.5
+  good_tracking_ratio: 0.25
 
   #landmark track recovery (if enabled)
   maximum_number_of_landmark_recoveries: 10
@@ -185,5 +182,8 @@ graph_optimization:
 
 visualization:
 
+  #follow robot in 3D map/trajectory viewer
+  follow_robot: false
+
   #show secondary image
-  display_secondary_image: false
+  display_secondary_image: true

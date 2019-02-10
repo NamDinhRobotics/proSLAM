@@ -3,7 +3,7 @@
 
 namespace proslam {
 
-//ds friends
+//ds friends forward declaration
 class LocalMap;
 class WorldMap;
 

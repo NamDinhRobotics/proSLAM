@@ -24,7 +24,7 @@ if [ -d "${DIR_CATKIN_SOURCE}/srrg_core" ]; then
 else
     cd "${DIR_CATKIN_SOURCE}"
     echo "- installing srrg_core:"
-    git clone https://gitlab.com/srrg-software/srrg_core
+    git clone -b marchless https://gitlab.com/srrg-software/srrg_core
 fi
 if [ -d "${DIR_CATKIN_SOURCE}/srrg_gl_helpers" ]; then
     echo "- srrg_gl_helpers already installed - updating code"
@@ -42,7 +42,7 @@ if [ -d "${DIR_CATKIN_SOURCE}/srrg_core_viewers" ]; then
 else
     cd "${DIR_CATKIN_SOURCE}"
     echo "- installing srrg_core_viewers:"
-    git clone https://gitlab.com/srrg-software/srrg_core_viewers
+    git clone -b marchless https://gitlab.com/srrg-software/srrg_core_viewers
 fi
 if [ -d "${DIR_CATKIN_SOURCE}/srrg_hbst" ]; then
     echo "- srrg_hbst already installed - updating code"

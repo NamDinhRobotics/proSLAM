@@ -33,12 +33,16 @@ Landmark::Landmark(FramePoint* point_, const LandmarkParameters* parameters_): _
 
 Landmark::~Landmark() {
 
-  //ds decouple itself from all framepoints
-  assert(!_origin->previous());
-  FramePoint* point = _origin;
-  while (point) {
-    point->setLandmark(nullptr);
-    point = point->next();
+  //ds if the landmark is connected to framepoints (is not the case after being merged into another landmark!)
+  if (_origin) {
+
+    //ds decouple itself from all framepoints
+    assert(!_origin->previous());
+    FramePoint* point = _origin;
+    while (point) {
+      point->setLandmark(nullptr);
+      point = point->next();
+    }
   }
 
   _appearance_map.clear();
@@ -59,6 +63,10 @@ void Landmark::replace(const HBSTMatchable* matchable_old_, HBSTMatchable* match
 }
 
 void Landmark::update(FramePoint* point_) {
+  assert(_origin);
+  assert(_last_update);
+  assert(point_->origin() == _origin);
+  assert(_last_update->origin() == _origin);
   assert(point_->previous() == _last_update);
   _last_update = point_;
   _last_update->setLandmark(this);
@@ -160,8 +168,11 @@ void Landmark::merge(Landmark* landmark_) {
     LOG_WARNING(std::cerr << "Landmark::merge|" << _identifier << "|received merge request to itself: " << landmark_ << std::endl)
     return;
   }
+  assert(landmark_);
+  assert(_identifier < landmark_->_identifier);
+  assert(_origin->identifier() < landmark_->_origin->identifier());
 
-  //ds merge landmark appearances
+  //ds merge landmark appearances (owned by HBST for relocalization)
   for (auto& appearance: landmark_->_appearance_map) {
     appearance.second->setObjects(this);
   }
@@ -190,16 +201,56 @@ void Landmark::merge(Landmark* landmark_) {
   _measurements.insert(_measurements.end(), landmark_->_measurements.begin(), landmark_->_measurements.end());
   landmark_->_measurements.clear();
 
-  //ds connect framepoint history (last update of this with origin of absorbed landmark)
-  landmark_->_origin->setPrevious(_last_update);
+  //ds in case the framepoints to merge are older than the current (smaller identifier) - we need to insert
+  assert(!landmark_->_origin->previous());
+  assert(landmark_->_origin->next());
+  if (landmark_->_last_update->identifier() < _last_update->identifier()) {
 
-  //ds update track lengths and landmark references until we arrive in the last framepoint of the absorbed landmark
-  //ds which will replace the _last_update of this landmark
-  while (_last_update->next()) {
-    _last_update = _last_update->next();
-    _last_update->setLandmark(this);
-    _last_update->setTrackLength(_last_update->previous()->trackLength()+1);
-    _last_update->setOrigin(_origin);
+    //ds look for the insertion point
+    FramePoint* insertionPoint = _origin;
+    while(insertionPoint->next()->identifier() < landmark_->_origin->identifier()) {
+      assert(insertionPoint->next());
+      insertionPoint = insertionPoint->next();
+    }
+
+    //ds bookkeep next of insertion point
+    FramePoint* next = insertionPoint->next();
+
+    //ds connect foreign origin with insertion point - this breaks the next of the original insertion point
+    landmark_->_origin->setPrevious(insertionPoint);
+    landmark_->_origin->setLandmark(this);
+
+    //ds connect last point in the foreign chain with the next of the insertion point
+    next->setPrevious(landmark_->_last_update);
+
+    //ds set the landmark field and origin to all points inbetween, also updating the track length of the points afterwards
+    FramePoint* point = landmark_->_origin;
+    while (point->next()) {
+      point = point->next();
+      point->setLandmark(this);
+      point->setTrackLength(point->previous()->trackLength()+1);
+      point->setOrigin(_origin);
+    }
+    assert(point != landmark_->_last_update);
+    assert(point == _last_update);
+  } else {
+
+    //ds connect framepoint history normally (last update of this with origin of absorbed landmark)
+    landmark_->_origin->setPrevious(_last_update);
+    landmark_->_origin->setLandmark(this);
+
+    //ds update track lengths and landmark references until we arrive in the last framepoint of the absorbed landmark
+    //ds which will replace the _last_update of this landmark
+    while (_last_update->next()) {
+      _last_update = _last_update->next();
+      _last_update->setLandmark(this);
+      _last_update->setTrackLength(_last_update->previous()->trackLength()+1);
+      _last_update->setOrigin(_origin);
+    }
   }
+
+  //ds detach merged landmark from its framepoints (otherwise it will break them if it is deleted!)
+  landmark_->_origin = nullptr;
+  landmark_->_last_update = nullptr;
 }
 }

@@ -12,6 +12,7 @@ command_line:
 
   #ds options
   option_use_gui:                   true
+  option_use_odometry:              false
   option_disable_relocalization:    false
   option_show_top_viewer:           false
   option_drop_framepoints:          false
@@ -93,12 +94,8 @@ tracking:
   minimum_number_of_landmarks_to_track: 5
 
   #point tracking thresholds
-  tunnel_vision_ratio:           0.75
-  good_tracking_ratio:           0.25
-  good_number_of_tracked_points: 100
-
-  #point tracking thresholds
   tunnel_vision_ratio: 0.75
+  good_tracking_ratio: 0.25
 
   #landmark track recovery (if enabled)
   maximum_number_of_landmark_recoveries: 10
@@ -150,7 +147,7 @@ graph_optimization:
   enable_full_bundle_adjustment: false
 
   #g2o factor graph optimization algorithm: GAUSS_NEWTON, LEVENBERG 
-  optimization_algorithm: GAUSS_NEWTON
+  optimization_algorithm: LEVENBERG
 
   #g2o linear solver type to perform optimization algorithm: CHOLMOD, CSPARSE
   linear_solver_type: CHOLMOD
@@ -159,7 +156,7 @@ graph_optimization:
   identifier_space: 1e9
   
   #maximum number of iterations graph optimization TODO proper termination criterion for GAUSS_NEWTON
-  maximum_number_of_iterations: 10
+  maximum_number_of_iterations: 100
 
   #determines window size for bundle adjustment
   number_of_frames_per_bundle_adjustment: 100
@@ -183,6 +180,9 @@ graph_optimization:
   minimum_estimation_delta_for_update_meters: 0.01
 
 visualization:
+
+  #follow robot in 3D map/trajectory viewer
+  follow_robot: true
 
   #show secondary image
   display_secondary_image: true

@@ -273,7 +273,7 @@ void DepthFramePointGenerator::track(Frame* frame_,
       framepoints[number_of_points] = framepoint;
       ++number_of_points;
 
-      if (framepoint->landmark()) {
+      if (point_previous->landmark()) {
         ++_number_of_tracked_landmarks;
       }
     }

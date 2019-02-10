@@ -90,8 +90,8 @@ tracking:
   minimum_number_of_landmarks_to_track: 5
 
   #point tracking thresholds
-  tunnel_vision_ratio:           0.5
-  good_tracking_ratio:           0.2
+  tunnel_vision_ratio: 0.5
+  good_tracking_ratio: 0.2
 
   #landmark track recovery (if enabled)
   maximum_number_of_landmark_recoveries: 10

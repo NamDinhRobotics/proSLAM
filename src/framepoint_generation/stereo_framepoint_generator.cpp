@@ -96,6 +96,7 @@ void StereoFramePointGenerator::initialize(Frame* frame_, const bool& extract_fe
 }
 
 void StereoFramePointGenerator::compute(Frame* frame_) {
+  CHRONOMETER_START(point_triangulation)
   if (!frame_) {
     throw std::runtime_error("StereoFramePointGenerator::compute|called with empty frame");
   }
@@ -259,6 +260,7 @@ void StereoFramePointGenerator::compute(Frame* frame_) {
     //ds add all points to frame
     framepoints.insert(framepoints.end(), framepoints_new.begin(), framepoints_new.end());
   }
+  CHRONOMETER_STOP(point_triangulation)
 }
 
 void StereoFramePointGenerator::track(Frame* frame_,

@@ -377,6 +377,7 @@ void WorldMap::mergeLandmarks(const Closure::ClosureConstraintVector& closures_)
       }
     }
   }
+  assert(landmark_queries_to_references_filtered.size() == landmark_references_to_queries_filtered.size());
 
   //ds map of merged landmark identfiers in case of multi-merges
   std::map<Identifier, Identifier> merged_landmark_identifiers;
@@ -402,9 +403,12 @@ void WorldMap::mergeLandmarks(const Closure::ClosureConstraintVector& closures_)
     } catch (const std::out_of_range& /*ex*/) {
       landmark_reference = _landmarks.at(merged_landmark_identifiers.at(pair.second.first));
     }
+    assert(landmark_query);
+    assert(landmark_reference);
 
     //ds skip processing for identical calls
     if (landmark_query->identifier() == landmark_reference->identifier()) {
+      assert(landmark_query == landmark_reference);
       continue;
     }
 
@@ -439,6 +443,7 @@ void WorldMap::mergeLandmarks(const Closure::ClosureConstraintVector& closures_)
 
     //ds perform merge (does not free landmark memory)
     landmark_reference->merge(landmark_query);
+    assert(landmark_reference->appearances().size() >= landmark_query->appearances().size());
 
     //ds update bookkeeping and free absorbed landmark
     merged_landmark_identifiers.insert(std::make_pair(landmark_query->identifier(), landmark_reference->identifier()));

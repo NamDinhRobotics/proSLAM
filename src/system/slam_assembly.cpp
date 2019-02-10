@@ -569,16 +569,16 @@ void SLAMAssembly::process(const cv::Mat& intensity_image_left_,
 
           //ds just add the frame to the pose graph
           _graph_optimizer->addPose(created_local_map);
+        }
 
-          //ds if we closed a local map - otherwise there is no need to optimize the pose graph
-          if (_world_map->relocalized()) {
+        //ds if we closed a local map
+        if (_world_map->relocalized()) {
 
-            //ds optimize pose graph with the loop closure constraint
-            _graph_optimizer->optimizePoseGraph(_world_map);
+          //ds perform a lightweight pose graph optimization with the loop closure constraints
+          _graph_optimizer->optimizePoseGraph(_world_map);
 
-            //ds merge landmarks for the current local map and its closures FIXME update for fixed framepoint chains
-            //_world_map->mergeLandmarks(created_local_map->closures());
-          }
+          //ds merge landmarks for the current local map and its closures
+          _world_map->mergeLandmarks(created_local_map->closures());
         }
 
         //ds update viewer
@@ -698,11 +698,16 @@ void SLAMAssembly::printReport() const {
   switch (_parameters->command_line_parameters->tracker_mode){
     case CommandLineParameters::TrackerMode::RGB_STEREO: {
       StereoFramePointGenerator* stereo_framepoint_generator = dynamic_cast<StereoFramePointGenerator*>(_tracker->framepointGenerator());
-      std::printf(" stereo keypoint search | %f | %f\n", stereo_framepoint_generator->getTimeConsumptionSeconds_point_triangulation()/_processing_time_total_seconds,
+  std::printf("        stereo matching | %f | %f\n", stereo_framepoint_generator->getTimeConsumptionSeconds_point_triangulation()/_processing_time_total_seconds,
                                                              stereo_framepoint_generator->getTimeConsumptionSeconds_point_triangulation());
       break;
     }
     case CommandLineParameters::TrackerMode::RGB_DEPTH: {
+      DepthFramePointGenerator* depth_framepoint_generator = dynamic_cast<DepthFramePointGenerator*>(_tracker->framepointGenerator());
+  std::printf("   depth map generation | %f | %f\n", depth_framepoint_generator->getTimeConsumptionSeconds_depth_map_generation()/_processing_time_total_seconds,
+          depth_framepoint_generator->getTimeConsumptionSeconds_depth_map_generation());
+  std::printf("       depth assignment | %f | %f\n", depth_framepoint_generator->getTimeConsumptionSeconds_depth_assignment()/_processing_time_total_seconds,
+          depth_framepoint_generator->getTimeConsumptionSeconds_depth_assignment());
       break;
     }
     default: {

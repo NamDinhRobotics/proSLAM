@@ -494,6 +494,8 @@ void PoseTracker3D::_updatePoints(WorldMap* context_, Frame* frame_) {
       //ds update landmark position based on current point (triggered as we linked the landmark to the point)
       landmark->update(point);
     }
+
+    //ds lock current landmark position estimate to framepoint measurement, will be use for the subsequent frame registration
     point->setCameraCoordinatesLeftLandmark(frame_->worldToCameraLeft()*landmark->coordinates());
     ++_number_of_active_landmarks;
 
